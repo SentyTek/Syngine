@@ -8,8 +8,6 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
 
-project(bakerman)
-
 if(MSVC)
     if( NOT CMAKE_GENERATOR STREQUAL "Ninja")
         add_definitions(/MP)
@@ -24,12 +22,13 @@ add_executable(${EXECUTABLE_NAME})
 # add the source files
 target_sources(${EXECUTABLE_NAME}
 PRIVATE
-    src/main.cpp
+    src/syngine.cpp
+    test/main.cpp
 )
 
 # to get an app icon on Apple, add it to the executable, then the image file in info.plist.in
 if(APPLE)
-    target_sources("${EXECUTABLE_NAME}" PRIVATE "src/icon.png")
+    target_sources("${EXECUTABLE_NAME}" PRIVATE "test/icon.png")
 endif()
 
 target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
@@ -40,6 +39,7 @@ add_subdirectory(third_party/SDL EXCLUDE_FROM_ALL)
 
 # link the SDL library to the executable
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE SDL3::SDL3) #if using satellite libs, SDL must be linked LAST
+target_include_directories(${EXECUTABLE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 # dealing with assets
 # if there's any non-code files, like images, audio, etc., we need to deal with per-platform
