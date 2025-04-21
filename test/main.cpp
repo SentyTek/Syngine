@@ -43,5 +43,5 @@ int main(int argc, char* argv[]) {
     //cleanup
     syn_destroyWindow(*synwin);
     delete synwin;
-    return 1;
+    return 0;
 }
