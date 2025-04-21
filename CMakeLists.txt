@@ -73,15 +73,19 @@ set_target_properties(${EXECUTABLE_NAME} PROPERTIES
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
    #tell Install about the target, otherwise fixup will not work
    install(TARGETS ${EXECUTABLE_NAME}
-       BUNDLE DESTINATION ./install COMPONENT Runtime
-         RUNTIME DESTINATION ./install/bin COMPONENT Runtime
+       BUNDLE DESTINATION ./install COMPONENT Runtime # Installs to ${CMAKE_INSTALL_PREFIX}/install
+       RUNTIME DESTINATION Contents/MacOS # BUNDLE destination handles the .app structure
    )
 
-   set(DEP_DIR "${CMAKE_BINARY_DIR}")
-   INSTALL(CODE 
-        "include(BundleUtilities)
-         fixup_bundle(\"$<TARGET_BUNDLE_DIR:${EXECUTABLE_NAME}>\" \"\" \"${DEP_DIR}\")"
-   )
+   set(DEP_DIR "${CMAKE_BINARY_DIR}") # Directory to search for dependencies
+   # Construct the path to the bundle *after* installation
+   set(BUNDLE_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/install/${EXECUTABLE_NAME}.app")
+    INSTALL(CODE
+        "message(STATUS \"Fixing up bundle at: ${BUNDLE_INSTALL_PATH}\")
+         include(BundleUtilities)
+          fixup_bundle(\"${BUNDLE_INSTALL_PATH}\" \"\" \"${DEP_DIR}\")"
+       COMPONENT Runtime # Ensure fixup runs when the Runtime component (the bundle) is installed
+    )
 
    set(CPACK_GENERATOR "DragNDrop")
    include(CPack)
