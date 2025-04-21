@@ -1,0 +1,4 @@
+config/tooling.bat
+build
+.vscode
+src/info.plist.in

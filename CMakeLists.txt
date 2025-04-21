@@ -1,0 +1,88 @@
+cmake_minimum_required(VERSION 3.16)
+project(bakerman)
+
+# set the output directory for built objects.
+# This makes sure that the dynamic library goes into the build directory automatically.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+
+set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
+
+project(bakerman)
+
+if(MSVC)
+    if( NOT CMAKE_GENERATOR STREQUAL "Ninja")
+        add_definitions(/MP)
+    endif()
+endif()
+
+#set exe name
+set(EXECUTABLE_NAME ${PROJECT_NAME})
+
+add_executable(${EXECUTABLE_NAME})
+
+# add the source files
+target_sources(${EXECUTABLE_NAME}
+PRIVATE
+    src/main.cpp
+)
+
+# to get an app icon on Apple, add it to the executable, then the image file in info.plist.in
+if(APPLE)
+    target_sources("${EXECUTABLE_NAME}" PRIVATE "src/icon.png")
+endif()
+
+target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
+
+# configure SDL by calling its cmake script
+# EXECLUDE_FROM_ALL is used so that its install targets and configs cont pollute upwards into the parent project
+add_subdirectory(third_party/SDL EXCLUDE_FROM_ALL)
+
+# link the SDL library to the executable
+target_link_libraries(${EXECUTABLE_NAME} PRIVATE SDL3::SDL3) #if using satellite libs, SDL must be linked LAST
+
+# dealing with assets
+# if there's any non-code files, like images, audio, etc., we need to deal with per-platform
+if(APPLE)
+    # on macOS, we copy the assets into the app bundle's "Resouces" directory
+    # SDL_GetBasePath will return the path to the app bundle, so we can use that to find the resources
+    set(input_dir "${CMAKE_CURRENT_SOURCE_DIR}/src") # the directory where the assets are located
+    macro(add_resource FILE)
+        file(RELATIVE_PATH relpath "${input_dir}" "${FILE}")
+        get_filename_component(relpath "${relpath}" DIRECTORY)
+        target_sources(${EXECUTABLE_NAME} PRIVATE "${FILE}")
+        set_property(SOURCE "${FILE}" MACOSX_PACKAGE_LOCATION "Resources/${relpath}")
+    endmacro()
+    # at this point we can add the resources but we aint got any
+endif()
+
+# set some extra configs per platform
+set(RESOURCE_FILES "src/icon.png")
+set_target_properties(${EXECUTABLE_NAME} PROPERTIES
+    # on macOS, we set the bundle identifier and version
+    MACOSX_BUNDLE TRUE
+    #in Xcode, create a scheme in the dropdowns for the app
+    XCODE_GENERATE_SCHEME TRUE
+    XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
+    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
+    XCODE_ATTRIBUTE_CURRENTYEAR "${CURRENTYEAR}"
+    RESOURCE "${RESOURCE_FILES}"
+)
+
+#on macOS, we need to ensure the bundle is valid by calling fixup_bundle
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+   #tell Install about the target, otherwise fixup will not work
+   install(TARGETS ${EXECUTABLE_NAME}
+       BUNDLE DESTINATION ./install COMPONENT Runtime
+         RUNTIME DESTINATION ./install/bin COMPONENT Runtime
+   )
+
+   set(DEP_DIR "${CMAKE_BINARY_DIR}")
+   INSTALL(CODE 
+        "include(BundleUtilities)
+         fixup_bundle(\"$<TARGET_BUNDLE_DIR:${EXECUTABLE_NAME}>\" \"\" \"${DEP_DIR}\")"
+   )
+
+   set(CPACK_GENERATOR "DragNDrop")
+   include(CPack)
+endif()
