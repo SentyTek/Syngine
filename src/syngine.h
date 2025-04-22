@@ -1,3 +1,4 @@
+#pragma once
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_events.h>
@@ -11,13 +12,8 @@
 #include <cmath>
 #include <string>
 
-struct SyngineWindow {
-    SDL_Window* win;
-    SDL_Renderer* rendr;
-    int width;
-    int height;
-    std::string title;
+class SyngineCore {
+    public:
+    SyngineCore();
+    ~SyngineCore();
 };
-
-SyngineWindow* syn_createWindow(const char*, int, int);
-void syn_destroyWindow(SyngineWindow& win);

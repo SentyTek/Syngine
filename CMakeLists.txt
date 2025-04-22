@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(bakerman)
 
+# Set policy CMP0177 to NEW to normalize install() DESTINATION paths
+cmake_policy(SET CMP0177 NEW)
+
 # set the output directory for built objects.
 # This makes sure that the dynamic library goes into the build directory automatically.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
@@ -22,7 +25,8 @@ add_executable(${EXECUTABLE_NAME})
 # add the source files
 target_sources(${EXECUTABLE_NAME}
 PRIVATE
-    src/syngine.cpp
+    src/Syngine.cpp
+    src/SyngineGraphics.cpp
     test/main.cpp
 )
 
@@ -77,7 +81,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
        RUNTIME DESTINATION Contents/MacOS # BUNDLE destination handles the .app structure
    )
 
-   set(DEP_DIR "${CMAKE_BINARY_DIR}") # Directory to search for dependencies
+   set(DEP_DIR "${CMAKE_BINARY_DIR};${CMAKE_BINARY_DIR}/Release;${CMAKE_BINARY_DIR}/Debug") # Directory to search for dependencies
    # Construct the path to the bundle *after* installation
    set(BUNDLE_INSTALL_PATH "${CMAKE_INSTALL_PREFIX}/install/${EXECUTABLE_NAME}.app")
     INSTALL(CODE

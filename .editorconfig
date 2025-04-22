@@ -1,0 +1,25 @@
+root = true
+
+[*.cpp]
+indent_style = space
+indent_size = 4
+
+[*.h]
+indent_style = space
+indent_size = 4
+
+[*.lua]
+indent_style = space
+indent_size = 4
+
+[*.xml]
+indent_style = space
+indent_size = 2
+tab_width = 4
+
+[{CmakeLists.txt,*.cmake}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+indent_style = space
