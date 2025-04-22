@@ -25,7 +25,7 @@ add_executable(${EXECUTABLE_NAME})
 # add the source files
 target_sources(${EXECUTABLE_NAME}
 PRIVATE
-    src/Syngine.cpp
+    src/SyngineCore.cpp
     src/SyngineGraphics.cpp
     test/main.cpp
 )
@@ -37,13 +37,32 @@ endif()
 
 target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
 
-# configure SDL by calling its cmake script
+# set what gets built
+set(SDL_TEST OFF CACHE BOOL "" FORCE)
+set(SDL_SHARED ON CACHE BOOL "" FORCE)
+set(SDL_STATIC OFF CACHE BOOL "" FORCE)
+
+set(BGFX_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+
+# configure SDL and bgfx by calling their cmake scripts
 # EXECLUDE_FROM_ALL is used so that its install targets and configs cont pollute upwards into the parent project
 add_subdirectory(third_party/SDL EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/bgfx EXCLUDE_FROM_ALL)
 
-# link the SDL library to the executable
-target_link_libraries(${EXECUTABLE_NAME} PRIVATE SDL3::SDL3) #if using satellite libs, SDL must be linked LAST
-target_include_directories(${EXECUTABLE_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/src)
+# link the libs to the executable
+target_link_libraries(${EXECUTABLE_NAME} PRIVATE #if using satellite libs, SDL must be linked LAST
+    SDL3::SDL3
+    bgfx
+    bx
+    bimg
+)
+target_include_directories(${EXECUTABLE_NAME} PRIVATE 
+    ${CMAKE_SOURCE_DIR}/src
+    third_party/bgfx.cmake/bgfx/include
+    third_party/bgfx.cmake/bx/include
+    third_party/bgfx.cmake/bimg/include
+)
 
 # dealing with assets
 # if there's any non-code files, like images, audio, etc., we need to deal with per-platform

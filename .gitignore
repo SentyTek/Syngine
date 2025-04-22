@@ -1,4 +1,4 @@
-config/tooling.bat
+config
 build
 .vscode
 .DS_Store

@@ -1,16 +1,13 @@
 #include <SyngineGraphics.h>
 
 SyngineGraphics::SyngineGraphics(const char* title, int width, int height) {
-    SyngineWindow* app = new SyngineWindow{
-        .win = nullptr,
-        .rendr = nullptr,
-        .width = width,
-        .height = height,
-        .title = title ? title : "Syngine Window"
-    };
-
-    this->app = app;
-}
+    //initialize app
+    this->title = title;
+    this->width = width;
+    this->height = height;
+    this->win = nullptr;
+    this->rendr = nullptr;
+};
 
 int SyngineGraphics::CreateWindow() {
     //init
@@ -19,27 +16,28 @@ int SyngineGraphics::CreateWindow() {
         return 1;
     }
 
-    SyngineWindow& app = *this->app;
+    //check if app is initialized
+    if (this->title == "") {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to create window for");
+        return 1;
+    }
 
     //create window
-    app.win = SDL_CreateWindow(
-        app.title.c_str(),
-        app.width, app.height,
+    this->win = SDL_CreateWindow(
+        this->title.c_str(),
+        this->width, this->height,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY
     );
-    if (!app.win) {
+    if (!this->win) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Window could not be created! SDL_Error: %s", SDL_GetError());
         SDL_Quit();
         return 1;
     }
-
-    SDL_Window* win = app.win; //for convenience
-    
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
 
     //create renderer
-    app.rendr = SDL_CreateRenderer(win, NULL);
-    if (!app.rendr) {
+    this->rendr = SDL_CreateRenderer(win, NULL);
+    if (!this->rendr) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Renderer could not be created! SDL_Error: %s", SDL_GetError());
         SDL_DestroyWindow(win);
         SDL_Quit();
@@ -64,12 +62,38 @@ int SyngineGraphics::CreateWindow() {
     return 0;
 }
 
-void SyngineGraphics::DestroyWindow() {
+void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
+    if (!this->win) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to destroy");
+        return;
+    }
     //cleanup
-    SyngineWindow& app = *this->app;
     SDL_Log("app shutting down");
-    SDL_DestroyRenderer(app.rendr);
-    SDL_DestroyWindow(app.win);
-    delete this->app;
+    SDL_DestroyRenderer(this->rendr);
+    SDL_DestroyWindow(this->win);
+    this->rendr = nullptr;
+    this->win = nullptr;
     SDL_Log("goodbye world");
+}
+
+int SyngineGraphics::SynDrawClear() {
+    if (!this->rendr) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to draw on");
+        return 1;
+    }
+
+    //sure, let's draw a color or something
+    auto time = SDL_GetTicks() / 1000.0f; // get time in seconds
+    auto red = static_cast<Uint8>((sin(time) + 1.0f) / 2.0f * 255);
+    auto green = static_cast<Uint8>((sin(time / 2.0f) + 1.0f) / 2.0f * 255);
+    auto blue = static_cast<Uint8>((sin(time * 2.0f) + 1.0f) / 2.0f * 255);
+
+    //clear screen with color
+    SDL_SetRenderDrawColor(this->rendr, red, green, blue, 255);
+    SDL_RenderClear(this->rendr);
+
+    //present to screen
+    SDL_RenderPresent(this->rendr);
+
+    return 0;
 }
