@@ -27,6 +27,7 @@ target_sources(${EXECUTABLE_NAME}
 PRIVATE
     src/SyngineCore.cpp
     src/SyngineGraphics.cpp
+    src/SynOSXMetalBridge.mm
     test/main.cpp
 )
 
@@ -37,6 +38,15 @@ endif()
 
 target_compile_features(${EXECUTABLE_NAME} PRIVATE cxx_std_20)
 
+# add platform specific flags
+if(APPLE)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_OSX=1)
+elseif(WIN32)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_WINDOWS=1)
+elseif(UNIX AND NOT APPLE)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
+endif()
+
 # set what gets built
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 set(SDL_SHARED ON CACHE BOOL "" FORCE)
@@ -45,10 +55,19 @@ set(SDL_STATIC OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
+if(APPLE)
+    set(SDL_VIDEO_VULKAN OFF CACHE BOOL "" FORCE)
+    set(SDL_VULKAN OFF CACHE BOOL "" FORCE)
+
+    set(BGFX_CONFIG_RENDERER_METAL ON CACHE BOOL "Enable Metal renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_OPENGL OFF CACHE BOOL "Disable OpenGL renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_VULKAN OFF CACHE BOOL "Disable Vulkan renderer" FORCE)
+endif()
+
 # configure SDL and bgfx by calling their cmake scripts
 # EXECLUDE_FROM_ALL is used so that its install targets and configs cont pollute upwards into the parent project
 add_subdirectory(third_party/SDL EXCLUDE_FROM_ALL)
-add_subdirectory(third_party/bgfx EXCLUDE_FROM_ALL)
+add_subdirectory(third_party/bgfx.cmake EXCLUDE_FROM_ALL)
 
 # link the libs to the executable
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE #if using satellite libs, SDL must be linked LAST

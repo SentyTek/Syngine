@@ -24,8 +24,8 @@ int main(int argc, char* argv[]) {
     syngine.SyngineEventLoop(); //note that this is a blocking call, it will run until the window is closed or quit event is triggered
 
     //cleanup
-    graphics.DestroyWindow();
     syngine.DetachGraphics();
+    graphics.DestroyWindow();
     SDL_Quit(); //cleanup SDL
     return 0;
 }

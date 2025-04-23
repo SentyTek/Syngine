@@ -1,4 +1,4 @@
-#include <SyngineCore.h>
+#include "SyngineCore.h"
 
 SyngineCore::SyngineCore() {
     //initialize app
@@ -9,10 +9,6 @@ SyngineCore::SyngineCore() {
 SyngineCore::~SyngineCore() {
     //cleanup
     if (this->app) {
-        if (this->app->graphics) {
-            this->app->graphics->DestroyWindow();
-            delete this->app->graphics;
-        }
         delete this->app;
     }
 }
@@ -41,7 +37,10 @@ int SyngineCore::DetachGraphics() {
 
 int SyngineCore::SyngineEventLoop() {
     //main loop
+    SDL_Log("Enetring event loop");
     bool running = true;
+    bool once = false;
+    int frame = 0;
     SDL_Event event;
     while (running) {
         //event handling
@@ -55,11 +54,25 @@ int SyngineCore::SyngineEventLoop() {
                     SDL_GetWindowSize(resizedWindow, &w, &h);
                 }
                 SDL_Log("Window resized to %d x %d", w, h);
+
+                bgfx::reset(w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
+                bgfx::setViewRect(0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
+            }
+            if (!once) {
+                this->app->graphics->CreateRenderer(); // create renderer
+                once = true;
             }
         }
+        ++frame;
 
-        this->app->graphics->SynDrawClear(); //temp draw clear function
+        if (this->app && this->app->graphics && once) {
+            this->app->graphics->RenderFrame(); // render frame
+            if (frame % 60 == 0) {
+                SDL_Log("render frame");
+            }
+        }
     }
-
+    
+    SDL_Log("Exiting event loop");
     return 0;
 }

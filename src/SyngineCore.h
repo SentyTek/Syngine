@@ -4,6 +4,8 @@
 #include <SDL3/SDL_timer.h>
 #include <SDL3/SDL_hints.h>
 
+#include <bgfx/bgfx.h>
+
 #include <SyngineGraphics.h>
 
 struct SyngineApp {
