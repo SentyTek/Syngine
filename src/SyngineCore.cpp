@@ -55,6 +55,8 @@ int SyngineCore::SyngineEventLoop() {
                 }
                 SDL_Log("Window resized to %d x %d", w, h);
 
+                this->app->graphics->width = w;
+                this->app->graphics->height = h;
                 bgfx::reset(w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
                 bgfx::setViewRect(0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
             }
@@ -67,7 +69,7 @@ int SyngineCore::SyngineEventLoop() {
 
         if (this->app && this->app->graphics && once) {
             this->app->graphics->RenderFrame(); // render frame
-            if (frame % 60 == 0) {
+            if (frame % 180 == 0) {
                 SDL_Log("render frame");
             }
         }
