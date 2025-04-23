@@ -54,11 +54,9 @@ set(SDL_STATIC OFF CACHE BOOL "" FORCE)
 
 set(BGFX_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-if(APPLE) # cocoa is really picky and requires entire renderer to be single threaded
-set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)
-endif()
 
-if(APPLE)
+if(APPLE) # cocoa is really picky and requires entire renderer to be single threaded
+    set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)
     set(SDL_VIDEO_VULKAN OFF CACHE BOOL "" FORCE)
     set(SDL_VULKAN OFF CACHE BOOL "" FORCE)
 

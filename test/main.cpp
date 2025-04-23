@@ -12,6 +12,12 @@ int main(int argc, char* argv[]) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create window");
         return 1;
     }
+    //create renderer
+    if (graphics.CreateRenderer() != 0) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create renderer");
+        graphics.DestroyWindow();
+        return 1;
+    }
 
     //attach graphics to core
     if (syngine.AttachGraphics(&graphics) != 0) {

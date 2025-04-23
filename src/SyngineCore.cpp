@@ -36,12 +36,12 @@ int SyngineCore::DetachGraphics() {
 }
 
 int SyngineCore::SyngineEventLoop() {
-    //main loop
-    SDL_Log("Enetring event loop");
+    //main loop. this will obviously be replaced with a more complex and modular/multi-threaded loop in the Future
+    SDL_Log("Entering event loop");
     bool running = true;
-    bool once = false;
     int frame = 0;
     SDL_Event event;
+
     while (running) {
         //event handling
         while (SDL_PollEvent(&event)) { //where inputs can also be handled
@@ -60,19 +60,16 @@ int SyngineCore::SyngineEventLoop() {
                 bgfx::reset(w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
                 bgfx::setViewRect(0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
             }
-            if (!once) {
-                this->app->graphics->CreateRenderer(); // create renderer
-                once = true;
-            }
         }
-        ++frame;
-
-        if (this->app && this->app->graphics && once) {
+        
+        if (this->app && this->app->graphics) {
             this->app->graphics->RenderFrame(); // render frame
             if (frame % 180 == 0) {
                 SDL_Log("render frame");
             }
         }
+        
+        ++frame;
     }
     
     SDL_Log("Exiting event loop");

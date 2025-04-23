@@ -14,7 +14,8 @@ static NSView* FindTaggedView(NSView* root, NSInteger tag) {
     return nil;
 }
 
-//export C style function
+/// This function is called from C code to get the Metal view associated with a given SDL window.
+/// MacOS Exclusive (Thanks Tim Apple!)
 extern "C" void* GetSYNMetalView(SDL_Window* win) {
     SDL_PropertiesID props = SDL_GetWindowProperties(win);
     if (!props) return nullptr;
@@ -25,12 +26,6 @@ extern "C" void* GetSYNMetalView(SDL_Window* win) {
 
     NSWindow* nsWindow = (__bridge NSWindow*)nsWindowPtr;
     NSView* contentView = [nsWindow contentView];
-
-    NSLog(@"Metal tag: %lld", tag);
-    NSLog(@"Subviews of contentView:");
-    for (NSView* view in contentView.subviews) {
-        NSLog(@"  → %@ (tag: %ld)", view, view.tag);
-    }
 
     NSView* metalView = FindTaggedView(contentView, tag);
 

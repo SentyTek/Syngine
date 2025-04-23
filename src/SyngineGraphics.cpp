@@ -110,11 +110,6 @@ int SyngineGraphics::CreateRenderer() {
     bgInit.resolution.height = this->height;
     bgInit.resolution.reset = BGFX_RESET_VSYNC; // enable vsync
 
-    #if BX_PLATFORM_OSX
-    for (int i = 0; i < 10; ++i) {
-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0.01, false);
-    }
-    #endif
     if(!bgfx::init(bgInit)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to initialize bgfx");
         SDL_DestroyWindow(this->win);
