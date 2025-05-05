@@ -2,3 +2,4 @@ config
 build
 .vscode
 .DS_Store
+.cache
