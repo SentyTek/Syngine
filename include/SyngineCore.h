@@ -1,15 +1,10 @@
 #pragma once
-#include <SDL3/SDL_events.h>
-#include <SDL3/SDL_log.h>
-#include <SDL3/SDL_timer.h>
-#include <SDL3/SDL_hints.h>
-
-#include <bgfx/bgfx.h>
-
-#include <SyngineGraphics.h>
+#include "SyngineGraphics.h"
+#include "SynModelLoader.h"
 
 struct SyngineApp {
-    SyngineGraphics* graphics; // lets point
+    SyngineGraphics* graphics;
+    SynModelLoader* models;
 };
 
 class SyngineCore {

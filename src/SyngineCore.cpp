@@ -1,4 +1,5 @@
 #include "SyngineCore.h"
+#include "defines.h"
 
 SyngineCore::SyngineCore() {
     //initialize app
@@ -59,11 +60,15 @@ int SyngineCore::SyngineEventLoop() {
                 this->app->graphics->height = h;
                 bgfx::reset(w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
                 bgfx::setViewRect(0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
+            } else if (event.type == SDL_EVENT_KEY_DOWN) {
+                if (event.key.key == SDLK_F) {
+                    SDL_Log("F key pressed");
+                }
             }
         }
         
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(); // render frame
+            this->app->graphics->RenderFrame(*(this->app->models)); // render frame
             if (frame % 180 == 0) {
                 SDL_Log("render frame");
             }

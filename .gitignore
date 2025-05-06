@@ -3,3 +3,6 @@ build
 .vscode
 .DS_Store
 .cache
+.clangd
+cmake_install.cmake
+CMakeScripts

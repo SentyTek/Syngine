@@ -3,13 +3,6 @@ project(Syngine)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# set the output directory for built objects.
-# This makes sure that the dynamic library goes into the build directory automatically.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
-
-set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
-
 # create the executable
 add_library(Syngine STATIC
     src/SyngineCore.cpp
@@ -23,8 +16,6 @@ if(APPLE)
     )
 endif()
 
-target_compile_features(Syngine PRIVATE cxx_std_20)
-
 # set what gets built
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
@@ -37,6 +28,7 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BX_CONFIG_DEBUG OFF CACHE BOOL "" FORCE)
+set(BGFX_BUILD_TOOLS_BINARIES shaderc ON CACHE BOOL "" FORCE)
 
 if(APPLE) # cocoa is really picky and requires entire renderer to be single threaded
     set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)
@@ -50,24 +42,35 @@ endif()
 
 # configure all third party files by calling their cmake scripts
 # EXECLUDE_FROM_ALL is used so that its install targets and configs cont pollute upwards into the parent project
-add_subdirectory(third_party/SDL EXCLUDE_FROM_ALL)
-add_subdirectory(third_party/bgfx.cmake EXCLUDE_FROM_ALL)
-add_subdirectory(third_party/assimp EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
 
-# link the libs to the executable
-target_link_libraries(Syngine PRIVATE #if using satellite libs, SDL must be linked LAST
+# --- Include Directories ---
+target_include_directories(Syngine
+    PUBLIC
+        # Engine public headers directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        # Third-party headers needed by engine's public headers (now relative to root)
+        ${CMAKE_SOURCE_DIR}/third_party/SDL/include
+        ${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/include
+        ${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/bx/include   # Often needed by bgfx headers
+        ${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/bimg/include # Often needed by bgfx headers
+        ${CMAKE_SOURCE_DIR}/third_party/assimp/include
+    PRIVATE
+        # Engine private headers/sources directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        # Add any third-party includes ONLY needed by engine's private .cpp files (if any)
+)
+
+# --- Link Libraries ---
+# Link the targets created by add_subdirectory
+target_link_libraries(Syngine PRIVATE
+    SDL3::SDL3
     assimp::assimp
-    bgfx
     bx
     bimg
-    SDL3::SDL3
+    bgfx
 )
 
-target_include_directories(Syngine PUBLIC 
-    ${CMAKE_SOURCE_DIR}/src
-    third_party/SDL/include
-    third_party/bgfx.cmake/bgfx/include
-    third_party/bgfx.cmake/bx/include
-    third_party/bgfx.cmake/bimg/include
-    third_party/assimp/include
-)
+clangdConfigure(Syngine)

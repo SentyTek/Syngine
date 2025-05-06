@@ -2,11 +2,6 @@
 #include <vector>
 #include <string>
 
-#include <assimp/Importer.hpp>
-#include <assimp/scene.h>
-
-#include <SDL3/SDL.h>
-
 #include <bgfx/bgfx.h>
 
 struct Vertex {

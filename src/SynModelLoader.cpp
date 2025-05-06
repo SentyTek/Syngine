@@ -1,5 +1,10 @@
 #include "SynModelLoader.h"
-#include "bgfx/bgfx.h"
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+
+#include <SDL3/SDL.h>
+#include <bgfx/bgfx.h>
 
 //Returns true if the model was loaded successfully, false otherwise
 bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
