@@ -5,31 +5,13 @@
 #include <vector>
 #include <filesystem>
 #include <string>
-
-static std::string resolveShaderPath(const char* shaderPath)
-{
-#ifdef __APPLE__
-    // SDL_GetBasePath() returns ".../Contents/MacOS/"
-    const char* base = SDL_GetBasePath();
-    std::string p(base);
-
-    // swap "MacOS/" -> "Resources/"
-    auto pos = p.rfind("MacOS/");
-    if (pos != std::string::npos) {
-        p = p.substr(0, pos) + "Resources/";
-    }
-    p += shaderPath; // e.g. "shaders/vs_simple.sc.bin"
-    return p;
-#else
-    return std::string(shaderPath);
-#endif
-}
+#include "helpers.h"
 
 inline bgfx::ShaderHandle LoadShader(const char* shaderPath)
 {
     namespace fs = std::filesystem;
 
-    std::string path = resolveShaderPath(shaderPath);
+    std::string path = resolveOSPath(shaderPath);
     if (!fs::exists(path))
     {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,

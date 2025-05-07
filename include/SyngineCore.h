@@ -4,7 +4,7 @@
 
 struct SyngineApp {
     SyngineGraphics* graphics;
-    SynModelLoader* models;
+    SynModelLoader* synModels;
 };
 
 class SyngineCore {

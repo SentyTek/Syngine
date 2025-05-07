@@ -1,10 +1,12 @@
 #include "SyngineCore.h"
+#include "SynModelLoader.h"
 #include "defines.h"
 
 SyngineCore::SyngineCore() {
     //initialize app
     this->app = new SyngineApp();
     this->app->graphics = nullptr; // No graphics attached initially
+    this->app->synModels = new AssimpLoader(); // Initialize the model loader
 }
 
 SyngineCore::~SyngineCore() {
@@ -63,15 +65,21 @@ int SyngineCore::SyngineEventLoop() {
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
                 if (event.key.key == SDLK_F) {
                     SDL_Log("F key pressed");
+                    
+                    //load model
+                    std::string modelPath = resolveOSPath("meshes/cube.dae"); // Path to your model
+                    SynMeshData meshData;
+                    if (this->app->synModels->LoadModel(modelPath, meshData)) {
+                        SDL_Log("Model loaded successfully");
+                    } else {
+                        SDL_Log("Failed to load model");
+                    }
                 }
             }
         }
         
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(*(this->app->models)); // render frame
-            if (frame % 180 == 0) {
-                SDL_Log("render frame");
-            }
+            this->app->graphics->RenderFrame(*(this->app->synModels)); // render frame
         }
         
         ++frame;

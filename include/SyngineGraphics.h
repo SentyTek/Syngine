@@ -26,8 +26,8 @@ class SyngineGraphics {
     int height;
     SDL_Window* win;
     Camera camera;
-    bgfx::ProgramHandle program;
-    bgfx::UniformHandle u_mvp;
+    bgfx::ProgramHandle program = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_mvp = BGFX_INVALID_HANDLE;
     
     SyngineGraphics(const char* title, int width, int height);
     int CreateWindow();

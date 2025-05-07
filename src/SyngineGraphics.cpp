@@ -1,13 +1,14 @@
 #include "SyngineGraphics.h"
+#include "bgfx/bgfx.h"
+#include "bgfx/defines.h"
+#include "helpers.h"
 
-#include <SDL3/SDL.h>
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_properties.h>
 
 #include <bx/math.h>
-#include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <cstdint>
 
@@ -140,8 +141,9 @@ int SyngineGraphics::CreateRenderer() {
     //reset view 0 to the dimentions of the window and clear it
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1.0f, 0);
     bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
+    bgfx::setDebug(BGFX_DEBUG_STATS|BGFX_DEBUG_WIREFRAME);
 
-    this->u_mvp = bgfx::createUniform("u_modelViewProjection", bgfx::UniformType::Mat4);
+    this->u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4); //u_modelViewProjection. it's a mat4 that is used to transform the vertices from model space to clip space
 
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
@@ -174,12 +176,18 @@ int SyngineGraphics::DestroyRenderer() {
 }
 
 void SyngineGraphics::SetProgram(bgfx::ProgramHandle program) {
-    if (!bgfx::isValid(this->program)) {
+    if (bgfx::isValid(this->program)) {
         bgfx::destroy(this->program);
         SDL_Log("Replacing program");
-        return;
     }
     this->program = program;
+
+    // Add diagnostic info
+    if (bgfx::isValid(this->program)) {
+        SDL_Log("Program successfully set");
+    } else {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to set program - invalid handle");
+    }
 }
 bgfx::ProgramHandle SyngineGraphics::GetProgram() const {
     return this->program;
@@ -208,25 +216,21 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
 }
 
 int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x303030ff, 1.0f, 0);
-    bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
-
     camera.Update(float(this->width) / float(this->height));
 
-    bgfx::setViewTransform(0, camera.view, camera.proj);
+    float model[16];
+    bx::mtxIdentity(model);
 
-    float mtx[16];
-    bx::mtxIdentity(mtx);
+    float viewProj[16];
+    bx::mtxMul(viewProj, camera.proj, camera.view);
 
     float mvp[16];
-    bx::mtxMul(mvp, mtx, camera.view);
-
-    bgfx::setUniform(this->u_mvp, mvp);
-
+    bx::mtxMul(mvp, viewProj, model);
+    
     //background slate
     int viewId = 0;
-
     uint32_t bgColor = 0x6495EDff;
+
     bgfx::setViewClear(
         viewId,
         BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
@@ -234,21 +238,70 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
         1.0f, //depth clear
         0     //stencil clear
     );
+
     bgfx::setViewRect(viewId, 0, 0, uint16_t(this->width), uint16_t(this->height));
+    bgfx::touch(viewId);
 
-    camera.Update(float(this->width) / float(this->height));
-    bgfx::setViewTransform(viewId, camera.view, camera.proj);
+    //prepare render
+    uint64_t renderState =  BGFX_STATE_WRITE_RGB |
+                            BGFX_STATE_WRITE_A |
+                            BGFX_STATE_WRITE_Z |
+                            BGFX_STATE_DEPTH_TEST_LESS;
 
-    bgfx::setState(BGFX_STATE_WRITE_RGB|BGFX_STATE_WRITE_A);
-    bgfx::submit(0, this->program);
+    bgfx::setState(renderState);
 
-    /*
+    bgfx::dbgTextPrintf(0, 1, 0x0f, "Mesh count: %u", modelLoader.getMeshes().size());
+    bgfx::dbgTextPrintf(0, 2, 0x0f, "Eye: %.2f, %.2f, %.2f", camera.eye[0], camera.eye[1], camera.eye[2]);
+
+    //hardcoded tri test
+    {
+        struct PosColorVertex {
+            float x,y,z;
+        };
+
+        static PosColorVertex triangleVertices[] = {
+            { -1.0f, -1.0f, 0.0f },  //top left
+            {  1.0f, -1.0f, 0.0f }, //top right
+            {  0.0f,  1.0f, 0.0f } //bottom center
+        };
+
+        static uint16_t triangleIndices[] = {
+            0, 1, 2
+        };
+
+        bgfx::VertexLayout layout;
+        layout.begin()
+            .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
+            .end();
+        
+        bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(
+            bgfx::makeRef(triangleVertices, sizeof(triangleVertices)),
+            layout
+        );
+        bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(
+            bgfx::makeRef(triangleIndices, sizeof(triangleIndices))
+        );
+        
+        if(bgfx::isValid(vbh) && bgfx::isValid(ibh)) {
+            bgfx::setVertexBuffer(0, vbh);
+            bgfx::setIndexBuffer(ibh);
+            bgfx::setUniform(u_mvp, mvp);
+            bgfx::submit(viewId, this->program);
+        } else {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create triangle buffers");
+        }
+
+        //cleanup
+        bgfx::destroy(vbh);
+        bgfx::destroy(ibh);
+    }
+    
     for (auto& mesh : modelLoader.getMeshes()) {
         bgfx::setVertexBuffer(0, mesh.vbh);
         bgfx::setIndexBuffer(mesh.ibh);
-        bgfx::setState(BGFX_STATE_DEFAULT);
-        bgfx::submit(0, this->program);
-    }*/
+        bgfx::setUniform(u_mvp, mvp);
+        bgfx::submit(viewId, this->program);
+    }
 
     bgfx::frame(); // submit the frame
     return 0;

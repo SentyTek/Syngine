@@ -1,10 +1,8 @@
 #include "SynModelLoader.h"
+#include "defines.h"
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
-
-#include <SDL3/SDL.h>
-#include <bgfx/bgfx.h>
 
 //Returns true if the model was loaded successfully, false otherwise
 bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
@@ -59,9 +57,9 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
     //create bgfx vertex layout
     bgfx::VertexLayout layout;
     layout.begin()
-        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
+        //.add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
+        //.add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
         .end();
 
     //create buffers
@@ -73,12 +71,20 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
         bgfx::makeRef(meshData.indices.data(), sizeof(uint16_t) * meshData.indices.size())
     );
 
+    //checks
+    SDL_Log("Loaded mesh with %zu vertices and %zu indices", meshData.vertices.size(), meshData.indices.size());
+    if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
+        SDL_Log("Failed to create vertex/index buffer");
+        return false;
+    }
+
     //and output
     meshData.vbh = vbh;
     meshData.ibh = ibh;
     meshData.material.name = "default"; //set default material name
     meshData.material.texturePath = ""; //set default texture path
     out = meshData;
+    meshes.push_back(meshData); //store mesh data for later use
     return true;
 }
 

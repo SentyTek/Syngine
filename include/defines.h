@@ -6,3 +6,4 @@
 #include "ShaderUtils.h"
 #include "SynModelLoader.h"
 #include "SyngineGraphics.h"
+#include <cstdint>
