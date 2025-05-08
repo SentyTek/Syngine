@@ -15,7 +15,7 @@ struct Camera {
     float view[16];
     float proj[16];
 
-    void Update(float aspect);
+    void Update(int viewId, int width, int height);
 };
 
 class SyngineGraphics {

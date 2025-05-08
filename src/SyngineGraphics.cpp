@@ -25,14 +25,16 @@ SyngineGraphics::SyngineGraphics(const char* title, int width, int height) {
     this->win = nullptr;
 };
 
-void Camera::Update(float aspect) {
+void Camera::Update(int viewId, int width, int height) {
     //update view and projection matrices
     bx::Vec3 eyeVec = { eye[0], eye[1], eye[2] };
     bx::Vec3 targetVec = { target[0], target[1], target[2] };
     bx::Vec3 upVec = { up[0], up[1], up[2] };
+    float aspect = float(width) / float(height);
+
     bx::mtxLookAt(view, eyeVec, targetVec, upVec);
     bx::mtxProj(proj, fov, aspect, near, far, bgfx::getCaps()->homogeneousDepth);
-    bgfx::setViewTransform(0, view, proj);
+    bgfx::setViewTransform(viewId, view, proj);
 }
 
 int SyngineGraphics::CreateWindow() {
@@ -139,9 +141,9 @@ int SyngineGraphics::CreateRenderer() {
     }
     
     //reset view 0 to the dimentions of the window and clear it
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1.0f, 0);
+    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1, 0);
     bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
-    bgfx::setDebug(BGFX_DEBUG_STATS|BGFX_DEBUG_WIREFRAME);
+    bgfx::setDebug(BGFX_DEBUG_TEXT);
 
     this->u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4); //u_modelViewProjection. it's a mat4 that is used to transform the vertices from model space to clip space
 
@@ -216,10 +218,33 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
 }
 
 int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
-    camera.Update(float(this->width) / float(this->height));
+    int viewId = 0;
+    camera.Update(viewId, this->width, this->height); //update camera view and projection matrices
+
+    /*float view[16], proj[16];
+
+    bx::Vec3 eyeVec = { camera.eye[0], camera.eye[1], camera.eye[2] };
+    bx::Vec3 targetVec = { camera.target[0], camera.target[1], camera.target[2] };
+    bx::Vec3 upVec = { camera.up[0], camera.up[1], camera.up[2] };
+    bx::mtxLookAt(view, eyeVec, targetVec, upVec);
+
+    bx::mtxProj(
+        proj,
+        camera.fov,
+        float(this->width) / float(this->height),
+        camera.near,
+        camera.far,
+        bgfx::getCaps()->homogeneousDepth
+    );
+
+    float I[16];
+    bx::mtxIdentity(I); //identity matrix
+
+    bgfx::setViewTransform(viewId, I, I); //set view transform for the view*/
 
     float model[16];
     bx::mtxIdentity(model);
+    //bx::mtxScale(model, 0.1f, 0.1f, 0.1f);
 
     float viewProj[16];
     bx::mtxMul(viewProj, camera.proj, camera.view);
@@ -228,7 +253,6 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
     bx::mtxMul(mvp, viewProj, model);
     
     //background slate
-    int viewId = 0;
     uint32_t bgColor = 0x6495EDff;
 
     bgfx::setViewClear(
@@ -243,18 +267,15 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
     bgfx::touch(viewId);
 
     //prepare render
-    uint64_t renderState =  BGFX_STATE_WRITE_RGB |
-                            BGFX_STATE_WRITE_A |
-                            BGFX_STATE_WRITE_Z |
-                            BGFX_STATE_DEPTH_TEST_LESS;
+    uint64_t renderState = BGFX_STATE_DEFAULT;
 
     bgfx::setState(renderState);
 
-    bgfx::dbgTextPrintf(0, 1, 0x0f, "Mesh count: %u", modelLoader.getMeshes().size());
-    bgfx::dbgTextPrintf(0, 2, 0x0f, "Eye: %.2f, %.2f, %.2f", camera.eye[0], camera.eye[1], camera.eye[2]);
+    //SDL_Log("Mesh count: %zu", modelLoader.getMeshes().size());
+    //SDL_Log("Eye: %.2f, %.2f, %.2f", camera.eye[0], camera.eye[1], camera.eye[2]);
 
     //hardcoded tri test
-    {
+    /*{
         struct PosColorVertex {
             float x,y,z;
         };
@@ -291,12 +312,15 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create triangle buffers");
         }
 
-        //cleanup
         bgfx::destroy(vbh);
         bgfx::destroy(ibh);
-    }
-    
+    }*/
+
     for (auto& mesh : modelLoader.getMeshes()) {
+        /*SDL_Log("Mesh %s has %zu vertices and %zu indices", mesh.material.name.c_str(), mesh.vertices.size(), mesh.indices.size());
+        SDL_Log("Vert 1 pos: %.2f, %.2f, %.2f", mesh.vertices[0].pos[0], mesh.vertices[0].pos[1], mesh.vertices[0].pos[2]);
+        SDL_Log("The VBH is %s", bgfx::isValid(mesh.vbh) ? "valid" : "invalid");
+        SDL_Log("The IBH is %s", bgfx::isValid(mesh.ibh) ? "valid" : "invalid");*/
         bgfx::setVertexBuffer(0, mesh.vbh);
         bgfx::setIndexBuffer(mesh.ibh);
         bgfx::setUniform(u_mvp, mvp);
