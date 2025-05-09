@@ -25,6 +25,8 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
     meshData.numVertices = scene->mNumMeshes > 0 ? scene->mMeshes[0]->mNumVertices : 0;
 
     aiMesh* mesh = scene->mMeshes[0]; //only loads first mesh for now
+
+    meshData.vertices.reserve(mesh->mNumVertices);
     for(unsigned int i = 0; i < mesh->mNumVertices; i++) {
         Vertex vertex;
         vertex.pos[0] = mesh->mVertices[i].x;
@@ -46,6 +48,7 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
     }
 
     //prepare index buffer
+    meshData.indices.reserve(mesh->mNumFaces * 3);
     for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];
         if(face.mNumIndices == 3) {
@@ -71,9 +74,9 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
     memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
     bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
 
-    mem = bgfx::alloc(meshData.indices.size() * sizeof(uint16_t));
-    memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint16_t));
-    bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem);
+    mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
+    memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
+    bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
     meshData.vertices.clear(); //clear vertices and indices from meshData bc its on the GPU now
     meshData.indices.clear(); //clear indices from meshData bc its on the GPU now

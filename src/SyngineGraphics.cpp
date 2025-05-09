@@ -28,9 +28,23 @@ SyngineGraphics::SyngineGraphics(const char* title, int width, int height) {
 void Camera::Update(int viewId, int width, int height) {
     //update view and projection matrices
     bx::Vec3 eyeVec = { eye[0], eye[1], eye[2] };
-    bx::Vec3 targetVec = { target[0], target[1], target[2] };
-    bx::Vec3 upVec = { up[0], up[1], up[2] };
     float aspect = float(width) / float(height);
+
+    bx::Vec3 forward = {
+        cosf(pitch) * sinf(yaw),
+        sinf(pitch),
+        cosf(pitch) * cosf(yaw)
+    };
+    bx::Vec3 right = {
+        sinf(yaw - bx::kPiHalf),
+        0.0f,
+        cosf(yaw - bx::kPiHalf)
+    };
+
+    bx::Vec3 targetVec = bx::add(eyeVec, forward);
+    bx::Vec3 upVec = bx::cross(right, forward);
+
+    bx::mtxLookAt(view, eyeVec, targetVec, upVec);
 
     bx::mtxLookAt(view, eyeVec, targetVec, upVec);
     bx::mtxProj(proj, fov, aspect, near, far, bgfx::getCaps()->homogeneousDepth);
@@ -143,7 +157,7 @@ int SyngineGraphics::CreateRenderer() {
     //reset view 0 to the dimentions of the window and clear it
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1, 0);
     bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
-    bgfx::setDebug(BGFX_DEBUG_TEXT);
+    bgfx::setDebug(BGFX_DEBUG_STATS | BGFX_DEBUG_TEXT);
 
     this->u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4); //u_modelViewProjection. it's a mat4 that is used to transform the vertices from model space to clip space
 

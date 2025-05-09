@@ -15,6 +15,9 @@ struct Camera {
     float view[16];
     float proj[16];
 
+    float yaw = 0.0f;
+    float pitch = 0.0f;
+
     void Update(int viewId, int width, int height);
 };
 
