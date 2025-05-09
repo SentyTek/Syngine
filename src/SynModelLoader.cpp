@@ -1,4 +1,5 @@
 #include "SynModelLoader.h"
+#include "bgfx/bgfx.h"
 #include "defines.h"
 
 #include <assimp/Importer.hpp>
@@ -22,7 +23,6 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
 
     SynMeshData meshData;
     meshData.numVertices = scene->mNumMeshes > 0 ? scene->mMeshes[0]->mNumVertices : 0;
-    SDL_Log("numVertices: %d", meshData.numVertices);
 
     aiMesh* mesh = scene->mMeshes[0]; //only loads first mesh for now
     for(unsigned int i = 0; i < mesh->mNumVertices; i++) {
@@ -30,19 +30,16 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
         vertex.pos[0] = mesh->mVertices[i].x;
         vertex.pos[1] = mesh->mVertices[i].y;
         vertex.pos[2] = mesh->mVertices[i].z;
-        SDL_Log("vertex %d: %.2f, %.2f, %.2f", i, vertex.pos[0], vertex.pos[1], vertex.pos[2]);
 
         if(mesh->HasNormals()) {
             vertex.normal[0] = mesh->mNormals[i].x;
             vertex.normal[1] = mesh->mNormals[i].y;
             vertex.normal[2] = mesh->mNormals[i].z;
-            SDL_Log("normal %d: %.2f, %.2f, %.2f", i, vertex.normal[0], vertex.normal[1], vertex.normal[2]);
         }
 
         if(mesh->HasTextureCoords(0)) {
             vertex.uv[0] = mesh->mTextureCoords[0][i].x;
             vertex.uv[1] = mesh->mTextureCoords[0][i].y;
-            SDL_Log("uv %d: %.2f, %.2f", i, vertex.uv[0], vertex.uv[1]);
         }
 
         meshData.vertices.push_back(vertex);
@@ -52,7 +49,6 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
     for(unsigned int i = 0; i < mesh->mNumFaces; i++) {
         aiFace face = mesh->mFaces[i];
         if(face.mNumIndices == 3) {
-            SDL_Log("face %d: %d, %d, %d", i, face.mIndices[0], face.mIndices[1], face.mIndices[2]);
             meshData.indices.push_back(face.mIndices[0]);
             meshData.indices.push_back(face.mIndices[1]);
             meshData.indices.push_back(face.mIndices[2]);
@@ -71,16 +67,18 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
         .end(); //stride = 48 bytes
 
     //create buffers
-    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(
-        bgfx::makeRef(meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex)),
-        layout
-    );
-    bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(
-        bgfx::makeRef(meshData.indices.data(), meshData.indices.size() * sizeof(uint16_t))
-    );
+    const bgfx::Memory* mem = bgfx::alloc(meshData.vertices.size() * sizeof(Vertex));
+    memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
+    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
+
+    mem = bgfx::alloc(meshData.indices.size() * sizeof(uint16_t));
+    memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint16_t));
+    bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem);
+
+    meshData.vertices.clear(); //clear vertices and indices from meshData bc its on the GPU now
+    meshData.indices.clear(); //clear indices from meshData bc its on the GPU now
 
     //checks
-    SDL_Log("Loaded mesh with %zu vertices and %zu indices", meshData.vertices.size(), meshData.indices.size());
     if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
         SDL_Log("Failed to create vertex/index buffer");
         return false;

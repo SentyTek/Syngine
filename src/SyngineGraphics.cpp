@@ -221,36 +221,15 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
     int viewId = 0;
     camera.Update(viewId, this->width, this->height); //update camera view and projection matrices
 
-    /*float view[16], proj[16];
-
-    bx::Vec3 eyeVec = { camera.eye[0], camera.eye[1], camera.eye[2] };
-    bx::Vec3 targetVec = { camera.target[0], camera.target[1], camera.target[2] };
-    bx::Vec3 upVec = { camera.up[0], camera.up[1], camera.up[2] };
-    bx::mtxLookAt(view, eyeVec, targetVec, upVec);
-
-    bx::mtxProj(
-        proj,
-        camera.fov,
-        float(this->width) / float(this->height),
-        camera.near,
-        camera.far,
-        bgfx::getCaps()->homogeneousDepth
-    );
-
-    float I[16];
-    bx::mtxIdentity(I); //identity matrix
-
-    bgfx::setViewTransform(viewId, I, I); //set view transform for the view*/
-
     float model[16];
     bx::mtxIdentity(model);
     //bx::mtxScale(model, 0.1f, 0.1f, 0.1f);
 
     float viewProj[16];
-    bx::mtxMul(viewProj, camera.proj, camera.view);
+    bx::mtxMul(viewProj, model, camera.view);
 
     float mvp[16];
-    bx::mtxMul(mvp, viewProj, model);
+    bx::mtxMul(mvp, viewProj, camera.proj);
     
     //background slate
     uint32_t bgColor = 0x6495EDff;
@@ -273,48 +252,6 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
 
     //SDL_Log("Mesh count: %zu", modelLoader.getMeshes().size());
     //SDL_Log("Eye: %.2f, %.2f, %.2f", camera.eye[0], camera.eye[1], camera.eye[2]);
-
-    //hardcoded tri test
-    /*{
-        struct PosColorVertex {
-            float x,y,z;
-        };
-
-        static PosColorVertex triangleVertices[] = {
-            { -1.0f, -1.0f, 0.0f },  //top left
-            {  1.0f, -1.0f, 0.0f }, //top right
-            {  0.0f,  1.0f, 0.0f } //bottom center
-        };
-
-        static uint16_t triangleIndices[] = {
-            0, 1, 2
-        };
-
-        bgfx::VertexLayout layout;
-        layout.begin()
-            .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
-            .end();
-        
-        bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(
-            bgfx::makeRef(triangleVertices, sizeof(triangleVertices)),
-            layout
-        );
-        bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(
-            bgfx::makeRef(triangleIndices, sizeof(triangleIndices))
-        );
-        
-        if(bgfx::isValid(vbh) && bgfx::isValid(ibh)) {
-            bgfx::setVertexBuffer(0, vbh);
-            bgfx::setIndexBuffer(ibh);
-            bgfx::setUniform(u_mvp, mvp);
-            bgfx::submit(viewId, this->program);
-        } else {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create triangle buffers");
-        }
-
-        bgfx::destroy(vbh);
-        bgfx::destroy(ibh);
-    }*/
 
     for (auto& mesh : modelLoader.getMeshes()) {
         /*SDL_Log("Mesh %s has %zu vertices and %zu indices", mesh.material.name.c_str(), mesh.vertices.size(), mesh.indices.size());
