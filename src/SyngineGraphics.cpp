@@ -1,7 +1,6 @@
 #include "SyngineGraphics.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
-#include "helpers.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
@@ -157,7 +156,6 @@ int SyngineGraphics::CreateRenderer() {
     //reset view 0 to the dimentions of the window and clear it
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1, 0);
     bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
-    bgfx::setDebug(BGFX_DEBUG_STATS | BGFX_DEBUG_TEXT);
 
     this->u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4); //u_modelViewProjection. it's a mat4 that is used to transform the vertices from model space to clip space
 
@@ -236,8 +234,7 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
     camera.Update(viewId, this->width, this->height); //update camera view and projection matrices
 
     float model[16];
-    bx::mtxIdentity(model);
-    //bx::mtxScale(model, 0.1f, 0.1f, 0.1f);
+    bx::mtxSRT(model, 30.0f, 1.0f, 30.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f); //once again hardcoded for now until ECS is built
 
     float viewProj[16];
     bx::mtxMul(viewProj, model, camera.view);
@@ -260,7 +257,7 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
     bgfx::touch(viewId);
 
     //prepare render
-    uint64_t renderState = BGFX_STATE_DEFAULT;
+    uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_CULL_CCW;
 
     bgfx::setState(renderState);
 
@@ -272,9 +269,15 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
         SDL_Log("Vert 1 pos: %.2f, %.2f, %.2f", mesh.vertices[0].pos[0], mesh.vertices[0].pos[1], mesh.vertices[0].pos[2]);
         SDL_Log("The VBH is %s", bgfx::isValid(mesh.vbh) ? "valid" : "invalid");
         SDL_Log("The IBH is %s", bgfx::isValid(mesh.ibh) ? "valid" : "invalid");*/
+
+        //TODO: add support for multiple materials
+        bgfx::UniformHandle u_baseColorSampler = bgfx::createUniform("s_baseColor", bgfx::UniformType::Sampler);
+        bgfx::setTexture(0, u_baseColorSampler, mesh.materials[1].baseColor);
+
         bgfx::setVertexBuffer(0, mesh.vbh);
         bgfx::setIndexBuffer(mesh.ibh);
         bgfx::setUniform(u_mvp, mvp);
+
         bgfx::submit(viewId, this->program);
     }
 

@@ -70,10 +70,7 @@ int SyngineCore::SyngineEventLoop() {
             } else if (event.type == SDL_EVENT_WINDOW_RESIZED) {
                 int w, h;
                 SDL_Window* resizedWindow = SDL_GetWindowFromID(event.window.windowID);
-                if (resizedWindow) {
-                    SDL_GetWindowSize(resizedWindow, &w, &h);
-                }
-                SDL_Log("Window resized to %d x %d", w, h);
+                SDL_GetWindowSize(resizedWindow, &w, &h);
 
                 this->app->graphics->width = w;
                 this->app->graphics->height = h;
@@ -81,14 +78,10 @@ int SyngineCore::SyngineEventLoop() {
                 bgfx::setViewRect(0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
                 if (event.key.key == SDLK_F) {
-                    SDL_Log("F key pressed");
-                    
                     //load model
-                    std::string modelPath = resolveOSPath("meshes/horosont.dae"); // Path to your model
+                    std::string modelPath = resolveOSPath("meshes/ground.glb");
                     SynMeshData meshData;
-                    if (this->app->synModels->LoadModel(modelPath, meshData)) {
-                        SDL_Log("Model loaded successfully");
-                    } else {
+                    if (!this->app->synModels->LoadModel(meshData, modelPath, true)) {
                         SDL_Log("Failed to load model");
                     }
                 } else if (event.key.key == SDLK_ESCAPE) {
@@ -122,7 +115,7 @@ int SyngineCore::SyngineEventLoop() {
         if (keystate[SDL_SCANCODE_S]) {
             moveVector = {
                 -cosf(camera.pitch) * sinf(camera.yaw),
-                sinf(camera.pitch),
+                -sinf(camera.pitch),
                 -cosf(camera.pitch) * cosf(camera.yaw)
             };
             moveVector = bx::mul(moveVector, 0.1f);

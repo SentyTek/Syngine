@@ -1,12 +1,16 @@
 #include "SynModelLoader.h"
+#include "assimp/material.h"
 #include "bgfx/bgfx.h"
 #include "defines.h"
+#include "helpers.h"
+#include <cstdint>
+#include <time.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 
 //Returns true if the model was loaded successfully, false otherwise
-bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
+bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
     //read file. ideally use some kind of post processing (tangents, join indices, etc), but this is a simple example
@@ -85,6 +89,35 @@ bool AssimpLoader::LoadModel(const std::string& path, SynMeshData& out) {
     if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
         SDL_Log("Failed to create vertex/index buffer");
         return false;
+    }
+
+    if(loadTextures) {
+        //load materials
+        meshData.materials.reserve(scene->mNumMaterials);
+        for(unsigned int i = 0; i < scene->mNumMaterials; ++i) {
+            aiMaterial* material = scene->mMaterials[i];
+            Material mat;
+
+            aiString texPath;
+            if(material->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS) {
+                const aiTexture* tex = scene->GetEmbeddedTexture(texPath.C_Str());
+                if(tex->mHeight == 0) {
+                    //compressed texture
+                    bgfx::TextureHandle texHandle = SynLoadTextureFromMemory(
+                        (const uint8_t*)tex->pcData,
+                        tex->mWidth,
+                        texPath.C_Str() //for debugging or caching
+                    );
+                    mat.baseColor = texHandle;
+                } else {
+                    //uncompressed
+                }
+            } else {
+                mat.baseColor = BGFX_INVALID_HANDLE;
+            }
+            mat.name = "material_" + std::to_string(i);
+            meshData.materials.push_back(mat);
+        }
     }
 
     //and output
