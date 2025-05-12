@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 #include <bgfx/bgfx.h>
 #include "SynModelLoader.h"
+#include "bx/math.h"
 
 struct Camera {
     float eye[3] = {0.0f, 0.0f, -5.0f};
@@ -21,6 +22,16 @@ struct Camera {
     void Update(int viewId, int width, int height);
 };
 
+struct SynHandles {
+    bgfx::ProgramHandle program = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_mvp = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_lightDir = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_normalMatrix = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_albedo = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_normalMapSampler = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_heightMapSampler = BGFX_INVALID_HANDLE;
+};
+
 class SyngineGraphics {
     std::string title;
     
@@ -29,8 +40,7 @@ class SyngineGraphics {
     int height;
     SDL_Window* win;
     Camera camera;
-    bgfx::ProgramHandle program = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_mvp = BGFX_INVALID_HANDLE;
+    SynHandles handles;
     
     SyngineGraphics(const char* title, int width, int height);
     int CreateWindow();
@@ -41,5 +51,5 @@ class SyngineGraphics {
     bgfx::ProgramHandle GetProgram() const;
     int DestroyProgram();
     
-    int RenderFrame(SynModelLoader& modelLoader);
+    int RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir);
 };

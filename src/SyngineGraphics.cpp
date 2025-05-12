@@ -7,7 +7,6 @@
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_properties.h>
 
-#include <bx/math.h>
 #include <bgfx/platform.h>
 #include <cstdint>
 
@@ -157,7 +156,13 @@ int SyngineGraphics::CreateRenderer() {
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1, 0);
     bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
 
-    this->u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4); //u_modelViewProjection. it's a mat4 that is used to transform the vertices from model space to clip space
+    this->handles.u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4); //u_modelViewProjection. it's a mat4 that is used to transform the vertices from model space to clip space
+    this->handles.u_lightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
+
+    this->handles.u_albedo = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
+    this->handles.u_normalMapSampler = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
+    this->handles.u_normalMatrix = bgfx::createUniform("u_normalMatrix", bgfx::UniformType::Mat3);
+    this->handles.u_heightMapSampler = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
 
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
@@ -183,36 +188,36 @@ int SyngineGraphics::DestroyRenderer() {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to destroy renderer for");
         return 1;
     }
-    bgfx::destroy(this->u_mvp);
+    bgfx::destroy(this->handles.u_mvp);
     bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
     SDL_Log("goodbye renderer");
     return 0;
 }
 
 void SyngineGraphics::SetProgram(bgfx::ProgramHandle program) {
-    if (bgfx::isValid(this->program)) {
-        bgfx::destroy(this->program);
+    if (bgfx::isValid(this->handles.program)) {
+        bgfx::destroy(this->handles.program);
         SDL_Log("Replacing program");
     }
-    this->program = program;
+    this->handles.program = program;
 
     // Add diagnostic info
-    if (bgfx::isValid(this->program)) {
+    if (bgfx::isValid(this->handles.program)) {
         SDL_Log("Program successfully set");
     } else {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to set program - invalid handle");
     }
 }
 bgfx::ProgramHandle SyngineGraphics::GetProgram() const {
-    return this->program;
+    return this->handles.program;
 }
 int SyngineGraphics::DestroyProgram() {
-    if (!bgfx::isValid(this->program)) {
+    if (!bgfx::isValid(this->handles.program)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No program to destroy");
         return 1;
     }
-    bgfx::destroy(this->program);
-    this->program = BGFX_INVALID_HANDLE;
+    bgfx::destroy(this->handles.program);
+    this->handles.program = BGFX_INVALID_HANDLE;
     return 0;
 }
 
@@ -229,12 +234,13 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
     SDL_Log("goodbye world");
 }
 
-int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
+int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir) {
     int viewId = 0;
     camera.Update(viewId, this->width, this->height); //update camera view and projection matrices
 
     float model[16];
-    bx::mtxSRT(model, 30.0f, 1.0f, 30.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f); //once again hardcoded for now until ECS is built
+    bx::mtxSRT(model, 30.0f, 1.0f, 30.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    //once again, hardcoded above until the transform component is implemented
 
     float viewProj[16];
     bx::mtxMul(viewProj, model, camera.view);
@@ -257,28 +263,39 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader) {
     bgfx::touch(viewId);
 
     //prepare render
-    uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_CULL_CCW;
+    uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_CULL_CCW | BGFX_STATE_MSAA;
 
     bgfx::setState(renderState);
 
-    //SDL_Log("Mesh count: %zu", modelLoader.getMeshes().size());
-    //SDL_Log("Eye: %.2f, %.2f, %.2f", camera.eye[0], camera.eye[1], camera.eye[2]);
+    constexpr uint32_t samplerFlags =
+        BGFX_SAMPLER_MIN_ANISOTROPIC |
+        BGFX_SAMPLER_MAG_ANISOTROPIC;
 
     for (auto& mesh : modelLoader.getMeshes()) {
-        /*SDL_Log("Mesh %s has %zu vertices and %zu indices", mesh.material.name.c_str(), mesh.vertices.size(), mesh.indices.size());
-        SDL_Log("Vert 1 pos: %.2f, %.2f, %.2f", mesh.vertices[0].pos[0], mesh.vertices[0].pos[1], mesh.vertices[0].pos[2]);
-        SDL_Log("The VBH is %s", bgfx::isValid(mesh.vbh) ? "valid" : "invalid");
-        SDL_Log("The IBH is %s", bgfx::isValid(mesh.ibh) ? "valid" : "invalid");*/
-
         //TODO: add support for multiple materials
-        bgfx::UniformHandle u_baseColorSampler = bgfx::createUniform("s_baseColor", bgfx::UniformType::Sampler);
-        bgfx::setTexture(0, u_baseColorSampler, mesh.materials[1].baseColor);
+        bgfx::setTexture(0, handles.u_albedo, mesh.materials[0].baseColor, samplerFlags);
+        bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
+        bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
+
+        float sx = bx::length(bx::Vec3(model[0], model[1], model[2]));
+        float sy = bx::length(bx::Vec3(model[4], model[5], model[6]));
+        float sz = bx::length(bx::Vec3(model[8], model[9], model[10]));
+
+        float normal3x3[9];
+        for(int i = 0; i < 3; ++i) {
+            normal3x3[i * 3 + 0] = model[i * 4 + 0] / sx;
+            normal3x3[i * 3 + 1] = model[i * 4 + 1] / sy;
+            normal3x3[i * 3 + 2] = model[i * 4 + 2] / sz;
+        }
+
+        bgfx::setUniform(handles.u_normalMatrix, normal3x3);
 
         bgfx::setVertexBuffer(0, mesh.vbh);
         bgfx::setIndexBuffer(mesh.ibh);
-        bgfx::setUniform(u_mvp, mvp);
+        bgfx::setUniform(handles.u_mvp, mvp);
+        bgfx::setUniform(handles.u_lightDir, &lightDir);
 
-        bgfx::submit(viewId, this->program);
+        bgfx::submit(viewId, this->handles.program);
     }
 
     bgfx::frame(); // submit the frame

@@ -51,6 +51,9 @@ int SyngineCore::SyngineEventLoop() {
     bool mouseLook = false;
     int frame = 0;
 
+    float sunYaw = 0.0f; //around Y
+    float sunPitch = bx::kPi*0.25f; //down
+
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch = bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
 
@@ -100,84 +103,107 @@ int SyngineCore::SyngineEventLoop() {
 
         //camera movement
         if (mouseLook) {
-        if (keystate[SDL_SCANCODE_W]) {
-            moveVector = {
-                cosf(camera.pitch) * sinf(camera.yaw),
-                sinf(camera.pitch),
-                cosf(camera.pitch) * cosf(camera.yaw)
-            };
-            moveVector = bx::mul(moveVector, 0.1f);
-            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = newEye.x;
-            camera.eye[1] = newEye.y;
-            camera.eye[2] = newEye.z;
+            if (keystate[SDL_SCANCODE_W]) {
+                moveVector = {
+                    cosf(camera.pitch) * sinf(camera.yaw),
+                    sinf(camera.pitch),
+                    cosf(camera.pitch) * cosf(camera.yaw)
+                };
+                moveVector = bx::mul(moveVector, 0.1f);
+                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = newEye.x;
+                camera.eye[1] = newEye.y;
+                camera.eye[2] = newEye.z;
+            }
+            if (keystate[SDL_SCANCODE_S]) {
+                moveVector = {
+                    -cosf(camera.pitch) * sinf(camera.yaw),
+                    -sinf(camera.pitch),
+                    -cosf(camera.pitch) * cosf(camera.yaw)
+                };
+                moveVector = bx::mul(moveVector, 0.1f);
+                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = newEye.x;
+                camera.eye[1] = newEye.y;
+                camera.eye[2] = newEye.z;
+            }
+            if (keystate[SDL_SCANCODE_A]) {
+                moveVector = {
+                    sinf(camera.yaw - bx::kPiHalf),
+                    0.0f,
+                    cosf(camera.yaw - bx::kPiHalf)
+                };
+                moveVector = bx::mul(moveVector, 0.1f);
+                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = newEye.x;
+                camera.eye[1] = newEye.y;
+                camera.eye[2] = newEye.z;
+            }
+            if (keystate[SDL_SCANCODE_D]) {
+                moveVector = {
+                    sinf(camera.yaw + bx::kPiHalf),
+                    0.0f,
+                    cosf(camera.yaw + bx::kPiHalf)
+                };
+                moveVector = bx::mul(moveVector, 0.1f);
+                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = newEye.x;
+                camera.eye[1] = newEye.y;
+                camera.eye[2] = newEye.z;
+            }
+            if (keystate[SDL_SCANCODE_Q]) {
+                moveVector = {
+                    0.0f,
+                    -1.0f,
+                    0.0f
+                };
+                moveVector = bx::mul(moveVector, 0.1f);
+                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = newEye.x;
+                camera.eye[1] = newEye.y;
+                camera.eye[2] = newEye.z;
+            }
+            if (keystate[SDL_SCANCODE_E]) {
+                moveVector = {
+                    0.0f,
+                    1.0f,
+                    0.0f
+                };
+                moveVector = bx::mul(moveVector, 0.1f);
+                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = newEye.x;
+                camera.eye[1] = newEye.y;
+                camera.eye[2] = newEye.z;
+            }
         }
-        if (keystate[SDL_SCANCODE_S]) {
-            moveVector = {
-                -cosf(camera.pitch) * sinf(camera.yaw),
-                -sinf(camera.pitch),
-                -cosf(camera.pitch) * cosf(camera.yaw)
-            };
-            moveVector = bx::mul(moveVector, 0.1f);
-            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = newEye.x;
-            camera.eye[1] = newEye.y;
-            camera.eye[2] = newEye.z;
+        //sun
+        if (keystate[SDL_SCANCODE_LEFT]) {
+            sunYaw += 0.01f;
         }
-        if (keystate[SDL_SCANCODE_A]) {
-            moveVector = {
-                sinf(camera.yaw - bx::kPiHalf),
-                0.0f,
-                cosf(camera.yaw - bx::kPiHalf)
-            };
-            moveVector = bx::mul(moveVector, 0.1f);
-            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = newEye.x;
-            camera.eye[1] = newEye.y;
-            camera.eye[2] = newEye.z;
+        if (keystate[SDL_SCANCODE_RIGHT]) {
+            sunYaw -= 0.01f;
         }
-        if (keystate[SDL_SCANCODE_D]) {
-            moveVector = {
-                sinf(camera.yaw + bx::kPiHalf),
-                0.0f,
-                cosf(camera.yaw + bx::kPiHalf)
-            };
-            moveVector = bx::mul(moveVector, 0.1f);
-            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = newEye.x;
-            camera.eye[1] = newEye.y;
-            camera.eye[2] = newEye.z;
+        if (keystate[SDL_SCANCODE_UP]) {
+            sunPitch = bx::clamp(sunPitch - 0.01f, 0.0f, bx::kPi*0.5f);
         }
-        if (keystate[SDL_SCANCODE_Q]) {
-            moveVector = {
-                0.0f,
-                -1.0f,
-                0.0f
-            };
-            moveVector = bx::mul(moveVector, 0.1f);
-            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = newEye.x;
-            camera.eye[1] = newEye.y;
-            camera.eye[2] = newEye.z;
+        if (keystate[SDL_SCANCODE_DOWN]) {
+            sunPitch = bx::clamp(sunPitch + 0.01f, 0.0f, bx::kPi*0.5f);
         }
-        if (keystate[SDL_SCANCODE_E]) {
-            moveVector = {
-                0.0f,
-                1.0f,
-                0.0f
-            };
-            moveVector = bx::mul(moveVector, 0.1f);
-            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = newEye.x;
-            camera.eye[1] = newEye.y;
-            camera.eye[2] = newEye.z;
-        }
-        }
+        float cy = cosf(sunPitch);
+        bx::Vec3 lightDir = {
+            cy * sinf(sunYaw),
+            -sinf(sunPitch), //negative so "up" = light coming down
+            cy * cosf(sunYaw)
+        };
+        lightDir = bx::normalize(lightDir);
         
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(*(this->app->synModels)); // render frame
+            this->app->graphics->RenderFrame(*(this->app->synModels), lightDir); // render frame
         }
         
+        if (frame % 60 == 0) {
+            SDL_Log("Sun Direction: (%f, %f, %f)", lightDir.x, lightDir.y, lightDir.z);
+        }
         ++frame;
     }
     

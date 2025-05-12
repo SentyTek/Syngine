@@ -9,11 +9,14 @@ struct Vertex {
     float normal[3] = {0.0f, 0.0f, 0.0f};
     float uv[2] = {0.0f, 0.0f};
     float color[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // RGBA
+    float tangent[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // XYZW
 };
 
 struct Material {
     std::string name = "empty";
     bgfx::TextureHandle baseColor = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle normalMap = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle heightMap = BGFX_INVALID_HANDLE;
 };
 
 struct SynMeshData {

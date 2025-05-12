@@ -1,6 +1,8 @@
 #include "SynModelLoader.h"
 #include "assimp/material.h"
+#include "assimp/postprocess.h"
 #include "bgfx/bgfx.h"
+#include "bx/math.h"
 #include "defines.h"
 #include "helpers.h"
 #include <cstdint>
@@ -13,8 +15,12 @@
 bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
+    const uint16_t flags    = aiProcess_JoinIdenticalVertices
+                            | aiProcess_CalcTangentSpace
+                            | aiProcess_GenSmoothNormals;
+
     //read file. ideally use some kind of post processing (tangents, join indices, etc), but this is a simple example
-    const aiScene* scene = importer.ReadFile(path, 0);
+    const aiScene* scene = importer.ReadFile(path, flags);
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->HasMeshes()) {
         SDL_Log("Error loading model: %s", importer.GetErrorString());
         return false;
@@ -48,6 +54,16 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             vertex.uv[1] = mesh->mTextureCoords[0][i].y;
         }
 
+        if(mesh->HasTangentsAndBitangents()) {
+            vertex.tangent[0] = mesh->mTangents[i].x;
+            vertex.tangent[1] = mesh->mTangents[i].y;
+            vertex.tangent[2] = mesh->mTangents[i].z;
+            vertex.tangent[3] = mesh->mBitangents[i].x * 
+                                (bx::dot(bx::Vec3{mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z}, 
+                                         bx::Vec3{mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z})
+                                > 0.0f ? 1.0f : -1.0f);
+        }
+
         meshData.vertices.push_back(vertex);
     }
 
@@ -71,6 +87,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
         .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
         .end(); //stride = 48 bytes
 
     //create buffers
@@ -108,12 +125,60 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
                         tex->mWidth,
                         texPath.C_Str() //for debugging or caching
                     );
+                    if(!bgfx::isValid(texHandle)) {
+                        SDL_Log("Failed to load texture %s", texPath.C_Str());
+                        return false;
+                    }
                     mat.baseColor = texHandle;
                 } else {
                     //uncompressed
                 }
             } else {
                 mat.baseColor = BGFX_INVALID_HANDLE;
+            }
+
+            aiString normPath;
+            if(material->GetTexture(aiTextureType_NORMALS, 0, &normPath) == AI_SUCCESS) {
+                const aiTexture* normTex = scene->GetEmbeddedTexture(normPath.C_Str());
+                if(normTex->mHeight == 0) {
+                    //compressed texture
+                    bgfx::TextureHandle texHandle = SynLoadTextureFromMemory(
+                        (const uint8_t*)normTex->pcData,
+                        normTex->mWidth,
+                        normPath.C_Str() //for debugging or caching
+                    );
+                    if(!bgfx::isValid(texHandle)) {
+                        SDL_Log("Failed to load normal map %s", normPath.C_Str());
+                        return false;
+                    }
+                    mat.normalMap = texHandle;
+                } else {
+                    //uncompressed
+                }
+            } else {
+                mat.normalMap = BGFX_INVALID_HANDLE;
+            }
+            
+            aiString heightPath;
+            if(material->GetTexture(aiTextureType_HEIGHT, 0, &heightPath) == AI_SUCCESS) {
+                const aiTexture* heightTex = scene->GetEmbeddedTexture(heightPath.C_Str());
+                if(heightTex->mHeight == 0) {
+                    //compressed texture
+                    bgfx::TextureHandle texHandle = SynLoadTextureFromMemory(
+                        (const uint8_t*)heightTex->pcData,
+                        heightTex->mWidth,
+                        heightPath.C_Str() //for debugging or caching
+                    );
+                    if(!bgfx::isValid(texHandle)) {
+                        SDL_Log("Failed to load height map %s", heightPath.C_Str());
+                        return false;
+                    }
+                    mat.heightMap = texHandle;
+                } else {
+                    //uncompressed
+                }
+            } else {
+                mat.heightMap = BGFX_INVALID_HANDLE;
             }
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);
