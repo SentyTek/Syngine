@@ -157,12 +157,16 @@ int SyngineGraphics::CreateRenderer() {
     bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
 
     this->handles.u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4); //u_modelViewProjection. it's a mat4 that is used to transform the vertices from model space to clip space
-    this->handles.u_lightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
-
-    this->handles.u_albedo = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
+    
+    this->handles.u_albedoSampler = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
     this->handles.u_normalMapSampler = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-    this->handles.u_normalMatrix = bgfx::createUniform("u_normalMatrix", bgfx::UniformType::Mat3);
     this->handles.u_heightMapSampler = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
+    
+    this->handles.u_normalMatrix = bgfx::createUniform("u_normalMatrix", bgfx::UniformType::Mat3);
+    this->handles.u_heightScale = bgfx::createUniform("u_heightScale", bgfx::UniformType::Vec4);
+    this->handles.u_mixFactor = bgfx::createUniform("u_mixFactor", bgfx::UniformType::Vec4);
+    this->handles.u_lightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
+    this->handles.u_ambient = bgfx::createUniform("u_ambient", bgfx::UniformType::Vec4);
 
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
@@ -239,7 +243,7 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
     camera.Update(viewId, this->width, this->height); //update camera view and projection matrices
 
     float model[16];
-    bx::mtxSRT(model, 30.0f, 1.0f, 30.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    bx::mtxSRT(model, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     //once again, hardcoded above until the transform component is implemented
 
     float viewProj[16];
@@ -273,7 +277,7 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
 
     for (auto& mesh : modelLoader.getMeshes()) {
         //TODO: add support for multiple materials
-        bgfx::setTexture(0, handles.u_albedo, mesh.materials[0].baseColor, samplerFlags);
+        bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
         bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
         bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
 
@@ -289,13 +293,19 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
         }
 
         bgfx::setUniform(handles.u_normalMatrix, normal3x3);
+        bgfx::setUniform(handles.u_mvp, mvp);
+        bgfx::setUniform(handles.u_lightDir, &lightDir);
+        bgfx::setUniform(handles.u_heightScale, &mesh.materials[0].heightScale);
+        bgfx::setUniform(handles.u_mixFactor, &mesh.materials[0].mixMacro);
+        bgfx::setUniform(handles.u_ambient, &mesh.materials[0].ambient);
 
         bgfx::setVertexBuffer(0, mesh.vbh);
         bgfx::setIndexBuffer(mesh.ibh);
-        bgfx::setUniform(handles.u_mvp, mvp);
-        bgfx::setUniform(handles.u_lightDir, &lightDir);
 
         bgfx::submit(viewId, this->handles.program);
+
+        printf("mix=%.2f ambient=%.2f heightScale=%.2f\n",
+            mesh.materials[0].mixMacro, mesh.materials[0].ambient, mesh.materials[0].heightScale);
     }
 
     bgfx::frame(); // submit the frame

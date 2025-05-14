@@ -207,6 +207,7 @@ int SyngineCore::SyngineEventLoop() {
         ++frame;
     }
     
+    this->app->synModels->UnloadAll();
     SDL_Log("Exiting event loop");
     return 0;
 }

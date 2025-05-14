@@ -7,16 +7,22 @@
 struct Vertex {
     float pos[3] = {0.0f, 0.0f, 0.0f};
     float normal[3] = {0.0f, 0.0f, 0.0f};
-    float uv[2] = {0.0f, 0.0f};
+    float uv0[2] = {0.0f, 0.0f}; //macro UV
+    float uv1[2] = {0.0f, 0.0f}; //for detail maps
     float color[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // RGBA
     float tangent[4] = {0.0f, 0.0f, 0.0f, 0.0f}; // XYZW
 };
 
 struct Material {
     std::string name = "empty";
-    bgfx::TextureHandle baseColor = BGFX_INVALID_HANDLE;
+    bgfx::TextureHandle albedo = BGFX_INVALID_HANDLE;
     bgfx::TextureHandle normalMap = BGFX_INVALID_HANDLE;
     bgfx::TextureHandle heightMap = BGFX_INVALID_HANDLE;
+
+    float tileDetail = 30.0f; //how many repeats of detail maps
+    float heightScale = 1.0f; //matches blender displacement
+    float mixMacro = 0.5f; //mix between detail and macro maps
+    float ambient = 0.2f; //ambient floor
 };
 
 struct SynMeshData {

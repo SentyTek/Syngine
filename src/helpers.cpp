@@ -81,3 +81,29 @@ bgfx::TextureHandle SynLoadTextureFromMemory(const uint8_t* data, size_t size, c
     stbi_image_free(pixels);
     return tex;
 }
+
+bgfx::TextureHandle SynLoadTextureFromFile(const char* path) {
+    SDL_IOStream* rw = SDL_IOFromFile(path, "rb");
+    if (!rw) {
+        SDL_Log("Failed to open file %s", path);
+        return BGFX_INVALID_HANDLE;
+    }
+
+    Sint64 size = SDL_GetIOSize(rw);
+    std::vector<Sint64> data(size);
+    SDL_ReadIO(rw, data.data(), size);
+    SDL_CloseIO(rw);
+
+    return SynLoadTextureFromMemory((uint8_t*)data.data(), size, path);
+}
+
+bgfx::TextureHandle SynCreateFlatTexture() {
+    uint8_t data[4] = { 127, 127, 127, 127 }; // white color
+    const bgfx::Memory* mem = bgfx::copy(data, sizeof(data));
+    bgfx::TextureHandle tex = bgfx::createTexture2D(
+        1, 1, false, 1, bgfx::TextureFormat::RGBA8,
+        BGFX_TEXTURE_NONE | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
+        mem
+    );
+    return tex;
+}

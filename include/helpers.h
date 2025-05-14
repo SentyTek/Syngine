@@ -24,3 +24,5 @@ inline std::string resolveOSPath(const char* path)
 }
 
 bgfx::TextureHandle SynLoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
+bgfx::TextureHandle SynLoadTextureFromFile(const char* path);
+bgfx::TextureHandle SynCreateFlatTexture();

@@ -25,9 +25,14 @@ struct Camera {
 struct SynHandles {
     bgfx::ProgramHandle program = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle u_mvp = BGFX_INVALID_HANDLE;
+
     bgfx::UniformHandle u_lightDir = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle u_normalMatrix = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_albedo = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_heightScale = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_mixFactor = BGFX_INVALID_HANDLE;
+    bgfx::UniformHandle u_ambient = BGFX_INVALID_HANDLE;
+
+    bgfx::UniformHandle u_albedoSampler = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle u_normalMapSampler = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle u_heightMapSampler = BGFX_INVALID_HANDLE;
 };

@@ -6,7 +6,6 @@
 #include "defines.h"
 #include "helpers.h"
 #include <cstdint>
-#include <time.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -50,8 +49,15 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         }
 
         if(mesh->HasTextureCoords(0)) {
-            vertex.uv[0] = mesh->mTextureCoords[0][i].x;
-            vertex.uv[1] = mesh->mTextureCoords[0][i].y;
+            vertex.uv0[0] = mesh->mTextureCoords[0][i].x;
+            vertex.uv0[1] = mesh->mTextureCoords[0][i].y;
+        }
+        if(mesh->HasTextureCoords(1)) {
+            vertex.uv1[0] = mesh->mTextureCoords[1][i].x;
+            vertex.uv1[1] = mesh->mTextureCoords[1][i].y;
+        } else {
+            vertex.uv1[0] = vertex.uv0[0];
+            vertex.uv1[1] = vertex.uv0[0];
         }
 
         if(mesh->HasTangentsAndBitangents()) {
@@ -85,10 +91,11 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
     layout.begin()
         .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
         .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float) //macro UV
+        .add(bgfx::Attrib::TexCoord1, 2, bgfx::AttribType::Float) //detail UV
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
         .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
-        .end(); //stride = 48 bytes
+        .end(); //stride = 72 bytes
 
     //create buffers
     const bgfx::Memory* mem = bgfx::alloc(meshData.vertices.size() * sizeof(Vertex));
@@ -129,12 +136,12 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
                         SDL_Log("Failed to load texture %s", texPath.C_Str());
                         return false;
                     }
-                    mat.baseColor = texHandle;
+                    mat.albedo = texHandle;
                 } else {
                     //uncompressed
                 }
             } else {
-                mat.baseColor = BGFX_INVALID_HANDLE;
+                mat.albedo = BGFX_INVALID_HANDLE;
             }
 
             aiString normPath;
@@ -159,26 +166,17 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
                 mat.normalMap = BGFX_INVALID_HANDLE;
             }
             
-            aiString heightPath;
-            if(material->GetTexture(aiTextureType_HEIGHT, 0, &heightPath) == AI_SUCCESS) {
-                const aiTexture* heightTex = scene->GetEmbeddedTexture(heightPath.C_Str());
-                if(heightTex->mHeight == 0) {
-                    //compressed texture
-                    bgfx::TextureHandle texHandle = SynLoadTextureFromMemory(
-                        (const uint8_t*)heightTex->pcData,
-                        heightTex->mWidth,
-                        heightPath.C_Str() //for debugging or caching
-                    );
-                    if(!bgfx::isValid(texHandle)) {
-                        SDL_Log("Failed to load height map %s", heightPath.C_Str());
-                        return false;
-                    }
-                    mat.heightMap = texHandle;
-                } else {
-                    //uncompressed
+            std::string heightPath = path.substr(0, path.find_last_of('.')) + "_height.png";
+
+            if (std::filesystem::exists(heightPath)) {
+                bgfx::TextureHandle texHandle = SynLoadTextureFromFile(heightPath.c_str());
+                if (!bgfx::isValid(texHandle)) {
+                    SDL_Log("Failed to load height map %s", heightPath.c_str());
+                    return false;
                 }
+                mat.heightMap = texHandle;
             } else {
-                mat.heightMap = BGFX_INVALID_HANDLE;
+                mat.heightMap = SynCreateFlatTexture();
             }
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);
@@ -195,6 +193,18 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
 
 void AssimpLoader::UnloadAll() {
     for (auto& mesh : meshes) {
+        for (auto& mat : mesh.materials) {
+            if (bgfx::isValid(mat.albedo)) {
+                bgfx::destroy(mat.albedo);
+            }
+            if (bgfx::isValid(mat.normalMap)) {
+                bgfx::destroy(mat.normalMap);
+            }
+            if (bgfx::isValid(mat.heightMap)) {
+                bgfx::destroy(mat.heightMap);
+            }
+        }
+        mesh.materials.clear();
         bgfx::destroy(mesh.vbh);
         bgfx::destroy(mesh.ibh);
         mesh.vertices.clear();
