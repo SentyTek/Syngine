@@ -303,9 +303,6 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
         bgfx::setIndexBuffer(mesh.ibh);
 
         bgfx::submit(viewId, this->handles.program);
-
-        printf("mix=%.2f ambient=%.2f heightScale=%.2f\n",
-            mesh.materials[0].mixMacro, mesh.materials[0].ambient, mesh.materials[0].heightScale);
     }
 
     bgfx::frame(); // submit the frame

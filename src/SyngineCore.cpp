@@ -50,9 +50,8 @@ int SyngineCore::SyngineEventLoop() {
     bool running = true;
     bool mouseLook = false;
     int frame = 0;
-
-    float sunYaw = 0.0f; //around Y
-    float sunPitch = bx::kPi*0.25f; //down
+    
+    bx::Vec3 startDir = {75.0f, 0.0f, 0.0f};
 
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch = bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
@@ -178,22 +177,31 @@ int SyngineCore::SyngineEventLoop() {
         }
         //sun
         if (keystate[SDL_SCANCODE_LEFT]) {
-            sunYaw += 0.01f;
+            startDir.z += 2.0f;
         }
         if (keystate[SDL_SCANCODE_RIGHT]) {
-            sunYaw -= 0.01f;
+            startDir.z -= 2.0f;
         }
         if (keystate[SDL_SCANCODE_UP]) {
-            sunPitch = bx::clamp(sunPitch - 0.01f, 0.0f, bx::kPi*0.5f);
+            startDir.x += 2.0f;
         }
         if (keystate[SDL_SCANCODE_DOWN]) {
-            sunPitch = bx::clamp(sunPitch + 0.01f, 0.0f, bx::kPi*0.5f);
+            startDir.x -= 2.0f;
         }
-        float cy = cosf(sunPitch);
+
+        if (startDir.z > 360.0f) startDir.z -= 360.0f;
+        if (startDir.z < 0.0f)   startDir.z += 360.0f;
+        startDir.x = bx::clamp(startDir.x, -179.99f, 179.99f);
+
+        // Convert to pitch/yaw
+        float pitch = bx::toRad(startDir.x - 90.0f); // vertical angle, 0 = up, 90 = horizon
+        float yaw   = bx::toRad(startDir.z); // horizontal rotation (azimuth)
+
+        float cy = cosf(pitch);
         bx::Vec3 lightDir = {
-            cy * sinf(sunYaw),
-            -sinf(sunPitch), //negative so "up" = light coming down
-            cy * cosf(sunYaw)
+            cy * sinf(yaw),     // x
+            sinf(pitch),       // y (Y-up world, light pointing down is negative)
+            cy * cosf(yaw)      // z
         };
         lightDir = bx::normalize(lightDir);
         
@@ -202,7 +210,7 @@ int SyngineCore::SyngineEventLoop() {
         }
         
         if (frame % 60 == 0) {
-            SDL_Log("Sun Direction: (%f, %f, %f)", lightDir.x, lightDir.y, lightDir.z);
+            SDL_Log("Sun Direction: (%f, %f, %f)", startDir.x, startDir.y, startDir.z);
         }
         ++frame;
     }

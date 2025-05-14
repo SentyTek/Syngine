@@ -1,6 +1,7 @@
 #pragma once
 #include "bgfx/bgfx.h"
 #include <string>
+#include <SDL3/SDL.h>
 
 // This function resolves the full relative path to resourced files based on platform.
 // macOS uses a different path structure than other because of the app bundle structure.
