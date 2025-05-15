@@ -163,10 +163,8 @@ int SyngineGraphics::CreateRenderer() {
     this->handles.u_heightMapSampler = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
     
     this->handles.u_normalMatrix = bgfx::createUniform("u_normalMatrix", bgfx::UniformType::Mat3);
-    this->handles.u_heightScale = bgfx::createUniform("u_heightScale", bgfx::UniformType::Vec4);
-    this->handles.u_mixFactor = bgfx::createUniform("u_mixFactor", bgfx::UniformType::Vec4);
     this->handles.u_lightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
-    this->handles.u_ambient = bgfx::createUniform("u_ambient", bgfx::UniformType::Vec4);
+    this->handles.u_floats = bgfx::createUniform("u_floats", bgfx::UniformType::Vec4);
 
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
@@ -292,16 +290,19 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
             normal3x3[i * 3 + 2] = model[i * 4 + 2] / sz;
         }
 
+        float u_floats[4] = {
+            mesh.materials[0].heightScale,
+            mesh.materials[0].mixFactor,
+            mesh.materials[0].ambient,
+            mesh.materials[0].tileDetail
+        };
         bgfx::setUniform(handles.u_normalMatrix, normal3x3);
         bgfx::setUniform(handles.u_mvp, mvp);
         bgfx::setUniform(handles.u_lightDir, &lightDir);
-        bgfx::setUniform(handles.u_heightScale, &mesh.materials[0].heightScale);
-        bgfx::setUniform(handles.u_mixFactor, &mesh.materials[0].mixMacro);
-        bgfx::setUniform(handles.u_ambient, &mesh.materials[0].ambient);
+        bgfx::setUniform(handles.u_floats, u_floats);
 
         bgfx::setVertexBuffer(0, mesh.vbh);
         bgfx::setIndexBuffer(mesh.ibh);
-
         bgfx::submit(viewId, this->handles.program);
     }
 

@@ -64,10 +64,46 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             vertex.tangent[0] = mesh->mTangents[i].x;
             vertex.tangent[1] = mesh->mTangents[i].y;
             vertex.tangent[2] = mesh->mTangents[i].z;
-            vertex.tangent[3] = mesh->mBitangents[i].x * 
-                                (bx::dot(bx::Vec3{mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z}, 
-                                         bx::Vec3{mesh->mBitangents[i].x, mesh->mBitangents[i].y, mesh->mBitangents[i].z})
-                                > 0.0f ? 1.0f : -1.0f);
+            
+            aiVector3D normal = mesh->mNormals[i];
+            aiVector3D tangent = mesh->mTangents[i];
+            aiVector3D bitangent = mesh->mBitangents[i];
+
+            aiVector3D NT = aiVector3D(
+                normal.y * tangent.z - normal.z * tangent.y,
+                normal.z * tangent.x - normal.x * tangent.z,
+                normal.x * tangent.y - normal.y * tangent.x
+            );
+
+            float handedness = (NT.x * bitangent.x + NT.y * bitangent.y + NT.z * bitangent.z) >= 0.0f ? 1.0f : -1.0f;
+            vertex.tangent[3] = handedness;
+        } else {
+            // fallback if no tangents/bitangents are present
+            vertex.tangent[0] = 1.0f;
+            vertex.tangent[1] = 0.0f;
+            vertex.tangent[2] = 0.0f;
+            vertex.tangent[3] = 1.0f; // default to right-handed
+            if (mesh->HasNormals()) { // try to generate a default tangent if only normals exist
+                aiVector3D normal = mesh->mNormals[i];
+                bx::Vec3 c1Vec = bx::cross(bx::Vec3(normal.x, normal.y, normal.z), bx::Vec3(0.0f, 0.0f, 1.0f));
+                aiVector3D c1(c1Vec.x, c1Vec.y, c1Vec.z);
+                bx::Vec3 c2Vec = bx::cross(bx::Vec3(normal.x, normal.y, normal.z), bx::Vec3(0.0f, 1.0f, 0.0f));
+                aiVector3D c2(c2Vec.x, c2Vec.y, c2Vec.z);
+                if (bx::length(bx::Vec3(c1.x, c1.y, c1.z)) > bx::length(bx::Vec3(c2.x, c2.y, c2.z))) {
+                    aiVector3D t = c1;
+                    t.Normalize();
+                    vertex.tangent[0] = t.x;
+                    vertex.tangent[1] = t.y;
+                    vertex.tangent[2] = t.z;
+                } else {
+                    aiVector3D t = c2;
+                    t.Normalize();
+                    vertex.tangent[0] = t.x;
+                    vertex.tangent[1] = t.y;
+                    vertex.tangent[2] = t.z;
+                }
+            }
+            SDL_Log("No tangents for mesh %s", path.c_str());
         }
 
         meshData.vertices.push_back(vertex);
@@ -106,8 +142,8 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
-    meshData.vertices.clear(); //clear vertices and indices from meshData bc its on the GPU now
-    meshData.indices.clear(); //clear indices from meshData bc its on the GPU now
+    meshData.vertices.clear();
+    meshData.indices.clear();
 
     //checks
     if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
@@ -177,6 +213,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
                 mat.heightMap = texHandle;
             } else {
                 mat.heightMap = SynCreateFlatTexture();
+                SDL_Log("Height map not found for object %s", path.c_str());
             }
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);

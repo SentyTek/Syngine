@@ -51,7 +51,7 @@ int SyngineCore::SyngineEventLoop() {
     bool mouseLook = false;
     int frame = 0;
     
-    bx::Vec3 startDir = {75.0f, 0.0f, 0.0f};
+    bx::Vec3 startDir = {75.0f, 0.0f, 180.0f};
 
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch = bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock

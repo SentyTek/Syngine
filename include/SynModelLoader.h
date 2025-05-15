@@ -20,8 +20,8 @@ struct Material {
     bgfx::TextureHandle heightMap = BGFX_INVALID_HANDLE;
 
     float tileDetail = 30.0f; //how many repeats of detail maps
-    float heightScale = 1.0f; //matches blender displacement
-    float mixMacro = 0.5f; //mix between detail and macro maps
+    float heightScale = 0.01f; //matches blender displacement
+    float mixFactor = 0.7f; //mix between detail and macro maps
     float ambient = 0.2f; //ambient floor
 };
 
