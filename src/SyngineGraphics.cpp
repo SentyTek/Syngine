@@ -1,6 +1,9 @@
 #include "SyngineGraphics.h"
+#include "ShaderUtils.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
+#include "bx/math.h"
+#include "helpers.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
@@ -166,6 +169,14 @@ int SyngineGraphics::CreateRenderer() {
     this->handles.u_lightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
     this->handles.u_floats = bgfx::createUniform("u_floats", bgfx::UniformType::Vec4);
 
+    this->handles.u_skyColorDay = bgfx::createUniform("u_skyColorDay", bgfx::UniformType::Vec4);
+    this->handles.u_skyColorNight = bgfx::createUniform("u_skyColorNight", bgfx::UniformType::Vec4);
+    this->handles.u_sunColorDay = bgfx::createUniform("u_sunColorDay", bgfx::UniformType::Vec4);
+    this->handles.u_sunColorRise = bgfx::createUniform("u_sunColorRise", bgfx::UniformType::Vec4);
+
+    this->handles.u_invViewRot = bgfx::createUniform("u_invViewRot", bgfx::UniformType::Mat4);
+    this->handles.u_invProjMan = bgfx::createUniform("u_invProjMan", bgfx::UniformType::Mat4);
+    
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
     SDL_ShowWindow(this->win); //show the window
@@ -190,39 +201,101 @@ int SyngineGraphics::DestroyRenderer() {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to destroy renderer for");
         return 1;
     }
+    for (auto& program : this->handles.programs) {
+        bgfx::destroy(program.program);
+    }
     bgfx::destroy(this->handles.u_mvp);
+    bgfx::destroy(this->handles.u_lightDir);
+    bgfx::destroy(this->handles.u_normalMatrix);
+    bgfx::destroy(this->handles.u_floats);
+    bgfx::destroy(this->handles.u_albedoSampler);
+    bgfx::destroy(this->handles.u_normalMapSampler);
+    bgfx::destroy(this->handles.u_heightMapSampler);
+    bgfx::destroy(this->handles.u_skyColorDay);
+    bgfx::destroy(this->handles.u_skyColorNight);
     bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
     SDL_Log("goodbye renderer");
     return 0;
 }
 
-void SyngineGraphics::SetProgram(bgfx::ProgramHandle program) {
-    if (bgfx::isValid(this->handles.program)) {
-        bgfx::destroy(this->handles.program);
-        SDL_Log("Replacing program");
+size_t SyngineGraphics::AddProgram(const char* vsPath, const char* fsPath, const char* name) {
+    bgfx::ShaderHandle vs = LoadShader(vsPath);
+    bgfx::ShaderHandle fs = LoadShader(fsPath);
+    bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
+    if (bgfx::isValid(vs) && bgfx::isValid(fs)) {
+        programHandle = bgfx::createProgram(vs, fs, true);
     }
-    this->handles.program = program;
 
-    // Add diagnostic info
-    if (bgfx::isValid(this->handles.program)) {
-        SDL_Log("Program successfully set");
+    if (bgfx::isValid(programHandle)) {
+        SynProgram prog;
+        prog.program = programHandle;
+        prog.name = name;
+        prog.viewId = this->handles.programs.size();
+        this->handles.programs.push_back(prog);
     } else {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to set program - invalid handle");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create program %s", name);
+        if (bgfx::isValid(vs)) {
+            bgfx::destroy(vs);
+        }
+        if (bgfx::isValid(fs)) {
+            bgfx::destroy(fs);
+        }
+        return -1;
     }
+    return this->handles.programs.size() - 1;
 }
-bgfx::ProgramHandle SyngineGraphics::GetProgram() const {
-    return this->handles.program;
-}
-int SyngineGraphics::DestroyProgram() {
-    if (!bgfx::isValid(this->handles.program)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No program to destroy");
-        return 1;
+
+SynProgram SyngineGraphics::GetProgram(size_t index) const {
+    if (index < 0 || index >= this->handles.programs.size()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program index %zu", index);
+        return SynProgram();
     }
-    bgfx::destroy(this->handles.program);
-    this->handles.program = BGFX_INVALID_HANDLE;
+    if (!bgfx::isValid(this->handles.programs[index].program)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %zu is not valid", index);
+        return SynProgram();
+    }
+    return this->handles.programs[index];
+}
+SynProgram SyngineGraphics::GetProgram(const char* name) const {
+    for (const auto& program : this->handles.programs) {
+        if (program.name == name && bgfx::isValid(program.program)) {
+            return program;
+        }
+    }
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %s not found", name);
+    return SynProgram();
+}
+
+int SyngineGraphics::RemoveProgram(size_t index) {
+    if (index < 0 || index >= this->handles.programs.size()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program index %zu", index);
+        return -1;
+    }
+    bgfx::destroy(this->handles.programs[index].program);
+    this->handles.programs.erase(this->handles.programs.begin() + index);
     return 0;
 }
-
+int SyngineGraphics::RemoveProgram(const char* name) {
+    for (size_t i = 0; i < this->handles.programs.size(); ++i) {
+        if (this->handles.programs[i].name == name) {
+            return RemoveProgram(i);
+        }
+    }
+    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %s not found", name);
+    return -1;
+}
+int SyngineGraphics::RemoveProgram(bool all) {
+    if (all) {
+        for (auto& program : this->handles.programs) {
+            bgfx::destroy(program.program);
+        }
+        this->handles.programs.clear();
+        return 0;
+    } else {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No program to remove");
+        return -1;
+    }
+}
 
 void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
     if (!this->win) {
@@ -237,11 +310,19 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
 }
 
 int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir) {
-    int viewId = 0;
-    camera.Update(viewId, this->width, this->height); //update camera view and projection matrices
+    const SynProgram& terrainProgram = GetProgram("terrain");
+    const SynProgram& skyProgram = GetProgram("sky");
+    if (!bgfx::isValid(terrainProgram.program) || !bgfx::isValid(skyProgram.program)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program");
+        return -1;
+    }
+    const bgfx::ViewId SKY_VIEW = skyProgram.viewId;
+    const bgfx::ViewId MAIN_VIEW = terrainProgram.viewId;
+    camera.Update(SKY_VIEW, this->width, this->height); //update camera view and projection matrices
 
     float model[16];
-    bx::mtxSRT(model, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+    bx::mtxIdentity(model);
+    //bx::mtxSRT(model, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
     //once again, hardcoded above until the transform component is implemented
 
     float viewProj[16];
@@ -250,31 +331,62 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
     float mvp[16];
     bx::mtxMul(mvp, viewProj, camera.proj);
     
-    //background slate
-    uint32_t bgColor = 0x6495EDff;
+    //sky pass
+    bgfx::setViewRect(SKY_VIEW, 0, 0, uint16_t(this->width), uint16_t(this->height));
+    bgfx::setViewClear(SKY_VIEW, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 1.0f, 0, 1, 0);
+    bgfx::touch(SKY_VIEW);
+    bgfx::setViewTransform(MAIN_VIEW, camera.view, camera.proj);
+    bgfx::touch(MAIN_VIEW);
 
-    bgfx::setViewClear(
-        viewId,
-        BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
-        bgColor,
-        1.0f, //depth clear
-        0     //stencil clear
-    );
+    float skyView[16];
+    bx::memCopy(skyView, camera.view, sizeof(skyView));
+    skyView[12] = 0.0f;
+    skyView[13] = 0.0f;
+    skyView[14] = 0.0f;
 
-    bgfx::setViewRect(viewId, 0, 0, uint16_t(this->width), uint16_t(this->height));
-    bgfx::touch(viewId);
+    float invViewRot[16];
+    bx::mtxInverse(invViewRot, skyView);
+    bgfx::setUniform(handles.u_invViewRot, invViewRot);
 
+    float invProjMan[16];
+    bx::mtxInverse(invProjMan, camera.proj);
+    bgfx::setUniform(handles.u_invProjMan, invProjMan);
+
+    bgfx::setViewTransform(SKY_VIEW, skyView, camera.proj);
+
+    float skyColorDay[4] = { 0.5f, 0.7f, 1.0f, 1.0f };
+    float skyColorNight[4] = { 0.0f, 0.0f, 0.1f, 1.0f };
+    float sunColorDay[4] = { 1.0f, 1.0f, 0.9f, 1.0f };
+    float sunColorRise[4] = { 0.77f, 0.39f, 0.14f, 1.0f };
+    bgfx::setUniform(handles.u_skyColorDay, skyColorDay);
+    bgfx::setUniform(handles.u_skyColorNight, skyColorNight);
+    bgfx::setUniform(handles.u_sunColorDay, sunColorDay);
+    bgfx::setUniform(handles.u_sunColorRise, sunColorRise);
+
+    bgfx::setState(BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LEQUAL | BGFX_STATE_MSAA);
+
+    //bgfx::setTransform(nullptr);
+    bgfx::setVertexCount(3);
+    bgfx::submit(SKY_VIEW, skyProgram.program);
+
+    //main scene pass
+    //bgfx::setViewClear(MAIN_VIEW, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
+    bgfx::setViewRect(MAIN_VIEW, 0, 0, uint16_t(this->width), uint16_t(this->height));
     //prepare render
     uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_CULL_CCW | BGFX_STATE_MSAA;
 
     bgfx::setState(renderState);
 
-    constexpr uint32_t samplerFlags =
+    const uint32_t samplerFlags =
         BGFX_SAMPLER_MIN_ANISOTROPIC |
         BGFX_SAMPLER_MAG_ANISOTROPIC;
 
     for (auto& mesh : modelLoader.getMeshes()) {
         //TODO: add support for multiple materials
+        if(!bgfx::isValid(mesh.ibh) || !bgfx::isValid(mesh.vbh)) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid mesh");
+            continue;
+        }
         bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
         bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
         bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
@@ -303,7 +415,7 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
 
         bgfx::setVertexBuffer(0, mesh.vbh);
         bgfx::setIndexBuffer(mesh.ibh);
-        bgfx::submit(viewId, this->handles.program);
+        bgfx::submit(MAIN_VIEW, terrainProgram.program);
     }
 
     bgfx::frame(); // submit the frame

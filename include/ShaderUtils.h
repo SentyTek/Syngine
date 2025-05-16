@@ -47,15 +47,3 @@ inline bgfx::ShaderHandle LoadShader(const char* shaderPath)
     const bgfx::Memory* mem = bgfx::copy(buffer.data(), (uint32_t)buffer.size());
     return bgfx::createShader(mem);
 }
-
-inline bgfx::ProgramHandle CreateProgram(const char* vsPath, const char* fsPath) {
-    bgfx::ShaderHandle vs = LoadShader(vsPath);
-    if (bgfx::isValid(vs)) {
-        bgfx::ShaderHandle fs = LoadShader(fsPath);
-        if (bgfx::isValid(fs)) {
-            return bgfx::createProgram(vs, fs, true);
-        }
-        bgfx::destroy(vs);
-    }
-    return BGFX_INVALID_HANDLE;
-}

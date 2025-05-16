@@ -51,7 +51,7 @@ int SyngineCore::SyngineEventLoop() {
     bool mouseLook = false;
     int frame = 0;
     
-    bx::Vec3 startDir = {75.0f, 0.0f, 180.0f};
+    bx::Vec3 startDir = {75.0f, 0.0f, 90.0f};
 
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch = bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
@@ -174,6 +174,8 @@ int SyngineCore::SyngineEventLoop() {
                 camera.eye[1] = newEye.y;
                 camera.eye[2] = newEye.z;
             }
+  
+            startDir.x += 0.02f;
         }
         //sun
         if (keystate[SDL_SCANCODE_LEFT]) {
@@ -191,10 +193,11 @@ int SyngineCore::SyngineEventLoop() {
 
         if (startDir.z > 360.0f) startDir.z -= 360.0f;
         if (startDir.z < 0.0f)   startDir.z += 360.0f;
-        startDir.x = bx::clamp(startDir.x, -179.99f, 179.99f);
+        if (startDir.x > 360.0f) startDir.x -= 360.0f;
+        if (startDir.x < 0.0f)   startDir.x += 360.0f;
 
         // Convert to pitch/yaw
-        float pitch = bx::toRad(startDir.x - 90.0f); // vertical angle, 0 = up, 90 = horizon
+        float pitch = bx::toRad(90.0f - startDir.x); // vertical angle, 0 = up, 90 = horizon
         float yaw   = bx::toRad(startDir.z); // horizontal rotation (azimuth)
 
         float cy = cosf(pitch);
