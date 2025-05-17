@@ -158,8 +158,6 @@ int SyngineGraphics::CreateRenderer() {
     //reset view 0 to the dimentions of the window and clear it
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1, 0);
     bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
-
-    this->handles.u_mvp = bgfx::createUniform("u_mvp", bgfx::UniformType::Mat4); //u_modelViewProjection. it's a mat4 that is used to transform the vertices from model space to clip space
     
     this->handles.u_albedoSampler = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
     this->handles.u_normalMapSampler = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
@@ -173,9 +171,6 @@ int SyngineGraphics::CreateRenderer() {
     this->handles.u_skyColorNight = bgfx::createUniform("u_skyColorNight", bgfx::UniformType::Vec4);
     this->handles.u_sunColorDay = bgfx::createUniform("u_sunColorDay", bgfx::UniformType::Vec4);
     this->handles.u_sunColorRise = bgfx::createUniform("u_sunColorRise", bgfx::UniformType::Vec4);
-
-    this->handles.u_invViewRot = bgfx::createUniform("u_invViewRot", bgfx::UniformType::Mat4);
-    this->handles.u_invProjMan = bgfx::createUniform("u_invProjMan", bgfx::UniformType::Mat4);
     
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
@@ -204,7 +199,6 @@ int SyngineGraphics::DestroyRenderer() {
     for (auto& program : this->handles.programs) {
         bgfx::destroy(program.program);
     }
-    bgfx::destroy(this->handles.u_mvp);
     bgfx::destroy(this->handles.u_lightDir);
     bgfx::destroy(this->handles.u_normalMatrix);
     bgfx::destroy(this->handles.u_floats);
@@ -319,17 +313,6 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
     const bgfx::ViewId SKY_VIEW = skyProgram.viewId;
     const bgfx::ViewId MAIN_VIEW = terrainProgram.viewId;
     camera.Update(SKY_VIEW, this->width, this->height); //update camera view and projection matrices
-
-    float model[16];
-    bx::mtxIdentity(model);
-    //bx::mtxSRT(model, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-    //once again, hardcoded above until the transform component is implemented
-
-    float viewProj[16];
-    bx::mtxMul(viewProj, model, camera.view);
-
-    float mvp[16];
-    bx::mtxMul(mvp, viewProj, camera.proj);
     
     //sky pass
     bgfx::setViewRect(SKY_VIEW, 0, 0, uint16_t(this->width), uint16_t(this->height));
@@ -343,14 +326,6 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
     skyView[12] = 0.0f;
     skyView[13] = 0.0f;
     skyView[14] = 0.0f;
-
-    float invViewRot[16];
-    bx::mtxInverse(invViewRot, skyView);
-    bgfx::setUniform(handles.u_invViewRot, invViewRot);
-
-    float invProjMan[16];
-    bx::mtxInverse(invProjMan, camera.proj);
-    bgfx::setUniform(handles.u_invProjMan, invProjMan);
 
     bgfx::setViewTransform(SKY_VIEW, skyView, camera.proj);
 
@@ -391,6 +366,9 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
         bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
         bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
 
+        float* model = mesh.transform;
+        bgfx::setTransform(model);
+
         float sx = bx::length(bx::Vec3(model[0], model[1], model[2]));
         float sy = bx::length(bx::Vec3(model[4], model[5], model[6]));
         float sz = bx::length(bx::Vec3(model[8], model[9], model[10]));
@@ -409,7 +387,6 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
             mesh.materials[0].tileDetail
         };
         bgfx::setUniform(handles.u_normalMatrix, normal3x3);
-        bgfx::setUniform(handles.u_mvp, mvp);
         bgfx::setUniform(handles.u_lightDir, &lightDir);
         bgfx::setUniform(handles.u_floats, u_floats);
 

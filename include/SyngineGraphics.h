@@ -30,7 +30,6 @@ struct SynProgram {
 
 struct SynHandles {
     std::vector<SynProgram> programs;
-    bgfx::UniformHandle u_mvp = BGFX_INVALID_HANDLE;
 
     bgfx::UniformHandle u_lightDir = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle u_normalMatrix = BGFX_INVALID_HANDLE;
@@ -44,9 +43,6 @@ struct SynHandles {
     bgfx::UniformHandle u_skyColorNight = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle u_sunColorDay = BGFX_INVALID_HANDLE;
     bgfx::UniformHandle u_sunColorRise = BGFX_INVALID_HANDLE;
-
-    bgfx::UniformHandle u_invViewRot = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_invProjMan = BGFX_INVALID_HANDLE;
 };
 
 class SyngineGraphics {

@@ -220,6 +220,16 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         }
     }
 
+    //set up transform
+    aiMatrix4x4 transform = scene->mRootNode->mTransformation;
+    transform.Inverse();
+    for(int i = 0; i < 4; ++i) {
+        for(int j = 0; j < 4; ++j) {
+            meshData.transform[i * 4 + j] = transform[i][j];
+        }
+    }
+    meshData.numMaterials = meshData.materials.size();
+
     //and output
     meshData.vbh = vbh;
     meshData.ibh = ibh;

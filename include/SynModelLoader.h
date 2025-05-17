@@ -34,6 +34,7 @@ struct SynMeshData {
     uint32_t numVertices;
     uint32_t numIndices;
     uint8_t numMaterials;
+    float transform[16]; //TODO: make this a component
 };
 
 class SynModelLoader {
