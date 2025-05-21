@@ -1,0 +1,52 @@
+#include "SyngineGameobject.h"
+
+#include "Components/MeshComponent.h"
+#include "Components/TransformComponent.h"
+
+GameObject::GameObject(string name) {
+    this->name = name;
+    this->id = -1;
+}
+
+GameObject::~GameObject() {}
+
+long GameObject::GetID() {
+    return this->id;
+}
+
+int GameObject::AddComponent(SynComponents type) {
+    auto it = this->components.find(type);
+    if (it != this->components.end()) {
+        return 1; // Component already exists
+    }
+    
+    SynComponent* component = nullptr;
+    switch (type) {
+        case SYN_COMPONENT_MESH:
+            component = new MeshComponent();
+            break;
+        case SYN_COMPONENT_TRANSFORM:
+            component = new TransformComponent();
+            break;
+        // Add cases for other components here
+        default:
+            return 2; // Unknown component type
+    }
+    
+    this->components[type] = unique_ptr<SynComponent>(component);
+    return 0;
+}
+
+int GameObject::RemoveComponent(SynComponents type) {
+    auto it = this->components.find(type);
+    if (it == this->components.end()) {
+        return 1; // Component not found
+    }
+    
+    this->components.erase(it);
+    return 0;
+}
+
+bool GameObject::HasComponent(SynComponents type) {
+    return this->components.find(type) != this->components.end();
+}

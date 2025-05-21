@@ -1,9 +1,12 @@
 #include "SyngineGraphics.h"
+#include "Components.h"
 #include "ShaderUtils.h"
+#include "SynModelLoader.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "bx/math.h"
 #include "helpers.h"
+#include "defines.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
@@ -247,7 +250,7 @@ SynProgram SyngineGraphics::GetProgram(size_t index) const {
     if (!bgfx::isValid(this->handles.programs[index].program)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %zu is not valid", index);
         return SynProgram();
-    }
+    } 
     return this->handles.programs[index];
 }
 SynProgram SyngineGraphics::GetProgram(const char* name) const {
@@ -303,7 +306,7 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
     SDL_Log("goodbye world");
 }
 
-int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir) {
+int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir) {
     const SynProgram& terrainProgram = GetProgram("terrain");
     const SynProgram& skyProgram = GetProgram("sky");
     if (!bgfx::isValid(terrainProgram.program) || !bgfx::isValid(skyProgram.program)) {
@@ -356,7 +359,19 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
         BGFX_SAMPLER_MIN_ANISOTROPIC |
         BGFX_SAMPLER_MAG_ANISOTROPIC;
 
-    for (auto& mesh : modelLoader.getMeshes()) {
+    for (auto& gameObject : gameObjects) {
+        if (!gameObject) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "GameObject is null");
+            continue;
+        }
+        if (!gameObject->HasComponent(SYN_COMPONENT_MESH)) {
+            continue;
+        }
+        SynMeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;
+        if (!gameObject->GetComponent<MeshComponent>()->isEnabled) {
+            continue;
+        }
+        
         //TODO: add support for multiple materials
         if(!bgfx::isValid(mesh.ibh) || !bgfx::isValid(mesh.vbh)) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid mesh");

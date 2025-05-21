@@ -9,6 +9,9 @@ add_library(Syngine STATIC
     src/SyngineGraphics.cpp
     src/SynModelLoader.cpp
     src/helpers.cpp
+    src/SyngineGameobjects.cpp
+    src/Components/MeshComponent.cpp
+    src/Components/TransformComponent.cpp
 )
 
 if(APPLE)
@@ -52,6 +55,7 @@ target_include_directories(Syngine
     PUBLIC
         # Engine public headers directory
         ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Components
         ${CMAKE_CURRENT_SOURCE_DIR}/lib
         # Third-party headers needed by engine's public headers (now relative to root)
         ${CMAKE_SOURCE_DIR}/third_party/SDL/include
@@ -62,6 +66,7 @@ target_include_directories(Syngine
     PRIVATE
         # Engine private headers/sources directory
         ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/Components
         # Add any third-party includes ONLY needed by engine's private .cpp files (if any)
 )
 

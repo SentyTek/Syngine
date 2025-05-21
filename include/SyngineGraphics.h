@@ -4,6 +4,7 @@
 #include <SDL3/SDL.h>
 #include <bgfx/bgfx.h>
 #include "SynModelLoader.h"
+#include "SyngineGameobject.h"
 #include "bx/math.h"
 
 struct Camera {
@@ -67,5 +68,5 @@ class SyngineGraphics {
     int RemoveProgram(size_t index);
     int RemoveProgram(const char* name);
     
-    int RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir);
+    int RenderFrame(std::vector<GameObject*> modelLoader, bx::Vec3& lightDir);
 };

@@ -1,12 +1,13 @@
 #include "SyngineCore.h"
+#include "defines.h"
+
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_mouse.h"
-#include "SynModelLoader.h"
+
 #include "bx/bx.h"
 #include "bx/constants.h"
 #include "bx/math.h"
-#include "defines.h"
 
 SyngineCore::SyngineCore() {
     //initialize app
@@ -82,10 +83,16 @@ int SyngineCore::SyngineEventLoop() {
                 if (event.key.key == SDLK_F) {
                     //load model
                     std::string modelPath = resolveOSPath("meshes/ground.glb");
-                    SynMeshData meshData;
-                    if (!this->app->synModels->LoadModel(meshData, modelPath, true)) {
-                        SDL_Log("Failed to load model");
+                    GameObject* model = new GameObject("ground");
+                    model->AddComponent(SYN_COMPONENT_TRANSFORM);
+                    model->AddComponent(SYN_COMPONENT_MESH);
+                    MeshComponent* meshComp = model->GetComponent<MeshComponent>();
+                    if (meshComp) {
+                        meshComp->LoadMesh(modelPath);
+                    } else {
+                        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get MeshComponent");
                     }
+                    this->app->gameObjects.push_back(model);
                 } else if (event.key.key == SDLK_ESCAPE) {
                     mouseLook = !mouseLook;
                     SDL_SetWindowRelativeMouseMode(this->app->graphics->win, mouseLook ? true : false);
@@ -209,7 +216,7 @@ int SyngineCore::SyngineEventLoop() {
         lightDir = bx::normalize(lightDir);
         
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(*(this->app->synModels), lightDir); // render frame
+            this->app->graphics->RenderFrame(this->app->gameObjects, lightDir); // render frame
         }
         
         if (frame % 60 == 0) {
