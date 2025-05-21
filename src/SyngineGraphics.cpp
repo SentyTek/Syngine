@@ -1,9 +1,13 @@
 #include "SyngineGraphics.h"
+#include "Components.h"
 #include "ShaderUtils.h"
+#include "SynModelLoader.h"
+#include "TransformComponent.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "bx/math.h"
 #include "helpers.h"
+#include "defines.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
@@ -247,7 +251,7 @@ SynProgram SyngineGraphics::GetProgram(size_t index) const {
     if (!bgfx::isValid(this->handles.programs[index].program)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %zu is not valid", index);
         return SynProgram();
-    }
+    } 
     return this->handles.programs[index];
 }
 SynProgram SyngineGraphics::GetProgram(const char* name) const {
@@ -303,7 +307,7 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
     SDL_Log("goodbye world");
 }
 
-int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir) {
+int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir) {
     const SynProgram& terrainProgram = GetProgram("terrain");
     const SynProgram& skyProgram = GetProgram("sky");
     if (!bgfx::isValid(terrainProgram.program) || !bgfx::isValid(skyProgram.program)) {
@@ -356,17 +360,31 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
         BGFX_SAMPLER_MIN_ANISOTROPIC |
         BGFX_SAMPLER_MAG_ANISOTROPIC;
 
-    for (auto& mesh : modelLoader.getMeshes()) {
-        //TODO: add support for multiple materials
-        if(!bgfx::isValid(mesh.ibh) || !bgfx::isValid(mesh.vbh)) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid mesh");
+    for (auto& gameObject : gameObjects) {
+        if (!gameObject) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "GameObject is null");
             continue;
         }
-        bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
-        bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
-        bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
+        if (!gameObject->HasComponent(SYN_COMPONENT_TRANSFORM) || !(gameObject->GetComponent<TransformComponent>())->isEnabled) {
+            continue;
+        }
+        SynMeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;
 
-        float* model = mesh.transform;
+        if(gameObject->HasComponent(SYN_COMPONENT_MESH) && gameObject->GetComponent<MeshComponent>()->isEnabled) {
+            //TODO: add support for multiple materials
+            if(!bgfx::isValid(mesh.ibh) || !bgfx::isValid(mesh.vbh)) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid mesh");
+                continue;
+            }
+            bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
+            bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
+            bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
+
+            bgfx::setVertexBuffer(0, mesh.vbh);
+            bgfx::setIndexBuffer(mesh.ibh);
+        }
+
+        float* model = gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
         bgfx::setTransform(model);
 
         float sx = bx::length(bx::Vec3(model[0], model[1], model[2]));
@@ -390,8 +408,6 @@ int SyngineGraphics::RenderFrame(SynModelLoader& modelLoader, bx::Vec3& lightDir
         bgfx::setUniform(handles.u_lightDir, &lightDir);
         bgfx::setUniform(handles.u_floats, u_floats);
 
-        bgfx::setVertexBuffer(0, mesh.vbh);
-        bgfx::setIndexBuffer(mesh.ibh);
         bgfx::submit(MAIN_VIEW, terrainProgram.program);
     }
 
