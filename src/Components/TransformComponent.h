@@ -18,4 +18,6 @@ class TransformComponent : public SynComponent {
         void SetPosition(float x, float y, float z); //Set the position of the gameobject
         void SetRotation(float x, float y, float z); //Set the rotation of the gameobject
         void SetScale(float x, float y, float z); //Set the scale of the gameobject
+
+        float* GetModelMatrix(); //Get the model matrix of the gameobject
 };

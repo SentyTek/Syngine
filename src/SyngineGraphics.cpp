@@ -2,6 +2,7 @@
 #include "Components.h"
 #include "ShaderUtils.h"
 #include "SynModelLoader.h"
+#include "TransformComponent.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "bx/math.h"
@@ -364,24 +365,26 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "GameObject is null");
             continue;
         }
-        if (!gameObject->HasComponent(SYN_COMPONENT_MESH)) {
+        if (!gameObject->HasComponent(SYN_COMPONENT_TRANSFORM) || !(gameObject->GetComponent<TransformComponent>())->isEnabled) {
             continue;
         }
         SynMeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;
-        if (!gameObject->GetComponent<MeshComponent>()->isEnabled) {
-            continue;
-        }
-        
-        //TODO: add support for multiple materials
-        if(!bgfx::isValid(mesh.ibh) || !bgfx::isValid(mesh.vbh)) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid mesh");
-            continue;
-        }
-        bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
-        bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
-        bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
 
-        float* model = mesh.transform;
+        if(gameObject->HasComponent(SYN_COMPONENT_MESH) && gameObject->GetComponent<MeshComponent>()->isEnabled) {
+            //TODO: add support for multiple materials
+            if(!bgfx::isValid(mesh.ibh) || !bgfx::isValid(mesh.vbh)) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid mesh");
+                continue;
+            }
+            bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
+            bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
+            bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
+
+            bgfx::setVertexBuffer(0, mesh.vbh);
+            bgfx::setIndexBuffer(mesh.ibh);
+        }
+
+        float* model = gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
         bgfx::setTransform(model);
 
         float sx = bx::length(bx::Vec3(model[0], model[1], model[2]));
@@ -405,8 +408,6 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
         bgfx::setUniform(handles.u_lightDir, &lightDir);
         bgfx::setUniform(handles.u_floats, u_floats);
 
-        bgfx::setVertexBuffer(0, mesh.vbh);
-        bgfx::setIndexBuffer(mesh.ibh);
         bgfx::submit(MAIN_VIEW, terrainProgram.program);
     }
 
