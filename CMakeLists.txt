@@ -49,6 +49,7 @@ endif()
 add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/JoltPhysics/build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
 
 # --- Include Directories ---
 target_include_directories(Syngine
@@ -63,6 +64,7 @@ target_include_directories(Syngine
         ${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/bx/include   # Often needed by bgfx headers
         ${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/bimg/include # Often needed by bgfx headers
         ${CMAKE_SOURCE_DIR}/third_party/assimp/include
+        ${CMAKE_SOURCE_DIR}/third_party/JoltPhysics
     PRIVATE
         # Engine private headers/sources directory
         ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -78,6 +80,7 @@ target_link_libraries(Syngine PRIVATE
     bx
     bimg
     bgfx
+    Jolt
 )
 
 clangdConfigure(Syngine)
