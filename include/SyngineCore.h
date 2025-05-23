@@ -3,11 +3,13 @@
 #include "SyngineGraphics.h"
 #include "SynModelLoader.h"
 #include "SyngineGameobject.h"
+#include "SynginePhys.h"
 
 struct SyngineApp {
     SyngineGraphics* graphics;
     SynModelLoader* synModels;
     std::vector<GameObject*> gameObjects;
+    Syngine::SynginePhys* physicsManager;
 };
 
 class SyngineCore {

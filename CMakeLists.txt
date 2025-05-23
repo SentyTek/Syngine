@@ -10,8 +10,10 @@ add_library(Syngine STATIC
     src/SynModelLoader.cpp
     src/helpers.cpp
     src/SyngineGameobjects.cpp
+    src/SynginePhys.cpp
     src/Components/MeshComponent.cpp
     src/Components/TransformComponent.cpp
+    src/Components/PhysComponent.cpp
 )
 
 if(APPLE)
@@ -31,7 +33,6 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
 
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(BX_CONFIG_DEBUG OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_BINARIES shaderc ON CACHE BOOL "" FORCE)
 
 if(APPLE) # cocoa is really picky and requires entire renderer to be single threaded

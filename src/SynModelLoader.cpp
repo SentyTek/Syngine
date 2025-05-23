@@ -225,6 +225,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
     //and output
     meshData.vbh = vbh;
     meshData.ibh = ibh;
+    meshData.hasTextures = loadTextures;
     out = meshData;
     meshes.push_back(meshData); //store mesh data for later use
     return true;

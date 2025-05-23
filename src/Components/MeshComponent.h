@@ -16,5 +16,5 @@ class MeshComponent : public SynComponent {
     SynMeshData meshData; //Mesh data for the gameobject
     SynComponents getComponentType() override;
     
-    int LoadMesh(const std::string& path); //Load a mesh from a file
+    int LoadMesh(const std::string& path, bool loadTextures = true); //Load a mesh from a file
 };

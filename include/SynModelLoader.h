@@ -34,6 +34,7 @@ struct SynMeshData {
     uint32_t numVertices;
     uint32_t numIndices;
     uint8_t numMaterials;
+    bool hasTextures = true;
 };
 
 class SynModelLoader {

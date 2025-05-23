@@ -376,9 +376,12 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid mesh");
                 continue;
             }
-            bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
-            bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
-            bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
+            
+            if(mesh.hasTextures) {
+                bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
+                bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
+                bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
+            }
 
             bgfx::setVertexBuffer(0, mesh.vbh);
             bgfx::setIndexBuffer(mesh.ibh);

@@ -1,25 +1,47 @@
 #include "SyngineCore.h"
+#include "MeshComponent.h"
 #include "defines.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_mouse.h"
+#include "SDL3/SDL_timer.h"
 
 #include "bx/bx.h"
 #include "bx/constants.h"
 #include "bx/math.h"
+
+#include <Jolt/Physics/Body/BodyInterface.h>
 
 SyngineCore::SyngineCore() {
     //initialize app
     this->app = new SyngineApp();
     this->app->graphics = nullptr; // No graphics attached initially
     this->app->synModels = new AssimpLoader(); // Initialize the model loader
+
+    this->app->physicsManager = new Syngine::SynginePhys(); // Initialize the physics manager
+    this->app->physicsManager->Init(); // Initialize the physics system
 }
 
 SyngineCore::~SyngineCore() {
     //cleanup
     if (this->app) {
+        if (this->app->graphics) {
+            delete this->app->graphics;
+            this->app->graphics = nullptr;
+        }
+        if (this->app->synModels) {
+            this->app->synModels->UnloadAll();
+            delete this->app->synModels;
+            this->app->synModels = nullptr;
+        }
+        if (this->app->physicsManager) {
+            this->app->physicsManager->Shutdown();
+            delete this->app->physicsManager;
+            this->app->physicsManager = nullptr;
+        }
         delete this->app;
+        this->app = nullptr;
     }
 }
 
@@ -59,7 +81,14 @@ int SyngineCore::SyngineEventLoop() {
 
     SDL_Event event;
 
+    uint64 NOW = SDL_GetPerformanceCounter();
+    uint64 LAST = 0;
+
     while (running) {
+        LAST = NOW;
+        NOW = SDL_GetPerformanceCounter();
+        float deltaTime = (float)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
+
         const bool* keystate = SDL_GetKeyboardState(NULL);
         Camera& camera = this->app->graphics->camera;
         bx::Vec3 moveVector = {0,0,0};
@@ -93,6 +122,17 @@ int SyngineCore::SyngineEventLoop() {
                         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get MeshComponent");
                     }
                     this->app->gameObjects.push_back(model);
+
+                    modelPath = resolveOSPath("meshes/cube.glb");
+                    GameObject* cube = new GameObject("cube");
+                    cube->AddComponent(SYN_COMPONENT_TRANSFORM);
+                    cube->AddComponent(SYN_COMPONENT_MESH);
+                    meshComp = cube->GetComponent<MeshComponent>();
+                    if (meshComp) {
+                        meshComp->LoadMesh(modelPath, false);
+                    } else {
+                        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get MeshComponent");
+                    }
                 } else if (event.key.key == SDLK_ESCAPE) {
                     mouseLook = !mouseLook;
                     SDL_SetWindowRelativeMouseMode(this->app->graphics->win, mouseLook ? true : false);
