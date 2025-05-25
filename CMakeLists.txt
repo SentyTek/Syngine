@@ -3,6 +3,9 @@ project(Syngine)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_C_COMPILER "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc")
+set(CMAKE_CXX_COMPILER "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++")
+
 # create the executable
 add_library(Syngine STATIC
     src/SyngineCore.cpp
