@@ -218,6 +218,9 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);
         }
+    } else {
+        Material mat;
+        meshData.materials.push_back(mat); //add a default material if no textures are loaded
     }
 
     meshData.numMaterials = meshData.materials.size();
@@ -247,8 +250,6 @@ void AssimpLoader::UnloadAll() {
         mesh.materials.clear();
         bgfx::destroy(mesh.vbh);
         bgfx::destroy(mesh.ibh);
-        mesh.vertices.clear();
-        mesh.indices.clear();
     }
     meshes.clear();
 }

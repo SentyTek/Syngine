@@ -134,8 +134,9 @@ int SyngineGraphics::CreateRenderer() {
         return 1;
     }
     #elif BX_PLATFORM_WINDOWS
-    bgInit.platformData.ndt = NULL; //only needed on x11
-    bgInit.platformData.nwh = SDL_GetPointerProperty(sdlProps, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+    bgInit.type = bgfx::RendererType::Direct3D12;
+    bgInit.platformData.ndt = nullptr; //only needed on x11
+    bgInit.platformData.nwh = SDL_GetPointerProperty(sdlProps, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
     if (bgInit.platformData.nwh == NULL) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get window properties windows");
         SDL_DestroyWindow(this->win);
@@ -151,6 +152,7 @@ int SyngineGraphics::CreateRenderer() {
     bgInit.resolution.width = this->width;
     bgInit.resolution.height = this->height;
     bgInit.resolution.reset |= BGFX_RESET_VSYNC; // enable vsync
+    bgInit.debug = true; // enable debug mode
 
     if(!bgfx::init(bgInit)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to initialize bgfx");
@@ -195,22 +197,60 @@ int SyngineGraphics::CreateRenderer() {
 
     return 0;
 }
+
 int SyngineGraphics::DestroyRenderer() {
     if (!this->win) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to destroy renderer for");
         return 1;
     }
+
     for (auto& program : this->handles.programs) {
         bgfx::destroy(program.program);
+        program.program = BGFX_INVALID_HANDLE;
     }
-    bgfx::destroy(this->handles.u_lightDir);
-    bgfx::destroy(this->handles.u_normalMatrix);
-    bgfx::destroy(this->handles.u_floats);
-    bgfx::destroy(this->handles.u_albedoSampler);
-    bgfx::destroy(this->handles.u_normalMapSampler);
-    bgfx::destroy(this->handles.u_heightMapSampler);
-    bgfx::destroy(this->handles.u_skyColorDay);
-    bgfx::destroy(this->handles.u_skyColorNight);
+    this->handles.programs.clear();
+
+    if(bgfx::isValid(this->handles.u_albedoSampler)) {
+        bgfx::destroy(this->handles.u_albedoSampler);
+        this->handles.u_albedoSampler = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_normalMapSampler)) {
+        bgfx::destroy(this->handles.u_normalMapSampler);
+        this->handles.u_normalMapSampler = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_heightMapSampler)) {
+        bgfx::destroy(this->handles.u_heightMapSampler);
+        this->handles.u_heightMapSampler = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_normalMatrix)) {
+        bgfx::destroy(this->handles.u_normalMatrix);
+        this->handles.u_normalMatrix = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_lightDir)) {
+        bgfx::destroy(this->handles.u_lightDir);
+        this->handles.u_lightDir = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_floats)) {
+        bgfx::destroy(this->handles.u_floats);
+        this->handles.u_floats = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_skyColorDay)) {
+        bgfx::destroy(this->handles.u_skyColorDay);
+        this->handles.u_skyColorDay = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_skyColorNight)) {
+        bgfx::destroy(this->handles.u_skyColorNight);
+        this->handles.u_skyColorNight = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_sunColorDay)) {
+        bgfx::destroy(this->handles.u_sunColorDay);
+        this->handles.u_sunColorDay = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.u_sunColorRise)) {
+        bgfx::destroy(this->handles.u_sunColorRise);
+        this->handles.u_sunColorRise = BGFX_INVALID_HANDLE;
+    }
+
     bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
     SDL_Log("goodbye renderer");
     return 0;
@@ -352,7 +392,7 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
     //bgfx::setViewClear(MAIN_VIEW, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 1.0f, 0);
     bgfx::setViewRect(MAIN_VIEW, 0, 0, uint16_t(this->width), uint16_t(this->height));
     //prepare render
-    uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_CULL_CCW | BGFX_STATE_MSAA;
+    uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA | BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
 
     bgfx::setState(renderState);
 

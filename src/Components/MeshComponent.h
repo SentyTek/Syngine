@@ -17,4 +17,5 @@ class MeshComponent : public SynComponent {
     SynComponents getComponentType() override;
     
     int LoadMesh(const std::string& path, bool loadTextures = true); //Load a mesh from a file
+    int UnloadMesh(); //Unload the mesh data
 };

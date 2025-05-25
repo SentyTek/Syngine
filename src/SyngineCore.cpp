@@ -1,5 +1,6 @@
 #include "SyngineCore.h"
 #include "MeshComponent.h"
+#include "TransformComponent.h"
 #include "defines.h"
 
 #include "SDL3/SDL_events.h"
@@ -123,7 +124,7 @@ int SyngineCore::SyngineEventLoop() {
                     }
                     this->app->gameObjects.push_back(model);
 
-                    modelPath = resolveOSPath("meshes/cube.glb");
+                    /*modelPath = resolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube");
                     cube->AddComponent(SYN_COMPONENT_TRANSFORM);
                     cube->AddComponent(SYN_COMPONENT_MESH);
@@ -133,6 +134,7 @@ int SyngineCore::SyngineEventLoop() {
                     } else {
                         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get MeshComponent");
                     }
+                    this->app->gameObjects.push_back(cube);*/
                 } else if (event.key.key == SDLK_ESCAPE) {
                     mouseLook = !mouseLook;
                     SDL_SetWindowRelativeMouseMode(this->app->graphics->win, mouseLook ? true : false);
@@ -268,4 +270,14 @@ int SyngineCore::SyngineEventLoop() {
     this->app->synModels->UnloadAll();
     SDL_Log("Exiting event loop");
     return 0;
+}
+
+int SyngineCore::DeleteGameobject(GameObject* gameobject) {
+    if(!gameobject) return 0;
+    MeshComponent* mesh = gameobject->GetComponent<MeshComponent>();
+    if(mesh) {
+        mesh->UnloadMesh();
+    }
+    delete gameobject; // delete the gameobject
+    gameobject = nullptr; // set to null to avoid dangling pointer
 }
