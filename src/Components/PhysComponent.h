@@ -27,12 +27,12 @@ class PhysicsComponent : public SynComponent {
     public:
     static constexpr SynComponents componentType = SYN_COMPONENT_PHYSICS;
 
-    PhysicsComponent(TransformComponent* transform);
+    PhysicsComponent();
     ~PhysicsComponent();
 
     SynComponents getComponentType() override;
 
-    void Init(Syngine::SynginePhys* physicsManager, PhysicsShapes shape, float mass, float friction);
+    void Init(TransformComponent* transform, Syngine::SynginePhys* physicsManager, PhysicsShapes shape, float mass, float friction);
     void Update();
     void Destroy();
 

@@ -1,12 +1,12 @@
 #include "Components/PhysComponent.h"
 #include "Jolt/Math/MathTypes.h"
 #include "Jolt/Physics/Body/MotionType.h"
-#include "Jolt/Physics/Collision/BroadPhase/QuadTree.h"
 #include "SynginePhys.h"
+#include "TransformComponent.h"
 
 namespace Syngine {
-PhysicsComponent::PhysicsComponent(TransformComponent* transform)
-    : transform(transform), bodyID(BodyID()), shape(PhysicsShapes::BOX), mass(1.0f), friction(0.5f) {}
+PhysicsComponent::PhysicsComponent()
+    : bodyID(BodyID()), shape(PhysicsShapes::BOX), mass(1.0f), friction(0.5f) {}
 
 PhysicsComponent::~PhysicsComponent() {
     Destroy();
@@ -16,8 +16,9 @@ SynComponents PhysicsComponent::getComponentType() {
     return SYN_COMPONENT_PHYSICS;
 }
 
-void PhysicsComponent::Init(Syngine::SynginePhys* physicsManager, PhysicsShapes shape, float mass, float friction) {
+void PhysicsComponent::Init(TransformComponent* transform, Syngine::SynginePhys* physicsManager, PhysicsShapes shape, float mass, float friction) {
     this->physicsManager = physicsManager;
+    this->transform = transform;
     this->friction = friction;
     this->shape = shape;
     this->mass = mass;
@@ -28,7 +29,7 @@ void PhysicsComponent::Init(Syngine::SynginePhys* physicsManager, PhysicsShapes 
 
     float* position = transform->position;
     float* rotation = transform->rotation;
-    QuatArg rotationQuat(rotation[0], rotation[1], rotation[2], 0.0f); // Assuming rotation is in degrees
+    QuatArg rotationQuat(rotation[0], rotation[1], rotation[2], 1.0f); // Assuming rotation is in degrees
 
     switch (shape) {
         case PhysicsShapes::SPHERE: {

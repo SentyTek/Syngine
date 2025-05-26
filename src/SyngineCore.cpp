@@ -1,5 +1,7 @@
 #include "SyngineCore.h"
+#include "Components.h"
 #include "MeshComponent.h"
+#include "PhysComponent.h"
 #include "TransformComponent.h"
 #include "defines.h"
 
@@ -117,25 +119,20 @@ int SyngineCore::SyngineEventLoop() {
                     model->AddComponent(SYN_COMPONENT_TRANSFORM);
                     model->AddComponent(SYN_COMPONENT_MESH);
                     MeshComponent* meshComp = model->GetComponent<MeshComponent>();
-                    if (meshComp) {
-                        meshComp->LoadMesh(modelPath);
-                    } else {
-                        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get MeshComponent");
-                    }
+                    if (meshComp) meshComp->LoadMesh(modelPath);
                     this->app->gameObjects.push_back(model);
 
                     modelPath = resolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
                     cube->AddComponent(SYN_COMPONENT_TRANSFORM);
                     cube->AddComponent(SYN_COMPONENT_MESH);
+                    cube->AddComponent(SYN_COMPONENT_PHYSICS);
                     meshComp = cube->GetComponent<MeshComponent>();
-                    if (meshComp) {
-                        meshComp->LoadMesh(modelPath, false);
-                    } else {
-                        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get MeshComponent");
-                    }
+                    if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
+                    Syngine::PhysicsComponent* physComp = cube->GetComponent<Syngine::PhysicsComponent>();
+                    if (physComp) physComp->Init(tComp, this->app->physicsManager, Syngine::PhysicsShapes::BOX, 1.0f, 0.5f);
                     this->app->gameObjects.push_back(cube);
                 } else if (event.key.key == SDLK_ESCAPE) {
                     mouseLook = !mouseLook;
@@ -153,6 +150,19 @@ int SyngineCore::SyngineEventLoop() {
 
         //camera movement
         if (mouseLook) {
+            if(this->app->physicsManager) {
+                this->app->physicsManager->Update(1);
+            }
+
+            for (auto* gameObject : this->app->gameObjects) {
+                if (gameObject) {
+                    Syngine::PhysicsComponent* physComp = gameObject->GetComponent<Syngine::PhysicsComponent>();
+                    if (physComp) {
+                        physComp->Update(); // Update physics component
+                    }
+                }
+            }
+
             if (keystate[SDL_SCANCODE_W]) {
                 moveVector = {
                     cosf(camera.pitch) * sinf(camera.yaw),

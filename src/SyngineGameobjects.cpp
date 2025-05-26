@@ -2,6 +2,7 @@
 
 #include "Components/MeshComponent.h"
 #include "Components/TransformComponent.h"
+#include "Components/PhysComponent.h"
 
 GameObject::GameObject(string name, string type) {
     this->name = name;
@@ -30,6 +31,9 @@ int GameObject::AddComponent(SynComponents type) {
             component = new TransformComponent();
             break;
         // Add cases for other components here
+        case SYN_COMPONENT_PHYSICS:
+            component = new Syngine::PhysicsComponent();
+            break;
         default:
             return 2; // Unknown component type
     }
