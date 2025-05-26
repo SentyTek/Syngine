@@ -113,7 +113,7 @@ int SyngineCore::SyngineEventLoop() {
                 if (event.key.key == SDLK_F) {
                     //load model
                     std::string modelPath = resolveOSPath("meshes/ground.glb");
-                    GameObject* model = new GameObject("ground");
+                    GameObject* model = new GameObject("ground", "terrain");
                     model->AddComponent(SYN_COMPONENT_TRANSFORM);
                     model->AddComponent(SYN_COMPONENT_MESH);
                     MeshComponent* meshComp = model->GetComponent<MeshComponent>();
@@ -124,8 +124,8 @@ int SyngineCore::SyngineEventLoop() {
                     }
                     this->app->gameObjects.push_back(model);
 
-                    /*modelPath = resolveOSPath("meshes/cube.glb");
-                    GameObject* cube = new GameObject("cube");
+                    modelPath = resolveOSPath("meshes/cube.glb");
+                    GameObject* cube = new GameObject("cube", "default");
                     cube->AddComponent(SYN_COMPONENT_TRANSFORM);
                     cube->AddComponent(SYN_COMPONENT_MESH);
                     meshComp = cube->GetComponent<MeshComponent>();
@@ -134,7 +134,9 @@ int SyngineCore::SyngineEventLoop() {
                     } else {
                         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get MeshComponent");
                     }
-                    this->app->gameObjects.push_back(cube);*/
+                    TransformComponent* tComp = cube->GetComponent<TransformComponent>();
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
+                    this->app->gameObjects.push_back(cube);
                 } else if (event.key.key == SDLK_ESCAPE) {
                     mouseLook = !mouseLook;
                     SDL_SetWindowRelativeMouseMode(this->app->graphics->win, mouseLook ? true : false);
@@ -280,4 +282,5 @@ int SyngineCore::DeleteGameobject(GameObject* gameobject) {
     }
     delete gameobject; // delete the gameobject
     gameobject = nullptr; // set to null to avoid dangling pointer
+    return 0;
 }

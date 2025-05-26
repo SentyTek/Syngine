@@ -19,7 +19,8 @@ class GameObject {
     map<SynComponents, unique_ptr<SynComponent>> components; //Map of components attached to the gameobject
     public:
         string name; //Name of the gameoject
-        GameObject(string name);
+        string type; //Type of object, used for shader selection.
+        GameObject(string name, string type);
         ~GameObject();
         long GetID(); //Get the ID of the gameobject
         int AddComponent(SynComponents type); //Add a component to the gameobject

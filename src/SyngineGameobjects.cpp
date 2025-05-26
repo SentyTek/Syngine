@@ -3,8 +3,9 @@
 #include "Components/MeshComponent.h"
 #include "Components/TransformComponent.h"
 
-GameObject::GameObject(string name) {
+GameObject::GameObject(string name, string type) {
     this->name = name;
+    this->type = type;
     this->id = -1;
 }
 

@@ -23,6 +23,7 @@ struct Material {
     float heightScale = 0.01f; //matches blender displacement
     float mixFactor = 0.7f; //mix between detail and macro maps
     float ambient = 0.2f; //ambient floor
+    float baseColor[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // RGBA base color
 };
 
 struct SynMeshData {

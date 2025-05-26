@@ -165,18 +165,20 @@ int SyngineGraphics::CreateRenderer() {
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1, 0);
     bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
     
-    this->handles.u_albedoSampler = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
-    this->handles.u_normalMapSampler = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-    this->handles.u_heightMapSampler = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
-    
-    this->handles.u_normalMatrix = bgfx::createUniform("u_normalMatrix", bgfx::UniformType::Mat3);
-    this->handles.u_lightDir = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
-    this->handles.u_floats = bgfx::createUniform("u_floats", bgfx::UniformType::Vec4);
+    // Create uniforms and store them in a map by name
+    this->handles.uniforms["s_albedo"]        = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
+    this->handles.uniforms["s_normalMap"]     = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
+    this->handles.uniforms["s_heightMap"]     = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
 
-    this->handles.u_skyColorDay = bgfx::createUniform("u_skyColorDay", bgfx::UniformType::Vec4);
-    this->handles.u_skyColorNight = bgfx::createUniform("u_skyColorNight", bgfx::UniformType::Vec4);
-    this->handles.u_sunColorDay = bgfx::createUniform("u_sunColorDay", bgfx::UniformType::Vec4);
-    this->handles.u_sunColorRise = bgfx::createUniform("u_sunColorRise", bgfx::UniformType::Vec4);
+    this->handles.uniforms["u_normalMatrix"]  = bgfx::createUniform("u_normalMatrix", bgfx::UniformType::Mat3);
+    this->handles.uniforms["u_lightDir"]      = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
+    this->handles.uniforms["u_floats"]        = bgfx::createUniform("u_floats", bgfx::UniformType::Vec4);
+    this->handles.uniforms["u_baseColor"]     = bgfx::createUniform("u_baseColor", bgfx::UniformType::Vec4);
+
+    this->handles.uniforms["u_skyColorDay"]   = bgfx::createUniform("u_skyColorDay", bgfx::UniformType::Vec4);
+    this->handles.uniforms["u_skyColorNight"] = bgfx::createUniform("u_skyColorNight", bgfx::UniformType::Vec4);
+    this->handles.uniforms["u_sunColorDay"]   = bgfx::createUniform("u_sunColorDay", bgfx::UniformType::Vec4);
+    this->handles.uniforms["u_sunColorRise"]  = bgfx::createUniform("u_sunColorRise", bgfx::UniformType::Vec4);
     
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
@@ -191,6 +193,16 @@ int SyngineGraphics::CreateRenderer() {
         if(w != bufw) {
             SDL_Log("This is a high DPI display");
         }
+    }
+
+    //create default shader
+    size_t defaultProg = AddProgram("shaders/default.vert.sc.bin", "shaders/default.frag.sc.bin", "default");
+    if (defaultProg == (size_t)-1) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create default program");
+        bgfx::shutdown();
+        SDL_DestroyWindow(this->win);
+        SDL_Quit();
+        return 1;
     }
 
     SDL_Log("hello world, this is bakerman coming at you live from CNN");
@@ -210,46 +222,12 @@ int SyngineGraphics::DestroyRenderer() {
     }
     this->handles.programs.clear();
 
-    if(bgfx::isValid(this->handles.u_albedoSampler)) {
-        bgfx::destroy(this->handles.u_albedoSampler);
-        this->handles.u_albedoSampler = BGFX_INVALID_HANDLE;
+    for (auto& uniform : this->handles.uniforms) {
+        if(bgfx::isValid(uniform.second) && uniform.second.idx != 0) {
+            bgfx::destroy(uniform.second);
+        }
     }
-    if(bgfx::isValid(this->handles.u_normalMapSampler)) {
-        bgfx::destroy(this->handles.u_normalMapSampler);
-        this->handles.u_normalMapSampler = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.u_heightMapSampler)) {
-        bgfx::destroy(this->handles.u_heightMapSampler);
-        this->handles.u_heightMapSampler = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.u_normalMatrix)) {
-        bgfx::destroy(this->handles.u_normalMatrix);
-        this->handles.u_normalMatrix = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.u_lightDir)) {
-        bgfx::destroy(this->handles.u_lightDir);
-        this->handles.u_lightDir = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.u_floats)) {
-        bgfx::destroy(this->handles.u_floats);
-        this->handles.u_floats = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.u_skyColorDay)) {
-        bgfx::destroy(this->handles.u_skyColorDay);
-        this->handles.u_skyColorDay = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.u_skyColorNight)) {
-        bgfx::destroy(this->handles.u_skyColorNight);
-        this->handles.u_skyColorNight = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.u_sunColorDay)) {
-        bgfx::destroy(this->handles.u_sunColorDay);
-        this->handles.u_sunColorDay = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.u_sunColorRise)) {
-        bgfx::destroy(this->handles.u_sunColorRise);
-        this->handles.u_sunColorRise = BGFX_INVALID_HANDLE;
-    }
+    this->handles.uniforms.clear();
 
     bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
     SDL_Log("goodbye renderer");
@@ -350,10 +328,12 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
 int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir) {
     const SynProgram& terrainProgram = GetProgram("terrain");
     const SynProgram& skyProgram = GetProgram("sky");
-    if (!bgfx::isValid(terrainProgram.program) || !bgfx::isValid(skyProgram.program)) {
+    const SynProgram& defaultProgram = GetProgram("default");
+    if (!bgfx::isValid(terrainProgram.program) || !bgfx::isValid(skyProgram.program) || !bgfx::isValid(defaultProgram.program)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program");
         return -1;
     }
+
     const bgfx::ViewId SKY_VIEW = skyProgram.viewId;
     const bgfx::ViewId MAIN_VIEW = terrainProgram.viewId;
     camera.Update(SKY_VIEW, this->width, this->height); //update camera view and projection matrices
@@ -367,7 +347,7 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
 
     float skyView[16];
     bx::memCopy(skyView, camera.view, sizeof(skyView));
-    skyView[12] = 0.0f;
+    skyView[12] = 0.0f; //remove translation for skybox
     skyView[13] = 0.0f;
     skyView[14] = 0.0f;
 
@@ -377,10 +357,10 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
     float skyColorNight[4] = { 0.0f, 0.0f, 0.1f, 1.0f };
     float sunColorDay[4] = { 1.0f, 1.0f, 0.9f, 1.0f };
     float sunColorRise[4] = { 0.77f, 0.39f, 0.14f, 1.0f };
-    bgfx::setUniform(handles.u_skyColorDay, skyColorDay);
-    bgfx::setUniform(handles.u_skyColorNight, skyColorNight);
-    bgfx::setUniform(handles.u_sunColorDay, sunColorDay);
-    bgfx::setUniform(handles.u_sunColorRise, sunColorRise);
+    bgfx::setUniform(handles.uniforms["u_skyColorDay"], skyColorDay);
+    bgfx::setUniform(handles.uniforms["u_skyColorNight"], skyColorNight);
+    bgfx::setUniform(handles.uniforms["u_sunColorDay"], sunColorDay);
+    bgfx::setUniform(handles.uniforms["u_sunColorRise"], sunColorRise);
 
     bgfx::setState(BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LEQUAL | BGFX_STATE_MSAA);
 
@@ -394,12 +374,11 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
     //prepare render
     uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA | BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
 
-    bgfx::setState(renderState);
-
+    
     const uint32_t samplerFlags =
-        BGFX_SAMPLER_MIN_ANISOTROPIC |
-        BGFX_SAMPLER_MAG_ANISOTROPIC;
-
+    BGFX_SAMPLER_MIN_ANISOTROPIC |
+    BGFX_SAMPLER_MAG_ANISOTROPIC;
+    
     for (auto& gameObject : gameObjects) {
         if (!gameObject) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "GameObject is null");
@@ -409,6 +388,21 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
             continue;
         }
         SynMeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;
+        
+        bool isDefault = false;
+        SynProgram currentProg;
+        if (gameObject->type != "default") { 
+            currentProg = GetProgram(gameObject->type.c_str());
+            if (!bgfx::isValid(currentProg.program)) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %s not found", gameObject->type.c_str());
+                continue;
+            }
+        } else {
+            isDefault = true;
+            currentProg = defaultProgram;
+        }
+        
+        bgfx::setState(renderState);
 
         if(gameObject->HasComponent(SYN_COMPONENT_MESH) && gameObject->GetComponent<MeshComponent>()->isEnabled) {
             //TODO: add support for multiple materials
@@ -417,41 +411,62 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
                 continue;
             }
             
-            if(mesh.hasTextures) {
-                bgfx::setTexture(0, handles.u_albedoSampler, mesh.materials[0].albedo, samplerFlags);
-                bgfx::setTexture(1, handles.u_normalMapSampler, mesh.materials[0].normalMap, samplerFlags);
-                bgfx::setTexture(2, handles.u_heightMapSampler, mesh.materials[0].heightMap, samplerFlags);
-            }
+            if(mesh.materials.empty()) {
+                SDL_Log("GameObject %s has no materials, using default material", gameObject->name.c_str());
+                if (gameObject->type == "default") {
+                    float color[4] = { 1.0f, 0.0f, 1.0f, 1.0f };
+                    bgfx::setUniform(handles.uniforms["u_baseColor"], color);
+                } else {
+                    continue; // Other types absolutely require materials
+                }
+            } else {
+                Material& currentMat = mesh.materials[0]; // TODO: support multiple materials
+                if (!isDefault) {
+                    //Set textures
+                    if (bgfx::isValid(currentMat.albedo)) 
+                        bgfx::setTexture(0, handles.uniforms["s_albedo"], currentMat.albedo, samplerFlags);
+                    if (bgfx::isValid(currentMat.normalMap))
+                        bgfx::setTexture(1, handles.uniforms["s_normalMap"], currentMat.normalMap, samplerFlags);
+                    if (bgfx::isValid(currentMat.heightMap))
+                        bgfx::setTexture(2, handles.uniforms["s_heightMap"], currentMat.heightMap, samplerFlags);
 
+                    //Set floats
+                    float u_floats[4] = {
+                        currentMat.heightScale,
+                        currentMat.mixFactor,
+                        currentMat.ambient,
+                        currentMat.tileDetail
+                    };
+                    bgfx::setUniform(handles.uniforms["u_floats"], u_floats);
+                } else {
+                    // Set base color for default shader
+                    bgfx::setUniform(handles.uniforms["u_baseColor"], currentMat.baseColor);
+                }
+            }
+            
             bgfx::setVertexBuffer(0, mesh.vbh);
             bgfx::setIndexBuffer(mesh.ibh);
         }
-
-        float* model = gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
-        bgfx::setTransform(model);
-
-        float sx = bx::length(bx::Vec3(model[0], model[1], model[2]));
-        float sy = bx::length(bx::Vec3(model[4], model[5], model[6]));
-        float sz = bx::length(bx::Vec3(model[8], model[9], model[10]));
+        
+        // Set common uniforms
+        float* modelMtx = gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
+        bgfx::setTransform(modelMtx);
+        
+        float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));
+        float sy = bx::length(bx::Vec3(modelMtx[4], modelMtx[5], modelMtx[6]));
+        float sz = bx::length(bx::Vec3(modelMtx[8], modelMtx[9], modelMtx[10]));
 
         float normal3x3[9];
         for(int i = 0; i < 3; ++i) {
-            normal3x3[i * 3 + 0] = model[i * 4 + 0] / sx;
-            normal3x3[i * 3 + 1] = model[i * 4 + 1] / sy;
-            normal3x3[i * 3 + 2] = model[i * 4 + 2] / sz;
+            normal3x3[i * 3 + 0] = modelMtx[i * 4 + 0] / sx;
+            normal3x3[i * 3 + 1] = modelMtx[i * 4 + 1] / sy;
+            normal3x3[i * 3 + 2] = modelMtx[i * 4 + 2] / sz;
         }
 
-        float u_floats[4] = {
-            mesh.materials[0].heightScale,
-            mesh.materials[0].mixFactor,
-            mesh.materials[0].ambient,
-            mesh.materials[0].tileDetail
-        };
-        bgfx::setUniform(handles.u_normalMatrix, normal3x3);
-        bgfx::setUniform(handles.u_lightDir, &lightDir);
-        bgfx::setUniform(handles.u_floats, u_floats);
+        bgfx::setUniform(handles.uniforms["u_normalMatrix"], normal3x3);
+        bgfx::setUniform(handles.uniforms["u_lightDir"], &lightDir);
 
-        bgfx::submit(MAIN_VIEW, terrainProgram.program);
+        bgfx::submit(MAIN_VIEW, currentProg.program);
     }
 
     bgfx::frame(); // submit the frame

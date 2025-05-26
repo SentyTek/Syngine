@@ -1,7 +1,7 @@
 #pragma once
 #include "Components.h"
 #include "SynginePhys.h"
-#include "Components/TransformComponent.h"
+#include "TransformComponent.h"
 
 namespace Syngine {
 enum class PhysicsShapes {
