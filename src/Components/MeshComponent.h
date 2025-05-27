@@ -1,6 +1,7 @@
 #pragma once
 #include "Components.h"
 #include "SynModelLoader.h"
+#include "SyngineGameobject.h"
 
 /*
     Syngine Mesh Component
@@ -12,7 +13,7 @@ class MeshComponent : public SynComponent {
     public:
     static constexpr SynComponents componentType = SYN_COMPONENT_MESH;
 
-    MeshComponent();
+    MeshComponent(GameObject* owner);
     SynMeshData meshData; //Mesh data for the gameobject
     SynComponents getComponentType() override;
     

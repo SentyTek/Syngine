@@ -1,10 +1,12 @@
 #include "Components/MeshComponent.h"
 #include "SynModelLoader.h"
+#include "SyngineGameobject.h"
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
 
-MeshComponent::MeshComponent() {
+MeshComponent::MeshComponent(GameObject* owner) {
     this->meshData = SynMeshData();
+    this->m_owner = owner;
 }
 
 SynComponents MeshComponent::getComponentType() {
