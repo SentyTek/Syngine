@@ -76,6 +76,10 @@ int SyngineCore::SyngineEventLoop() {
     SDL_Log("Entering event loop");
     bool running = true;
     bool simulate = false;
+    bool rmb = false;
+    bool mouseState = false; //relative mouse mode state
+    float mouseX, mouseY;
+
     int frame = 0;
     
     bx::Vec3 startDir = {75.0f, 0.0f, 90.0f};
@@ -161,9 +165,19 @@ int SyngineCore::SyngineEventLoop() {
                     this->app->gameObjects.push_back(cube);
                 } else if (event.key.key == SDLK_ESCAPE) {
                     simulate = !simulate;
-                    SDL_SetWindowRelativeMouseMode(this->app->graphics->win, simulate ? true : false);
                 }
-            } else if (event.type == SDL_EVENT_MOUSE_MOTION && simulate) {
+            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+                if (event.button.button == SDL_BUTTON_RIGHT) {
+                    rmb = true;
+                    mouseX = event.button.x;
+                    mouseY = event.button.y;
+                }
+            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+                if (event.button.button == SDL_BUTTON_RIGHT) {
+                    rmb = false;
+                    SDL_WarpMouseInWindow(this->app->graphics->win, mouseX, mouseY);
+                }
+            }else if (event.type == SDL_EVENT_MOUSE_MOTION && rmb) {
                 float dx = event.motion.xrel * sensitivity;
                 float dy = event.motion.yrel * sensitivity;
 
@@ -171,6 +185,16 @@ int SyngineCore::SyngineEventLoop() {
                 camera.pitch -= dy;
                 camera.pitch = bx::clamp(camera.pitch, -maxPitch, maxPitch); // Clamp pitch to avoid gimbal lock
             }
+        }
+
+        //mouse move
+        if (this->app->graphics->win) {
+            bool desiredMouseState = rmb;
+            if (desiredMouseState != mouseState) {
+                SDL_SetWindowRelativeMouseMode(this->app->graphics->win, desiredMouseState);
+                mouseState = desiredMouseState;
+            }
+
         }
 
         //simulation stuff
@@ -258,17 +282,7 @@ int SyngineCore::SyngineEventLoop() {
 
         //sun
         if (keystate[SDL_SCANCODE_LEFT]) {
-            //startDir.z += 2.0f;
-            if(!simulate) {
-                TransformComponent* tcomp = this->app->gameObjects[0]->GetComponent<TransformComponent>();
-                if (tcomp) {
-                    float x, y, z;
-                    tcomp->GetRotationAsEuler(x, y, z);
-                    x += 2.0f; // rotate around Y-axis
-                    tcomp->SetRotation(x, y, z); // update rotation
-                    SDL_Log("rotation updated to: (%f, %f, %f)", x, y, z);
-                }
-            }
+            startDir.z += 2.0f;
         }
         if (keystate[SDL_SCANCODE_RIGHT]) {
             startDir.z -= 2.0f;
