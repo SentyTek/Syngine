@@ -2,6 +2,7 @@
 #include "Components.h"
 #include "MeshComponent.h"
 #include "PhysComponent.h"
+#include "SynginePhys.h"
 #include "TransformComponent.h"
 #include "defines.h"
 
@@ -74,7 +75,7 @@ int SyngineCore::SyngineEventLoop() {
     //main loop. this will obviously be replaced with a more complex and modular/multi-threaded loop in the Future
     SDL_Log("Entering event loop");
     bool running = true;
-    bool mouseLook = false;
+    bool simulate = false;
     int frame = 0;
     
     bx::Vec3 startDir = {75.0f, 0.0f, 90.0f};
@@ -118,8 +119,22 @@ int SyngineCore::SyngineEventLoop() {
                     GameObject* model = new GameObject("ground", "terrain");
                     model->AddComponent(SYN_COMPONENT_TRANSFORM);
                     model->AddComponent(SYN_COMPONENT_MESH);
+                    model->AddComponent(SYN_COMPONENT_PHYSICS);
                     MeshComponent* meshComp = model->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath);
+                    Syngine::PhysicsComponent* physComp = model->GetComponent<Syngine::PhysicsComponent>();
+                    if (physComp) {
+                            physComp->Init(
+                                model->GetComponent<TransformComponent>(),
+                                this->app->physicsManager,
+                                Syngine::PhysicsShapes::MESH,
+                                0.0f, // no mass for static objects
+                                0.5f, // friction
+                                JPH::EMotionType::Static,
+                                Syngine::Layers::NON_MOVING,
+                                {}
+                            );
+                    }
                     this->app->gameObjects.push_back(model);
 
                     modelPath = resolveOSPath("meshes/cube.glb");
@@ -131,14 +146,24 @@ int SyngineCore::SyngineEventLoop() {
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
-                    Syngine::PhysicsComponent* physComp = cube->GetComponent<Syngine::PhysicsComponent>();
-                    if (physComp) physComp->Init(tComp, this->app->physicsManager, Syngine::PhysicsShapes::BOX, 1.0f, 0.5f);
+                    physComp = cube->GetComponent<Syngine::PhysicsComponent>();
+                    std::vector<float> shapeParams = {0.5f, 0.5f, 0.5f}; // half extents for box shape
+                    if (physComp) physComp->Init(
+                        tComp,
+                        this->app->physicsManager,
+                        Syngine::PhysicsShapes::BOX,
+                        1.0f,
+                        0.5f,
+                        JPH::EMotionType::Dynamic,
+                        Syngine::Layers::MOVING,
+                        shapeParams
+                    );
                     this->app->gameObjects.push_back(cube);
                 } else if (event.key.key == SDLK_ESCAPE) {
-                    mouseLook = !mouseLook;
-                    SDL_SetWindowRelativeMouseMode(this->app->graphics->win, mouseLook ? true : false);
+                    simulate = !simulate;
+                    SDL_SetWindowRelativeMouseMode(this->app->graphics->win, simulate ? true : false);
                 }
-            } else if (event.type == SDL_EVENT_MOUSE_MOTION && mouseLook) {
+            } else if (event.type == SDL_EVENT_MOUSE_MOTION && simulate) {
                 float dx = event.motion.xrel * sensitivity;
                 float dy = event.motion.yrel * sensitivity;
 
@@ -148,99 +173,102 @@ int SyngineCore::SyngineEventLoop() {
             }
         }
 
-        //camera movement
-        if (mouseLook) {
+        //simulation stuff
+        if (simulate) {
             if(this->app->physicsManager) {
                 this->app->physicsManager->Update(1);
-            }
-
-            for (auto* gameObject : this->app->gameObjects) {
-                if (gameObject) {
-                    Syngine::PhysicsComponent* physComp = gameObject->GetComponent<Syngine::PhysicsComponent>();
-                    if (physComp) {
-                        physComp->Update(); // Update physics component
-                    }
-                }
-            }
-
-            if (keystate[SDL_SCANCODE_W]) {
-                moveVector = {
-                    cosf(camera.pitch) * sinf(camera.yaw),
-                    sinf(camera.pitch),
-                    cosf(camera.pitch) * cosf(camera.yaw)
-                };
-                moveVector = bx::mul(moveVector, 0.1f);
-                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = newEye.x;
-                camera.eye[1] = newEye.y;
-                camera.eye[2] = newEye.z;
-            }
-            if (keystate[SDL_SCANCODE_S]) {
-                moveVector = {
-                    -cosf(camera.pitch) * sinf(camera.yaw),
-                    -sinf(camera.pitch),
-                    -cosf(camera.pitch) * cosf(camera.yaw)
-                };
-                moveVector = bx::mul(moveVector, 0.1f);
-                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = newEye.x;
-                camera.eye[1] = newEye.y;
-                camera.eye[2] = newEye.z;
-            }
-            if (keystate[SDL_SCANCODE_A]) {
-                moveVector = {
-                    sinf(camera.yaw - bx::kPiHalf),
-                    0.0f,
-                    cosf(camera.yaw - bx::kPiHalf)
-                };
-                moveVector = bx::mul(moveVector, 0.1f);
-                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = newEye.x;
-                camera.eye[1] = newEye.y;
-                camera.eye[2] = newEye.z;
-            }
-            if (keystate[SDL_SCANCODE_D]) {
-                moveVector = {
-                    sinf(camera.yaw + bx::kPiHalf),
-                    0.0f,
-                    cosf(camera.yaw + bx::kPiHalf)
-                };
-                moveVector = bx::mul(moveVector, 0.1f);
-                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = newEye.x;
-                camera.eye[1] = newEye.y;
-                camera.eye[2] = newEye.z;
-            }
-            if (keystate[SDL_SCANCODE_Q]) {
-                moveVector = {
-                    0.0f,
-                    -1.0f,
-                    0.0f
-                };
-                moveVector = bx::mul(moveVector, 0.1f);
-                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = newEye.x;
-                camera.eye[1] = newEye.y;
-                camera.eye[2] = newEye.z;
-            }
-            if (keystate[SDL_SCANCODE_E]) {
-                moveVector = {
-                    0.0f,
-                    1.0f,
-                    0.0f
-                };
-                moveVector = bx::mul(moveVector, 0.1f);
-                newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = newEye.x;
-                camera.eye[1] = newEye.y;
-                camera.eye[2] = newEye.z;
             }
   
             startDir.x += 0.02f;
         }
+
+        //camera movement
+        if (keystate[SDL_SCANCODE_W]) {
+            moveVector = {
+                cosf(camera.pitch) * sinf(camera.yaw),
+                sinf(camera.pitch),
+                cosf(camera.pitch) * cosf(camera.yaw)
+            };
+            moveVector = bx::mul(moveVector, 0.1f);
+            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+            camera.eye[0] = newEye.x;
+            camera.eye[1] = newEye.y;
+            camera.eye[2] = newEye.z;
+        }
+        if (keystate[SDL_SCANCODE_S]) {
+            moveVector = {
+                -cosf(camera.pitch) * sinf(camera.yaw),
+                -sinf(camera.pitch),
+                -cosf(camera.pitch) * cosf(camera.yaw)
+            };
+            moveVector = bx::mul(moveVector, 0.1f);
+            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+            camera.eye[0] = newEye.x;
+            camera.eye[1] = newEye.y;
+            camera.eye[2] = newEye.z;
+        }
+        if (keystate[SDL_SCANCODE_A]) {
+            moveVector = {
+                sinf(camera.yaw - bx::kPiHalf),
+                0.0f,
+                cosf(camera.yaw - bx::kPiHalf)
+            };
+            moveVector = bx::mul(moveVector, 0.1f);
+            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+            camera.eye[0] = newEye.x;
+            camera.eye[1] = newEye.y;
+            camera.eye[2] = newEye.z;
+        }
+        if (keystate[SDL_SCANCODE_D]) {
+            moveVector = {
+                sinf(camera.yaw + bx::kPiHalf),
+                0.0f,
+                cosf(camera.yaw + bx::kPiHalf)
+            };
+            moveVector = bx::mul(moveVector, 0.1f);
+            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+            camera.eye[0] = newEye.x;
+            camera.eye[1] = newEye.y;
+            camera.eye[2] = newEye.z;
+        }
+        if (keystate[SDL_SCANCODE_Q]) {
+            moveVector = {
+                0.0f,
+                -1.0f,
+                0.0f
+            };
+            moveVector = bx::mul(moveVector, 0.1f);
+            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+            camera.eye[0] = newEye.x;
+            camera.eye[1] = newEye.y;
+            camera.eye[2] = newEye.z;
+        }
+        if (keystate[SDL_SCANCODE_E]) {
+            moveVector = {
+                0.0f,
+                1.0f,
+                0.0f
+            };
+            moveVector = bx::mul(moveVector, 0.1f);
+            newEye = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+            camera.eye[0] = newEye.x;
+            camera.eye[1] = newEye.y;
+            camera.eye[2] = newEye.z;
+        }
+
         //sun
         if (keystate[SDL_SCANCODE_LEFT]) {
-            startDir.z += 2.0f;
+            //startDir.z += 2.0f;
+            if(!simulate) {
+                TransformComponent* tcomp = this->app->gameObjects[0]->GetComponent<TransformComponent>();
+                if (tcomp) {
+                    float x, y, z;
+                    tcomp->GetRotationAsEuler(x, y, z);
+                    x += 2.0f; // rotate around Y-axis
+                    tcomp->SetRotation(x, y, z); // update rotation
+                    SDL_Log("rotation updated to: (%f, %f, %f)", x, y, z);
+                }
+            }
         }
         if (keystate[SDL_SCANCODE_RIGHT]) {
             startDir.z -= 2.0f;
@@ -268,6 +296,15 @@ int SyngineCore::SyngineEventLoop() {
             cy * cosf(yaw)      // z
         };
         lightDir = bx::normalize(lightDir);
+
+        for (auto* gameObject : this->app->gameObjects) {
+            if (gameObject) {
+                Syngine::PhysicsComponent* physComp = gameObject->GetComponent<Syngine::PhysicsComponent>();
+                if (physComp) {
+                    physComp->Update(simulate); // Update physics component
+                }
+            }
+        }
         
         if (this->app && this->app->graphics) {
             this->app->graphics->RenderFrame(this->app->gameObjects, lightDir); // render frame

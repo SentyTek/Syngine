@@ -142,8 +142,8 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
-    meshData.vertices.clear();
-    meshData.indices.clear();
+    //meshData.vertices.clear();
+    //meshData.indices.clear();
 
     //checks
     if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {

@@ -449,7 +449,8 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
         }
         
         // Set common uniforms
-        float* modelMtx = gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
+        float modelMtx[16];
+        gameObject->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
         bgfx::setTransform(modelMtx);
         
         float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));

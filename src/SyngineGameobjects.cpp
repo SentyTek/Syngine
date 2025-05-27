@@ -25,14 +25,14 @@ int GameObject::AddComponent(SynComponents type) {
     SynComponent* component = nullptr;
     switch (type) {
         case SYN_COMPONENT_MESH:
-            component = new MeshComponent();
+            component = new MeshComponent(this);
             break;
         case SYN_COMPONENT_TRANSFORM:
-            component = new TransformComponent();
+            component = new TransformComponent(this);
             break;
         // Add cases for other components here
         case SYN_COMPONENT_PHYSICS:
-            component = new Syngine::PhysicsComponent();
+            component = new Syngine::PhysicsComponent(this);
             break;
         default:
             return 2; // Unknown component type
