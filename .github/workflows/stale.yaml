@@ -1,0 +1,18 @@
+name: Mark stale issues and PRs
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2AM UTC
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          stale-issue-message: 'This issue has been inactive for 30 days. Marked as stale.'
+          stale-pr-message: 'This PR has been inactive for 30 days. Marked as stale.'
+          close-issue-message: 'Closing due to inactivity.'
+          close-pr-message: 'Closing due to inactivity.'
+          days-before-stale: 30
+          days-before-close: 7

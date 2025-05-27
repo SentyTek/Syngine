@@ -1,0 +1,48 @@
+name: Bug Report
+description: Report an issue with the engine
+labels: bug
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Tell us what broke and how you found it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How do we replicate it?
+      placeholder: |
+        1. Launch game
+        2. Create Gameobject
+        3. Observe crash when adding light component
+    validations:
+      required: true
+
+  - type: textarea
+    id: ideal
+    attributes:
+      label: Ideal Behavior
+      description: What did you expect to happen?
+      placeholder: |
+        The game should not crash when adding a light component.
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform & System
+      description: OS, GPU, CPU, RAM, etc.
+    validations:
+      required: true
+
+  - type: input
+    id: engine-version
+    attributes:
+      label: Engine Commit or Version.
+    validations:
+      required: true
