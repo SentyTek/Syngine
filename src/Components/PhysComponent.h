@@ -15,7 +15,6 @@ enum class PhysicsShapes {
     CONVEX_HULL,
     PLANE,
     MESH,
-    TERRAIN
 };
 
 /*
@@ -27,13 +26,22 @@ class PhysicsComponent : public SynComponent {
     public:
     static constexpr SynComponents componentType = SYN_COMPONENT_PHYSICS;
 
-    PhysicsComponent();
+    PhysicsComponent(GameObject* owner);
     ~PhysicsComponent();
 
     SynComponents getComponentType() override;
 
-    void Init(TransformComponent* transform, Syngine::SynginePhys* physicsManager, PhysicsShapes shape, float mass, float friction);
-    void Update();
+    void Init(
+        TransformComponent* transform,
+        Syngine::SynginePhys* physicsManager,
+        PhysicsShapes shape,
+        float mass,
+        float friction,
+        JPH::EMotionType motionType,
+        JPH::ObjectLayer layer,
+        const std::vector<float>& shapeParameters
+    );
+    void Update(bool simulate);
     void Destroy();
 
     private:

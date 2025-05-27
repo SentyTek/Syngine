@@ -1,9 +1,11 @@
 #include "SynginePhys.h"
 #include "Jolt/Core/Factory.h"
 #include "Jolt/Core/TempAllocator.h"
+#include "Jolt/Geometry/IndexedTriangle.h"
 #include "Jolt/Math/Quat.h"
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
+#include "Jolt/Physics/Collision/Shape/MeshShape.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 #include "Jolt/Physics/PhysicsSettings.h"
@@ -126,5 +128,64 @@ namespace Syngine {
         Body *box = body_interface.CreateBody(box_settings);
         body_interface.AddBody(box->GetID(), EActivation::Activate);
         return box->GetID();
+    }
+    
+    BodyID SynginePhys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const SynMeshData& meshData, EMotionType motionType, ObjectLayer layer) {
+        BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
+        if (meshData.numVertices == 0) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Mesh data is empty.");
+            return BodyID(); // Return an invalid BodyID
+        }
+
+        // convert SynMeshData to Jolt's mesh format
+        JPH::VertexList vertices;
+        vertices.reserve(meshData.vertices.size());
+        for (const auto& synVertex : meshData.vertices) {
+            vertices.push_back(JPH::Float3(
+                synVertex.pos[0],
+                synVertex.pos[1],
+                synVertex.pos[2]
+            ));
+        }
+
+        JPH::IndexedTriangleList triangles;
+        triangles.reserve(meshData.indices.size() / 3);
+        for (size_t i = 0; i < meshData.indices.size(); i += 3) {
+            triangles.push_back(JPH::IndexedTriangle(
+                meshData.indices[i],
+                meshData.indices[i + 1],
+                meshData.indices[i + 2]
+            ));
+        }
+
+        if (vertices.empty() || triangles.empty()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: No valid vertices or triangles found in mesh data.");
+            return BodyID();
+        }
+
+        MeshShapeSettings meshShapeSettings(vertices, triangles);
+        
+        ShapeSettings::ShapeResult meshShapeResult = meshShapeSettings.Create();
+        if (meshShapeResult.HasError()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Failed to create mesh shape: %s", meshShapeResult.GetError().c_str());
+            return BodyID();
+        }
+        ShapeRefC meshShape = meshShapeResult.Get();
+        BodyCreationSettings meshSettings(meshShape, position, rotation, motionType, layer);
+
+        // For static meshes, mass properties are not strictly required, as Jolt treats them as infinite mass.
+        // If it were dynamic, mass properties would be needed.
+        // if (motionType == EMotionType::Dynamic) {
+        //    bodySettings.mMassProertiesOverride = meshShape->GetMassProperties();
+        //    bodySettings.mMassPropertiesOverride.ScaleToMass(desired_mass); //For specific mass
+        // }
+
+        Body* body = bodyInterface.CreateBody(meshSettings);
+        if (!body) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Failed to create body for mesh.");
+            return BodyID(); // Return an invalid BodyID
+        }
+        bodyInterface.AddBody(body->GetID(), EActivation::Activate);
+        return body->GetID();
     }
 } // namespace Syngine

@@ -1,4 +1,5 @@
 #pragma once
+#include "SynModelLoader.h"
 #include <Jolt/Jolt.h>
 
 //Jolt includes
@@ -169,6 +170,7 @@ namespace Syngine {
 
         BodyID CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer);
         BodyID CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, EMotionType motionType, ObjectLayer layer);
+        BodyID CreateMeshBody(RVec3Arg position, QuatArg rotation, const SynMeshData& meshData, EMotionType motionType, ObjectLayer layer);
 
         private:
         //Jolt specific variables
