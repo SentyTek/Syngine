@@ -37,7 +37,7 @@ SyngineCore::~SyngineCore() {
         }
         if (this->app->synModels) {
             this->app->synModels->UnloadAll();
-            delete this->app->synModels;
+            //delete this->app->synModels; //It was getting mad.
             this->app->synModels = nullptr;
         }
         if (this->app->physicsManager) {
