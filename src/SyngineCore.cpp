@@ -4,8 +4,7 @@
 #include "PhysComponent.h"
 #include "SynginePhys.h"
 #include "TransformComponent.h"
-#include "bgfx/defines.h"
-#include "defines.h"
+#include "helpers.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
@@ -15,8 +14,7 @@
 #include "bx/bx.h"
 #include "bx/constants.h"
 #include "bx/math.h"
-
-#include <Jolt/Physics/Body/BodyInterface.h>
+#include "bgfx/defines.h"
 
 SyngineCore::SyngineCore() {
     //initialize app

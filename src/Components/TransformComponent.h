@@ -1,7 +1,6 @@
 #pragma once
 #include "Components.h"
 #include "SyngineGameobject.h"
-#include <cmath>
 
 /*
     Syngine Transform Component
