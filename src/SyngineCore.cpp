@@ -1,4 +1,5 @@
 #include "SyngineCore.h"
+#include "SDL3/SDL_scancode.h"
 #include "SynginePhys.h"
 #include "Components.h"
 #include "MeshComponent.h"
@@ -83,26 +84,29 @@ int SyngineCore::SyngineEventLoop() {
     GameObject* player = new GameObject("player", "default");
     player->AddComponent(SYN_COMPONENT_TRANSFORM);
     player->AddComponent(SYN_COMPONENT_PLAYER);
-    player->GetComponent<PlayerComponent>()->Initialize(&(this->app->graphics->camera));
+    player->GetComponent<TransformComponent>()->SetPosition(0.0f, 20.0f, 0.0f);
+    player->GetComponent<PlayerComponent>()->Initialize(&(this->app->graphics->camera), this->app->graphics->win);
     this->app->gameObjects.push_back(player);
-
+    
     bool running = true;
-    bool simulate = false;
+    bool playerMode = false; // False is editor mode, True is player mode
+    bool simulate = false; // Toggles the physics simulation (always true in player mode)
     bool rmb = false;
-    bool mouseState = false; //relative mouse mode state
+    bool mouseState = false;
     float mouseX, mouseY;
-
+    
     int frame = 0;
     int count = 0;
-    
-    bx::Vec3 startDir = {75.0f, 0.0f, 90.0f};
+
+    Camera editorCam = Camera();
+    bx::Vec3 startDir = {180.0f, 0.0f, 90.0f};
 
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch =
         bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
     const float moveSpeed = 2.0f; // Speed of camera movement
-    const float sprintMult = 2.0f; // Sprint multiplier
-    const float crouchSpeed = 0.5f; // Crouch speed
+    const float sprintMult = 2.0f;
+    const float crouchSpeed = 0.5f;
 
     SDL_Event event;
 
@@ -111,12 +115,13 @@ int SyngineCore::SyngineEventLoop() {
 
     while (running) {
         LAST = NOW;
-        NOW = SDL_GetPerformanceCounter();
-        float deltaTime = (float)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
+        NOW  = SDL_GetPerformanceCounter();
+        float deltaTime =
+            (float)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
 
-        const bool* keystate = SDL_GetKeyboardState(NULL);
-        Camera& camera = this->app->graphics->camera;
-        bx::Vec3 moveVector = {0,0,0};
+        const bool* keystate    = SDL_GetKeyboardState(NULL);
+        Camera&     camera      = this->app->graphics->camera;
+        bx::Vec3    moveVector  = { 0, 0, 0 };
 
         //event handling
         while (SDL_PollEvent(&event)) { //where inputs can also be handled
@@ -157,7 +162,12 @@ int SyngineCore::SyngineEventLoop() {
                     }
                     this->app->gameObjects.push_back(model);
                 } else if (event.key.key == SDLK_ESCAPE) {
-                    simulate = !simulate;
+                    playerMode = !playerMode;
+                    simulate = playerMode; // Always simulate in player mode
+                } else if (event.key.key == SDLK_SPACE) {
+                    if (!playerMode) {
+                        simulate = !simulate;
+                    }
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {
@@ -188,49 +198,44 @@ int SyngineCore::SyngineEventLoop() {
                     this->app->gameObjects.push_back(cube);
                     count++;
                 }
-            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && !simulate) {
+            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && !playerMode) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {
                     rmb = false;
                     SDL_WarpMouseInWindow(this->app->graphics->win, mouseX, mouseY);
                 }
-            } else if (event.type == SDL_EVENT_MOUSE_MOTION && rmb && !simulate) {
+            } else if (event.type == SDL_EVENT_MOUSE_MOTION && rmb && !playerMode) {
                 //mouse motion
                 float dx = event.motion.xrel * sensitivity;
                 float dy = event.motion.yrel * sensitivity;
 
-                camera.yaw += dx;
-                camera.pitch -= dy;
+                editorCam.yaw += dx;
+                editorCam.pitch -= dy;
 
                 // Clamp pitch to avoid gimbal lock
-                camera.pitch = bx::clamp(camera.pitch, -maxPitch, maxPitch);
+                editorCam.pitch = bx::clamp(editorCam.pitch, -maxPitch, maxPitch);
             }
 
-            if (simulate) {
+            if (playerMode) {
                 if (player) {
                     PlayerComponent* playerComp =
                         player->GetComponent<PlayerComponent>();
                     if (playerComp)
-                        playerComp->HandleInput(event, simulate, sensitivity, maxPitch);
+                        playerComp->HandleInput(event, playerMode, sensitivity, maxPitch);
                 }
             }
         }
 
         //mouse move
         if (this->app->graphics->win) {
-            bool desiredMouseState = rmb || simulate;
+            bool desiredMouseState = rmb || playerMode;
             if (desiredMouseState != mouseState) {
                 SDL_SetWindowRelativeMouseMode(this->app->graphics->win, desiredMouseState);
                 mouseState = desiredMouseState;
             }
-
         }
 
-        //simulation stuff
-        if (simulate) {
-            if(this->app->physicsManager) {
-                this->app->physicsManager->Update(1);
-            }
-  
+        // camera mode stuff
+        if (playerMode) {
             startDir.x += 0.02f;
 
             if (player->GetComponent<PlayerComponent>()) {
@@ -239,53 +244,57 @@ int SyngineCore::SyngineEventLoop() {
             }
         } else {
             // camera movement
+            float realSpeed = moveSpeed; // Default speed
+            if (keystate[SDL_SCANCODE_LSHIFT]) realSpeed = moveSpeed * sprintMult;
+            if (keystate[SDL_SCANCODE_LCTRL]) realSpeed = moveSpeed * crouchSpeed;
+
             if (keystate[SDL_SCANCODE_W]) {
                 moveVector = {
-                    cosf(camera.pitch) * sinf(camera.yaw),
-                    sinf(camera.pitch),
-                    cosf(camera.pitch) * cosf(camera.yaw)
+                    cosf(editorCam.pitch) * sinf(editorCam.yaw),
+                    sinf(editorCam.pitch),
+                    cosf(editorCam.pitch) * cosf(editorCam.yaw)
                 };
-                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = moveVector.x;
-                camera.eye[1] = moveVector.y;
-                camera.eye[2] = moveVector.z;
+                moveVector = bx::mul(moveVector, realSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
+                editorCam.eye[0] = moveVector.x;
+                editorCam.eye[1] = moveVector.y;
+                editorCam.eye[2] = moveVector.z;
             }
             if (keystate[SDL_SCANCODE_S]) {
                 moveVector = {
-                    -cosf(camera.pitch) * sinf(camera.yaw),
-                    -sinf(camera.pitch),
-                    -cosf(camera.pitch) * cosf(camera.yaw)
+                    -cosf(editorCam.pitch) * sinf(editorCam.yaw),
+                    -sinf(editorCam.pitch),
+                    -cosf(editorCam.pitch) * cosf(editorCam.yaw)
                 };
-                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = moveVector.x;
-                camera.eye[1] = moveVector.y;
-                camera.eye[2] = moveVector.z;
+                moveVector = bx::mul(moveVector, realSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
+                editorCam.eye[0] = moveVector.x;
+                editorCam.eye[1] = moveVector.y;
+                editorCam.eye[2] = moveVector.z;
             }
             if (keystate[SDL_SCANCODE_A]) {
                 moveVector = {
-                    sinf(camera.yaw - bx::kPiHalf),
+                    sinf(editorCam.yaw - bx::kPiHalf),
                     0.0f,
-                    cosf(camera.yaw - bx::kPiHalf)
+                    cosf(editorCam.yaw - bx::kPiHalf)
                 };
-                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = moveVector.x;
-                camera.eye[1] = moveVector.y;
-                camera.eye[2] = moveVector.z;
+                moveVector = bx::mul(moveVector, realSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
+                editorCam.eye[0] = moveVector.x;
+                editorCam.eye[1] = moveVector.y;
+                editorCam.eye[2] = moveVector.z;
             }
             if (keystate[SDL_SCANCODE_D]) {
                 moveVector = {
-                    sinf(camera.yaw + bx::kPiHalf),
+                    sinf(editorCam.yaw + bx::kPiHalf),
                     0.0f,
-                    cosf(camera.yaw + bx::kPiHalf)
+                    cosf(editorCam.yaw + bx::kPiHalf)
                 };
-                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = moveVector.x;
-                camera.eye[1] = moveVector.y;
-                camera.eye[2] = moveVector.z;
+                moveVector = bx::mul(moveVector, realSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
+                editorCam.eye[0] = moveVector.x;
+                editorCam.eye[1] = moveVector.y;
+                editorCam.eye[2] = moveVector.z;
             }
             if (keystate[SDL_SCANCODE_Q]) {
                 moveVector = {
@@ -293,11 +302,11 @@ int SyngineCore::SyngineEventLoop() {
                     -1.0f,
                     0.0f
                 };
-                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = moveVector.x;
-                camera.eye[1] = moveVector.y;
-                camera.eye[2] = moveVector.z;
+                moveVector = bx::mul(moveVector, realSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
+                editorCam.eye[0] = moveVector.x;
+                editorCam.eye[1] = moveVector.y;
+                editorCam.eye[2] = moveVector.z;
             }
             if (keystate[SDL_SCANCODE_E]) {
                 moveVector = {
@@ -305,11 +314,19 @@ int SyngineCore::SyngineEventLoop() {
                     1.0f,
                     0.0f
                 };
-                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-                camera.eye[0] = moveVector.x;
-                camera.eye[1] = moveVector.y;
-                camera.eye[2] = moveVector.z;
+                moveVector = bx::mul(moveVector, realSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
+                editorCam.eye[0] = moveVector.x;
+                editorCam.eye[1] = moveVector.y;
+                editorCam.eye[2] = moveVector.z;
+            }
+            camera = editorCam; // Update the camera with the editor camera state
+        }
+
+        // simulation stuff
+        if (simulate) { // two if statements for now in case other stuff happens in sim mode
+            if (this->app->physicsManager) {
+                this->app->physicsManager->Update(1);
             }
         }
 
@@ -348,7 +365,7 @@ int SyngineCore::SyngineEventLoop() {
             if (gameObject) {
                 Syngine::PhysicsComponent* physComp = gameObject->GetComponent<Syngine::PhysicsComponent>();
                 if (physComp) {
-                    physComp->Update(simulate); // Update physics component
+                    physComp->Update(simulate);
                 }
             }
         }
@@ -358,11 +375,11 @@ int SyngineCore::SyngineEventLoop() {
         }
         
         if (frame % 60 == 0) {
-            SDL_Log("Sun Direction: (%f, %f, %f)",
-                    startDir.x,
-                    startDir.y,
-                    startDir.z);
-            SDL_Log("Num cubes: %d", count);
+            SDL_Log("Frame: %d, Gameobjects: %d, Sim: %s, Mode: %s",
+                    frame,
+                    (int)this->app->gameObjects.size(),
+                    simulate ? "ON" : "OFF",
+                    playerMode ? "Player" : "Editor");
         }
         ++frame;
     }

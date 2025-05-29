@@ -1,5 +1,7 @@
 #include "PlayerComponent.h"
 #include "Components.h"
+#include "SDL3/SDL_mouse.h"
+#include "SDL3/SDL_video.h"
 #include "SyngineGraphics.h"
 #include "TransformComponent.h"
 #include "SyngineGameobject.h"
@@ -14,8 +16,9 @@ SynComponents PlayerComponent::getComponentType() {
     return SYN_COMPONENT_PLAYER;
 }
 
-void PlayerComponent::Initialize(Camera* camera) {
+void PlayerComponent::Initialize(Camera* camera, SDL_Window* win) {
     m_camera = camera;
+    m_window = win;
     if (!m_owner || !m_transform || !m_camera) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent is missing a required component");
         return;
@@ -48,6 +51,12 @@ void PlayerComponent::HandleInput(const SDL_Event& event,
 
         // Clamp pitch to avoid gimbal lock
         currentPitch = bx::clamp(currentPitch, -maxPitchAngle, maxPitchAngle);
+
+        // Lock mouse position to the center of the window
+        int w, h;
+        SDL_GetWindowSize(m_window, &w, &h);
+        float x = w / 2.0f, y = h / 2.0f;
+        SDL_WarpMouseInWindow(m_window, x, y);
     }
 }
 
@@ -83,10 +92,10 @@ void PlayerComponent::Update(float        deltaTime,
         moveDirection = bx::sub(moveDirection, forward);
     }
     if (keystate[SDL_SCANCODE_A]) {
-        moveDirection = bx::sub(moveDirection, right);
+        moveDirection = bx::add(moveDirection, right);
     }
     if (keystate[SDL_SCANCODE_D]) {
-        moveDirection = bx::add(moveDirection, right);
+        moveDirection = bx::sub(moveDirection, right);
     }
 
     if (bx::length(moveDirection) > 0.0001f) { // Check for non-zero length

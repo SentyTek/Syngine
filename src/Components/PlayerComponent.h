@@ -1,5 +1,6 @@
 #pragma once
 #include "Components.h"
+#include "SDL3/SDL_video.h"
 #include "SyngineGraphics.h"
 #include "SyngineGameobject.h"
 #include "SynComponents.h"
@@ -15,7 +16,7 @@ class PlayerComponent : public SynComponent {
     PlayerComponent(GameObject* owner);
 
     SynComponents getComponentType() override;
-    void          Initialize(Camera* camera);
+    void          Initialize(Camera* camera, SDL_Window* win);
     void          HandleInput(const SDL_Event& event,
                               bool             simulate,
                               float            mouseSens,
@@ -30,7 +31,8 @@ class PlayerComponent : public SynComponent {
     float currentPitch = 0.0f;
 
   private:
-    GameObject* m_owner = nullptr;
+    GameObject*         m_owner     = nullptr;
     TransformComponent* m_transform = nullptr;
-    Camera* m_camera = nullptr;
+    Camera*             m_camera    = nullptr;
+    SDL_Window*         m_window    = nullptr;
 };
