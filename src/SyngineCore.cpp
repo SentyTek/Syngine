@@ -1,13 +1,10 @@
 #include "SyngineCore.h"
+#include "SynginePhys.h"
 #include "Components.h"
 #include "MeshComponent.h"
 #include "PhysComponent.h"
-#include "SynginePhys.h"
 #include "TransformComponent.h"
-<<<<<<< HEAD
-=======
-#include "bgfx/defines.h"
->>>>>>> 014d2a342da457dedcd01de30ae2da0265ef1a83
+#include "PlayerComponent.h"
 #include "helpers.h"
 
 #include "SDL3/SDL_events.h"
@@ -18,10 +15,7 @@
 #include "bx/bx.h"
 #include "bx/constants.h"
 #include "bx/math.h"
-<<<<<<< HEAD
 #include "bgfx/defines.h"
-=======
->>>>>>> 014d2a342da457dedcd01de30ae2da0265ef1a83
 
 SyngineCore::SyngineCore() {
     //initialize app
@@ -80,6 +74,18 @@ int SyngineCore::DetachGraphics() {
 int SyngineCore::SyngineEventLoop() {
     //main loop. this will obviously be replaced with a more complex and modular/multi-threaded loop in the Future
     SDL_Log("Entering event loop");
+
+    if (!this->app->graphics || !this->app->graphics->win) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Graphics not initialized or window not created");
+        return 1;
+    }
+
+    GameObject* player = new GameObject("player", "default");
+    player->AddComponent(SYN_COMPONENT_TRANSFORM);
+    player->AddComponent(SYN_COMPONENT_PLAYER);
+    player->GetComponent<PlayerComponent>()->Initialize(&(this->app->graphics->camera));
+    this->app->gameObjects.push_back(player);
+
     bool running = true;
     bool simulate = false;
     bool rmb = false;
@@ -94,7 +100,9 @@ int SyngineCore::SyngineEventLoop() {
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch =
         bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
-    float moveSpeed = 2.0f; // Speed of camera movement
+    const float moveSpeed = 2.0f; // Speed of camera movement
+    const float sprintMult = 2.0f; // Sprint multiplier
+    const float crouchSpeed = 0.5f; // Crouch speed
 
     SDL_Event event;
 
@@ -150,14 +158,6 @@ int SyngineCore::SyngineEventLoop() {
                     this->app->gameObjects.push_back(model);
                 } else if (event.key.key == SDLK_ESCAPE) {
                     simulate = !simulate;
-                } else if (event.key.key == SDLK_LSHIFT) {
-                    moveSpeed = 10.0f; // Increase speed when holding shift
-                } else if (event.key.key == SDLK_LCTRL) {
-                    moveSpeed = 1.0f; // Decrease speed when holding ctrl
-                }
-            } else if (event.type == SDL_EVENT_KEY_UP) {
-                if (event.key.key == SDLK_LSHIFT || event.key.key == SDLK_LCTRL) {
-                    moveSpeed = 2.0f; // Reset speed when releasing shift or ctrl
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {
@@ -188,24 +188,36 @@ int SyngineCore::SyngineEventLoop() {
                     this->app->gameObjects.push_back(cube);
                     count++;
                 }
-            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && !simulate) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {
                     rmb = false;
                     SDL_WarpMouseInWindow(this->app->graphics->win, mouseX, mouseY);
                 }
-            }else if (event.type == SDL_EVENT_MOUSE_MOTION && rmb) {
+            } else if (event.type == SDL_EVENT_MOUSE_MOTION && rmb && !simulate) {
+                //mouse motion
                 float dx = event.motion.xrel * sensitivity;
                 float dy = event.motion.yrel * sensitivity;
 
                 camera.yaw += dx;
                 camera.pitch -= dy;
-                camera.pitch = bx::clamp(camera.pitch, -maxPitch, maxPitch); // Clamp pitch to avoid gimbal lock
+
+                // Clamp pitch to avoid gimbal lock
+                camera.pitch = bx::clamp(camera.pitch, -maxPitch, maxPitch);
+            }
+
+            if (simulate) {
+                if (player) {
+                    PlayerComponent* playerComp =
+                        player->GetComponent<PlayerComponent>();
+                    if (playerComp)
+                        playerComp->HandleInput(event, simulate, sensitivity, maxPitch);
+                }
             }
         }
 
         //mouse move
         if (this->app->graphics->win) {
-            bool desiredMouseState = rmb;
+            bool desiredMouseState = rmb || simulate;
             if (desiredMouseState != mouseState) {
                 SDL_SetWindowRelativeMouseMode(this->app->graphics->win, desiredMouseState);
                 mouseState = desiredMouseState;
@@ -220,80 +232,85 @@ int SyngineCore::SyngineEventLoop() {
             }
   
             startDir.x += 0.02f;
-        }
 
-        //camera movement
-        if (keystate[SDL_SCANCODE_W]) {
-            moveVector = {
-                cosf(camera.pitch) * sinf(camera.yaw),
-                sinf(camera.pitch),
-                cosf(camera.pitch) * cosf(camera.yaw)
-            };
-            moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = moveVector.x;
-            camera.eye[1] = moveVector.y;
-            camera.eye[2] = moveVector.z;
-        }
-        if (keystate[SDL_SCANCODE_S]) {
-            moveVector = {
-                -cosf(camera.pitch) * sinf(camera.yaw),
-                -sinf(camera.pitch),
-                -cosf(camera.pitch) * cosf(camera.yaw)
-            };
-            moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = moveVector.x;
-            camera.eye[1] = moveVector.y;
-            camera.eye[2] = moveVector.z;
-        }
-        if (keystate[SDL_SCANCODE_A]) {
-            moveVector = {
-                sinf(camera.yaw - bx::kPiHalf),
-                0.0f,
-                cosf(camera.yaw - bx::kPiHalf)
-            };
-            moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = moveVector.x;
-            camera.eye[1] = moveVector.y;
-            camera.eye[2] = moveVector.z;
-        }
-        if (keystate[SDL_SCANCODE_D]) {
-            moveVector = {
-                sinf(camera.yaw + bx::kPiHalf),
-                0.0f,
-                cosf(camera.yaw + bx::kPiHalf)
-            };
-            moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = moveVector.x;
-            camera.eye[1] = moveVector.y;
-            camera.eye[2] = moveVector.z;
-        }
-        if (keystate[SDL_SCANCODE_Q]) {
-            moveVector = {
-                0.0f,
-                -1.0f,
-                0.0f
-            };
-            moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = moveVector.x;
-            camera.eye[1] = moveVector.y;
-            camera.eye[2] = moveVector.z;
-        }
-        if (keystate[SDL_SCANCODE_E]) {
-            moveVector = {
-                0.0f,
-                1.0f,
-                0.0f
-            };
-            moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
-            camera.eye[0] = moveVector.x;
-            camera.eye[1] = moveVector.y;
-            camera.eye[2] = moveVector.z;
+            if (player->GetComponent<PlayerComponent>()) {
+                player->GetComponent<PlayerComponent>()->Update(
+                    deltaTime, keystate, moveSpeed, sprintMult, crouchSpeed);
+            }
+        } else {
+            // camera movement
+            if (keystate[SDL_SCANCODE_W]) {
+                moveVector = {
+                    cosf(camera.pitch) * sinf(camera.yaw),
+                    sinf(camera.pitch),
+                    cosf(camera.pitch) * cosf(camera.yaw)
+                };
+                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = moveVector.x;
+                camera.eye[1] = moveVector.y;
+                camera.eye[2] = moveVector.z;
+            }
+            if (keystate[SDL_SCANCODE_S]) {
+                moveVector = {
+                    -cosf(camera.pitch) * sinf(camera.yaw),
+                    -sinf(camera.pitch),
+                    -cosf(camera.pitch) * cosf(camera.yaw)
+                };
+                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = moveVector.x;
+                camera.eye[1] = moveVector.y;
+                camera.eye[2] = moveVector.z;
+            }
+            if (keystate[SDL_SCANCODE_A]) {
+                moveVector = {
+                    sinf(camera.yaw - bx::kPiHalf),
+                    0.0f,
+                    cosf(camera.yaw - bx::kPiHalf)
+                };
+                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = moveVector.x;
+                camera.eye[1] = moveVector.y;
+                camera.eye[2] = moveVector.z;
+            }
+            if (keystate[SDL_SCANCODE_D]) {
+                moveVector = {
+                    sinf(camera.yaw + bx::kPiHalf),
+                    0.0f,
+                    cosf(camera.yaw + bx::kPiHalf)
+                };
+                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = moveVector.x;
+                camera.eye[1] = moveVector.y;
+                camera.eye[2] = moveVector.z;
+            }
+            if (keystate[SDL_SCANCODE_Q]) {
+                moveVector = {
+                    0.0f,
+                    -1.0f,
+                    0.0f
+                };
+                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = moveVector.x;
+                camera.eye[1] = moveVector.y;
+                camera.eye[2] = moveVector.z;
+            }
+            if (keystate[SDL_SCANCODE_E]) {
+                moveVector = {
+                    0.0f,
+                    1.0f,
+                    0.0f
+                };
+                moveVector = bx::mul(moveVector, moveSpeed * deltaTime);
+                moveVector = bx::add(bx::Vec3(camera.eye[0], camera.eye[1], camera.eye[2]), moveVector);
+                camera.eye[0] = moveVector.x;
+                camera.eye[1] = moveVector.y;
+                camera.eye[2] = moveVector.z;
+            }
         }
 
         //sun

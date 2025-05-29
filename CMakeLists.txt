@@ -61,6 +61,7 @@ add_library(Syngine STATIC
     src/Components/MeshComponent.cpp
     src/Components/TransformComponent.cpp
     src/Components/PhysComponent.cpp
+    src/Components/PlayerComponent.cpp
 )
 
 if(APPLE)
