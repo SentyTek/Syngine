@@ -1,6 +1,7 @@
 #include "TransformComponent.h"
 #include "SyngineGameobject.h"
 #include "bx/math.h"
+#include <cmath>
 
 TransformComponent::TransformComponent(GameObject* owner) {
     position[0] = position[1] = position[2] = 0.0f;
