@@ -4,6 +4,10 @@
 #include "PhysComponent.h"
 #include "SynginePhys.h"
 #include "TransformComponent.h"
+<<<<<<< HEAD
+=======
+#include "bgfx/defines.h"
+>>>>>>> 014d2a342da457dedcd01de30ae2da0265ef1a83
 #include "helpers.h"
 
 #include "SDL3/SDL_events.h"
@@ -14,7 +18,10 @@
 #include "bx/bx.h"
 #include "bx/constants.h"
 #include "bx/math.h"
+<<<<<<< HEAD
 #include "bgfx/defines.h"
+=======
+>>>>>>> 014d2a342da457dedcd01de30ae2da0265ef1a83
 
 SyngineCore::SyngineCore() {
     //initialize app
