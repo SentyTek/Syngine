@@ -121,7 +121,6 @@ int SyngineCore::SyngineEventLoop() {
     float mouseX, mouseY;
     
     int frame = 0;
-    int count = 0;
 
     Camera editorCam = Camera();
     bx::Vec3 startDir = {180.0f, 0.0f, 90.0f};
@@ -192,13 +191,7 @@ int SyngineCore::SyngineEventLoop() {
                     if (!playerMode) {
                         simulate = !simulate;
                     }
-                }
-            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                if (event.button.button == SDL_BUTTON_RIGHT) {
-                    rmb = true;
-                    mouseX = event.button.x;
-                    mouseY = event.button.y;
-                } else if (event.button.button == SDL_BUTTON_LEFT) {
+                } else if (event.key.key == SDLK_1) {
                     string modelPath = resolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
                     cube->AddComponent(SYN_COMPONENT_TRANSFORM);
@@ -209,7 +202,7 @@ int SyngineCore::SyngineEventLoop() {
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
                     Syngine::RigidbodyComponent* physComp = cube->GetComponent<Syngine::RigidbodyComponent>();
-                    std::vector<float> shapeParams = {0.5f, 0.5f, 0.5f}; // half extents for box shape
+                    std::vector<float> shapeParams = {1.0f, 1.0f, 1.0f}; // half extents for box shape
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
@@ -219,7 +212,33 @@ int SyngineCore::SyngineEventLoop() {
                                        Syngine::Layers::MOVING,
                                        shapeParams);
                     this->app->gameObjects.push_back(cube);
-                    count++;
+                } else if (event.key.key == SDLK_2) {
+                                        string modelPath = resolveOSPath("meshes/sphere.glb");
+                    GameObject* sphere = new GameObject("sphere", "default");
+                    sphere->AddComponent(SYN_COMPONENT_TRANSFORM);
+                    sphere->AddComponent(SYN_COMPONENT_MESH);
+                    sphere->AddComponent(SYN_COMPONENT_RIGIDBODY);
+                    MeshComponent* meshComp = sphere->GetComponent<MeshComponent>();
+                    if (meshComp) meshComp->LoadMesh(modelPath, false);
+                    TransformComponent* tComp = sphere->GetComponent<TransformComponent>();
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
+                    Syngine::RigidbodyComponent* physComp = sphere->GetComponent<Syngine::RigidbodyComponent>();
+                    std::vector<float> shapeParams = { 0.95f }; // half extents for sphere shape (diameter)
+                    if (physComp)
+                        physComp->Init(tComp,
+                                       this->app->physicsManager,
+                                       Syngine::PhysicsShapes::SPHERE,
+                                       {520.0f, 0.7f, 0.02f}, // mass, friction, restitution
+                                       JPH::EMotionType::Dynamic,
+                                       Syngine::Layers::MOVING,
+                                       shapeParams);
+                    this->app->gameObjects.push_back(sphere);
+                }
+            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
+                if (event.button.button == SDL_BUTTON_RIGHT) {
+                    rmb = true;
+                    mouseX = event.button.x;
+                    mouseY = event.button.y;
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && !playerMode) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {
