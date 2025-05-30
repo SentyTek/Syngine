@@ -136,6 +136,8 @@ void PlayerComponent::Initialize(Camera*                    camera,
     m_camera->eye[0] = m_transform->position[0];
     m_camera->eye[1] = m_transform->position[1];
     m_camera->eye[2] = m_transform->position[2];
+    float m_targetEyeHeight = eyeHeight;
+    float m_targetFov        = m_camera->fov;
 }
 
 void PlayerComponent::HandleInput(const SDL_Event& event,
@@ -175,10 +177,24 @@ void PlayerComponent::Update(const bool* keystate,
     }
 
     CheckGrounded();
+
+    m_targetMoveSpeed = moveSpeed;
+    m_targetEyeHeight = 1.8f;
+    m_targetFov       = 70.0f;
+    if (keystate[SDL_SCANCODE_LSHIFT]) {
+        m_targetMoveSpeed *= sprintMult;
+        m_targetFov = 90.0f;
+    }
+    if (keystate[SDL_SCANCODE_LCTRL]) {
+        m_targetMoveSpeed *= crouchSpeed;
+        m_targetEyeHeight = 0.7f;
+        m_targetFov = 60.0f;
+    }
+
     
-    float currentMoveSpeed = moveSpeed;
-    if (keystate[SDL_SCANCODE_LSHIFT]) currentMoveSpeed *= sprintMult;
-    if (keystate[SDL_SCANCODE_LCTRL]) currentMoveSpeed *= crouchSpeed;
+    m_camera->fov = bx::lerp(m_camera->fov, m_targetFov, 0.1f);
+    eyeHeight = bx::lerp(eyeHeight, m_targetEyeHeight, 0.1f);
+    m_moveSpeed = bx::lerp(m_moveSpeed, m_targetMoveSpeed, 0.1f);
 
     bx::Vec3 moveDirection = { 0.0f, 0.0f, 0.0f };
     bx::Vec3 forwardView   = {
@@ -221,8 +237,8 @@ void PlayerComponent::Update(const bool* keystate,
 
         if (bx::length(moveDirection) > 0.0001f) {
             moveDirection = bx::normalize(moveDirection);
-            desiredVel.SetX(moveDirection.x * currentMoveSpeed);
-            desiredVel.SetZ(moveDirection.z * currentMoveSpeed);
+            desiredVel.SetX(moveDirection.x * m_moveSpeed);
+            desiredVel.SetZ(moveDirection.z * m_moveSpeed);
         } else {
             // If no movement keys are pressed, we can zero out the XZ velocity
             desiredVel.SetX(0.0f);
