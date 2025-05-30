@@ -118,15 +118,31 @@ namespace Syngine {
         return sphere->GetID();
     }
 
-    BodyID SynginePhys::CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, EMotionType motionType, ObjectLayer layer)
+    BodyID SynginePhys::CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, EMotionType motionType, ObjectLayer layer, float mass)
     {
         BodyInterface &body_interface = mPhysicsSystem.GetBodyInterface();
         BoxShapeSettings box_shape_settings(halfExtent);
         ShapeSettings::ShapeResult box_shape_result = box_shape_settings.Create();
+        if (box_shape_result.HasError()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateBox: Failed to create box shape: %s", box_shape_result.GetError().c_str());
+            return BodyID();
+        }
         ShapeRefC box_shape = box_shape_result.Get();
 
         BodyCreationSettings box_settings(box_shape, position, rotation, motionType, layer);
+
+        // Set mass if dynamic
+        if (motionType == EMotionType::Dynamic && mass > 0.0f) {
+            box_settings.mOverrideMassProperties = EOverrideMassProperties::CalculateInertia;
+            box_settings.mMassPropertiesOverride = box_shape->GetMassProperties();
+            box_settings.mMassPropertiesOverride.ScaleToMass(mass);
+        }
+
         Body *box = body_interface.CreateBody(box_settings);
+        if (!box) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateBox: Failed to create box body.");
+            return BodyID();
+        }
         body_interface.AddBody(box->GetID(), EActivation::Activate);
         return box->GetID();
     }

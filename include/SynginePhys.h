@@ -167,6 +167,15 @@ namespace Syngine {
 
         BodyInterface& GetBodyInterface() { return mPhysicsSystem.GetBodyInterface(); }
         PhysicsSystem& GetPhysicsSystem() { return mPhysicsSystem; }
+        const BPLayerInterfaceImpl& GetBroadPhaseLayerInterface() const {
+            return mBroadPhaseLayerInterface;
+        }
+        const ObjectLayerPairFilterImpl& GetObjectLayerPairFilter() const {
+            return mObjectLayerPairFilter;
+        }
+        const ObjectVsBroadPhaseLayerFilterImpl& GetObjectVsBroadPhaseLayerFilter() const {
+            return mObjectVsBroadPhaseLayerFilter;
+        }
 
         BodyID CreateSphere(RVec3Arg    position,
                             float       radius,
@@ -176,7 +185,8 @@ namespace Syngine {
                          QuatArg     rotation,
                          Vec3Arg     halfExtent,
                          EMotionType motionType,
-                         ObjectLayer layer);
+                         ObjectLayer layer,
+                         float       mass = 0.0f);
         BodyID CreateMeshBody(RVec3Arg           position,
                               QuatArg            rotation,
                               const SynMeshData& meshData,

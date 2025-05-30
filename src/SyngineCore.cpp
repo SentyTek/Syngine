@@ -98,15 +98,13 @@ int SyngineCore::SyngineEventLoop() {
         delete player; // Clean up the player object
         return 1;
     }
-    rbComp->Init(
-        pTransform,
-        this->app->physicsManager,
-        Syngine::PhysicsShapes::CAPSULE,
-        60.0f,
-        0.5f,
-        JPH::EMotionType::Dynamic,
-        Syngine::Layers::MOVING,
-        std::vector<float>{ 0.7f, 0.3f });
+    rbComp->Init(pTransform,
+                 this->app->physicsManager,
+                 Syngine::PhysicsShapes::CAPSULE,
+                 { 60.0f, 0.9f, 0.1f }, // mass, friction, restitution
+                 JPH::EMotionType::Dynamic,
+                 Syngine::Layers::MOVING,
+                 { 0.7f, 0.3f });
 
     player->GetComponent<PlayerComponent>()->Initialize(
         &(this->app->graphics->camera),
@@ -180,8 +178,7 @@ int SyngineCore::SyngineEventLoop() {
                                 model->GetComponent<TransformComponent>(),
                                 this->app->physicsManager,
                                 Syngine::PhysicsShapes::MESH,
-                                0.0f, // no mass for static objects
-                                0.5f, // friction
+                                {0.0f, 0.8f, 0.1f},
                                 JPH::EMotionType::Static,
                                 Syngine::Layers::NON_MOVING,
                                 {}
@@ -217,8 +214,7 @@ int SyngineCore::SyngineEventLoop() {
                         physComp->Init(tComp,
                                        this->app->physicsManager,
                                        Syngine::PhysicsShapes::BOX,
-                                       1.0f,
-                                       0.5f,
+                                       {1000.0f, 0.9f, 0.1f}, // mass, friction, restitution
                                        JPH::EMotionType::Dynamic,
                                        Syngine::Layers::MOVING,
                                        shapeParams);
@@ -262,14 +258,7 @@ int SyngineCore::SyngineEventLoop() {
         }
 
         // camera mode stuff
-        if (playerMode) {
-            startDir.x += 0.02f;
-
-            if (player->GetComponent<PlayerComponent>()) {
-                player->GetComponent<PlayerComponent>()->Update(
-                    deltaTime, keystate, moveSpeed, sprintMult, crouchSpeed);
-            }
-        } else {
+        if (!playerMode) {
             // camera movement
             float realSpeed = moveSpeed; // Default speed
             if (keystate[SDL_SCANCODE_LSHIFT]) realSpeed = moveSpeed * sprintMult;
@@ -391,9 +380,16 @@ int SyngineCore::SyngineEventLoop() {
         for (auto* gameObject : this->app->gameObjects) {
             if (gameObject) {
                 Syngine::RigidbodyComponent* physComp = gameObject->GetComponent<Syngine::RigidbodyComponent>();
-                if (physComp) {
+                if (physComp && physComp->isEnabled) {
                     physComp->Update(simulate);
                 }
+            }
+        }
+
+        if (playerMode) {
+            if (player->GetComponent<PlayerComponent>()) {
+                player->GetComponent<PlayerComponent>()->Update(
+                    keystate, moveSpeed, sprintMult, crouchSpeed);
             }
         }
         
@@ -402,11 +398,15 @@ int SyngineCore::SyngineEventLoop() {
         }
         
         if (frame % 60 == 0) {
-            SDL_Log("Frame: %d, Gameobjects: %d, Sim: %s, Mode: %s",
+            SDL_Log("Frame: %d, Gameobjects: %d, Sim: %s, Mode: %s, Camera "
+                    "coords: (%.1f, %.1f, %.1f)",
                     frame,
                     (int)this->app->gameObjects.size(),
                     simulate ? "ON" : "OFF",
-                    playerMode ? "Player" : "Editor");
+                    playerMode ? "Player" : "Editor",
+                    camera.eye[0],
+                    camera.eye[1],
+                    camera.eye[2]);
         }
         ++frame;
     }

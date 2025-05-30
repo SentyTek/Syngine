@@ -10,6 +10,7 @@
 
 #include "Jolt/Math/MathTypes.h"
 #include "Jolt/Physics/Body/MotionType.h"
+#include <vector>
 
 namespace Syngine {
 RigidbodyComponent::RigidbodyComponent(GameObject* owner)
@@ -23,19 +24,28 @@ SynComponents RigidbodyComponent::getComponentType() {
     return SYN_COMPONENT_RIGIDBODY;
 }
 
+std::vector<float> RigidbodyComponent::GetShapeParameters() const {
+    return shapeParameters;
+}
+
 void RigidbodyComponent::Init(TransformComponent*       transform,
-                            Syngine::SynginePhys*     physicsManager,
-                            PhysicsShapes             shape,
-                            float                     mass,
-                            float                     friction,
-                            JPH::EMotionType          motionType,
-                            JPH::ObjectLayer          layer,
-                            const std::vector<float>& shapeParameters) {
+                              Syngine::SynginePhys*     physicsManager,
+                              PhysicsShapes             shape,
+                              const std::vector<float>& parameters,
+                              JPH::EMotionType          motionType,
+                              JPH::ObjectLayer          layer,
+                              const std::vector<float>& shapeParameters) {
+    if (parameters.size() < 3) {
+        SDL_Log("RigidbodyComponent::Init: Not enough parameters provided.");
+        return;
+    }
     this->physicsManager = physicsManager;
-    this->transform = transform;
-    this->friction = friction;
-    this->shape = shape;
-    this->mass = mass;
+    this->transform      = transform;
+    this->friction       = parameters[0];
+    this->mass           = parameters[1];
+    this->restitution    = parameters[2];
+    this->shape          = shape;
+    this->shapeParameters = shapeParameters;
 
     if (!physicsManager || !transform) {
         return;
@@ -56,7 +66,12 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
         case PhysicsShapes::BOX: {
             if (shapeParameters.size() < 3) { SDL_Log("RigidbodyComponent::Init: Not enough parameters for box shape."); return; }
             float halfSize = 1.0f;
-            bodyID = physicsManager->CreateBox(posVec, rotationQuat, {halfSize, halfSize, halfSize}, motionType, layer);
+            bodyID         = physicsManager->CreateBox(posVec,
+                                               rotationQuat,
+                                               { halfSize, halfSize, halfSize },
+                                               motionType,
+                                               layer,
+                                               mass);
             break;
         }
         case PhysicsShapes::MESH: {
@@ -85,11 +100,9 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
 
     if (!bodyID.IsInvalid()) {
         JPH::BodyInterface& bodyInterface = physicsManager->GetBodyInterface();
-        bodyInterface.SetFriction(bodyID, friction);
-        // For dynamic bodies, Jolt calculates the mass automatically based on
-        // the shape.
-        // If you want to set a specific mass, you can use SetMassProperties or
-        // override MassProperties
+        // Set the body properties (mass set during body creation)
+        if (friction > 0) bodyInterface.SetFriction(bodyID, friction);
+        if (restitution > 0) bodyInterface.SetRestitution(bodyID, restitution);
     }
 }
 
