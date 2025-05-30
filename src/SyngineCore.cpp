@@ -101,7 +101,7 @@ int SyngineCore::SyngineEventLoop() {
     rbComp->Init(pTransform,
                  this->app->physicsManager,
                  Syngine::PhysicsShapes::CAPSULE,
-                 { 60.0f, 0.9f, 0.1f }, // mass, friction, restitution
+                 { 60.0f, 0.5f, 0.1f }, // mass, friction, restitution
                  JPH::EMotionType::Dynamic,
                  Syngine::Layers::MOVING,
                  { 0.7f, 0.3f });
@@ -214,7 +214,7 @@ int SyngineCore::SyngineEventLoop() {
                         physComp->Init(tComp,
                                        this->app->physicsManager,
                                        Syngine::PhysicsShapes::BOX,
-                                       {1000.0f, 0.9f, 0.1f}, // mass, friction, restitution
+                                       {1000.0f, 0.7f, 0.02f}, // mass, friction, restitution
                                        JPH::EMotionType::Dynamic,
                                        Syngine::Layers::MOVING,
                                        shapeParams);
@@ -340,7 +340,8 @@ int SyngineCore::SyngineEventLoop() {
         }
 
         // simulation stuff
-        if (simulate) { // two if statements for now in case other stuff happens in sim mode
+        if (simulate) {
+            startDir.x += 0.02f;
             if (this->app->physicsManager) {
                 this->app->physicsManager->Update(1);
             }
@@ -377,19 +378,19 @@ int SyngineCore::SyngineEventLoop() {
         };
         lightDir = bx::normalize(lightDir);
 
+        if (playerMode) {
+            if (player->GetComponent<PlayerComponent>()) {
+                player->GetComponent<PlayerComponent>()->Update(
+                    keystate, moveSpeed, sprintMult, crouchSpeed);
+            }
+        }
+
         for (auto* gameObject : this->app->gameObjects) {
             if (gameObject) {
                 Syngine::RigidbodyComponent* physComp = gameObject->GetComponent<Syngine::RigidbodyComponent>();
                 if (physComp && physComp->isEnabled) {
                     physComp->Update(simulate);
                 }
-            }
-        }
-
-        if (playerMode) {
-            if (player->GetComponent<PlayerComponent>()) {
-                player->GetComponent<PlayerComponent>()->Update(
-                    keystate, moveSpeed, sprintMult, crouchSpeed);
             }
         }
         

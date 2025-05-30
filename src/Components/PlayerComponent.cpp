@@ -103,7 +103,7 @@ void PlayerComponent::CheckGrounded() {
             JPH::Vec3 contactNormal = actualHitBody.GetWorldSpaceSurfaceNormal(collector.mHit.mSubShapeID2, hitPosition);
 
             if (contactNormal.GetY() >
-                0.6f) { // Check if normal is mostly upward
+                0.4f) { // Check if normal is mostly upward
                 isGrounded = true;
                 lastGroundNormal = contactNormal.GetY(); // Store the last ground normal
                 return;
@@ -246,9 +246,7 @@ void PlayerComponent::Update(const bool* keystate,
         // If the player is grounded and not intentionally moving, zero out velocity
         if (m_RigidbodyComponent && !m_RigidbodyComponent->GetBodyID().IsInvalid() && isGrounded) {
             JPH::Vec3 currentVelocity = bodyInterface.GetLinearVelocity(bodyID);
-            float     horizontalSpeed =
-                currentVelocity.GetX() * currentVelocity.GetX() +
-                currentVelocity.GetZ() * currentVelocity.GetZ();
+            float     horizontalSpeed = bx::length(bx::Vec3(desiredVel.GetX(), 0.0f, desiredVel.GetZ()));
 
             const float stopSlidingSpeed = 0.01f; // Speed below which we stop sliding
 

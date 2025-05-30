@@ -9,6 +9,8 @@
 #include "Jolt/Physics/Collision/Shape/MeshShape.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
+#include "Jolt/Physics/Collision/Shape/BoxShape.h"
+#include "Jolt/Physics/Collision/Shape/CylinderShape.h"
 #include "Jolt/Physics/PhysicsSettings.h"
 #include "Jolt/RegisterTypes.h"
 #include "SDL3/SDL_log.h"
@@ -106,14 +108,29 @@ namespace Syngine {
         mPhysicsSystem.Update(cFixedDeltaTime, collisionSteps, mTempAllocator, mJobSystem);
     }
 
-    BodyID SynginePhys::CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer) {
+    BodyID SynginePhys::CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
         BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
         SphereShapeSettings sphereShapeSettings(radius);
         ShapeSettings::ShapeResult sphereShapeResult = sphereShapeSettings.Create();
+        if (sphereShapeResult.HasError()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateSphere: Failed to create sphere shape: %s", sphereShapeResult.GetError().c_str());
+            return BodyID();
+        }
         ShapeRefC sphereShape = sphereShapeResult.Get();
 
         BodyCreationSettings sphereSettings(sphereShape, position, Quat::sIdentity(), motionType, layer);
+
+        if (motionType == EMotionType::Dynamic && mass > 0.0f) {
+            sphereSettings.mMassPropertiesOverride = sphereShape->GetMassProperties();
+            sphereSettings.mMassPropertiesOverride.ScaleToMass(mass);
+            sphereSettings.mOverrideMassProperties = EOverrideMassProperties::MassAndInertiaProvided;
+        }
+
         Body *sphere = bodyInterface.CreateBody(sphereSettings);
+        if (!sphere) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateSphere: Failed to create sphere body.");
+            return BodyID();
+        }
         bodyInterface.AddBody(sphere->GetID(), EActivation::Activate);
         return sphere->GetID();
     }
@@ -206,30 +223,62 @@ namespace Syngine {
         return body->GetID();
     }
 
-    BodyID SynginePhys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer) {
+    BodyID SynginePhys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer, float mass) {
         BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
         CapsuleShapeSettings capsuleShapeSettings(halfHeight, radius);
         ShapeSettings::ShapeResult capsuleShapeResult = capsuleShapeSettings.Create();
         if (capsuleShapeResult.HasError()) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCapsule: Failed to create capsule shape: %s", capsuleShapeResult.GetError().c_str());
-            return BodyID(); // Return an invalid BodyID
+            return BodyID(); 
         }
         ShapeRefC capsuleShape = capsuleShapeResult.Get();
 
         BodyCreationSettings capsuleSettings(
             capsuleShape, position, Quat::sIdentity(), motionType, layer);
+        
+        capsuleSettings.mAllowSleeping = false; 
 
-        // For a character, rotation will need to be restricted because falling is bad
-        // One way is to set inertia tensor properties or to use Jolt's character class
-        // For now, we just zero out angular velocity
-        capsuleSettings.mAllowSleeping = false; // Characters often don't sleep
+        if (motionType == EMotionType::Dynamic && mass > 0.0f) {
+            capsuleSettings.mMassPropertiesOverride = capsuleShape->GetMassProperties();
+            capsuleSettings.mMassPropertiesOverride.ScaleToMass(mass);
+            capsuleSettings.mOverrideMassProperties = EOverrideMassProperties::MassAndInertiaProvided;
+        }
 
         Body* capsule = bodyInterface.CreateBody(capsuleSettings);
         if (!capsule) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCapsule: Failed to create capsule body.");
-            return BodyID(); // Return an invalid BodyID
+            return BodyID(); 
         }
         bodyInterface.AddBody(capsule->GetID(), EActivation::Activate);
         return capsule->GetID();
+    }
+
+        BodyID SynginePhys::CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeight, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
+        BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
+        CylinderShapeSettings cylinderShapeSettings(halfHeight, radius);
+        ShapeSettings::ShapeResult cylinderShapeResult = cylinderShapeSettings.Create();
+        if (cylinderShapeResult.HasError()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCylinder: Failed to create cylinder shape: %s", cylinderShapeResult.GetError().c_str());
+            return BodyID();
+        }
+        ShapeRefC cylinderShape = cylinderShapeResult.Get();
+
+        BodyCreationSettings cylinderSettings(cylinderShape, position, rotation, motionType, layer);
+
+        if (motionType == EMotionType::Dynamic && mass > 0.0f) {
+            cylinderSettings.mMassPropertiesOverride = cylinderShape->GetMassProperties();
+            cylinderSettings.mMassPropertiesOverride.ScaleToMass(mass);
+            cylinderSettings.mOverrideMassProperties = EOverrideMassProperties::MassAndInertiaProvided;
+        }
+        
+        // cylinderSettings.mAllowSleeping = false; // Optional: if cylinders are often characters or active objects
+
+        Body* cylinder = bodyInterface.CreateBody(cylinderSettings);
+        if (!cylinder) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCylinder: Failed to create cylinder body.");
+            return BodyID();
+        }
+        bodyInterface.AddBody(cylinder->GetID(), EActivation::Activate);
+        return cylinder->GetID();
     }
 } // namespace Syngine

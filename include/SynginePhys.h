@@ -180,7 +180,8 @@ namespace Syngine {
         BodyID CreateSphere(RVec3Arg    position,
                             float       radius,
                             EMotionType motionType,
-                            ObjectLayer layer);
+                            ObjectLayer layer,
+                            float       mass = 0.0f);
         BodyID CreateBox(RVec3Arg    position,
                          QuatArg     rotation,
                          Vec3Arg     halfExtent,
@@ -196,7 +197,15 @@ namespace Syngine {
                              float       radius,
                              float       halfHeight,
                              EMotionType motionType,
-                             ObjectLayer layer);
+                             ObjectLayer layer,
+                             float       mass = 0.0f);
+        BodyID CreateCylinder(RVec3Arg    position,
+                              QuatArg     rotation,
+                              float       radius,
+                              float       halfHeight,
+                              EMotionType motionType,
+                              ObjectLayer layer,
+                              float       mass = 0.0f);
 
         private:
         //Jolt specific variables

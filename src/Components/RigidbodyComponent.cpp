@@ -60,7 +60,7 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
         case PhysicsShapes::SPHERE: {
             if (shapeParameters.empty()) { SDL_Log("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
             float radius = 1.0f; //how on earth do I make this a parameter?
-            bodyID = physicsManager->CreateSphere(posVec, radius, motionType, layer);
+            bodyID = physicsManager->CreateSphere(posVec, radius, motionType, layer, mass);
             break;
         }
         case PhysicsShapes::BOX: {
@@ -91,7 +91,14 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
             if (shapeParameters.size() < 2) { SDL_Log("RigidbodyComponent::Init: Not enough parameters for capsule shape."); return; }
             float radius = shapeParameters[0];
             float halfHeight = shapeParameters[1];
-            bodyID = physicsManager->CreateCapsule(posVec, radius, halfHeight, motionType, layer);
+            bodyID = physicsManager->CreateCapsule(posVec, radius, halfHeight, motionType, layer, mass);
+            break;
+        }
+        case PhysicsShapes::CYLINDER: {
+            if (shapeParameters.size() < 2) { SDL_Log("RigidbodyComponent::Init: Not enough parameters for cylinder shape."); return; }
+            float radius = shapeParameters[0];
+            float halfHeight = shapeParameters[1];
+            bodyID = physicsManager->CreateCylinder(posVec, rotationQuat, radius, halfHeight, motionType, layer, mass);
             break;
         }
         default:
