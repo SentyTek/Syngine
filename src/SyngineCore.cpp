@@ -101,7 +101,7 @@ int SyngineCore::SyngineEventLoop() {
     rbComp->Init(pTransform,
                  this->app->physicsManager,
                  Syngine::PhysicsShapes::CAPSULE,
-                 { 60.0f, 0.5f, 0.1f }, // mass, friction, restitution
+                 { 60.0f, 0.3f, 0.1f }, // mass, friction, restitution
                  JPH::EMotionType::Dynamic,
                  Syngine::Layers::MOVING,
                  { 0.7f, 0.3f });

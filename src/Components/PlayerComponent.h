@@ -39,6 +39,8 @@ class PlayerComponent : public SynComponent {
     float halfHeight = 0.0f; // Half height for collision detection
     bool  isGrounded = false;
     float lastGroundNormal = 0.0f;
+    float m_targetEyeHeight = 1.8f;
+    float m_targetFov = 70.0f;
 
     void CheckGrounded();
 };

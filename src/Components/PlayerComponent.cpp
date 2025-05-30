@@ -136,6 +136,8 @@ void PlayerComponent::Initialize(Camera*                    camera,
     m_camera->eye[0] = m_transform->position[0];
     m_camera->eye[1] = m_transform->position[1];
     m_camera->eye[2] = m_transform->position[2];
+    float m_targetEyeHeight = eyeHeight;
+    float m_targetFov        = m_camera->fov;
 }
 
 void PlayerComponent::HandleInput(const SDL_Event& event,
@@ -175,10 +177,22 @@ void PlayerComponent::Update(const bool* keystate,
     }
 
     CheckGrounded();
-    
+
     float currentMoveSpeed = moveSpeed;
-    if (keystate[SDL_SCANCODE_LSHIFT]) currentMoveSpeed *= sprintMult;
-    if (keystate[SDL_SCANCODE_LCTRL]) currentMoveSpeed *= crouchSpeed;
+    m_targetEyeHeight      = 1.8f;
+    m_targetFov            = 70.0f;
+    if (keystate[SDL_SCANCODE_LSHIFT]) {
+        currentMoveSpeed *= sprintMult;
+        m_targetFov = 90.0f;
+    }
+    if (keystate[SDL_SCANCODE_LCTRL]) {
+        currentMoveSpeed *= crouchSpeed;
+        m_targetEyeHeight = 0.7f;
+        m_targetFov = 60.0f;
+    }
+
+    m_camera->fov = bx::lerp(m_camera->fov, m_targetFov, 0.1f);
+    eyeHeight = bx::lerp(eyeHeight, m_targetEyeHeight, 0.1f);
 
     bx::Vec3 moveDirection = { 0.0f, 0.0f, 0.0f };
     bx::Vec3 forwardView   = {
