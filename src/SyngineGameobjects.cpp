@@ -2,7 +2,7 @@
 
 #include "Components/MeshComponent.h"
 #include "Components/TransformComponent.h"
-#include "Components/PhysComponent.h"
+#include "Components/RigidbodyComponent.h"
 #include "Components/PlayerComponent.h"
 
 GameObject::GameObject(string name, string type) {
@@ -31,8 +31,8 @@ int GameObject::AddComponent(SynComponents type) {
         case SYN_COMPONENT_TRANSFORM:
             component = new TransformComponent(this);
             break;
-        case SYN_COMPONENT_PHYSICS:
-            component = new Syngine::PhysicsComponent(this);
+        case SYN_COMPONENT_RIGIDBODY:
+            component = new Syngine::RigidbodyComponent(this);
             break;
         case SYN_COMPONENT_PLAYER:
             component = new PlayerComponent(this);

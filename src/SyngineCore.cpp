@@ -1,9 +1,10 @@
 #include "SyngineCore.h"
+#include "SDL3/SDL_oldnames.h"
 #include "SDL3/SDL_scancode.h"
 #include "SynginePhys.h"
 #include "Components.h"
 #include "MeshComponent.h"
-#include "PhysComponent.h"
+#include "RigidbodyComponent.h"
 #include "TransformComponent.h"
 #include "PlayerComponent.h"
 #include "helpers.h"
@@ -82,10 +83,36 @@ int SyngineCore::SyngineEventLoop() {
     }
 
     GameObject* player = new GameObject("player", "default");
+
     player->AddComponent(SYN_COMPONENT_TRANSFORM);
     player->AddComponent(SYN_COMPONENT_PLAYER);
-    player->GetComponent<TransformComponent>()->SetPosition(0.0f, 20.0f, 0.0f);
-    player->GetComponent<PlayerComponent>()->Initialize(&(this->app->graphics->camera), this->app->graphics->win);
+    player->AddComponent(SYN_COMPONENT_RIGIDBODY);
+
+    TransformComponent* pTransform = player->GetComponent<TransformComponent>();
+    pTransform->SetPosition(0.0f, 20.0f, 0.0f);
+
+    Syngine::RigidbodyComponent* rbComp =
+        player->GetComponent<Syngine::RigidbodyComponent>();
+    if (!rbComp) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get RigidbodyComponent for player");
+        delete player; // Clean up the player object
+        return 1;
+    }
+    rbComp->Init(
+        pTransform,
+        this->app->physicsManager,
+        Syngine::PhysicsShapes::CAPSULE,
+        60.0f,
+        0.5f,
+        JPH::EMotionType::Dynamic,
+        Syngine::Layers::MOVING,
+        std::vector<float>{ 0.7f, 0.3f });
+
+    player->GetComponent<PlayerComponent>()->Initialize(
+        &(this->app->graphics->camera),
+        this->app->graphics->win,
+        rbComp);
+    
     this->app->gameObjects.push_back(player);
     
     bool running = true;
@@ -144,10 +171,10 @@ int SyngineCore::SyngineEventLoop() {
                     GameObject* model = new GameObject("ground", "terrain");
                     model->AddComponent(SYN_COMPONENT_TRANSFORM);
                     model->AddComponent(SYN_COMPONENT_MESH);
-                    model->AddComponent(SYN_COMPONENT_PHYSICS);
+                    model->AddComponent(SYN_COMPONENT_RIGIDBODY);
                     MeshComponent* meshComp = model->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath);
-                    Syngine::PhysicsComponent* physComp = model->GetComponent<Syngine::PhysicsComponent>();
+                    Syngine::RigidbodyComponent* physComp = model->GetComponent<Syngine::RigidbodyComponent>();
                     if (physComp) {
                             physComp->Init(
                                 model->GetComponent<TransformComponent>(),
@@ -164,7 +191,7 @@ int SyngineCore::SyngineEventLoop() {
                 } else if (event.key.key == SDLK_ESCAPE) {
                     playerMode = !playerMode;
                     simulate = playerMode; // Always simulate in player mode
-                } else if (event.key.key == SDLK_SPACE) {
+                } else if (event.key.key == SDLK_P) {
                     if (!playerMode) {
                         simulate = !simulate;
                     }
@@ -179,12 +206,12 @@ int SyngineCore::SyngineEventLoop() {
                     GameObject* cube = new GameObject("cube", "default");
                     cube->AddComponent(SYN_COMPONENT_TRANSFORM);
                     cube->AddComponent(SYN_COMPONENT_MESH);
-                    cube->AddComponent(SYN_COMPONENT_PHYSICS);
+                    cube->AddComponent(SYN_COMPONENT_RIGIDBODY);
                     MeshComponent* meshComp = cube->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
-                    Syngine::PhysicsComponent* physComp = cube->GetComponent<Syngine::PhysicsComponent>();
+                    Syngine::RigidbodyComponent* physComp = cube->GetComponent<Syngine::RigidbodyComponent>();
                     std::vector<float> shapeParams = {0.5f, 0.5f, 0.5f}; // half extents for box shape
                     if (physComp)
                         physComp->Init(tComp,
@@ -363,7 +390,7 @@ int SyngineCore::SyngineEventLoop() {
 
         for (auto* gameObject : this->app->gameObjects) {
             if (gameObject) {
-                Syngine::PhysicsComponent* physComp = gameObject->GetComponent<Syngine::PhysicsComponent>();
+                Syngine::RigidbodyComponent* physComp = gameObject->GetComponent<Syngine::RigidbodyComponent>();
                 if (physComp) {
                     physComp->Update(simulate);
                 }

@@ -60,7 +60,7 @@ add_library(Syngine STATIC
     src/SynginePhys.cpp
     src/Components/MeshComponent.cpp
     src/Components/TransformComponent.cpp
-    src/Components/PhysComponent.cpp
+    src/Components/RigidbodyComponent.cpp
     src/Components/PlayerComponent.cpp
 )
 

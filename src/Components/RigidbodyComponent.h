@@ -19,15 +19,15 @@ enum class PhysicsShapes {
 
 /*
     Syngine Physics Component
-    The PhysicsComponent is used to represent a physics body in the game world.
+    The RigidbodyComponent is used to represent a physics body in the game world.
     It holds the BodyID and the shape of the physics body from Jolt, among other properties.
 */
-class PhysicsComponent : public SynComponent {
+class RigidbodyComponent : public SynComponent {
     public:
-    static constexpr SynComponents componentType = SYN_COMPONENT_PHYSICS;
+    static constexpr SynComponents componentType = SYN_COMPONENT_RIGIDBODY;
 
-    PhysicsComponent(GameObject* owner);
-    ~PhysicsComponent();
+    RigidbodyComponent(GameObject* owner);
+    ~RigidbodyComponent();
 
     SynComponents getComponentType() override;
 
@@ -43,6 +43,9 @@ class PhysicsComponent : public SynComponent {
     );
     void Update(bool simulate);
     void Destroy();
+
+    JPH::BodyID GetBodyID() const;
+    Syngine::SynginePhys* GetPhysicsManager() const;
 
     private:
     TransformComponent* transform;         // Reference to the transform component

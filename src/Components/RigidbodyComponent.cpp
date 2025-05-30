@@ -1,4 +1,6 @@
-#include "PhysComponent.h"
+#include "RigidbodyComponent.h"
+#include "Components.h"
+#include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/EActivation.h"
 #include "MeshComponent.h"
 #include "TransformComponent.h"
@@ -10,27 +12,25 @@
 #include "Jolt/Physics/Body/MotionType.h"
 
 namespace Syngine {
-PhysicsComponent::PhysicsComponent(GameObject* owner)
+RigidbodyComponent::RigidbodyComponent(GameObject* owner)
     : bodyID(BodyID()), shape(PhysicsShapes::BOX), mass(1.0f), friction(0.5f) { this->m_owner = owner; }
 
-PhysicsComponent::~PhysicsComponent() {
+RigidbodyComponent::~RigidbodyComponent() {
     Destroy();
 }
 
-SynComponents PhysicsComponent::getComponentType() {
-    return SYN_COMPONENT_PHYSICS;
+SynComponents RigidbodyComponent::getComponentType() {
+    return SYN_COMPONENT_RIGIDBODY;
 }
 
-void PhysicsComponent::Init(
-    TransformComponent* transform,
-    Syngine::SynginePhys* physicsManager,
-    PhysicsShapes shape,
-    float mass,
-    float friction,
-    JPH::EMotionType motionType,
-    JPH::ObjectLayer layer,
-    const std::vector<float>& shapeParameters
-) {
+void RigidbodyComponent::Init(TransformComponent*       transform,
+                            Syngine::SynginePhys*     physicsManager,
+                            PhysicsShapes             shape,
+                            float                     mass,
+                            float                     friction,
+                            JPH::EMotionType          motionType,
+                            JPH::ObjectLayer          layer,
+                            const std::vector<float>& shapeParameters) {
     this->physicsManager = physicsManager;
     this->transform = transform;
     this->friction = friction;
@@ -48,36 +48,52 @@ void PhysicsComponent::Init(
 
     switch (shape) {
         case PhysicsShapes::SPHERE: {
-            if (shapeParameters.empty()) { SDL_Log("PhysicsComponent::Init: No radius provided for sphere shape."); return; }
+            if (shapeParameters.empty()) { SDL_Log("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
             float radius = 1.0f; //how on earth do I make this a parameter?
             bodyID = physicsManager->CreateSphere(posVec, radius, motionType, layer);
             break;
         }
         case PhysicsShapes::BOX: {
-            if (shapeParameters.size() < 3) { SDL_Log("PhysicsComponent::Init: Not enough parameters for box shape."); return; }
+            if (shapeParameters.size() < 3) { SDL_Log("RigidbodyComponent::Init: Not enough parameters for box shape."); return; }
             float halfSize = 1.0f;
             bodyID = physicsManager->CreateBox(posVec, rotationQuat, {halfSize, halfSize, halfSize}, motionType, layer);
             break;
         }
         case PhysicsShapes::MESH: {
             if(!m_owner) {
-                SDL_Log("PhysicsComponent::Init: No owner game object provided for mesh shape.");
+                SDL_Log("RigidbodyComponent::Init: No owner game object provided for mesh shape.");
                 return;
             }
             MeshComponent* meshComp = m_owner->GetComponent<MeshComponent>();
             if (!meshComp ) {
-                SDL_Log("PhysicsComponent::Init: No mesh component or mesh loaded for mesh shape.");
+                SDL_Log("RigidbodyComponent::Init: No mesh component or mesh loaded for mesh shape.");
                 return;
             }
             bodyID = physicsManager->CreateMeshBody(posVec, rotationQuat, meshComp->meshData, motionType, layer);
             break;
         }
+        case PhysicsShapes::CAPSULE: {
+            if (shapeParameters.size() < 2) { SDL_Log("RigidbodyComponent::Init: Not enough parameters for capsule shape."); return; }
+            float radius = shapeParameters[0];
+            float halfHeight = shapeParameters[1];
+            bodyID = physicsManager->CreateCapsule(posVec, radius, halfHeight, motionType, layer);
+            break;
+        }
         default:
             return;
     }
+
+    if (!bodyID.IsInvalid()) {
+        JPH::BodyInterface& bodyInterface = physicsManager->GetBodyInterface();
+        bodyInterface.SetFriction(bodyID, friction);
+        // For dynamic bodies, Jolt calculates the mass automatically based on
+        // the shape.
+        // If you want to set a specific mass, you can use SetMassProperties or
+        // override MassProperties
+    }
 }
 
-void PhysicsComponent::Update(bool simulate) {
+void RigidbodyComponent::Update(bool simulate) {
     if (!physicsManager || !transform || bodyID.IsInvalid()) {
         return;
     }
@@ -105,7 +121,7 @@ void PhysicsComponent::Update(bool simulate) {
     }
 }
 
-void PhysicsComponent::Destroy() {
+void RigidbodyComponent::Destroy() {
     if (physicsManager && !bodyID.IsInvalid()) {
         BodyInterface& bodyInterface = physicsManager->GetBodyInterface();
         bodyInterface.RemoveBody(bodyID);
@@ -113,4 +129,10 @@ void PhysicsComponent::Destroy() {
         bodyID = BodyID(); // Reset the body ID to an invalid state
     }
 }
+
+JPH::BodyID RigidbodyComponent::GetBodyID() const { return bodyID; }
+Syngine::SynginePhys* RigidbodyComponent::GetPhysicsManager() const {
+    return physicsManager;
+}
+
 } // namespace Syngine

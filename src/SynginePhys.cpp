@@ -5,6 +5,7 @@
 #include "Jolt/Math/Quat.h"
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
+#include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
 #include "Jolt/Physics/Collision/Shape/MeshShape.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
@@ -187,5 +188,32 @@ namespace Syngine {
         }
         bodyInterface.AddBody(body->GetID(), EActivation::Activate);
         return body->GetID();
+    }
+
+    BodyID SynginePhys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer) {
+        BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
+        CapsuleShapeSettings capsuleShapeSettings(halfHeight, radius);
+        ShapeSettings::ShapeResult capsuleShapeResult = capsuleShapeSettings.Create();
+        if (capsuleShapeResult.HasError()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCapsule: Failed to create capsule shape: %s", capsuleShapeResult.GetError().c_str());
+            return BodyID(); // Return an invalid BodyID
+        }
+        ShapeRefC capsuleShape = capsuleShapeResult.Get();
+
+        BodyCreationSettings capsuleSettings(
+            capsuleShape, position, Quat::sIdentity(), motionType, layer);
+
+        // For a character, rotation will need to be restricted because falling is bad
+        // One way is to set inertia tensor properties or to use Jolt's character class
+        // For now, we just zero out angular velocity
+        capsuleSettings.mAllowSleeping = false; // Characters often don't sleep
+
+        Body* capsule = bodyInterface.CreateBody(capsuleSettings);
+        if (!capsule) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCapsule: Failed to create capsule body.");
+            return BodyID(); // Return an invalid BodyID
+        }
+        bodyInterface.AddBody(capsule->GetID(), EActivation::Activate);
+        return capsule->GetID();
     }
 } // namespace Syngine
