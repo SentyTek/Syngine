@@ -374,7 +374,7 @@ int SyngineCore::SyngineEventLoop() {
         if (simulate) {
             if (this->app->physicsManager) {
                 this->app->physicsManager->Update(physicsTimestep, physicsSteps);
-                startDir.x += 2.0f * physicsTimestep;
+                startDir.x += 0.5f * physicsTimestep;
                 physCounter++;
             }
         }
