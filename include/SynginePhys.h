@@ -163,7 +163,7 @@ namespace Syngine {
 
         void Init();
         void Shutdown();
-        void Update(int collisionSteps);
+        void Update(float deltaTime, int collisionSteps);
 
         BodyInterface& GetBodyInterface() { return mPhysicsSystem.GetBodyInterface(); }
         PhysicsSystem& GetPhysicsSystem() { return mPhysicsSystem; }

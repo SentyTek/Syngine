@@ -120,17 +120,26 @@ int SyngineCore::SyngineEventLoop() {
     bool mouseState = false;
     float mouseX, mouseY;
     
-    int frame = 0;
-
+    
     Camera editorCam = Camera();
     bx::Vec3 startDir = {180.0f, 0.0f, 90.0f};
-
+    
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch =
-        bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
+    bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
     const float moveSpeed = 2.0f; // Speed of camera movement
     const float sprintMult = 2.0f;
     const float crouchSpeed = 0.5f;
+    
+    const float physicsTimestep = 1.0f / 120.0f;
+    const int   physicsSteps    = 1;
+    
+    float oneSec       = 0.0f;
+    int   frame        = 0;
+    int   frameDisplay = 0;
+    int   physCounter  = 0;
+    int   lastFPS      = 0;
+    int   lastTPS      = 0;    
 
     SDL_Event event;
 
@@ -142,6 +151,9 @@ int SyngineCore::SyngineEventLoop() {
         NOW  = SDL_GetPerformanceCounter();
         float deltaTime =
             (float)((NOW - LAST) / (double)SDL_GetPerformanceFrequency());
+        oneSec += deltaTime;
+        frame++;
+        frameDisplay++;
 
         const bool* keystate    = SDL_GetKeyboardState(NULL);
         Camera&     camera      = this->app->graphics->camera;
@@ -360,9 +372,10 @@ int SyngineCore::SyngineEventLoop() {
 
         // simulation stuff
         if (simulate) {
-            startDir.x += 0.02f;
             if (this->app->physicsManager) {
-                this->app->physicsManager->Update(1);
+                this->app->physicsManager->Update(physicsTimestep, physicsSteps);
+                startDir.x += 2.0f * physicsTimestep;
+                physCounter++;
             }
         }
 
@@ -416,19 +429,28 @@ int SyngineCore::SyngineEventLoop() {
         if (this->app && this->app->graphics) {
             this->app->graphics->RenderFrame(this->app->gameObjects, lightDir); // render frame
         }
+
+        if (oneSec >= 1.0f) {
+            lastFPS = frameDisplay;
+            lastTPS = physCounter;
+            physCounter = 0;
+            frameDisplay = 0;
+            oneSec -= 1.0f;
+        }
         
         if (frame % 60 == 0) {
-            SDL_Log("Frame: %d, Gameobjects: %d, Sim: %s, Mode: %s, Camera "
-                    "coords: (%.1f, %.1f, %.1f)",
+            SDL_Log("Frame: %d, Gameobjects: %d, Sim: %s, Mode: %s, FPS/TPS: "
+                    "%d/%d, Camera coords: (%.1f, %.1f, %.1f)",
                     frame,
                     (int)this->app->gameObjects.size(),
                     simulate ? "ON" : "OFF",
                     playerMode ? "Player" : "Editor",
+                    lastFPS,
+                    lastTPS,
                     camera.eye[0],
                     camera.eye[1],
                     camera.eye[2]);
         }
-        ++frame;
     }
     
     this->app->synModels->UnloadAll();

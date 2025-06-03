@@ -99,13 +99,10 @@ namespace Syngine {
         }
     }
 
-    void SynginePhys::Update(int collisionSteps) {
+    void SynginePhys::Update(float deltaTime, int collisionSteps) {
         if (!Factory::sInstance) return;
 
-        //so it's a bad idea to do dynamic steps so we do a fixed step which i say is Better:tm:
-        const float cFixedDeltaTime = 1.0f / 60.0f;
-
-        mPhysicsSystem.Update(cFixedDeltaTime, collisionSteps, mTempAllocator, mJobSystem);
+        mPhysicsSystem.Update(deltaTime, collisionSteps, mTempAllocator, mJobSystem);
     }
 
     BodyID SynginePhys::CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
