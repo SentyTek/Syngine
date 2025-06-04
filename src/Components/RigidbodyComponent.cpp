@@ -1,5 +1,6 @@
 #include "RigidbodyComponent.h"
 #include "Components.h"
+#include "Jolt/Math/Quat.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/EActivation.h"
 #include "MeshComponent.h"
@@ -126,12 +127,33 @@ void RigidbodyComponent::Update(bool simulate) {
     BodyInterface& bodyInterface = physicsManager->GetBodyInterface();
 
     if(simulate) {
-        // Sync the TransformComponent with the physics body's position and rotation
-        RVec3 position = bodyInterface.GetPosition(bodyID);
-        Quat rotation = bodyInterface.GetRotation(bodyID);
+        // Smoothly lerp the TransformComponent towards the physics body's
+        // position and rotation over time
+        static const float lerpAlpha = 1.0f / 3.0f;
 
-        transform->SetPosition(position.GetX(), position.GetY(), position.GetZ());
-        transform->SetRotation(rotation.GetX(), rotation.GetY(), rotation.GetZ(), rotation.GetW());
+        RVec3 physicsPos = bodyInterface.GetPosition(bodyID);
+        Quat  physicsRot = bodyInterface.GetRotation(bodyID);
+
+        Vec3 currentPos(transform->position[0],
+                        transform->position[1],
+                        transform->position[2]);
+        Quat currentRot(transform->rotation[0],
+                        transform->rotation[1],
+                        transform->rotation[2],
+                        transform->rotation[3]);
+
+        // Lerp pos and slerp rot
+        Vec3 lerpedPos =
+            currentPos +
+            (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) -
+             currentPos) *
+                lerpAlpha;
+        Quat lerpedRot = currentRot.SLERP(physicsRot, lerpAlpha);
+
+        transform->SetPosition(
+            lerpedPos.GetX(), lerpedPos.GetY(), lerpedPos.GetZ());
+        transform->SetRotation(lerpedRot.GetX(), lerpedRot.GetY(),
+                               lerpedRot.GetZ(), lerpedRot.GetW());
     } else {
         Vec3 pos(transform->position[0], 
                   transform->position[1], 

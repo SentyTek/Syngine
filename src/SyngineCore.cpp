@@ -131,8 +131,9 @@ int SyngineCore::SyngineEventLoop() {
     const float sprintMult = 2.0f;
     const float crouchSpeed = 0.5f;
     
-    const float physicsTimestep = 1.0f / 120.0f;
+    const float physicsTimestep = 1.0f / 60.0f;
     const int   physicsSteps    = 1;
+    float accumlator = 0.0f;
     
     float oneSec       = 0.0f;
     int   frame        = 0;
@@ -373,9 +374,14 @@ int SyngineCore::SyngineEventLoop() {
         // simulation stuff
         if (simulate) {
             if (this->app->physicsManager) {
-                this->app->physicsManager->Update(physicsTimestep, physicsSteps);
-                startDir.x += 0.5f * physicsTimestep;
-                physCounter++;
+                accumlator += deltaTime;
+
+                while(accumlator >= physicsTimestep) {
+                    this->app->physicsManager->Update(physicsTimestep, physicsSteps);
+                    startDir.x += 0.5f * physicsTimestep;
+                    physCounter++;
+                    accumlator -= physicsTimestep;
+                }
             }
         }
 
