@@ -2,9 +2,12 @@
 
 #include "Components/MeshComponent.h"
 #include "Components/TransformComponent.h"
+#include "Components/RigidbodyComponent.h"
+#include "Components/PlayerComponent.h"
 
-GameObject::GameObject(string name) {
+GameObject::GameObject(string name, string type) {
     this->name = name;
+    this->type = type;
     this->id = -1;
 }
 
@@ -23,12 +26,17 @@ int GameObject::AddComponent(SynComponents type) {
     SynComponent* component = nullptr;
     switch (type) {
         case SYN_COMPONENT_MESH:
-            component = new MeshComponent();
+            component = new MeshComponent(this);
             break;
         case SYN_COMPONENT_TRANSFORM:
-            component = new TransformComponent();
+            component = new TransformComponent(this);
             break;
-        // Add cases for other components here
+        case SYN_COMPONENT_RIGIDBODY:
+            component = new Syngine::RigidbodyComponent(this);
+            break;
+        case SYN_COMPONENT_PLAYER:
+            component = new PlayerComponent(this);
+            break;
         default:
             return 2; // Unknown component type
     }
