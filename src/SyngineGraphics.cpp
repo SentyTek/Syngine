@@ -6,8 +6,7 @@
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "bx/math.h"
-#include "helpers.h"
-#include "defines.h"
+#include "SynComponents.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
@@ -384,7 +383,7 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "GameObject is null");
             continue;
         }
-        if (!gameObject->HasComponent(SYN_COMPONENT_TRANSFORM) || !(gameObject->GetComponent<TransformComponent>())->isEnabled) {
+        if (!gameObject->HasComponent(SYN_COMPONENT_TRANSFORM) || (!gameObject->HasComponent(SYN_COMPONENT_MESH)) || !(gameObject->GetComponent<TransformComponent>())->isEnabled) {
             continue;
         }
         SynMeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;

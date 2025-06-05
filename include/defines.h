@@ -11,6 +11,6 @@
 
 #include "Components/MeshComponent.h"
 #include "Components/TransformComponent.h"
-#include "Components/PhysComponent.h"
+#include "Components/RigidbodyComponent.h"
 
 #include <cstdint>

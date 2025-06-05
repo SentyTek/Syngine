@@ -163,14 +163,49 @@ namespace Syngine {
 
         void Init();
         void Shutdown();
-        void Update(int collisionSteps);
+        void Update(float deltaTime, int collisionSteps);
 
         BodyInterface& GetBodyInterface() { return mPhysicsSystem.GetBodyInterface(); }
         PhysicsSystem& GetPhysicsSystem() { return mPhysicsSystem; }
+        const BPLayerInterfaceImpl& GetBroadPhaseLayerInterface() const {
+            return mBroadPhaseLayerInterface;
+        }
+        const ObjectLayerPairFilterImpl& GetObjectLayerPairFilter() const {
+            return mObjectLayerPairFilter;
+        }
+        const ObjectVsBroadPhaseLayerFilterImpl& GetObjectVsBroadPhaseLayerFilter() const {
+            return mObjectVsBroadPhaseLayerFilter;
+        }
 
-        BodyID CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer);
-        BodyID CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, EMotionType motionType, ObjectLayer layer);
-        BodyID CreateMeshBody(RVec3Arg position, QuatArg rotation, const SynMeshData& meshData, EMotionType motionType, ObjectLayer layer);
+        BodyID CreateSphere(RVec3Arg    position,
+                            float       radius,
+                            EMotionType motionType,
+                            ObjectLayer layer,
+                            float       mass = 0.0f);
+        BodyID CreateBox(RVec3Arg    position,
+                         QuatArg     rotation,
+                         Vec3Arg     halfExtent,
+                         EMotionType motionType,
+                         ObjectLayer layer,
+                         float       mass = 0.0f);
+        BodyID CreateMeshBody(RVec3Arg           position,
+                              QuatArg            rotation,
+                              const SynMeshData& meshData,
+                              EMotionType        motionType,
+                              ObjectLayer        layer);
+        BodyID CreateCapsule(RVec3Arg    position,
+                             float       radius,
+                             float       halfHeight,
+                             EMotionType motionType,
+                             ObjectLayer layer,
+                             float       mass = 0.0f);
+        BodyID CreateCylinder(RVec3Arg    position,
+                              QuatArg     rotation,
+                              float       radius,
+                              float       halfHeight,
+                              EMotionType motionType,
+                              ObjectLayer layer,
+                              float       mass = 0.0f);
 
         private:
         //Jolt specific variables
