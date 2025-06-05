@@ -14,12 +14,15 @@ enum SynComponents {
     SYN_COMPONENT_LIGHT = 64
 };
 
+#include "SyngineGameobject.h"
 /*
-    Syngine Components are the base class for all components attached to gameobjects.
-    They are used to add functionality to gameobjects, such as mesh, transform, physics, AI, PlayerController, etc.
+Syngine Components are the base class for all components attached to gameobjects.
+They are used to add functionality to gameobjects, such as mesh, transform, physics, AI, PlayerController, etc.
 */
 class SynComponent {
     public:
     virtual SynComponents getComponentType() = 0; //Get the type of component
+    virtual ~SynComponent() = default; //Virtual destructor for cleanup
     bool isEnabled = true;
+    GameObject* m_owner = nullptr; //The owner of the component, the gameobject it is attached to
 };

@@ -1,9 +1,10 @@
 #pragma once
 #include <string>
+#include <vector>
+#include <map>
 
 #include <SDL3/SDL.h>
 #include <bgfx/bgfx.h>
-#include "SynModelLoader.h"
 #include "SyngineGameobject.h"
 #include "bx/math.h"
 
@@ -31,19 +32,7 @@ struct SynProgram {
 
 struct SynHandles {
     std::vector<SynProgram> programs;
-
-    bgfx::UniformHandle u_lightDir = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_normalMatrix = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_floats = BGFX_INVALID_HANDLE;
-
-    bgfx::UniformHandle u_albedoSampler = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_normalMapSampler = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_heightMapSampler = BGFX_INVALID_HANDLE;
-
-    bgfx::UniformHandle u_skyColorDay = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_skyColorNight = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_sunColorDay = BGFX_INVALID_HANDLE;
-    bgfx::UniformHandle u_sunColorRise = BGFX_INVALID_HANDLE;
+    std::map<std::string, bgfx::UniformHandle> uniforms;
 };
 
 class SyngineGraphics {

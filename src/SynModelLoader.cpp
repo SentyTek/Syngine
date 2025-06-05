@@ -142,8 +142,8 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
-    meshData.vertices.clear();
-    meshData.indices.clear();
+    //meshData.vertices.clear();
+    //meshData.indices.clear();
 
     //checks
     if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
@@ -157,6 +157,15 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         for(unsigned int i = 0; i < scene->mNumMaterials; ++i) {
             aiMaterial* material = scene->mMaterials[i];
             Material mat;
+
+            //set default values
+            aiColor4D diffuse;
+            if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS) {
+                mat.baseColor[0] = diffuse.r;
+                mat.baseColor[1] = diffuse.g;
+                mat.baseColor[2] = diffuse.b;
+                mat.baseColor[3] = diffuse.a;
+            }
 
             aiString texPath;
             if(material->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS) {
@@ -218,6 +227,60 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);
         }
+
+        //If no materials were loaded but loadTextures was true
+        //Consider making a default material
+        if(meshData.materials.empty() && scene->mNumMeshes > 0) {
+            Material mat;
+            mat.albedo = BGFX_INVALID_HANDLE;
+            mat.normalMap = BGFX_INVALID_HANDLE;
+            mat.heightMap = SynCreateFlatTexture();
+            mat.name = "default_material";
+            meshData.materials.push_back(mat);
+        }
+    } else { //if !loadTextures
+        //Even if not loading textures, still might have multiple materials defined
+        //with different base colors
+        
+        if (scene->mNumMaterials > 0) {
+            meshData.materials.reserve(scene->mNumMaterials);
+            for(unsigned int i = 0; i < scene->mNumMaterials; ++i) {
+                aiMaterial* material = scene->mMaterials[i];
+                Material mat;
+
+                aiColor4D diffuse;
+                if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS) {
+                    mat.baseColor[0] = diffuse.r;
+                    mat.baseColor[1] = diffuse.g;
+                    mat.baseColor[2] = diffuse.b;
+                    mat.baseColor[3] = diffuse.a;
+                }
+
+                mat.albedo = BGFX_INVALID_HANDLE;
+                mat.normalMap = BGFX_INVALID_HANDLE;
+                mat.heightMap = SynCreateFlatTexture();
+                mat.name = "material_" + std::to_string(i);
+                meshData.materials.push_back(mat);
+            }
+        } else { //Fallback if no materials are defined
+            Material mat;
+            mat.albedo = BGFX_INVALID_HANDLE;
+            mat.normalMap = BGFX_INVALID_HANDLE;
+            mat.heightMap = SynCreateFlatTexture();
+            mat.name = "default_material";
+            meshData.materials.push_back(mat);
+        }
+    }
+
+    //Ensure at least one material exists
+    if(meshData.materials.empty()) {
+        SDL_Log("Warning: Mesh %s had no materials, using default.", path.c_str());
+        Material mat;
+        mat.albedo = BGFX_INVALID_HANDLE;
+        mat.normalMap = BGFX_INVALID_HANDLE;
+        mat.heightMap = SynCreateFlatTexture();
+        mat.name = "default_material";
+        meshData.materials.push_back(mat);
     }
 
     meshData.numMaterials = meshData.materials.size();
@@ -225,6 +288,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
     //and output
     meshData.vbh = vbh;
     meshData.ibh = ibh;
+    meshData.hasTextures = loadTextures;
     out = meshData;
     meshes.push_back(meshData); //store mesh data for later use
     return true;
@@ -246,8 +310,6 @@ void AssimpLoader::UnloadAll() {
         mesh.materials.clear();
         bgfx::destroy(mesh.vbh);
         bgfx::destroy(mesh.ibh);
-        mesh.vertices.clear();
-        mesh.indices.clear();
     }
     meshes.clear();
 }
