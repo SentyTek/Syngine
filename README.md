@@ -25,6 +25,8 @@ don't.
 /src            -> Engine source files
     /Components -> Component type files for the Entity-Component-System
 /lib            -> Other library files not in third_party abd custom libraries
+/testgame       -> Files to be able to quickly test the engine
+/third_party    -> Third party components like SDL
 ```
 
 ## Technologies used
