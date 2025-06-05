@@ -115,10 +115,10 @@ endif()
 
 # configure all third party files by calling their cmake scripts
 # EXECLUDE_FROM_ALL is used so that its install targets and configs cont pollute upwards into the parent project
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/JoltPhysics/build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/JoltPhysics/build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
 
 if(MSVC)
     target_compile_options(Syngine PRIVATE
@@ -142,18 +142,18 @@ target_include_directories(Syngine
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include/Components
         ${CMAKE_CURRENT_SOURCE_DIR}/lib
-        # Third-party headers needed by engine's public headers (now relative to root)
-        ${CMAKE_SOURCE_DIR}/third_party/SDL/include
-        ${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/include
-        ${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/bx/include   # Often needed by bgfx headers
-        ${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/bimg/include # Often needed by bgfx headers
-        ${CMAKE_SOURCE_DIR}/third_party/assimp/include
-        ${CMAKE_SOURCE_DIR}/third_party/JoltPhysics
+
+        # Third-party headers needed by engine's public headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/SDL/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bx/include   # Often needed by bgfx headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bimg/include # Often needed by bgfx headers
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/JoltPhysics
     PRIVATE
         # Engine private headers/sources directory
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Components
-        # Add any third-party includes ONLY needed by engine's private .cpp files (if any)
 )
 
 # --- Link Libraries ---
