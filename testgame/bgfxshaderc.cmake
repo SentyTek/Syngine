@@ -122,7 +122,6 @@ function(compile_all_shaders)
         endif()
 
         # --- Attempt to find matching varying definition file ---
-        # Scheme 1: <common_name_part><varying_suffix> in the same directory
         # e.g., if shader is "terrain.vert.sc", look for "terrain.vary.sc"
         set(expected_varying_file_name "${common_name_part}${resolved_varying_suffix}")
         set(potential_varying_path "${ARG_SOURCE_DIRECTORY}/${shader_dir_relative}/${expected_varying_file_name}")
@@ -152,12 +151,6 @@ function(compile_all_shaders)
             file(MAKE_DIRECTORY "${shader_specific_output_dir}") # Ensure sub-output directory exists
         endif()
 
-        message(STATUS "Preparing to compile ${current_shader_type} shader: ${shader_absolute_path}")
-        if(varying_def_to_use)
-            message(STATUS "  Using varying definition: ${varying_def_to_use}")
-        endif()
-        message(STATUS "  Output directory: ${shader_specific_output_dir}")
-
         set(current_shader_output_files "") # Variable to capture this specific compilation's output
         bgfx_compile_shaders(
             TYPE ${current_shader_type}
@@ -165,7 +158,7 @@ function(compile_all_shaders)
             VARYING_DEF ${varying_def_to_use} # Pass empty if not found; bgfx_compile_shaders handles it
             OUTPUT_DIR ${shader_specific_output_dir}
             INCLUDE_DIRS ${ARG_BGFX_SRC_INCLUDE_DIRS}
-            OUT_FILES_VAR current_shader_output_files # Crucial: get the list of generated .bin files
+            OUT_FILES_VAR current_shader_output_files
         )
 
         if(current_shader_output_files)

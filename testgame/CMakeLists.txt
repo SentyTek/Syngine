@@ -14,33 +14,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
 
 add_subdirectory(engine)
-
-if(MSVC)
-    message(STATUS "Root: Forcing /MTd for bakerman's CMAKE_CXX_FLAGS_DEBUG just before target definition.")
-    if(CMAKE_CXX_FLAGS_DEBUG MATCHES "/MDd")
-        string(REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-    elseif(NOT CMAKE_CXX_FLAGS_DEBUG MATCHES "/MTd")
-        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-    endif()
-    # Ensure /MD is not in debug flags
-    string(REPLACE "/MD" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
-    message(STATUS "Root: CMAKE_CXX_FLAGS_DEBUG for bakerman is now: ${CMAKE_CXX_FLAGS_DEBUG}")
-
-    # You might also need to apply this specifically to the target if global flags are tricky
-    # target_compile_options(${EXECUTABLE_NAME} PRIVATE "$<$<CONFIG:Debug>:/MTd>")
-    # Be careful with the above, as target_compile_options appends.
-    # A more robust way for a target is to set its property:
-    # set_property(TARGET ${EXECUTABLE_NAME} APPEND_STRING PROPERTY COMPILE_FLAGS_DEBUG " /MTd") # Not standard, check exact property
-    # The standard way is to ensure CMAKE_CXX_FLAGS_DEBUG is correct before the target uses it.
-endif()
-
 add_executable(${EXECUTABLE_NAME}
     src/main.cpp
 )
 
-# Include the official bgfx shader utils
-# include(${CMAKE_SOURCE_DIR}/third_party/bgfx.cmake/cmake/bgfxToolUtils.cmake)
-
+# Compile shaders
 set(SHADER_SOURCE_DIR_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
 file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR}) #ensure exists
@@ -66,10 +44,7 @@ endif()
 
 # Include directories for the executable
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
-    # ${CMAKE_SOURCE_DIR}/engine/include # Should be inherited via PUBLIC from Syngine
-    ${CMAKE_CURRENT_SOURCE_DIR}/src # If main.cpp includes headers from root src
-    # Add third-party includes ONLY if main.cpp includes them DIRECTLY
-    # ${CMAKE_SOURCE_DIR}/third_party/SDL/include # Example
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE Syngine)
@@ -210,12 +185,9 @@ endif()
 if(WIN32 OR (UNIX AND NOT APPLE))
     set(SHADER_PLATFORM_SUBDIR_GENERIC "")
     if(WIN32)
-        # Common choices for Windows: dx11, dx12, vulkan (spirv)
-        # Choose the one that matches your BGFX renderer for Windows
-        set(SHADER_PLATFORM_SUBDIR_GENERIC "dx11") # Example
-    else() # Linux
-        # Common choices for Linux: glsl, spirv (vulkan)
-        set(SHADER_PLATFORM_SUBDIR_GENERIC "spirv") # Example
+        set(SHADER_PLATFORM_SUBDIR_GENERIC "dx11")
+    else()
+        set(SHADER_PLATFORM_SUBDIR_GENERIC "spirv")
     endif()
 
     set(PLATFORM_SHADER_COPY_SOURCE_DIR "${SHADER_OUTPUT_DIR}/${SHADER_PLATFORM_SUBDIR_GENERIC}")

@@ -1,11 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
 if(MSVC)
-    message(STATUS "Engine (after project(Syngine)): Initial CMAKE_C_FLAGS_DEBUG: ${CMAKE_C_FLAGS_DEBUG}")
-    message(STATUS "Engine (after project(Syngine)): Initial CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
-    message(STATUS "Engine (after project(Syngine)): Initial CMAKE_C_FLAGS_RELEASE: ${CMAKE_C_FLAGS_RELEASE}")
-    message(STATUS "Engine (after project(Syngine)): Initial CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
-
     # For Debug configurations: Change /MDd to /MTd
     string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG_TEMP "${CMAKE_C_FLAGS_DEBUG}")
     if(NOT CMAKE_C_FLAGS_DEBUG_TEMP MATCHES "/MTd") # Add /MTd if /MDd wasn't found (shouldn't happen for default debug)
@@ -86,10 +81,22 @@ set(BX_CONFIG_DEBUG ${LOCAL_BX_CONFIG_DEBUG}) # Also set as normal variable
 set(SDL_TEST OFF CACHE BOOL "" FORCE)
 set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_AUDIO_DISABLED ON CACHE BOOL "" FORCE)
+set(SDL_SENSOR_DISABLED OFF CACHE BOOL "" FORCE) # SDL sensor needs to be on idk
+set(SDL_LOADSO_DISABLED ON CACHE BOOL "" FORCE)
+set(SDL_RENDER_DISABLED ON CACHE BOOL "" FORCE)
 
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE) # assimp
 set(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "" FORCE) # Enable glTF importer
 set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+
+set(JOLT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(JOLT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(JOLT_PROFILE_ENABLED OFF CACHE BOOL "" FORCE)
 
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -106,11 +113,31 @@ set(BX_CONFIG_DEBUG ${LOCAL_BX_CONFIG_DEBUG})
 if(APPLE) # cocoa is really picky and requires entire renderer to be single threaded
     set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)
     set(SDL_VIDEO_VULKAN OFF CACHE BOOL "" FORCE)
-    set(SDL_VULKAN OFF CACHE BOOL "" FORCE)
 
-    set(BGFX_CONFIG_RENDERER_METAL ON CACHE BOOL "Enable Metal renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_OPENGL OFF CACHE BOOL "Disable OpenGL renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_VULKAN OFF CACHE BOOL "Disable Vulkan renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF CACHE BOOL "Disable Direct3D 12 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF CACHE BOOL "Disable Direct3D 11 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF CACHE BOOL "Disable Direct3D 9 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_OPENGL OFF CACHE BOOL "Disable OpenGL Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_VULKAN OFF CACHE BOOL "Disable Vulkan Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_METAL ON CACHE BOOL "Enable Metal Renderer" FORCE)
+endif()
+
+if(MSVC)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D12 ON CACHE BOOL "Enable Direct3D 12 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF CACHE BOOL "Disable Direct3D 11 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF CACHE BOOL "Disable Direct3D 9 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_OPENGL OFF CACHE BOOL "Disable OpenGL Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_VULKAN OFF CACHE BOOL "Disable Vulkan Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_METAL OFF CACHE BOOL "Disable Metal Renderer" FORCE)
+endif()
+
+if(UNIX AND NOT APPLE)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF CACHE BOOL "Disable Direct3D 12 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF CACHE BOOL "Disable Direct3D 11 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF CACHE BOOL "Disable Direct3D 9 Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_OPENGL OFF CACHE BOOL "Disable OpenGL Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_VULKAN ON CACHE BOOL "Enable Vulkan Renderer" FORCE)
+    set(BGFX_CONFIG_RENDERER_METAL OFF CACHE BOOL "Disable Metal Renderer" FORCE)
 endif()
 
 # configure all third party files by calling their cmake scripts
@@ -125,14 +152,12 @@ if(MSVC)
         "$<$<CONFIG:Debug>:/MTd>"
         "$<$<NOT:$<CONFIG:Debug>>:/MT>" # For Release, RelWithDebInfo, MinSizeRel
     )
-    message(STATUS "Syngine: Applied /MTd (Debug) and /MT (Release) explicit compile options to Syngine target.")
 
     # Also ensure the BX_CONFIG_DEBUG preprocessor macro is set for Syngine
     target_compile_definitions(Syngine PRIVATE
         "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"
         "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>"
     )
-    message(STATUS "Syngine: Set BX_CONFIG_DEBUG preprocessor definition for Syngine library.")
 endif()
 
 # --- Include Directories ---
