@@ -1,6 +1,7 @@
 #include "SyngineCore.h"
 #include "SDL3/SDL_oldnames.h"
 #include "SDL3/SDL_scancode.h"
+#include "SyngineGameobject.h"
 #include "SynginePhys.h"
 #include "Components.h"
 #include "MeshComponent.h"
@@ -378,7 +379,6 @@ int SyngineCore::SyngineEventLoop() {
 
                 while(accumlator >= physicsTimestep) {
                     this->app->physicsManager->Update(physicsTimestep, physicsSteps);
-                    startDir.x += 0.5f * physicsTimestep;
                     physCounter++;
                     accumlator -= physicsTimestep;
                 }
@@ -387,15 +387,9 @@ int SyngineCore::SyngineEventLoop() {
 
         //sun
         if (keystate[SDL_SCANCODE_LEFT]) {
-            startDir.z += 2.0f;
-        }
-        if (keystate[SDL_SCANCODE_RIGHT]) {
-            startDir.z -= 2.0f;
-        }
-        if (keystate[SDL_SCANCODE_UP]) {
             startDir.x += 2.0f;
         }
-        if (keystate[SDL_SCANCODE_DOWN]) {
+        if (keystate[SDL_SCANCODE_RIGHT]) {
             startDir.x -= 2.0f;
         }
 
