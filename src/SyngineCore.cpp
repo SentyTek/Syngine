@@ -1,6 +1,7 @@
 #include "SyngineCore.h"
 #include "SDL3/SDL_oldnames.h"
 #include "SDL3/SDL_scancode.h"
+#include "SyngineGameobject.h"
 #include "SynginePhys.h"
 #include "Components.h"
 #include "MeshComponent.h"
@@ -215,7 +216,7 @@ int SyngineCore::SyngineEventLoop() {
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
                     Syngine::RigidbodyComponent* physComp = cube->GetComponent<Syngine::RigidbodyComponent>();
-                    std::vector<float> shapeParams = {1.0f, 1.0f, 1.0f}; // half extents for box shape
+                    std::vector<float> shapeParams = {1.0f, 1.0f, 1.0f}; // full extents
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
@@ -378,7 +379,6 @@ int SyngineCore::SyngineEventLoop() {
 
                 while(accumlator >= physicsTimestep) {
                     this->app->physicsManager->Update(physicsTimestep, physicsSteps);
-                    startDir.x += 0.5f * physicsTimestep;
                     physCounter++;
                     accumlator -= physicsTimestep;
                 }
@@ -387,15 +387,9 @@ int SyngineCore::SyngineEventLoop() {
 
         //sun
         if (keystate[SDL_SCANCODE_LEFT]) {
-            startDir.z += 2.0f;
-        }
-        if (keystate[SDL_SCANCODE_RIGHT]) {
-            startDir.z -= 2.0f;
-        }
-        if (keystate[SDL_SCANCODE_UP]) {
             startDir.x += 2.0f;
         }
-        if (keystate[SDL_SCANCODE_DOWN]) {
+        if (keystate[SDL_SCANCODE_RIGHT]) {
             startDir.x -= 2.0f;
         }
 

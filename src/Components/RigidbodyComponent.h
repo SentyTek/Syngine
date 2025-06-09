@@ -41,11 +41,18 @@ class RigidbodyComponent : public SynComponent {
               const std::vector<float>& shapeParameters);
     void Update(bool simulate);
     void Destroy();
-
+    
     JPH::BodyID           GetBodyID() const;
     Syngine::SynginePhys* GetPhysicsManager() const;
+    float                 GetMass() const;
+    float                 GetFriction() const;
+    float                 GetRestitution() const;
 
     std::vector<float> GetShapeParameters() const;
+
+    void UpdateShapeParameters(const std::vector<float>& newShapeParameters);
+    void SetFriction(float newFriction);
+    void SetRestitution(float newRestitution);
 
   private:
     TransformComponent*   transform; // Reference to the transform component
