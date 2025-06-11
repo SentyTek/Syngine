@@ -8,21 +8,9 @@
 #include "SyngineGameobject.h"
 #include "bx/math.h"
 
-struct Camera {
-    float eye[3] = {0.0f, 0.0f, -5.0f};
-    float target[3] = {0.0f, 0.0f, 0.0f};
-    float up[3] = {0.0f, 1.0f, 0.0f};
-    float fov = 70.0f; //deg
-    float near = 0.1f;
-    float far = 100.0f;
-    float view[16];
-    float proj[16];
-
-    float yaw = 0.0f;
-    float pitch = 0.0f;
-
-    void Update(int viewId, int width, int height);
-};
+namespace Syngine {
+    class CameraComponent; // Forward declaration
+}
 
 struct SynProgram {
     bgfx::ProgramHandle program = BGFX_INVALID_HANDLE;
@@ -42,7 +30,6 @@ class SyngineGraphics {
     int width;
     int height;
     SDL_Window* win;
-    Camera camera;
     SynHandles handles;
     
     SyngineGraphics(const char* title, int width, int height);
@@ -56,6 +43,8 @@ class SyngineGraphics {
     int RemoveProgram(bool all);
     int RemoveProgram(size_t index);
     int RemoveProgram(const char* name);
-    
-    int RenderFrame(std::vector<GameObject*> modelLoader, bx::Vec3& lightDir);
+
+    int RenderFrame(std::vector<GameObject*>  modelLoader,
+                    bx::Vec3&                 lightDir,
+                    Syngine::CameraComponent* camera);
 };

@@ -1,5 +1,5 @@
 #include "SyngineCore.h"
-#include "SDL3/SDL_oldnames.h"
+#include "Components/CameraComponent.h"
 #include "SDL3/SDL_scancode.h"
 #include "SyngineGameobject.h"
 #include "SynginePhys.h"
@@ -88,6 +88,7 @@ int SyngineCore::SyngineEventLoop() {
     player->AddComponent(SYN_COMPONENT_TRANSFORM);
     player->AddComponent(SYN_COMPONENT_PLAYER);
     player->AddComponent(SYN_COMPONENT_RIGIDBODY);
+    player->AddComponent(SYN_COMPONENT_CAMERA);
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
@@ -107,8 +108,8 @@ int SyngineCore::SyngineEventLoop() {
                  Syngine::Layers::MOVING,
                  { 0.7f, 0.3f });
 
-    player->GetComponent<PlayerComponent>()->Initialize(
-        &(this->app->graphics->camera),
+    player->GetComponent<PlayerComponent>()->Init(
+        player->GetComponent<Syngine::CameraComponent>(),
         this->app->graphics->win,
         rbComp);
     
@@ -120,9 +121,11 @@ int SyngineCore::SyngineEventLoop() {
     bool rmb = false;
     bool mouseState = false;
     float mouseX, mouseY;
-    
-    
-    Camera editorCam = Camera();
+
+    Syngine::CameraComponent* cam = new Syngine::CameraComponent(nullptr);
+    // FinalCam specifically is so we can keep track of both the player camera
+    // and the editor camera, switching between them as needed.
+    Syngine::CameraComponent* finalCam = new Syngine::CameraComponent(nullptr);
     bx::Vec3 startDir = {180.0f, 0.0f, 90.0f};
     
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
@@ -158,7 +161,6 @@ int SyngineCore::SyngineEventLoop() {
         frameDisplay++;
 
         const bool* keystate    = SDL_GetKeyboardState(NULL);
-        Camera&     camera      = this->app->graphics->camera;
         bx::Vec3    moveVector  = { 0, 0, 0 };
 
         //event handling
@@ -264,11 +266,13 @@ int SyngineCore::SyngineEventLoop() {
                 float dx = event.motion.xrel * sensitivity;
                 float dy = event.motion.yrel * sensitivity;
 
-                editorCam.yaw += dx;
-                editorCam.pitch -= dy;
-
-                // Clamp pitch to avoid gimbal lock
-                editorCam.pitch = bx::clamp(editorCam.pitch, -maxPitch, maxPitch);
+                float cx, cy = 0.0f;
+                cam->GetAngles(cx, cy);
+                cx += dx;
+                cy -= dy;
+                cy = bx::clamp(cy, -maxPitch, maxPitch);
+                // Update camera angles
+                cam->SetAngles(cx, cy);
             }
 
             if (playerMode) {
@@ -298,78 +302,104 @@ int SyngineCore::SyngineEventLoop() {
             if (keystate[SDL_SCANCODE_LCTRL]) realSpeed = moveSpeed * crouchSpeed;
 
             if (keystate[SDL_SCANCODE_W]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
-                    cosf(editorCam.pitch) * sinf(editorCam.yaw),
-                    sinf(editorCam.pitch),
-                    cosf(editorCam.pitch) * cosf(editorCam.yaw)
+                    cosf(pitch) * sinf(yaw),
+                    sinf(pitch),
+                    cosf(pitch) * cosf(yaw)
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_S]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
-                    -cosf(editorCam.pitch) * sinf(editorCam.yaw),
-                    -sinf(editorCam.pitch),
-                    -cosf(editorCam.pitch) * cosf(editorCam.yaw)
+                    -cosf(pitch) * sinf(yaw),
+                    -sinf(pitch),
+                    -cosf(pitch) * cosf(yaw)
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_A]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
-                    sinf(editorCam.yaw - bx::kPiHalf),
+                    sinf(yaw - bx::kPiHalf),
                     0.0f,
-                    cosf(editorCam.yaw - bx::kPiHalf)
+                    cosf(yaw - bx::kPiHalf)
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_D]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
-                    sinf(editorCam.yaw + bx::kPiHalf),
+                    sinf(yaw + bx::kPiHalf),
                     0.0f,
-                    cosf(editorCam.yaw + bx::kPiHalf)
+                    cosf(yaw + bx::kPiHalf)
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_Q]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
                     0.0f,
                     -1.0f,
                     0.0f
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_E]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
                     0.0f,
                     1.0f,
                     0.0f
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
-            camera = editorCam; // Update the camera with the editor camera state
+            finalCam = cam;
+        } else {
+            // player mode, use player camera
+            if (player && player->GetComponent<Syngine::CameraComponent>()) {
+                finalCam = player->GetComponent<Syngine::CameraComponent>();
+            } else {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Player or CameraComponent not found");
+                return 1;
+            }
         }
 
         // simulation stuff
@@ -427,7 +457,7 @@ int SyngineCore::SyngineEventLoop() {
         }
         
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(this->app->gameObjects, lightDir); // render frame
+            this->app->graphics->RenderFrame(this->app->gameObjects, lightDir, finalCam); // render frame
         }
 
         if (oneSec >= 1.0f) {
@@ -447,9 +477,9 @@ int SyngineCore::SyngineEventLoop() {
                     playerMode ? "Player" : "Editor",
                     lastFPS,
                     lastTPS,
-                    camera.eye[0],
-                    camera.eye[1],
-                    camera.eye[2]);
+                    finalCam->GetPosition()[0],
+                    finalCam->GetPosition()[1],
+                    finalCam->GetPosition()[2]);
         }
     }
     

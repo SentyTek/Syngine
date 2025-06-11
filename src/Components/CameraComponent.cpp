@@ -16,6 +16,10 @@ Syngine::CameraComponent::CameraComponent(GameObject* owner) {
     this->camera.up[2] = 0.0f;
 }
 
+Syngine::CameraComponent::~CameraComponent() {
+    // No specific cleanup needed for now
+}
+
 void Syngine::CameraComponent::Update(int viewId, int width, int height) {
     // update view and projection matrices
     Syngine::Camera& cam = this->camera;
@@ -75,3 +79,17 @@ void Syngine::CameraComponent::SetFarPlane(float farPlane) {
 }
 
 float Syngine::CameraComponent::GetFarPlane() const { return this->camera.far; }
+
+void Syngine::CameraComponent::SetAngles(float yaw, float pitch) {
+    this->camera.yaw = yaw;
+    this->camera.pitch = pitch;
+}
+
+void Syngine::CameraComponent::GetAngles(float& yaw, float& pitch) const {
+    yaw = this->camera.yaw;
+    pitch = this->camera.pitch;
+}
+
+Syngine::Camera Syngine::CameraComponent::GetCamera() const {
+    return this->camera;
+}

@@ -33,6 +33,11 @@ class CameraComponent : public SynComponent {
     void   SetFarPlane(float farPlane);
     float  GetFarPlane() const;
 
+    void SetAngles(float yaw, float pitch);
+    void GetAngles(float& yaw, float& pitch) const;
+
+    Syngine::Camera GetCamera() const;
+
   private:
     GameObject* m_owner; // Reference to the owner game object
     Camera      camera;  // Camera data

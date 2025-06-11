@@ -4,6 +4,7 @@
 #include "Components/TransformComponent.h"
 #include "Components/RigidbodyComponent.h"
 #include "Components/PlayerComponent.h"
+#include "Components/CameraComponent.h"
 
 GameObject::GameObject(string name, string type) {
     this->name = name;
@@ -36,6 +37,9 @@ int GameObject::AddComponent(SynComponents type) {
             break;
         case SYN_COMPONENT_PLAYER:
             component = new PlayerComponent(this);
+            break;
+        case SYN_COMPONENT_CAMERA:
+            component = new Syngine::CameraComponent(this);
             break;
         default:
             return 2; // Unknown component type

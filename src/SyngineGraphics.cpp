@@ -1,5 +1,6 @@
 #include "SyngineGraphics.h"
 #include "Components.h"
+#include "Components/CameraComponent.h"
 #include "ShaderUtils.h"
 #include "SynModelLoader.h"
 #include "TransformComponent.h"
@@ -28,32 +29,6 @@ SyngineGraphics::SyngineGraphics(const char* title, int width, int height) {
     this->height = height;
     this->win = nullptr;
 };
-
-void Camera::Update(int viewId, int width, int height) {
-    //update view and projection matrices
-    bx::Vec3 eyeVec = { eye[0], eye[1], eye[2] };
-    float aspect = float(width) / float(height);
-
-    bx::Vec3 forward = {
-        cosf(pitch) * sinf(yaw),
-        sinf(pitch),
-        cosf(pitch) * cosf(yaw)
-    };
-    bx::Vec3 right = {
-        sinf(yaw - bx::kPiHalf),
-        0.0f,
-        cosf(yaw - bx::kPiHalf)
-    };
-
-    bx::Vec3 targetVec = bx::add(eyeVec, forward);
-    bx::Vec3 upVec = bx::cross(right, forward);
-
-    bx::mtxLookAt(view, eyeVec, targetVec, upVec);
-
-    bx::mtxLookAt(view, eyeVec, targetVec, upVec);
-    bx::mtxProj(proj, fov, aspect, near, far, bgfx::getCaps()->homogeneousDepth);
-    bgfx::setViewTransform(viewId, view, proj);
-}
 
 int SyngineGraphics::CreateWindow() {
     //bgInit
@@ -324,7 +299,7 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
     SDL_Log("goodbye world");
 }
 
-int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir) {
+int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir, Syngine::CameraComponent* camera) {
     const SynProgram& terrainProgram = GetProgram("terrain");
     const SynProgram& skyProgram = GetProgram("sky");
     const SynProgram& defaultProgram = GetProgram("default");
@@ -335,22 +310,26 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
 
     const bgfx::ViewId SKY_VIEW = skyProgram.viewId;
     const bgfx::ViewId MAIN_VIEW = terrainProgram.viewId;
-    camera.Update(SKY_VIEW, this->width, this->height); //update camera view and projection matrices
+    camera->Update(SKY_VIEW,
+                   this->width,
+                   this->height); // update camera view and projection matrices
+
+    Syngine::Camera camObj = camera->GetCamera();
     
     //sky pass
     bgfx::setViewRect(SKY_VIEW, 0, 0, uint16_t(this->width), uint16_t(this->height));
     bgfx::setViewClear(SKY_VIEW, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 1.0f, 0, 1, 0);
     bgfx::touch(SKY_VIEW);
-    bgfx::setViewTransform(MAIN_VIEW, camera.view, camera.proj);
+    bgfx::setViewTransform(MAIN_VIEW, camObj.view, camObj.proj);
     bgfx::touch(MAIN_VIEW);
 
     float skyView[16];
-    bx::memCopy(skyView, camera.view, sizeof(skyView));
+    bx::memCopy(skyView, camObj.view, sizeof(skyView));
     skyView[12] = 0.0f; //remove translation for skybox
     skyView[13] = 0.0f;
     skyView[14] = 0.0f;
 
-    bgfx::setViewTransform(SKY_VIEW, skyView, camera.proj);
+    bgfx::setViewTransform(SKY_VIEW, skyView, camObj.proj);
 
     float skyColorDay[4] = { 0.5f, 0.7f, 1.0f, 1.0f };
     float skyColorNight[4] = { 0.0f, 0.0f, 0.1f, 1.0f };

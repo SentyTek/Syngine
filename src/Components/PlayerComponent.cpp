@@ -1,4 +1,5 @@
 #include "PlayerComponent.h"
+#include "CameraComponent.h"
 #include "Components.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "SyngineGraphics.h"
@@ -116,9 +117,9 @@ void PlayerComponent::CheckGrounded() {
     isGrounded = false;
 }
 
-void PlayerComponent::Initialize(Camera*                    camera,
-                                 SDL_Window*                win,
-                                 Syngine::RigidbodyComponent* RigidbodyComponent) {
+void PlayerComponent::Init(Syngine::CameraComponent*    camera,
+                           SDL_Window*                  win,
+                           Syngine::RigidbodyComponent* RigidbodyComponent) {
     m_camera = camera;
     m_window = win;
     m_RigidbodyComponent = RigidbodyComponent;
@@ -129,15 +130,9 @@ void PlayerComponent::Initialize(Camera*                    camera,
         return;
     }
 
-    // Initialize player component
-    currentYaw   = m_camera->yaw;
-    currentPitch = m_camera->pitch;
-
-    m_camera->eye[0] = m_transform->position[0];
-    m_camera->eye[1] = m_transform->position[1];
-    m_camera->eye[2] = m_transform->position[2];
-    float m_targetEyeHeight = eyeHeight;
-    float m_targetFov        = m_camera->fov;
+    m_camera->SetPosition(m_transform->position[0],
+                          m_transform->position[1],
+                          m_transform->position[2]);
 }
 
 void PlayerComponent::HandleInput(const SDL_Event& event,
@@ -191,8 +186,7 @@ void PlayerComponent::Update(const bool* keystate,
         m_targetFov = 60.0f;
     }
 
-    
-    m_camera->fov = bx::lerp(m_camera->fov, m_targetFov, 0.1f);
+    m_camera->SetFOV(bx::lerp(m_camera->GetFOV(), m_targetFov, 0.1f));
     eyeHeight = bx::lerp(eyeHeight, m_targetEyeHeight, 0.1f);
     m_moveSpeed = bx::lerp(m_moveSpeed, m_targetMoveSpeed, 0.1f);
 
@@ -278,9 +272,8 @@ void PlayerComponent::Update(const bool* keystate,
     }
 
     // Update camera position and orientation
-    m_camera->eye[0] = m_transform->position[0];
-    m_camera->eye[1] = m_transform->position[1] + eyeHeight; // Fortunately, our eyes aren't at our feet
-    m_camera->eye[2] = m_transform->position[2];
-    m_camera->yaw    = currentYaw;
-    m_camera->pitch  = currentPitch;
+    m_camera->SetPosition(m_transform->position[0],
+                          m_transform->position[1] + eyeHeight,
+                          m_transform->position[2]);
+    m_camera->SetAngles(currentYaw, currentPitch);
 }
