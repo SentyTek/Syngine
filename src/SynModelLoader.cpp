@@ -1,6 +1,4 @@
 #include "SynModelLoader.h"
-#include "assimp/material.h"
-#include "assimp/postprocess.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 #include "defines.h"
@@ -9,6 +7,8 @@
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
+#include "assimp/material.h"
+#include "assimp/postprocess.h"
 
 //Returns true if the model was loaded successfully, false otherwise
 bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loadTextures) {
