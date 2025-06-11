@@ -21,6 +21,7 @@ struct SynProgram {
 struct SynHandles {
     std::vector<SynProgram> programs;
     std::map<std::string, bgfx::UniformHandle> uniforms;
+    bgfx::VertexBufferHandle dummy;
 };
 
 class SyngineGraphics {

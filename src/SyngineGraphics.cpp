@@ -77,7 +77,6 @@ int SyngineGraphics::CreateRenderer() {
 
     //initialize bgfx
     bgfx::Init bgInit;
-    bgInit.debug = true;
     SDL_PropertiesID sdlProps = SDL_GetWindowProperties(this->win);
     if(sdlProps == 0) { //return 0 on failure
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get window properties");
@@ -126,7 +125,7 @@ int SyngineGraphics::CreateRenderer() {
     bgInit.resolution.width = this->width;
     bgInit.resolution.height = this->height;
     bgInit.resolution.reset |= BGFX_RESET_VSYNC; // enable vsync
-    bgInit.debug = true; // enable debug mode
+    bgInit.debug = true;
 
     if(!bgfx::init(bgInit)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to initialize bgfx");
@@ -179,6 +178,25 @@ int SyngineGraphics::CreateRenderer() {
         return 1;
     }
 
+        // Dummy buffer to make metal happy
+#if BX_PLATFORM_OSX
+    static bgfx::VertexBufferHandle fullscreenDummyVBH = BGFX_INVALID_HANDLE;
+
+    if (!bgfx::isValid(fullscreenDummyVBH)) {
+        static float dummyData[3] = {0.0f, 0.0f, 0.0f}; // just 1 vertex's worth
+
+        bgfx::VertexLayout dummyLayout;
+        dummyLayout.begin()
+            .add(bgfx::Attrib::Position, 1, bgfx::AttribType::Float)
+            .end();
+
+        fullscreenDummyVBH = bgfx::createVertexBuffer(
+            bgfx::copy(dummyData, sizeof(dummyData)), dummyLayout);
+
+        handles.dummy = fullscreenDummyVBH;
+    }
+#endif
+
     SDL_Log("hello world, this is bakerman coming at you live from CNN");
 
     return 0;
@@ -202,6 +220,11 @@ int SyngineGraphics::DestroyRenderer() {
         }
     }
     this->handles.uniforms.clear();
+
+    if (bgfx::isValid(this->handles.dummy)) {
+        bgfx::destroy(this->handles.dummy);
+        this->handles.dummy = BGFX_INVALID_HANDLE;
+    }
 
     bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
     SDL_Log("goodbye renderer");
@@ -342,8 +365,11 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
 
     bgfx::setState(BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LEQUAL | BGFX_STATE_MSAA);
 
-    //bgfx::setTransform(nullptr);
+#if BX_PLATFORM_OSX
+    bgfx::setVertexBuffer(0, handles.dummy);
+#else
     bgfx::setVertexCount(3);
+#endif
     bgfx::submit(SKY_VIEW, skyProgram.program);
 
     //main scene pass

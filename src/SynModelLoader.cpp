@@ -134,9 +134,9 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         .end(); //stride = 72 bytes
 
     //create buffers
-    const bgfx::Memory* mem = bgfx::alloc(meshData.vertices.size() * sizeof(Vertex));
+    const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.vertices.size() * sizeof(Vertex)));
     memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
-    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
+    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout, BGFX_BUFFER_COMPUTE_READ);
 
     mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
