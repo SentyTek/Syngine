@@ -10,8 +10,10 @@
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
 
+using namespace Syngine;
+
 //Returns true if the model was loaded successfully, false otherwise
-bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loadTextures) {
+bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
     const uint16_t flags    = aiProcess_JoinIdenticalVertices
@@ -30,7 +32,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         return false;
     }
 
-    SynMeshData meshData;
+    MeshData meshData;
     meshData.numVertices = scene->mNumMeshes > 0 ? scene->mMeshes[0]->mNumVertices : 0;
 
     aiMesh* mesh = scene->mMeshes[0]; //only loads first mesh for now
@@ -314,6 +316,6 @@ void AssimpLoader::UnloadAll() {
     meshes.clear();
 }
 
-std::vector<SynMeshData>& SynModelLoader::getMeshes() {
+std::vector<MeshData>& SynModelLoader::getMeshes() {
     return meshes;
 }

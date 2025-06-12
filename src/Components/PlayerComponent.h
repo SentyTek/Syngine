@@ -8,13 +8,14 @@
 
 #include "SDL3/SDL_events.h"
 
-class PlayerComponent : public SynComponent {
+namespace Syngine {
+class PlayerComponent : public Syngine::Component {
   public:
-    static constexpr SynComponents componentType = SYN_COMPONENT_PLAYER;
+    static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER;
 
     PlayerComponent(GameObject* owner);
 
-    SynComponents getComponentType() override;
+    Syngine::Components getComponentType() override;
     void          Init(Syngine::CameraComponent*    camera,
                        SDL_Window*                  win,
                        Syngine::RigidbodyComponent* RigidbodyComponent);
@@ -47,3 +48,5 @@ class PlayerComponent : public SynComponent {
 
     void CheckGrounded();
 };
+
+} // namespace Syngine

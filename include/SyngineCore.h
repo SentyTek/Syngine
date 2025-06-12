@@ -5,20 +5,21 @@
 #include "SyngineGameobject.h"
 #include "SynginePhys.h"
 
-struct SyngineApp {
-    SyngineGraphics* graphics;
+namespace Syngine {
+struct App {
+    Graphics* graphics;
     SynModelLoader* synModels;
     std::vector<GameObject*> gameObjects;
-    Syngine::SynginePhys* physicsManager;
+    Phys* physicsManager;
 };
 
-class SyngineCore {
+class Core {
     public:
-    SyngineApp* app;
+    App* app;
 
-    SyngineCore();
-    ~SyngineCore();
-    int AttachGraphics(SyngineGraphics* graphics);
+    Core();
+    ~Core();
+    int AttachGraphics(Graphics* graphics);
     int DetachGraphics();
 
     int SyngineEventLoop();
@@ -28,3 +29,5 @@ class SyngineCore {
     int CreateGameobject(GameObject* gameobject);
     int DeleteGameobject(GameObject* gameobject);
 };
+
+} // namespace Syngine

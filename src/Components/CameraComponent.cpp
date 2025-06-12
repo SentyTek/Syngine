@@ -2,7 +2,10 @@
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
 
-Syngine::CameraComponent::CameraComponent(GameObject* owner) {
+#include <cmath>
+
+namespace Syngine {
+CameraComponent::CameraComponent(GameObject* owner) {
     this->m_owner = owner;
     this->camera = {};
     this->camera.eye[0] = 0.0f;
@@ -16,11 +19,11 @@ Syngine::CameraComponent::CameraComponent(GameObject* owner) {
     this->camera.up[2] = 0.0f;
 }
 
-Syngine::CameraComponent::~CameraComponent() {
+CameraComponent::~CameraComponent() {
     // No specific cleanup needed for now
 }
 
-void Syngine::CameraComponent::Update(int viewId, int width, int height) {
+void CameraComponent::Update(int viewId, int width, int height) {
     // update view and projection matrices
     Syngine::Camera& cam = this->camera;
     float* eye = this->camera.eye;
@@ -48,48 +51,50 @@ void Syngine::CameraComponent::Update(int viewId, int width, int height) {
     bgfx::setViewTransform(viewId, cam.view, cam.proj);
 }
 
-SynComponents Syngine::CameraComponent::getComponentType() {
+Components CameraComponent::getComponentType() {
     return SYN_COMPONENT_CAMERA;
 }
 
-void Syngine::CameraComponent::SetPosition(float x, float y, float z) {
+void CameraComponent::SetPosition(float x, float y, float z) {
     this->camera.eye[0] = x;
     this->camera.eye[1] = y;
     this->camera.eye[2] = z;
 }
 
-const float* Syngine::CameraComponent::GetPosition() const {
+const float* CameraComponent::GetPosition() const {
     return this->camera.eye;
 }
 
-void Syngine::CameraComponent::SetFOV(float fov) {
+void CameraComponent::SetFOV(float fov) {
     if (fov < 1.0f || fov > 179.0f) {
         return;
     }
     this->camera.fov = fov;
 }
 
-float Syngine::CameraComponent::GetFOV() const { return this->camera.fov; }
+float CameraComponent::GetFOV() const { return this->camera.fov; }
 
-void Syngine::CameraComponent::SetFarPlane(float farPlane) {
+void CameraComponent::SetFarPlane(float farPlane) {
     if (farPlane < 0.0f && farPlane > this->camera.near && farPlane > 50000.0f) {
         return;
     }
     this->camera.far = farPlane;
 }
 
-float Syngine::CameraComponent::GetFarPlane() const { return this->camera.far; }
+float CameraComponent::GetFarPlane() const { return this->camera.far; }
 
-void Syngine::CameraComponent::SetAngles(float yaw, float pitch) {
+void CameraComponent::SetAngles(float yaw, float pitch) {
     this->camera.yaw = yaw;
     this->camera.pitch = pitch;
 }
 
-void Syngine::CameraComponent::GetAngles(float& yaw, float& pitch) const {
+void CameraComponent::GetAngles(float& yaw, float& pitch) const {
     yaw = this->camera.yaw;
     pitch = this->camera.pitch;
 }
 
-Syngine::Camera Syngine::CameraComponent::GetCamera() const {
+Camera Syngine::CameraComponent::GetCamera() const {
     return this->camera;
 }
+
+} // namespace Syngine

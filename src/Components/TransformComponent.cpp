@@ -3,6 +3,7 @@
 #include "bx/math.h"
 #include <cmath>
 
+namespace Syngine {
 TransformComponent::TransformComponent(GameObject* owner) {
     position[0] = position[1] = position[2] = 0.0f;
     rotation[0] = rotation[1] = rotation[2] = 0.0f; rotation[3] = 1.0f; // Quaternion identity
@@ -10,7 +11,7 @@ TransformComponent::TransformComponent(GameObject* owner) {
     this->m_owner = owner;
 }
 
-SynComponents TransformComponent::getComponentType() {
+Syngine::Components TransformComponent::getComponentType() {
     return SYN_COMPONENT_TRANSFORM;
 }
 
@@ -117,3 +118,5 @@ void TransformComponent::GetModelMatrix(float* result) {
     result[14] = position[2];
     result[15] = 1.0f;
 }
+
+} // namespace Syngine

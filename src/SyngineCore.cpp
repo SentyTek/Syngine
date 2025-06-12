@@ -20,17 +20,19 @@
 #include "bx/math.h"
 #include "bgfx/defines.h"
 
-SyngineCore::SyngineCore() {
+using namespace Syngine;
+
+Core::Core() {
     //initialize app
-    this->app = new SyngineApp();
+    this->app = new App();
     this->app->graphics = nullptr; // No graphics attached initially
     this->app->synModels = new AssimpLoader(); // Initialize the model loader
 
-    this->app->physicsManager = new Syngine::SynginePhys(); // Initialize the physics manager
+    this->app->physicsManager = new Phys(); // Initialize the physics manager
     this->app->physicsManager->Init(); // Initialize the physics system
 }
 
-SyngineCore::~SyngineCore() {
+Core::~Core() {
     //cleanup
     if (this->app) {
         if (this->app->graphics) {
@@ -52,7 +54,7 @@ SyngineCore::~SyngineCore() {
     }
 }
 
-int SyngineCore::AttachGraphics(SyngineGraphics* graphics) {
+int Core::AttachGraphics(Graphics* graphics) {
     //attach graphics to app
     if (!graphics) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No graphics object provided to attach");
@@ -63,7 +65,7 @@ int SyngineCore::AttachGraphics(SyngineGraphics* graphics) {
     return 0;
 }
 
-int SyngineCore::DetachGraphics() {
+int Core::DetachGraphics() {
     //detach graphics from app
     if (!this->app->graphics) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No graphics object to detach");
@@ -74,7 +76,7 @@ int SyngineCore::DetachGraphics() {
     return 0;
 }
 
-int SyngineCore::SyngineEventLoop() {
+int Core::SyngineEventLoop() {
     //main loop. this will obviously be replaced with a more complex and modular/multi-threaded loop in the Future
     SDL_Log("Entering event loop");
 
@@ -85,16 +87,16 @@ int SyngineCore::SyngineEventLoop() {
 
     GameObject* player = new GameObject("player", "default");
 
-    player->AddComponent(SYN_COMPONENT_TRANSFORM);
-    player->AddComponent(SYN_COMPONENT_PLAYER);
-    player->AddComponent(SYN_COMPONENT_RIGIDBODY);
-    player->AddComponent(SYN_COMPONENT_CAMERA);
+    player->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+    player->AddComponent(Syngine::SYN_COMPONENT_PLAYER);
+    player->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
+    player->AddComponent(Syngine::SYN_COMPONENT_CAMERA);
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
 
-    Syngine::RigidbodyComponent* rbComp =
-        player->GetComponent<Syngine::RigidbodyComponent>();
+    RigidbodyComponent* rbComp =
+        player->GetComponent<RigidbodyComponent>();
     if (!rbComp) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get RigidbodyComponent for player");
         delete player; // Clean up the player object
@@ -102,14 +104,14 @@ int SyngineCore::SyngineEventLoop() {
     }
     rbComp->Init(pTransform,
                  this->app->physicsManager,
-                 Syngine::PhysicsShapes::CAPSULE,
+                 PhysicsShapes::CAPSULE,
                  { 60.0f, 0.3f, 0.1f }, // mass, friction, restitution
                  JPH::EMotionType::Dynamic,
-                 Syngine::Layers::MOVING,
+                 Layers::MOVING,
                  { 0.7f, 0.3f });
 
     player->GetComponent<PlayerComponent>()->Init(
-        player->GetComponent<Syngine::CameraComponent>(),
+        player->GetComponent<CameraComponent>(),
         this->app->graphics->win,
         rbComp);
     
@@ -122,10 +124,10 @@ int SyngineCore::SyngineEventLoop() {
     bool mouseState = false;
     float mouseX, mouseY;
 
-    Syngine::CameraComponent* cam = new Syngine::CameraComponent(nullptr);
+    CameraComponent* cam = new CameraComponent(nullptr);
     // FinalCam specifically is so we can keep track of both the player camera
     // and the editor camera, switching between them as needed.
-    Syngine::CameraComponent* finalCam = new Syngine::CameraComponent(nullptr);
+    CameraComponent* finalCam = new CameraComponent(nullptr);
     bx::Vec3 startDir = {180.0f, 0.0f, 90.0f};
     
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
@@ -182,20 +184,20 @@ int SyngineCore::SyngineEventLoop() {
                     //load model
                     std::string modelPath = resolveOSPath("meshes/ground.glb");
                     GameObject* model = new GameObject("ground", "terrain");
-                    model->AddComponent(SYN_COMPONENT_TRANSFORM);
-                    model->AddComponent(SYN_COMPONENT_MESH);
-                    model->AddComponent(SYN_COMPONENT_RIGIDBODY);
+                    model->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+                    model->AddComponent(Syngine::SYN_COMPONENT_MESH);
+                    model->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
                     MeshComponent* meshComp = model->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath);
-                    Syngine::RigidbodyComponent* physComp = model->GetComponent<Syngine::RigidbodyComponent>();
+                    RigidbodyComponent* physComp = model->GetComponent<RigidbodyComponent>();
                     if (physComp) {
                             physComp->Init(
                                 model->GetComponent<TransformComponent>(),
                                 this->app->physicsManager,
-                                Syngine::PhysicsShapes::MESH,
+                                PhysicsShapes::MESH,
                                 {0.0f, 0.8f, 0.1f},
                                 JPH::EMotionType::Static,
-                                Syngine::Layers::NON_MOVING,
+                                Layers::NON_MOVING,
                                 {}
                             );
                     }
@@ -210,43 +212,43 @@ int SyngineCore::SyngineEventLoop() {
                 } else if (event.key.key == SDLK_1) {
                     string modelPath = resolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
-                    cube->AddComponent(SYN_COMPONENT_TRANSFORM);
-                    cube->AddComponent(SYN_COMPONENT_MESH);
-                    cube->AddComponent(SYN_COMPONENT_RIGIDBODY);
+                    cube->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+                    cube->AddComponent(Syngine::SYN_COMPONENT_MESH);
+                    cube->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
                     MeshComponent* meshComp = cube->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
-                    Syngine::RigidbodyComponent* physComp = cube->GetComponent<Syngine::RigidbodyComponent>();
+                    RigidbodyComponent* physComp = cube->GetComponent<RigidbodyComponent>();
                     std::vector<float> shapeParams = {1.0f, 1.0f, 1.0f}; // full extents
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
-                                       Syngine::PhysicsShapes::BOX,
+                                       PhysicsShapes::BOX,
                                        {1000.0f, 0.7f, 0.02f}, // mass, friction, restitution
                                        JPH::EMotionType::Dynamic,
-                                       Syngine::Layers::MOVING,
+                                       Layers::MOVING,
                                        shapeParams);
                     this->app->gameObjects.push_back(cube);
                 } else if (event.key.key == SDLK_2) {
                                         string modelPath = resolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
-                    sphere->AddComponent(SYN_COMPONENT_TRANSFORM);
-                    sphere->AddComponent(SYN_COMPONENT_MESH);
-                    sphere->AddComponent(SYN_COMPONENT_RIGIDBODY);
+                    sphere->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+                    sphere->AddComponent(Syngine::SYN_COMPONENT_MESH);
+                    sphere->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
                     MeshComponent* meshComp = sphere->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = sphere->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
-                    Syngine::RigidbodyComponent* physComp = sphere->GetComponent<Syngine::RigidbodyComponent>();
+                    RigidbodyComponent* physComp = sphere->GetComponent<RigidbodyComponent>();
                     std::vector<float> shapeParams = { 0.95f }; // half extents for sphere shape (diameter)
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
-                                       Syngine::PhysicsShapes::SPHERE,
+                                       PhysicsShapes::SPHERE,
                                        {520.0f, 0.7f, 0.02f}, // mass, friction, restitution
                                        JPH::EMotionType::Dynamic,
-                                       Syngine::Layers::MOVING,
+                                       Layers::MOVING,
                                        shapeParams);
                     this->app->gameObjects.push_back(sphere);
                 }
@@ -394,8 +396,8 @@ int SyngineCore::SyngineEventLoop() {
             finalCam = cam;
         } else {
             // player mode, use player camera
-            if (player && player->GetComponent<Syngine::CameraComponent>()) {
-                finalCam = player->GetComponent<Syngine::CameraComponent>();
+            if (player && player->GetComponent<CameraComponent>()) {
+                finalCam = player->GetComponent<CameraComponent>();
             } else {
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Player or CameraComponent not found");
                 return 1;
@@ -449,7 +451,7 @@ int SyngineCore::SyngineEventLoop() {
 
         for (auto* gameObject : this->app->gameObjects) {
             if (gameObject) {
-                Syngine::RigidbodyComponent* physComp = gameObject->GetComponent<Syngine::RigidbodyComponent>();
+                RigidbodyComponent* physComp = gameObject->GetComponent<RigidbodyComponent>();
                 if (physComp && physComp->isEnabled) {
                     physComp->Update(simulate);
                 }
@@ -488,7 +490,7 @@ int SyngineCore::SyngineEventLoop() {
     return 0;
 }
 
-int SyngineCore::DeleteGameobject(GameObject* gameobject) {
+int Core::DeleteGameobject(GameObject* gameobject) {
     if(!gameobject) return 0;
     MeshComponent* mesh = gameobject->GetComponent<MeshComponent>();
     if(mesh) {

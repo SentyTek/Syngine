@@ -28,12 +28,13 @@
 
 #include <cmath>
 
+namespace Syngine {
 PlayerComponent::PlayerComponent(GameObject* owner) {
     this->m_owner = owner;
     m_transform = owner->GetComponent<TransformComponent>();
 }
 
-SynComponents PlayerComponent::getComponentType() {
+Syngine::Components PlayerComponent::getComponentType() {
     return SYN_COMPONENT_PLAYER;
 }
 
@@ -43,7 +44,7 @@ void PlayerComponent::CheckGrounded() {
         return;
     }
 
-    Syngine::SynginePhys* physicsManager =
+    Syngine::Phys* physicsManager =
         m_RigidbodyComponent->GetPhysicsManager();
     JPH::PhysicsSystem& physicsSystem = physicsManager->GetPhysicsSystem();
     JPH::BodyInterface& bodyInterface = physicsSystem.GetBodyInterface();
@@ -73,8 +74,6 @@ void PlayerComponent::CheckGrounded() {
 
     // Query (god Jolt is a pain)
     JPH::ObjectLayer playerObjectLayer = bodyInterface.GetObjectLayer(bodyID);
-    const JPH::BroadPhaseLayerInterface& bpLayerInterface =
-        physicsManager->GetBroadPhaseLayerInterface(); // Get from SynginePhys
 
     JPH::DefaultBroadPhaseLayerFilter broadphaseFilter(
         physicsManager->GetObjectVsBroadPhaseLayerFilter(), playerObjectLayer);
@@ -277,3 +276,5 @@ void PlayerComponent::Update(const bool* keystate,
                           m_transform->position[2]);
     m_camera->SetAngles(currentYaw, currentPitch);
 }
+
+} // namespace Syngine

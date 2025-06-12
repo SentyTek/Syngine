@@ -16,13 +16,13 @@ struct Camera {
     float pitch = 0.0f;
 };
 
-class CameraComponent : public SynComponent {
+class CameraComponent : public Syngine::Component {
   public:
-    static constexpr SynComponents componentType = SYN_COMPONENT_CAMERA;
+    static constexpr Syngine::Components componentType = Syngine::SYN_COMPONENT_CAMERA;
 
     CameraComponent(GameObject* owner);
     ~CameraComponent();
-    SynComponents getComponentType() override;
+    Syngine::Components getComponentType() override;
 
     void Update(int viewId, int width, int height);
 
