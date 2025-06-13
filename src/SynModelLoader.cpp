@@ -10,8 +10,10 @@
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
 
+using namespace Syngine;
+
 //Returns true if the model was loaded successfully, false otherwise
-bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loadTextures) {
+bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
     const uint16_t flags    = aiProcess_JoinIdenticalVertices
@@ -30,7 +32,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         return false;
     }
 
-    SynMeshData meshData;
+    MeshData meshData;
     meshData.numVertices = scene->mNumMeshes > 0 ? scene->mMeshes[0]->mNumVertices : 0;
 
     aiMesh* mesh = scene->mMeshes[0]; //only loads first mesh for now
@@ -134,9 +136,9 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         .end(); //stride = 72 bytes
 
     //create buffers
-    const bgfx::Memory* mem = bgfx::alloc(meshData.vertices.size() * sizeof(Vertex));
+    const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.vertices.size() * sizeof(Vertex)));
     memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
-    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
+    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout, BGFX_BUFFER_COMPUTE_READ);
 
     mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
@@ -314,6 +316,6 @@ void AssimpLoader::UnloadAll() {
     meshes.clear();
 }
 
-std::vector<SynMeshData>& SynModelLoader::getMeshes() {
+std::vector<MeshData>& SynModelLoader::getMeshes() {
     return meshes;
 }

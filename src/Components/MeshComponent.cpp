@@ -4,12 +4,13 @@
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
 
+namespace Syngine {
 MeshComponent::MeshComponent(GameObject* owner) {
-    this->meshData = SynMeshData();
+    this->meshData = Syngine::MeshData();
     this->m_owner = owner;
 }
 
-SynComponents MeshComponent::getComponentType() {
+Syngine::Components MeshComponent::getComponentType() {
     return SYN_COMPONENT_MESH;
 }
 
@@ -50,3 +51,5 @@ int MeshComponent::UnloadMesh() {
     this->meshData.materials.clear();
     return 0; // Success
 }
+
+} // namespace Syngine

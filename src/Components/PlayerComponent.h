@@ -1,4 +1,5 @@
 #pragma once
+#include "CameraComponent.h"
 #include "Components.h"
 #include "RigidbodyComponent.h"
 #include "SDL3/SDL_video.h"
@@ -7,16 +8,17 @@
 
 #include "SDL3/SDL_events.h"
 
-class PlayerComponent : public SynComponent {
+namespace Syngine {
+class PlayerComponent : public Syngine::Component {
   public:
-    static constexpr SynComponents componentType = SYN_COMPONENT_PLAYER;
+    static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER;
 
     PlayerComponent(GameObject* owner);
 
-    SynComponents getComponentType() override;
-    void          Initialize(Camera*                      camera,
-                             SDL_Window*                  win,
-                             Syngine::RigidbodyComponent* RigidbodyComponent);
+    Syngine::Components getComponentType() override;
+    void          Init(Syngine::CameraComponent*    camera,
+                       SDL_Window*                  win,
+                       Syngine::RigidbodyComponent* RigidbodyComponent);
     void          HandleInput(const SDL_Event& event,
                               bool             simulate,
                               float            mouseSens,
@@ -33,8 +35,8 @@ class PlayerComponent : public SynComponent {
   private:
     GameObject*         m_owner     = nullptr;
     TransformComponent* m_transform = nullptr;
-    Camera*             m_camera    = nullptr;
-    SDL_Window*         m_window    = nullptr;
+    Syngine::CameraComponent* m_camera    = nullptr;
+    SDL_Window*               m_window    = nullptr;
     Syngine::RigidbodyComponent* m_RigidbodyComponent = nullptr;
     float halfHeight = 0.0f; // Half height for collision detection
     bool  isGrounded = false;
@@ -46,3 +48,5 @@ class PlayerComponent : public SynComponent {
 
     void CheckGrounded();
 };
+
+} // namespace Syngine

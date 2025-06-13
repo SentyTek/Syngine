@@ -2,19 +2,20 @@
 #include "Components.h"
 #include "SyngineGameobject.h"
 
+namespace Syngine {
 /*
     Syngine Transform Component
     The TransformComponent is used to represent the position, rotation, and scale of a gameobject in the game world.
 */
-class TransformComponent : public SynComponent {
+class TransformComponent : public Syngine::Component {
     public:
-        static constexpr SynComponents componentType = SYN_COMPONENT_TRANSFORM;
+        static constexpr Syngine::Components componentType = SYN_COMPONENT_TRANSFORM;
 
         TransformComponent(GameObject* owner);
         float position[3]; //Position of the gameobject
         float rotation[4]; //Rotation of the gameobject (Quaternion)
         float scale[3]; //Scale of the gameobject
-        SynComponents getComponentType() override;
+        Syngine::Components getComponentType() override;
         void GetRotationAsEuler(float& x, float& y, float& z) const; //Get the rotation of the gameobject as Euler angles (in radians)
 
         void SetPosition(float x, float y, float z); //Set the position of the gameobject
@@ -24,3 +25,5 @@ class TransformComponent : public SynComponent {
 
         void GetModelMatrix(float* result); //Get the model matrix of the gameobject
 };
+
+} // namespace Syngine

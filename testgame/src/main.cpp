@@ -2,8 +2,8 @@
 
 int main(int argc, char* argv[]) {
     //create window
-    SyngineCore syngine;
-    SyngineGraphics graphics("bakerman", 800, 600);
+    Syngine::Core syngine;
+    Syngine::Graphics graphics("bakerman", 800, 600);
     if (graphics.CreateWindow() != 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create window");
         return 1;
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
 
     //cleanup
     for(size_t i = 0; i < syngine.app->gameObjects.size(); ++i) {
-        GameObject* gameObject = syngine.app->gameObjects[i];
+        Syngine::GameObject* gameObject = syngine.app->gameObjects[i];
         if (gameObject) {
             syngine.DeleteGameobject(gameObject);
         }

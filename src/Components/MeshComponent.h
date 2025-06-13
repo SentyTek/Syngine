@@ -3,20 +3,23 @@
 #include "SynModelLoader.h"
 #include "SyngineGameobject.h"
 
+namespace Syngine {
 /*
     Syngine Mesh Component
     The MeshComponent is used to represent a 3D model in the game world.
     It is used to render the model using the graphics engine.
     It contains a reference to a 3D model and it's associated materials.
 */
-class MeshComponent : public SynComponent {
+class MeshComponent : public Syngine::Component {
     public:
-    static constexpr SynComponents componentType = SYN_COMPONENT_MESH;
+    static constexpr Syngine::Components componentType = SYN_COMPONENT_MESH;
 
     MeshComponent(GameObject* owner);
-    SynMeshData meshData; //Mesh data for the gameobject
-    SynComponents getComponentType() override;
+    MeshData meshData; //Mesh data for the gameobject
+    Components getComponentType() override;
     
     int LoadMesh(const std::string& path, bool loadTextures = true); //Load a mesh from a file
     int UnloadMesh(); //Unload the mesh data
 };
+
+} // namespace Syngine

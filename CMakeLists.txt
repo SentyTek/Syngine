@@ -57,6 +57,7 @@ add_library(Syngine STATIC
     src/Components/TransformComponent.cpp
     src/Components/RigidbodyComponent.cpp
     src/Components/PlayerComponent.cpp
+    src/Components/CameraComponent.cpp
 )
 
 if(APPLE)

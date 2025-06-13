@@ -1,5 +1,6 @@
 #include "SyngineGraphics.h"
 #include "Components.h"
+#include "Components/CameraComponent.h"
 #include "ShaderUtils.h"
 #include "SynModelLoader.h"
 #include "TransformComponent.h"
@@ -21,7 +22,9 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-SyngineGraphics::SyngineGraphics(const char* title, int width, int height) {
+using namespace Syngine;
+
+Graphics::Graphics(const char* title, int width, int height) {
     //initialize app
     this->title = title;
     this->width = width;
@@ -29,33 +32,7 @@ SyngineGraphics::SyngineGraphics(const char* title, int width, int height) {
     this->win = nullptr;
 };
 
-void Camera::Update(int viewId, int width, int height) {
-    //update view and projection matrices
-    bx::Vec3 eyeVec = { eye[0], eye[1], eye[2] };
-    float aspect = float(width) / float(height);
-
-    bx::Vec3 forward = {
-        cosf(pitch) * sinf(yaw),
-        sinf(pitch),
-        cosf(pitch) * cosf(yaw)
-    };
-    bx::Vec3 right = {
-        sinf(yaw - bx::kPiHalf),
-        0.0f,
-        cosf(yaw - bx::kPiHalf)
-    };
-
-    bx::Vec3 targetVec = bx::add(eyeVec, forward);
-    bx::Vec3 upVec = bx::cross(right, forward);
-
-    bx::mtxLookAt(view, eyeVec, targetVec, upVec);
-
-    bx::mtxLookAt(view, eyeVec, targetVec, upVec);
-    bx::mtxProj(proj, fov, aspect, near, far, bgfx::getCaps()->homogeneousDepth);
-    bgfx::setViewTransform(viewId, view, proj);
-}
-
-int SyngineGraphics::CreateWindow() {
+int Graphics::CreateWindow() {
     //bgInit
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL could not initialize! SDL_Error: %s", SDL_GetError());
@@ -93,7 +70,7 @@ int SyngineGraphics::CreateWindow() {
     return 0;
 }
 
-int SyngineGraphics::CreateRenderer() {
+int Graphics::CreateRenderer() {
     //create renderer
     if (!this->win) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to create renderer for");
@@ -102,7 +79,6 @@ int SyngineGraphics::CreateRenderer() {
 
     //initialize bgfx
     bgfx::Init bgInit;
-    bgInit.debug = true;
     SDL_PropertiesID sdlProps = SDL_GetWindowProperties(this->win);
     if(sdlProps == 0) { //return 0 on failure
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get window properties");
@@ -151,7 +127,7 @@ int SyngineGraphics::CreateRenderer() {
     bgInit.resolution.width = this->width;
     bgInit.resolution.height = this->height;
     bgInit.resolution.reset |= BGFX_RESET_VSYNC; // enable vsync
-    bgInit.debug = true; // enable debug mode
+    bgInit.debug = true;
 
     if(!bgfx::init(bgInit)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to initialize bgfx");
@@ -204,12 +180,31 @@ int SyngineGraphics::CreateRenderer() {
         return 1;
     }
 
+        // Dummy buffer to make metal happy
+#if BX_PLATFORM_OSX
+    static bgfx::VertexBufferHandle fullscreenDummyVBH = BGFX_INVALID_HANDLE;
+
+    if (!bgfx::isValid(fullscreenDummyVBH)) {
+        static float dummyData[3] = {0.0f, 0.0f, 0.0f}; // just 1 vertex's worth
+
+        bgfx::VertexLayout dummyLayout;
+        dummyLayout.begin()
+            .add(bgfx::Attrib::Position, 1, bgfx::AttribType::Float)
+            .end();
+
+        fullscreenDummyVBH = bgfx::createVertexBuffer(
+            bgfx::copy(dummyData, sizeof(dummyData)), dummyLayout);
+
+        handles.dummy = fullscreenDummyVBH;
+    }
+#endif
+
     SDL_Log("hello world, this is bakerman coming at you live from CNN");
 
     return 0;
 }
 
-int SyngineGraphics::DestroyRenderer() {
+int Graphics::DestroyRenderer() {
     if (!this->win) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to destroy renderer for");
         return 1;
@@ -228,12 +223,17 @@ int SyngineGraphics::DestroyRenderer() {
     }
     this->handles.uniforms.clear();
 
+    if (bgfx::isValid(this->handles.dummy)) {
+        bgfx::destroy(this->handles.dummy);
+        this->handles.dummy = BGFX_INVALID_HANDLE;
+    }
+
     bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
     SDL_Log("goodbye renderer");
     return 0;
 }
 
-size_t SyngineGraphics::AddProgram(const char* vsPath, const char* fsPath, const char* name) {
+size_t Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* name) {
     bgfx::ShaderHandle vs = LoadShader(vsPath);
     bgfx::ShaderHandle fs = LoadShader(fsPath);
     bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
@@ -242,7 +242,7 @@ size_t SyngineGraphics::AddProgram(const char* vsPath, const char* fsPath, const
     }
 
     if (bgfx::isValid(programHandle)) {
-        SynProgram prog;
+        Program prog;
         prog.program = programHandle;
         prog.name = name;
         prog.viewId = this->handles.programs.size();
@@ -260,28 +260,28 @@ size_t SyngineGraphics::AddProgram(const char* vsPath, const char* fsPath, const
     return this->handles.programs.size() - 1;
 }
 
-SynProgram SyngineGraphics::GetProgram(size_t index) const {
+Program Graphics::GetProgram(size_t index) const {
     if (index < 0 || index >= this->handles.programs.size()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program index %zu", index);
-        return SynProgram();
+        return Program();
     }
     if (!bgfx::isValid(this->handles.programs[index].program)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %zu is not valid", index);
-        return SynProgram();
+        return Program();
     } 
     return this->handles.programs[index];
 }
-SynProgram SyngineGraphics::GetProgram(const char* name) const {
+Program Graphics::GetProgram(const char* name) const {
     for (const auto& program : this->handles.programs) {
         if (program.name == name && bgfx::isValid(program.program)) {
             return program;
         }
     }
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %s not found", name);
-    return SynProgram();
+    return Program();
 }
 
-int SyngineGraphics::RemoveProgram(size_t index) {
+int Graphics::RemoveProgram(size_t index) {
     if (index < 0 || index >= this->handles.programs.size()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program index %zu", index);
         return -1;
@@ -290,7 +290,7 @@ int SyngineGraphics::RemoveProgram(size_t index) {
     this->handles.programs.erase(this->handles.programs.begin() + index);
     return 0;
 }
-int SyngineGraphics::RemoveProgram(const char* name) {
+int Graphics::RemoveProgram(const char* name) {
     for (size_t i = 0; i < this->handles.programs.size(); ++i) {
         if (this->handles.programs[i].name == name) {
             return RemoveProgram(i);
@@ -299,7 +299,7 @@ int SyngineGraphics::RemoveProgram(const char* name) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %s not found", name);
     return -1;
 }
-int SyngineGraphics::RemoveProgram(bool all) {
+int Graphics::RemoveProgram(bool all) {
     if (all) {
         for (auto& program : this->handles.programs) {
             bgfx::destroy(program.program);
@@ -312,7 +312,7 @@ int SyngineGraphics::RemoveProgram(bool all) {
     }
 }
 
-void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
+void Graphics::DestroyWindow() { //dw this is effectively the destructor
     if (!this->win) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to destroy");
         return;
@@ -324,10 +324,10 @@ void SyngineGraphics::DestroyWindow() { //dw this is effectively the destructor
     SDL_Log("goodbye world");
 }
 
-int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir) {
-    const SynProgram& terrainProgram = GetProgram("terrain");
-    const SynProgram& skyProgram = GetProgram("sky");
-    const SynProgram& defaultProgram = GetProgram("default");
+int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir, CameraComponent* camera) {
+    const Program& terrainProgram = GetProgram("terrain");
+    const Program& skyProgram = GetProgram("sky");
+    const Program& defaultProgram = GetProgram("default");
     if (!bgfx::isValid(terrainProgram.program) || !bgfx::isValid(skyProgram.program) || !bgfx::isValid(defaultProgram.program)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program");
         return -1;
@@ -335,22 +335,26 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
 
     const bgfx::ViewId SKY_VIEW = skyProgram.viewId;
     const bgfx::ViewId MAIN_VIEW = terrainProgram.viewId;
-    camera.Update(SKY_VIEW, this->width, this->height); //update camera view and projection matrices
+    camera->Update(SKY_VIEW,
+                   this->width,
+                   this->height); // update camera view and projection matrices
+
+    Camera camObj = camera->GetCamera();
     
     //sky pass
     bgfx::setViewRect(SKY_VIEW, 0, 0, uint16_t(this->width), uint16_t(this->height));
     bgfx::setViewClear(SKY_VIEW, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 1.0f, 0, 1, 0);
     bgfx::touch(SKY_VIEW);
-    bgfx::setViewTransform(MAIN_VIEW, camera.view, camera.proj);
+    bgfx::setViewTransform(MAIN_VIEW, camObj.view, camObj.proj);
     bgfx::touch(MAIN_VIEW);
 
     float skyView[16];
-    bx::memCopy(skyView, camera.view, sizeof(skyView));
+    bx::memCopy(skyView, camObj.view, sizeof(skyView));
     skyView[12] = 0.0f; //remove translation for skybox
     skyView[13] = 0.0f;
     skyView[14] = 0.0f;
 
-    bgfx::setViewTransform(SKY_VIEW, skyView, camera.proj);
+    bgfx::setViewTransform(SKY_VIEW, skyView, camObj.proj);
 
     float skyColorDay[4] = { 0.5f, 0.7f, 1.0f, 1.0f };
     float skyColorNight[4] = { 0.0f, 0.0f, 0.1f, 1.0f };
@@ -363,8 +367,11 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
 
     bgfx::setState(BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LEQUAL | BGFX_STATE_MSAA);
 
-    //bgfx::setTransform(nullptr);
+#if BX_PLATFORM_OSX
+    bgfx::setVertexBuffer(0, handles.dummy);
+#else
     bgfx::setVertexCount(3);
+#endif
     bgfx::submit(SKY_VIEW, skyProgram.program);
 
     //main scene pass
@@ -383,13 +390,13 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "GameObject is null");
             continue;
         }
-        if (!gameObject->HasComponent(SYN_COMPONENT_TRANSFORM) || (!gameObject->HasComponent(SYN_COMPONENT_MESH)) || !(gameObject->GetComponent<TransformComponent>())->isEnabled) {
+        if (!gameObject->HasComponent(Syngine::SYN_COMPONENT_TRANSFORM) || (!gameObject->HasComponent(Syngine::SYN_COMPONENT_MESH)) || !(gameObject->GetComponent<TransformComponent>())->isEnabled) {
             continue;
         }
-        SynMeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;
+        MeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;
         
         bool isDefault = false;
-        SynProgram currentProg;
+        Program currentProg;
         if (gameObject->type != "default") { 
             currentProg = GetProgram(gameObject->type.c_str());
             if (!bgfx::isValid(currentProg.program)) {
@@ -403,7 +410,7 @@ int SyngineGraphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3&
         
         bgfx::setState(renderState);
 
-        if(gameObject->HasComponent(SYN_COMPONENT_MESH) && gameObject->GetComponent<MeshComponent>()->isEnabled) {
+        if(gameObject->HasComponent(Syngine::SYN_COMPONENT_MESH) && gameObject->GetComponent<MeshComponent>()->isEnabled) {
             //TODO: add support for multiple materials
             if(!bgfx::isValid(mesh.ibh) || !bgfx::isValid(mesh.vbh)) {
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid mesh");

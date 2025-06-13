@@ -1,7 +1,6 @@
 #include "RigidbodyComponent.h"
 #include "Components.h"
 #include "Jolt/Math/Quat.h"
-#include "Jolt/Physics/Body/Body.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
 #include "Jolt/Physics/Collision/Shape/CylinderShape.h"
@@ -25,19 +24,19 @@ RigidbodyComponent::~RigidbodyComponent() {
     Destroy();
 }
 
-SynComponents RigidbodyComponent::getComponentType() {
+Components RigidbodyComponent::getComponentType() {
     return SYN_COMPONENT_RIGIDBODY;
 }
 
 JPH::BodyID RigidbodyComponent::GetBodyID() const { return bodyID; }
-Syngine::SynginePhys* RigidbodyComponent::GetPhysicsManager() const { return physicsManager; }
+Syngine::Phys* RigidbodyComponent::GetPhysicsManager() const { return physicsManager; }
 std::vector<float> RigidbodyComponent::GetShapeParameters() const { return shapeParameters; }
 float RigidbodyComponent::GetMass() const { return mass; }
 float RigidbodyComponent::GetFriction() const { return friction; }
 float RigidbodyComponent::GetRestitution() const { return restitution; }
 
 void RigidbodyComponent::Init(TransformComponent*       transform,
-                              Syngine::SynginePhys*     physicsManager,
+                              Syngine::Phys*            physicsManager,
                               PhysicsShapes             shape,
                               const std::vector<float>& parameters,
                               JPH::EMotionType          motionType,

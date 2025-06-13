@@ -156,10 +156,10 @@ namespace Syngine {
         }
     };
 
-    class SynginePhys {
+    class Phys {
         public:
-        SynginePhys();
-        ~SynginePhys();
+        Phys();
+        ~Phys();
 
         void Init();
         void Shutdown();
@@ -190,7 +190,7 @@ namespace Syngine {
                          float       mass = 0.0f);
         BodyID CreateMeshBody(RVec3Arg           position,
                               QuatArg            rotation,
-                              const SynMeshData& meshData,
+                              const MeshData& meshData,
                               EMotionType        motionType,
                               ObjectLayer        layer);
         BodyID CreateCapsule(RVec3Arg    position,
