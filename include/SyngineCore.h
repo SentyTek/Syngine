@@ -1,20 +1,33 @@
 #pragma once
+#include <vector>
 #include "SyngineGraphics.h"
 #include "SynModelLoader.h"
+#include "SyngineGameobject.h"
+#include "SynginePhys.h"
 
-struct SyngineApp {
-    SyngineGraphics* graphics;
+namespace Syngine {
+struct App {
+    Graphics* graphics;
     SynModelLoader* synModels;
+    std::vector<GameObject*> gameObjects;
+    Phys* physicsManager;
 };
 
-class SyngineCore {
+class Core {
     public:
-    SyngineApp* app;
+    App* app;
 
-    SyngineCore();
-    ~SyngineCore();
-    int AttachGraphics(SyngineGraphics* graphics);
+    Core();
+    ~Core();
+    int AttachGraphics(Graphics* graphics);
     int DetachGraphics();
 
     int SyngineEventLoop();
+
+    GameObject* FindGameobjectByID(long id);
+    GameObject* FindGameobjectByName(std::string name);
+    int CreateGameobject(GameObject* gameobject);
+    int DeleteGameobject(GameObject* gameobject);
 };
+
+} // namespace Syngine

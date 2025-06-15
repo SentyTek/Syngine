@@ -11,11 +11,16 @@ inline std::string resolveOSPath(const char* path)
     // SDL_GetBasePath() returns ".../Contents/MacOS/"
     const char* base = SDL_GetBasePath();
     std::string p(base);
-
+    
     // swap "MacOS/" -> "Resources/"
-    auto pos = p.rfind("MacOS/");
-    if (pos != std::string::npos) {
-        p = p.substr(0, pos) + "Resources/";
+    size_t pos = p.find("MacOS/");
+    if (pos != std::string::npos)
+    {
+        p.replace(pos, 6, "Resources/");
+    }
+    else
+    {
+        
     }
     p += path; // e.g. "shaders/vs_simple.sc.bin"
     return p;

@@ -1,6 +1,4 @@
 #include "SynModelLoader.h"
-#include "assimp/material.h"
-#include "assimp/postprocess.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 #include "defines.h"
@@ -9,9 +7,13 @@
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
+#include "assimp/material.h"
+#include "assimp/postprocess.h"
+
+using namespace Syngine;
 
 //Returns true if the model was loaded successfully, false otherwise
-bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loadTextures) {
+bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
     const uint16_t flags    = aiProcess_JoinIdenticalVertices
@@ -30,7 +32,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         return false;
     }
 
-    SynMeshData meshData;
+    MeshData meshData;
     meshData.numVertices = scene->mNumMeshes > 0 ? scene->mMeshes[0]->mNumVertices : 0;
 
     aiMesh* mesh = scene->mMeshes[0]; //only loads first mesh for now
@@ -134,16 +136,16 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         .end(); //stride = 72 bytes
 
     //create buffers
-    const bgfx::Memory* mem = bgfx::alloc(meshData.vertices.size() * sizeof(Vertex));
+    const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.vertices.size() * sizeof(Vertex)));
     memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
-    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
+    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout, BGFX_BUFFER_COMPUTE_READ);
 
     mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
-    meshData.vertices.clear();
-    meshData.indices.clear();
+    //meshData.vertices.clear();
+    //meshData.indices.clear();
 
     //checks
     if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
@@ -157,6 +159,15 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         for(unsigned int i = 0; i < scene->mNumMaterials; ++i) {
             aiMaterial* material = scene->mMaterials[i];
             Material mat;
+
+            //set default values
+            aiColor4D diffuse;
+            if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS) {
+                mat.baseColor[0] = diffuse.r;
+                mat.baseColor[1] = diffuse.g;
+                mat.baseColor[2] = diffuse.b;
+                mat.baseColor[3] = diffuse.a;
+            }
 
             aiString texPath;
             if(material->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) == AI_SUCCESS) {
@@ -218,21 +229,68 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);
         }
-    }
 
-    //set up transform
-    aiMatrix4x4 transform = scene->mRootNode->mTransformation;
-    transform.Inverse();
-    for(int i = 0; i < 4; ++i) {
-        for(int j = 0; j < 4; ++j) {
-            meshData.transform[i * 4 + j] = transform[i][j];
+        //If no materials were loaded but loadTextures was true
+        //Consider making a default material
+        if(meshData.materials.empty() && scene->mNumMeshes > 0) {
+            Material mat;
+            mat.albedo = BGFX_INVALID_HANDLE;
+            mat.normalMap = BGFX_INVALID_HANDLE;
+            mat.heightMap = SynCreateFlatTexture();
+            mat.name = "default_material";
+            meshData.materials.push_back(mat);
+        }
+    } else { //if !loadTextures
+        //Even if not loading textures, still might have multiple materials defined
+        //with different base colors
+        
+        if (scene->mNumMaterials > 0) {
+            meshData.materials.reserve(scene->mNumMaterials);
+            for(unsigned int i = 0; i < scene->mNumMaterials; ++i) {
+                aiMaterial* material = scene->mMaterials[i];
+                Material mat;
+
+                aiColor4D diffuse;
+                if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS) {
+                    mat.baseColor[0] = diffuse.r;
+                    mat.baseColor[1] = diffuse.g;
+                    mat.baseColor[2] = diffuse.b;
+                    mat.baseColor[3] = diffuse.a;
+                }
+
+                mat.albedo = BGFX_INVALID_HANDLE;
+                mat.normalMap = BGFX_INVALID_HANDLE;
+                mat.heightMap = SynCreateFlatTexture();
+                mat.name = "material_" + std::to_string(i);
+                meshData.materials.push_back(mat);
+            }
+        } else { //Fallback if no materials are defined
+            Material mat;
+            mat.albedo = BGFX_INVALID_HANDLE;
+            mat.normalMap = BGFX_INVALID_HANDLE;
+            mat.heightMap = SynCreateFlatTexture();
+            mat.name = "default_material";
+            meshData.materials.push_back(mat);
         }
     }
+
+    //Ensure at least one material exists
+    if(meshData.materials.empty()) {
+        SDL_Log("Warning: Mesh %s had no materials, using default.", path.c_str());
+        Material mat;
+        mat.albedo = BGFX_INVALID_HANDLE;
+        mat.normalMap = BGFX_INVALID_HANDLE;
+        mat.heightMap = SynCreateFlatTexture();
+        mat.name = "default_material";
+        meshData.materials.push_back(mat);
+    }
+
     meshData.numMaterials = meshData.materials.size();
 
     //and output
     meshData.vbh = vbh;
     meshData.ibh = ibh;
+    meshData.hasTextures = loadTextures;
     out = meshData;
     meshes.push_back(meshData); //store mesh data for later use
     return true;
@@ -254,12 +312,10 @@ void AssimpLoader::UnloadAll() {
         mesh.materials.clear();
         bgfx::destroy(mesh.vbh);
         bgfx::destroy(mesh.ibh);
-        mesh.vertices.clear();
-        mesh.indices.clear();
     }
     meshes.clear();
 }
 
-std::vector<SynMeshData>& SynModelLoader::getMeshes() {
+std::vector<MeshData>& SynModelLoader::getMeshes() {
     return meshes;
 }
