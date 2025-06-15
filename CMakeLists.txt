@@ -185,6 +185,12 @@ target_include_directories(Syngine
         # Engine private headers/sources directory
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/src/Components
+		
+		# add the header files so they show up in Xcode
+		src/Components/MeshComponent.h
+		src/Components/TransformComponent.h
+		src/Components/RigidbodyComponent.h
+		src/Components/PlayerComponent.h
 )
 
 # --- Link Libraries ---
