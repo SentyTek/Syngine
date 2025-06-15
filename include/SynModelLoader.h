@@ -4,6 +4,7 @@
 
 #include <bgfx/bgfx.h>
 
+namespace Syngine {;
 struct Vertex {
     float pos[3] = {0.0f, 0.0f, 0.0f};
     float normal[3] = {0.0f, 0.0f, 0.0f};
@@ -23,9 +24,10 @@ struct Material {
     float heightScale = 0.01f; //matches blender displacement
     float mixFactor = 0.7f; //mix between detail and macro maps
     float ambient = 0.2f; //ambient floor
+    float baseColor[4] = {1.0f, 1.0f, 1.0f, 1.0f}; // RGBA base color
 };
 
-struct SynMeshData {
+struct MeshData {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
     std::vector<Material> materials;
@@ -34,20 +36,22 @@ struct SynMeshData {
     uint32_t numVertices;
     uint32_t numIndices;
     uint8_t numMaterials;
-    float transform[16]; //TODO: make this a component
+    bool hasTextures = true;
 };
 
 class SynModelLoader {
     protected:
-    std::vector<SynMeshData> meshes;
+    std::vector<MeshData> meshes;
     public:
-    virtual bool LoadModel(SynMeshData& out, const std::string& path, bool loadTextures) = 0;
+    virtual bool LoadModel(MeshData& out, const std::string& path, bool loadTextures) = 0;
     virtual void UnloadAll() = 0;
-    std::vector<SynMeshData>& getMeshes();
+    std::vector<MeshData>& getMeshes();
 };
 
 class AssimpLoader : public SynModelLoader {
     public:
-    bool LoadModel( SynMeshData& out, const std::string& path, bool loadTextures) override;
+    bool LoadModel( MeshData& out, const std::string& path, bool loadTextures) override;
     void UnloadAll() override;
 };
+
+} // namespace Syngine

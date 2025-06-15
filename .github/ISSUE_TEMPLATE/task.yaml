@@ -1,0 +1,24 @@
+name: Development Task
+description: Use this for implementation work on small features.
+labels: task
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Task Summary
+      placeholder: "Refactor EntityManager"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done?
+
+  - type: checkboxes
+    id: status
+    attributes:
+      label: Subtasks
+      options:
+        - label: Initial implementation
+        - label: Add unit tests
+        - label: Document feature

@@ -23,12 +23,15 @@ don't.
 ```
 /include        -> User-facing header files
 /src            -> Engine source files
-/lib            -> Other library files not in third_party
-/third_party    -> Submodules
+    /Components -> Component type files for the Entity-Component-System
+/lib            -> Other library files not in third_party abd custom libraries
+/testgame       -> Files to be able to quickly test the engine
+/third_party    -> Third party components like SDL
 ```
 
 ## Technologies used
 - [SDL3](https://github.com/libsdl-org/SDL/tree/8e0b39f465c31492f9386d42e15b9df8a3bd7e21)
 - [bgfx](https://github.com/bkaradzic/bgfx.cmake/tree/36a0d1d8d040113a954f99b1456121072dc77348)
 - [Assimp](https://github.com/assimp/assimp/tree/ac5988422a7f1898b25c13fb5fb068c646a4c544)
+- [Jolt Physics](https://github.com/jrouwe/JoltPhysics)
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
