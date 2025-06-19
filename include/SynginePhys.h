@@ -1,5 +1,7 @@
 #pragma once
 #include "SynModelLoader.h"
+#include "SyngineDebug.h"
+#include "bgfx/bgfx.h"
 #include <Jolt/Jolt.h>
 
 //Jolt includes
@@ -161,9 +163,10 @@ namespace Syngine {
         Phys();
         ~Phys();
 
-        void Init();
+        void Init(bool debug);
         void Shutdown();
         void Update(float deltaTime, int collisionSteps);
+        void DrawDebug(const float* view, const float* proj, int width, int height, bgfx::ProgramHandle program);
 
         BodyInterface& GetBodyInterface() { return mPhysicsSystem.GetBodyInterface(); }
         PhysicsSystem& GetPhysicsSystem() { return mPhysicsSystem; }
@@ -221,6 +224,8 @@ namespace Syngine {
         //Listeners
         SynContactListener mContactListener;
         SynBodyActivationListener mBodyActivationListener;
+
+        DebugRender* mDebugRenderer = nullptr;
 
         //Jolt foundation for tracing and asserts
         static void TraceImpl(const char* inFMT, ...);

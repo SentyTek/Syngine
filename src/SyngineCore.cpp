@@ -29,7 +29,7 @@ Core::Core() {
     this->app->synModels = new AssimpLoader(); // Initialize the model loader
 
     this->app->physicsManager = new Phys(); // Initialize the physics manager
-    this->app->physicsManager->Init(); // Initialize the physics system
+    this->app->physicsManager->Init(this->app->debug); // Initialize the physics system
 }
 
 Core::~Core() {
@@ -457,8 +457,16 @@ int Core::SyngineEventLoop() {
                 }
             }
         }
-        
+
         if (this->app && this->app->graphics) {
+            if (this->app->debug) {
+                this->app->physicsManager->DrawDebug(
+                    finalCam->GetCamera().view,
+                    finalCam->GetCamera().proj,
+                    this->app->graphics->width,
+                    this->app->graphics->height,
+                    this->app->graphics->GetProgram("debugger").program);
+            }
             this->app->graphics->RenderFrame(this->app->gameObjects, lightDir, finalCam); // render frame
         }
 

@@ -34,3 +34,23 @@ bgfx::TextureHandle SynLoadTextureFromFile(const char* path);
 bgfx::TextureHandle SynCreateFlatTexture();
 
 int SynCreateQuad(int viewId);
+
+inline bool CheckRequiredFolders() {
+    const char* requiredFolders[] = {
+        "shaders",
+        "meshes",
+    };
+
+    for (const char* folder : requiredFolders) {
+        if (!SDL_GetBasePath()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get base path");
+            return false;
+        }
+        std::string fullPath = resolveOSPath(folder);
+        if (!SDL_GetPathInfo(fullPath.c_str(), nullptr)) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Required folder '%s' does not exist in game dir: %s", folder, fullPath.c_str());
+            return false;
+        }
+    }
+    return true;
+}

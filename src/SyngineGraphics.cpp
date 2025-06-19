@@ -77,6 +77,13 @@ int Graphics::CreateRenderer() {
         return 1;
     }
 
+    // Check if required folders exist (shaders, meshes)
+    if (!CheckRequiredFolders()) {
+        SDL_DestroyWindow(this->win);
+        SDL_Quit();
+        return 1;
+    }
+
     //initialize bgfx
     bgfx::Init bgInit;
     SDL_PropertiesID sdlProps = SDL_GetWindowProperties(this->win);
@@ -170,8 +177,10 @@ int Graphics::CreateRenderer() {
         }
     }
 
-    //create default shader
-    size_t defaultProg = AddProgram("shaders/default.vert.sc.bin", "shaders/default.frag.sc.bin", "default");
+    //create default shaders
+    size_t defaultProg = AddProgram("shaders/default.vert.sc.bin",
+                                    "shaders/default.frag.sc.bin",
+                                    "default");
     if (defaultProg == (size_t)-1) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create default program");
         bgfx::shutdown();
@@ -180,7 +189,18 @@ int Graphics::CreateRenderer() {
         return 1;
     }
 
-        // Dummy buffer to make metal happy
+    size_t debugProg = AddProgram("shaders/debug.vert.sc.bin",
+                                  "shaders/debug.frag.sc.bin",
+                                  "debugger");
+    if (debugProg == (size_t)-1) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create debug program");
+        bgfx::shutdown();
+        SDL_DestroyWindow(this->win);
+        SDL_Quit();
+        return 1;
+    }
+
+    // Dummy buffer to make metal happy
 #if BX_PLATFORM_OSX
     static bgfx::VertexBufferHandle fullscreenDummyVBH = BGFX_INVALID_HANDLE;
 

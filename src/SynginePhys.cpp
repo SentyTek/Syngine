@@ -1,4 +1,6 @@
 #include "SynginePhys.h"
+#include <thread> //for hardware_concurrency
+
 #include "Jolt/Core/Factory.h"
 #include "Jolt/Core/TempAllocator.h"
 #include "Jolt/Geometry/IndexedTriangle.h"
@@ -15,9 +17,6 @@
 #include "Jolt/RegisterTypes.h"
 #include "SDL3/SDL_log.h"
 #include <Jolt/Core/JobSystemSingleThreaded.h> //for single threaded fallback
-#include <thread> //for hardware_concurrency
-
-//Jolt includes
 #include <Jolt/Core/Memory.h>
 #include <Jolt/Core/StreamWrapper.h>
 #include <Jolt/Core/IssueReporting.h>
@@ -46,12 +45,17 @@ bool Phys::AssertFailedImpl(const char* inExpression, const char* inMessage, con
 Phys::Phys() {}
 Phys::~Phys() { Shutdown(); }
 
-void Phys::Init() {
+void Phys::Init(bool debug) {
     RegisterDefaultAllocator();
     Trace = TraceImpl;
     JPH_IF_ENABLE_ASSERTS(AssertFailed = AssertFailedImpl;)
     Factory::sInstance = new Factory();
     RegisterTypes();
+
+    // Debug if true
+    if (debug) {
+        mDebugRenderer = new DebugRender();
+    }
 
     //We need a temp allocator for temp allocations during physics update.
     //Pre-allocating 10mb allows to avoid having to allocate memory during the update.
@@ -97,12 +101,29 @@ void Phys::Shutdown() {
         delete mJobSystem;
         mJobSystem = nullptr;
     }
+
+    if (mDebugRenderer) {
+        delete mDebugRenderer;
+        mDebugRenderer = nullptr;
+    }
 }
 
 void Phys::Update(float deltaTime, int collisionSteps) {
     if (!Factory::sInstance) return;
 
     mPhysicsSystem.Update(deltaTime, collisionSteps, mTempAllocator, mJobSystem);
+}
+
+void Phys::DrawDebug(const float* view, const float* proj, int width, int height, bgfx::ProgramHandle program) {
+    if (mDebugRenderer) {
+        mDebugRenderer->ClearLines();
+
+        JPH::BodyManager::DrawSettings drawSettings;
+        drawSettings.mDrawShapeWireframe = true;
+
+        mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
+        mDebugRenderer->RenderLines(view, proj, width, height, program);
+    }
 }
 
 BodyID Phys::CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
