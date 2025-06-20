@@ -67,6 +67,13 @@ if(APPLE)
     )
 endif()
 
+if(CMAKE_GENERATOR STREQUAL "Xcode")
+    set(CMAKE_XCODE_ATTRIBUTE_SIGNING_ALLOWED "NO")
+    set(CMAKE_XCODE_ATTRIBUTE_SIGN_IDENTITY "")
+    set(CMAKE_XCODE_ATTRIBUTE_SIGNING_REQUIRED "NO")
+    set(CMAKE_OSX_SYSROOT "macosx")
+endif()
+
 if(MSVC)
     set(ASSIMP_MSVC_STATIC_RUNTIME ON CACHE BOOL "Force Assimp to use static MSVC runtime (/MT or /MTd)" FORCE)
 endif()
