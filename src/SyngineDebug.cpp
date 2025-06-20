@@ -1,6 +1,7 @@
 #include "SyngineDebug.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "SDL3/SDL.h"
+#include "bgfx/defines.h"
 
 namespace Syngine {
 
@@ -13,18 +14,13 @@ DebugRender::DebugRender() {
     
 }
 DebugRender::~DebugRender() {
-    for (auto& line : debugLines) {
-        delete[] line.from;
-        delete[] line.to;
-    }
     debugLines.clear();
 }
 
 void DebugRender::DrawLine(JPH::RVec3Arg from, JPH::RVec3Arg to, JPH::ColorArg color) {
-    debugLines.push_back(
-        { .from  = new float[3]{ from.GetX(), from.GetY(), from.GetZ() },
-          .to    = new float[3]{ to.GetX(), to.GetY(), to.GetZ() },
-          .color = color.GetUInt32() });
+    debugLines.push_back({ .from  = { from.GetX(), from.GetY(), from.GetZ() },
+                           .to    = { to.GetX(), to.GetY(), to.GetZ() },
+                           .color = color.GetUInt32() });
 }
 
 void DebugRender::DrawTriangle(JPH::RVec3Arg v1,
@@ -118,21 +114,17 @@ void DebugRender::RenderLines(const float*        view,
     DebugVertex* vertex = (DebugVertex*)tvb.data;
     for (size_t i = 0; i < debugLines.size(); ++i) {
         const DebugLine& line = debugLines[i];
-        vertex[i * 2 + 0]     = { line.from[0], line.from[1], line.from[2], line.color };
-        vertex[i * 2 + 1] = { line.to[0], line.to[1], line.to[2], line.color };
+        vertex[i * 2 + 0]     = { line.from.x, line.from.y, line.from.z, line.color };
+        vertex[i * 2 + 1] = { line.to.x, line.to.y, line.to.z, line.color };
     }
 
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                   BGFX_STATE_PT_LINES);
+                   BGFX_STATE_PT_LINES | BGFX_STATE_DEPTH_TEST_LEQUAL);
     bgfx::submit(viewId, program);
 }
 
 void DebugRender::ClearLines() {
-    for (auto& line : debugLines) {
-        delete[] line.from;
-        delete[] line.to;
-    }
     debugLines.clear();
 }
 

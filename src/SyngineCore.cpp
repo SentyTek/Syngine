@@ -459,6 +459,9 @@ int Core::SyngineEventLoop() {
         }
 
         if (this->app && this->app->graphics) {
+            this->app->graphics->RenderFrame(
+                this->app->gameObjects, lightDir, finalCam); // render frame
+            
             if (this->app->debug) {
                 this->app->physicsManager->DrawDebug(
                     finalCam->GetCamera().view,
@@ -467,7 +470,6 @@ int Core::SyngineEventLoop() {
                     this->app->graphics->height,
                     this->app->graphics->GetProgram("debugger").program);
             }
-            this->app->graphics->RenderFrame(this->app->gameObjects, lightDir, finalCam); // render frame
         }
 
         if (oneSec >= 1.0f) {

@@ -1,6 +1,9 @@
 #ifndef JPH_DEBUG_RENDERER
 #define JPH_DEBUG_RENDERER
+#include "bx/math.h"
 #endif
+
+#include <atomic>
 
 #include "Jolt/Jolt.h"
 #include "Jolt/Core/Color.h"
@@ -10,7 +13,8 @@
 #include "Jolt/Core/Reference.h"
 
 #include "bgfx/bgfx.h"
-#include <atomic>
+#include "bx/math.h"
+
 namespace Syngine {
 
 class DebugRender : public JPH::DebugRenderer {
@@ -76,8 +80,8 @@ class DebugRender : public JPH::DebugRenderer {
     
   private:
     struct DebugLine {
-        float* from;
-        float* to;
+        bx::Vec3 from;
+        bx::Vec3 to;
         uint32_t color; //TODO: Change this to custom color class once that's implemented
     };
     struct DebugVertex {
