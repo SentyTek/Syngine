@@ -46,16 +46,19 @@ Phys::Phys() {}
 Phys::~Phys() { Shutdown(); }
 
 void Phys::Init(bool debug) {
+
     RegisterDefaultAllocator();
     Trace = TraceImpl;
     JPH_IF_ENABLE_ASSERTS(AssertFailed = AssertFailedImpl;)
     Factory::sInstance = new Factory();
-    RegisterTypes();
 
-    // Debug if true
+    // Set Jolt's debug renderer to our custom debug renderer if debugging is enabled
     if (debug) {
-        mDebugRenderer = new DebugRender();
+        mDebugRenderer = new Syngine::DebugRender();
+        JPH::DebugRenderer::sInstance = mDebugRenderer;
     }
+
+    RegisterTypes();
 
     //We need a temp allocator for temp allocations during physics update.
     //Pre-allocating 10mb allows to avoid having to allocate memory during the update.
@@ -116,13 +119,14 @@ void Phys::Update(float deltaTime, int collisionSteps) {
 
 void Phys::DrawDebug(const float* view, const float* proj, int width, int height, bgfx::ProgramHandle program) {
     if (mDebugRenderer) {
-        mDebugRenderer->ClearLines();
-
         JPH::BodyManager::DrawSettings drawSettings;
         drawSettings.mDrawShapeWireframe = true;
-
+        //drawSettings.mDrawShape = false;
+        
         mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
         mDebugRenderer->RenderLines(view, proj, width, height, program);
+
+        mDebugRenderer->ClearLines();
     }
 }
 

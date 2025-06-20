@@ -1,4 +1,3 @@
-
 #ifndef JPH_DEBUG_RENDERER
 #define JPH_DEBUG_RENDERER
 #endif
@@ -8,17 +7,31 @@
 #include "Jolt/Math/Real.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "Jolt/Renderer/DebugRenderer.h"
+#include "Jolt/Core/Reference.h"
 
 #include "bgfx/bgfx.h"
+#include <atomic>
 namespace Syngine {
 
 class DebugRender : public JPH::DebugRenderer {
   private:
-    class BatchImpl : public JPH::DebugRenderer::Batch {
+    class BatchImpl : public JPH::RefTargetVirtual {
       public:
         JPH_OVERRIDE_NEW_DELETE
 
         std::vector<JPH::DebugRenderer::Triangle> mTriangles;
+
+        virtual void AddRef() override {
+            mRefCount.fetch_add(1, std::memory_order_relaxed);
+        }
+        virtual void Release() override {
+            if (mRefCount.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                delete this;
+            }
+        }
+
+      private:
+        std::atomic<uint32_t> mRefCount = { 0 }; // Reference count for memory management
     };
   public:
     DebugRender();
@@ -49,9 +62,9 @@ class DebugRender : public JPH::DebugRenderer {
                  JPH::ColorArg color,
                  ECastShadow   castShadow = ECastShadow::Off) override;
 
-    virtual Batch CreateTriangleBatch(const Triangle* inTriangles, int inTriangleCount) override;
+    virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const Triangle* inTriangles, int inTriangleCount) override;
 
-    virtual Batch CreateTriangleBatch(const Vertex* inVertices, int inVertexCount, const JPH::uint32* inIndices, int inIndexCount) override;
+    virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const Vertex* inVertices, int inVertexCount, const JPH::uint32* inIndices, int inIndexCount) override;
 
     void RenderLines(const float*        view,
                      const float*        proj,
@@ -59,8 +72,8 @@ class DebugRender : public JPH::DebugRenderer {
                      int                 height,
                      bgfx::ProgramHandle program);
 
-    void ClearLines() { debugLines.clear(); }
-
+    void ClearLines();
+    
   private:
     struct DebugLine {
         float* from;

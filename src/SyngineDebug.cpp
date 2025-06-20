@@ -1,13 +1,16 @@
 #include "SyngineDebug.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"
+#include "SDL3/SDL.h"
 
 namespace Syngine {
 
 DebugRender::DebugRender() {
+    Initialize();
     DebugVertexLayout.begin()
         .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
+    
 }
 DebugRender::~DebugRender() {
     for (auto& line : debugLines) {
@@ -18,11 +21,10 @@ DebugRender::~DebugRender() {
 }
 
 void DebugRender::DrawLine(JPH::RVec3Arg from, JPH::RVec3Arg to, JPH::ColorArg color) {
-    debugLines.push_back({
-        .from = new float[3]{ from.GetX(), from.GetY(), from.GetZ() },
-        .to   = new float[3]{ to.GetX(), to.GetY(), to.GetZ() },
-        .color = color.GetUInt32()
-    });
+    debugLines.push_back(
+        { .from  = new float[3]{ from.GetX(), from.GetY(), from.GetZ() },
+          .to    = new float[3]{ to.GetX(), to.GetY(), to.GetZ() },
+          .color = color.GetUInt32() });
 }
 
 void DebugRender::DrawTriangle(JPH::RVec3Arg v1,
@@ -44,6 +46,7 @@ void DebugRender::DrawGeometry(JPH::RMat44Arg     modelMatrix,
                                ECastShadow        castShadow,
                                EDrawMode          drawMode) {
     if (drawMode != EDrawMode::Wireframe) return; // Only wireframe is supported
+    if (!geometry) return;
     if (geometry->mLODs.empty()) return;
 
     const Batch& batchRef = geometry->mLODs[0].mTriangleBatch;
@@ -78,7 +81,7 @@ JPH::DebugRenderer::Batch DebugRender::CreateTriangleBatch(const Triangle* inTri
     if (inTriangles != nullptr && inTriangleCount > 0) {
         batch->mTriangles.assign(inTriangles, inTriangles + inTriangleCount);
     }
-    return *batch;
+    return batch;
 }
 
 JPH::DebugRenderer::Batch DebugRender::CreateTriangleBatch(const Vertex* inVertices, int inVertexCount, const JPH::uint32* inIndices, int inIndexCount) {
@@ -93,13 +96,18 @@ JPH::DebugRenderer::Batch DebugRender::CreateTriangleBatch(const Vertex* inVerti
             batch->mTriangles.push_back(t);
         }
     }
-    return *batch;
+    return batch;
 }
 
-void DebugRender::RenderLines(const float* view, const float* proj, int width, int height, bgfx::ProgramHandle program) {
-    bgfx::setViewTransform(9999, &view, &proj);
-    bgfx::setViewRect(9999, 0, 0, width, height);
-    bgfx::touch(9999);
+void DebugRender::RenderLines(const float*        view,
+                              const float*        proj,
+                              int                 width,
+                              int                 height,
+                              bgfx::ProgramHandle program) {
+    unsigned short viewId = 254; // Why the hell does anyone use shorts
+    bgfx::setViewTransform(viewId, view, proj);
+    bgfx::setViewRect(viewId, 0, 0, width, height);
+    bgfx::touch(viewId);
 
     if (debugLines.empty()) return;
 
@@ -117,7 +125,15 @@ void DebugRender::RenderLines(const float* view, const float* proj, int width, i
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_PT_LINES);
-    bgfx::submit(9999, program);
+    bgfx::submit(viewId, program);
+}
+
+void DebugRender::ClearLines() {
+    for (auto& line : debugLines) {
+        delete[] line.from;
+        delete[] line.to;
+    }
+    debugLines.clear();
 }
 
 } // namespace Syngine

@@ -11,7 +11,7 @@ struct App {
     SynModelLoader* synModels;
     std::vector<GameObject*> gameObjects;
     Phys*                    physicsManager;
-    bool                     debug = false;
+    bool                     debug = true;
 };
 
 class Core {
