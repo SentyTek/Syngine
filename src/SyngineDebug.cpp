@@ -48,8 +48,8 @@ void DebugRender::DrawGeometry(JPH::RMat44Arg     modelMatrix,
     const Batch& batchRef = geometry->mLODs[0].mTriangleBatch;
     if (batchRef == nullptr) return;
 
-    // Cast back to our implementation
-    const BatchImpl* batch = dynamic_cast<const BatchImpl*>(batchRef.GetPtr());
+    // Cast back to our implementation (do not ever do dynamic_cast in Jolt or you will explode)
+    const BatchImpl* batch = static_cast<const BatchImpl*>(batchRef.GetPtr());
 
     // Draw the batch
     if (batch) {

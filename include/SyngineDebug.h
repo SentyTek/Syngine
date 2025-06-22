@@ -1,6 +1,5 @@
 #ifndef JPH_DEBUG_RENDERER
 #define JPH_DEBUG_RENDERER
-#include "bx/math.h"
 #endif
 
 #include <atomic>
