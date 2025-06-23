@@ -125,6 +125,7 @@ int Core::SyngineEventLoop() {
     float mouseX, mouseY;
 
     CameraComponent* cam = new CameraComponent(nullptr);
+    cam->SetFarPlane(2000);
     // FinalCam specifically is so we can keep track of both the player camera
     // and the editor camera, switching between them as needed.
     CameraComponent* finalCam = new CameraComponent(nullptr);
@@ -251,6 +252,14 @@ int Core::SyngineEventLoop() {
                                        Layers::MOVING,
                                        shapeParams);
                     this->app->gameObjects.push_back(sphere);
+                } else if (event.key.key == SDLK_F1) {
+                    // Toggle debug mode
+                    this->app->debug = !this->app->debug;
+                    if (this->app->debug) {
+                        SDL_Log("Debug mode enabled");
+                    } else {
+                        SDL_Log("Debug mode disabled");
+                    }
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {
@@ -461,14 +470,16 @@ int Core::SyngineEventLoop() {
         if (this->app && this->app->graphics) {
             this->app->graphics->RenderFrame(
                 this->app->gameObjects, lightDir, finalCam); // render frame
-            
+
             if (this->app->debug) {
+                // christ on a stick this call is ridiculous
                 this->app->physicsManager->DrawDebug(
-                    finalCam->GetCamera().view,
-                    finalCam->GetCamera().proj,
                     this->app->graphics->width,
                     this->app->graphics->height,
-                    this->app->graphics->GetProgram("debugger").program);
+                    this->app->graphics->GetProgram("debugger").program,
+                    this->app->gameObjects[0]
+                        ->GetComponent<Syngine::CameraComponent>()
+                        ->GetCamera(), finalCam->GetCamera());
             }
         }
 

@@ -1,6 +1,7 @@
 #include "SynginePhys.h"
 #include <thread> //for hardware_concurrency
 
+#include "Components/CameraComponent.h"
 #include "Jolt/Core/Factory.h"
 #include "Jolt/Core/TempAllocator.h"
 #include "Jolt/Geometry/IndexedTriangle.h"
@@ -117,14 +118,15 @@ void Phys::Update(float deltaTime, int collisionSteps) {
     mPhysicsSystem.Update(deltaTime, collisionSteps, mTempAllocator, mJobSystem);
 }
 
-void Phys::DrawDebug(const float* view, const float* proj, int width, int height, bgfx::ProgramHandle program) {
+void Phys::DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam) {
     if (mDebugRenderer) {
         JPH::BodyManager::DrawSettings drawSettings;
         drawSettings.mDrawShapeWireframe = true;
         //drawSettings.mDrawShape = false;
         
         mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
-        mDebugRenderer->RenderLines(view, proj, width, height, program);
+        mDebugRenderer->DrawFrustum(camera);
+        mDebugRenderer->RenderLines(finalCam.view, finalCam.proj, width, height, program);
 
         mDebugRenderer->ClearLines();
     }

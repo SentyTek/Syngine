@@ -1,4 +1,10 @@
 #pragma once
+
+// Forward declarations
+namespace Syngine {
+class DebugRender;
+}
+
 #include "SynModelLoader.h"
 #include "SyngineDebug.h"
 #include "bgfx/bgfx.h"
@@ -166,7 +172,7 @@ namespace Syngine {
         void Init(bool debug);
         void Shutdown();
         void Update(float deltaTime, int collisionSteps);
-        void DrawDebug(const float* view, const float* proj, int width, int height, bgfx::ProgramHandle program);
+        void DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam);
 
         BodyInterface& GetBodyInterface() { return mPhysicsSystem.GetBodyInterface(); }
         PhysicsSystem& GetPhysicsSystem() { return mPhysicsSystem; }

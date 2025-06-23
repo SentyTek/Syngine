@@ -1,4 +1,5 @@
 #include "SyngineDebug.h"
+#include "Components/CameraComponent.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "SDL3/SDL.h"
 #include "bgfx/defines.h"
@@ -11,7 +12,6 @@ DebugRender::DebugRender() {
         .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
-    
 }
 DebugRender::~DebugRender() {
     debugLines.clear();
@@ -95,12 +95,65 @@ JPH::DebugRenderer::Batch DebugRender::CreateTriangleBatch(const Vertex* inVerti
     return batch;
 }
 
+void DebugRender::DrawFrustum(Syngine::Camera camera) {
+    float viewMtx[16], projMtx[16];
+
+    memcpy(&viewMtx, camera.view, sizeof(float) * 16);
+    memcpy(&projMtx, camera.proj, sizeof(float) * 16);
+
+    float viewProj[16];
+    bx::mtxMul(viewProj, viewMtx, projMtx);
+
+    float invViewProj[16];
+    bx::mtxInverse(invViewProj, viewProj);
+
+    // Define 8 corners of the normalized device coordinates (NDC) frustum
+    // We use Z from 0-1, standard for all but OGL for some fucking reason
+    const bx::Vec3 corners[8] = {
+        bx::Vec3(-1.0f, -1.0f, 0.0f), bx::Vec3(1.0f, -1.0f, 0.0f),
+        bx::Vec3(1.0f, 1.0f, 0.0f),   bx::Vec3(-1.0f, 1.0f, 0.0f),
+        bx::Vec3(-1.0f, -1.0f, 1.0f), bx::Vec3(1.0f, -1.0f, 1.0f),
+        bx::Vec3(1.0f, 1.0f, 1.0f),   bx::Vec3(-1.0f, 1.0f, 1.0f)
+    };
+
+    // Transform NDC to world space using the inverse view-projection matrix
+    float worldCorners[8][4];
+    for (int i = 0; i < 8; ++i) {
+        float corner[4] = { corners[i].x, corners[i].y, corners[i].z, 1.0f };
+        bx::vec4MulMtx(worldCorners[i], corner, invViewProj);
+        float w = worldCorners[i][3];
+        if (w != 0.0f) {
+            worldCorners[i][0] /= w; // Normalize by w
+            worldCorners[i][1] /= w;
+            worldCorners[i][2] /= w;
+        }
+    }
+
+    auto toJolt = [](const float* v) { return JPH::RVec3(v[0], v[1], v[2]); };
+
+    // Draw the frustum lines
+    DrawLine(toJolt(worldCorners[0]), toJolt(worldCorners[1]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[1]), toJolt(worldCorners[2]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[2]), toJolt(worldCorners[3]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[0]), JPH::Color::sRed);
+    // Far plane
+    DrawLine(toJolt(worldCorners[4]), toJolt(worldCorners[5]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[5]), toJolt(worldCorners[6]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[6]), toJolt(worldCorners[7]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[7]), toJolt(worldCorners[4]), JPH::Color::sRed);
+    // Connecting edges
+    DrawLine(toJolt(worldCorners[0]), toJolt(worldCorners[4]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[1]), toJolt(worldCorners[5]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[2]), toJolt(worldCorners[6]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[7]), JPH::Color::sRed);
+}
+
 void DebugRender::RenderLines(const float*        view,
                               const float*        proj,
                               int                 width,
                               int                 height,
                               bgfx::ProgramHandle program) {
-    unsigned short viewId = 254; // Why the hell does anyone use shorts
+    unsigned short viewId = 50; // Why the hell does anyone use shorts
     bgfx::setViewTransform(viewId, view, proj);
     bgfx::setViewRect(viewId, 0, 0, width, height);
     bgfx::touch(viewId);
@@ -120,7 +173,7 @@ void DebugRender::RenderLines(const float*        view,
 
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                   BGFX_STATE_PT_LINES | BGFX_STATE_DEPTH_TEST_LEQUAL);
+                   BGFX_STATE_PT_LINES | BGFX_STATE_DEPTH_TEST_ALWAYS);
     bgfx::submit(viewId, program);
 }
 
