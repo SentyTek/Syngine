@@ -1,3 +1,4 @@
+#pragma once
 #ifndef JPH_DEBUG_RENDERER
 #define JPH_DEBUG_RENDERER
 #endif
@@ -13,6 +14,14 @@
 
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
+
+// Forward declarations
+namespace Syngine {
+class Phys;
+struct Camera;
+}
+
+#include "SynginePhys.h"
 
 namespace Syngine {
 
@@ -67,7 +76,13 @@ class DebugRender : public JPH::DebugRenderer {
 
     virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const Triangle* inTriangles, int inTriangleCount) override;
 
-    virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const Vertex* inVertices, int inVertexCount, const JPH::uint32* inIndices, int inIndexCount) override;
+    virtual JPH::DebugRenderer::Batch
+    CreateTriangleBatch(const Vertex*      inVertices,
+                        int                inVertexCount,
+                        const JPH::uint32* inIndices,
+                        int                inIndexCount) override;
+
+    void DrawFrustum(Syngine::Camera camera);
 
     void RenderLines(const float*        view,
                      const float*        proj,
