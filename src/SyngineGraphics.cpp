@@ -268,6 +268,21 @@ int Graphics::DestroyRenderer() {
         return 1;
     }
 
+    // Default cleanup
+    if(bgfx::isValid(this->billboardVbh)) {
+        bgfx::destroy(this->billboardVbh);
+        this->billboardVbh = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->billboardIbh)) {
+        bgfx::destroy(this->billboardIbh);
+        this->billboardIbh = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.dummy)) {
+        bgfx::destroy(this->handles.dummy);
+        this->handles.dummy = BGFX_INVALID_HANDLE;
+    }
+
+    // Destroy all programs and uniforms
     for (auto& program : this->handles.programs) {
         bgfx::destroy(program.program);
         program.program = BGFX_INVALID_HANDLE;
@@ -281,10 +296,13 @@ int Graphics::DestroyRenderer() {
     }
     this->handles.uniforms.clear();
 
-    if (bgfx::isValid(this->handles.dummy)) {
-        bgfx::destroy(this->handles.dummy);
-        this->handles.dummy = BGFX_INVALID_HANDLE;
+    // Clear gizmos
+    for (auto& gizmo : this->gizmoRegistry) {
+        if (bgfx::isValid(gizmo.second.texture)) {
+            bgfx::destroy(gizmo.second.texture);
+        }
     }
+    this->gizmoRegistry.clear();
 
     bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
     SDL_Log("goodbye renderer");
