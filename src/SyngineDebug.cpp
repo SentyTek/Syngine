@@ -132,20 +132,20 @@ void DebugRender::DrawFrustum(Syngine::Camera camera) {
     auto toJolt = [](const float* v) { return JPH::RVec3(v[0], v[1], v[2]); };
 
     // Draw the frustum lines
-    DrawLine(toJolt(worldCorners[0]), toJolt(worldCorners[1]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[1]), toJolt(worldCorners[2]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[2]), toJolt(worldCorners[3]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[0]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[0]), toJolt(worldCorners[1]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[1]), toJolt(worldCorners[2]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[2]), toJolt(worldCorners[3]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[0]), JPH::Color::sWhite);
     // Far plane
-    DrawLine(toJolt(worldCorners[4]), toJolt(worldCorners[5]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[5]), toJolt(worldCorners[6]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[6]), toJolt(worldCorners[7]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[7]), toJolt(worldCorners[4]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[4]), toJolt(worldCorners[5]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[5]), toJolt(worldCorners[6]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[6]), toJolt(worldCorners[7]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[7]), toJolt(worldCorners[4]), JPH::Color::sWhite);
     // Connecting edges
-    DrawLine(toJolt(worldCorners[0]), toJolt(worldCorners[4]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[1]), toJolt(worldCorners[5]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[2]), toJolt(worldCorners[6]), JPH::Color::sRed);
-    DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[7]), JPH::Color::sRed);
+    DrawLine(toJolt(worldCorners[0]), toJolt(worldCorners[4]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[1]), toJolt(worldCorners[5]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[2]), toJolt(worldCorners[6]), JPH::Color::sWhite);
+    DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[7]), JPH::Color::sWhite);
 }
 
 void DebugRender::RenderLines(const float*        view,
@@ -173,7 +173,7 @@ void DebugRender::RenderLines(const float*        view,
 
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                   BGFX_STATE_PT_LINES | BGFX_STATE_DEPTH_TEST_ALWAYS);
+                   BGFX_STATE_PT_LINES | BGFX_STATE_DEPTH_TEST_ALWAYS); // may change this later to LEQUAL
     bgfx::submit(viewId, program);
 }
 

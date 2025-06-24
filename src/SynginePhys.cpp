@@ -118,7 +118,11 @@ void Phys::Update(float deltaTime, int collisionSteps) {
     mPhysicsSystem.Update(deltaTime, collisionSteps, mTempAllocator, mJobSystem);
 }
 
-void Phys::DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam) {
+void Phys::DrawDebug(int                 width,
+                     int                 height,
+                     bgfx::ProgramHandle program,
+                     Syngine::Camera     camera,
+                     Syngine::Camera     finalCam) {
     if (mDebugRenderer) {
         JPH::BodyManager::DrawSettings drawSettings;
         drawSettings.mDrawShapeWireframe = true;
