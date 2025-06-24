@@ -11,7 +11,8 @@ using namespace Syngine;
 GameObject::GameObject(string name, string type) {
     this->name = name;
     this->type = type;
-    this->id = -1;
+    this->id   = -1;
+    this->gizmo = "none";
 }
 
 GameObject::~GameObject() {}
@@ -42,6 +43,7 @@ int GameObject::AddComponent(Syngine::Components type) {
             break;
         case Syngine::SYN_COMPONENT_CAMERA:
             component = new CameraComponent(this);
+            gizmo = "camera_render";
             break;
         default:
             return 2; // Unknown component type

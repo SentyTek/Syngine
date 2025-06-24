@@ -85,12 +85,13 @@ int Core::SyngineEventLoop() {
         return 1;
     }
 
-    GameObject* player = new GameObject("player", "default");
+    GameObject* player = new GameObject("player");
 
     player->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
     player->AddComponent(Syngine::SYN_COMPONENT_PLAYER);
     player->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
     player->AddComponent(Syngine::SYN_COMPONENT_CAMERA);
+    this->app->graphics->RegisterGizmo("camera_render");
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
@@ -468,8 +469,10 @@ int Core::SyngineEventLoop() {
         }
 
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(
-                this->app->gameObjects, lightDir, finalCam); // render frame
+            this->app->graphics->RenderFrame(this->app->gameObjects,
+                                             lightDir,
+                                             finalCam,
+                                             this->app->debug);
 
             if (this->app->debug) {
                 // christ on a stick this call is ridiculous

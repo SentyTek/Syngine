@@ -153,7 +153,7 @@ void DebugRender::RenderLines(const float*        view,
                               int                 width,
                               int                 height,
                               bgfx::ProgramHandle program) {
-    unsigned short viewId = 50; // Why the hell does anyone use shorts
+    unsigned short viewId = 25; // Why the hell does anyone use shorts
     bgfx::setViewTransform(viewId, view, proj);
     bgfx::setViewRect(viewId, 0, 0, width, height);
     bgfx::touch(viewId);

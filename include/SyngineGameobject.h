@@ -21,9 +21,10 @@ class GameObject {
     map<Syngine::Components, unique_ptr<Syngine::Component>> components; //Map of components attached to the gameobject
     public:
         string name; //Name of the gameoject
-        string type; //Type of object, used for shader selection.
+        string type; // Type of object, used for shader selection.
+        string gizmo; //Gizmo tag for the gameobject, used for debugging and visualization
         
-        GameObject(string name, string type);
+        GameObject(string name, string type = "default"); //Constructor
         ~GameObject();
 
         long GetID(); //Get the ID of the gameobject

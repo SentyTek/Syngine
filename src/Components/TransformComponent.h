@@ -23,7 +23,9 @@ class TransformComponent : public Syngine::Component {
         void SetRotation(float x, float y, float z, float w); //Set the rotation of the gameobject (Quaternion)
         void SetScale(float x, float y, float z); //Set the scale of the gameobject
 
-        void GetModelMatrix(float* result); //Get the model matrix of the gameobject
+        void
+        GetModelMatrix(float* result); // Get the model matrix of the gameobject
+        const float* GetPosition(); // Get the position of the gameobject
 };
 
 } // namespace Syngine
