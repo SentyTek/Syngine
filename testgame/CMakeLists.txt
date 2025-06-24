@@ -42,6 +42,29 @@ else()
     add_custom_target(Shaders ALL)
 endif()
 
+set(SHADER_SOURCE_DIR_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/engine/default/shaders")
+set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
+file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR}) #ensure exists
+set(BGFX_CORE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/engine/third_party/bgfx.cmake/bgfx/src")
+
+set(ALL_COMPILED_SHADER_BINARIES)
+
+compile_all_shaders(
+    SOURCE_DIRECTORY      ${SHADER_SOURCE_DIR_ROOT}
+    OUTPUT_DIRECTORY      ${SHADER_OUTPUT_DIR}
+    BGFX_SRC_INCLUDE_DIRS ${BGFX_CORE_INCLUDE_DIR}
+    SHADER_FILES_OUTPUT_VAR ALL_COMPILED_SHADER_BINARIES
+)
+
+if(ALL_COMPILED_SHADER_BINARIES)
+    message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
+    add_custom_target(Shaders2 ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
+    add_dependencies(${EXECUTABLE_NAME} Shaders2)
+else()
+    message(STATUS "No shaders compiled.")
+    add_custom_target(Shaders2 ALL)
+endif()
+
 # Include directories for the executable
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -221,5 +244,20 @@ if(WIN32 OR (UNIX AND NOT APPLE))
                 "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/icon.png"
             COMMENT "Copying icon.png to executable directory"
         )
+    endif()
+
+    # Copy engine defaults except the default/shaders folder
+    if(EXISTS "${CMAKE_SOURCE_DIR}/engine/default")
+        file(GLOB DEFAULT_SUBDIRS RELATIVE "${CMAKE_SOURCE_DIR}/engine/default" "${CMAKE_SOURCE_DIR}/engine/default/*")
+        foreach(subdir ${DEFAULT_SUBDIRS})
+            if(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/engine/default/${subdir}" AND NOT "${subdir}" STREQUAL "shaders")
+                add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        "${CMAKE_SOURCE_DIR}/engine/default/${subdir}"
+                        "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/default/${subdir}"
+                    COMMENT "Copying engine default subdir '${subdir}' to executable directory"
+                )
+            endif()
+        endforeach()
     endif()
 endif()
