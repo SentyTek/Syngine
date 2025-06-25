@@ -39,6 +39,7 @@ inline bool CheckRequiredFolders() {
     const char* requiredFolders[] = {
         "shaders",
         "meshes",
+        "default",
     };
 
     for (const char* folder : requiredFolders) {
