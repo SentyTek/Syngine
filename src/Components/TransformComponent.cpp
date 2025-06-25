@@ -119,4 +119,8 @@ void TransformComponent::GetModelMatrix(float* result) {
     result[15] = 1.0f;
 }
 
+const float* TransformComponent::GetPosition() {
+    return position;
+}
+
 } // namespace Syngine

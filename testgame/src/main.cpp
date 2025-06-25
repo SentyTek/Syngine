@@ -5,12 +5,12 @@ int main(int argc, char* argv[]) {
     Syngine::Core syngine;
     Syngine::Graphics graphics("bakerman", 800, 600);
     if (graphics.CreateWindow() != 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create window");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create window! If any errors are listed above, these will likely fix it!");
         return 1;
     }
     //create renderer
     if (graphics.CreateRenderer() != 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create renderer");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create renderer! If any errors are listed above, these will likely fix it!");
         graphics.DestroyWindow();
         return 1;
     }

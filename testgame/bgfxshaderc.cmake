@@ -124,8 +124,8 @@ function(compile_all_shaders)
         # --- Attempt to find matching varying definition file ---
         # e.g., if shader is "terrain.vert.sc", look for "terrain.vary.sc"
         set(expected_varying_file_name "${common_name_part}${resolved_varying_suffix}")
-        set(potential_varying_path "${ARG_SOURCE_DIRECTORY}/${shader_dir_relative}/${expected_varying_file_name}")
-
+        set(potential_varying_path "${ARG_SOURCE_DIRECTORY}/${shader_dir_relative}varying/${expected_varying_file_name}")
+        # message(STATUS "Varying path: ${potential_varying_path} for shader: ${shader_absolute_path}")
         if(EXISTS "${potential_varying_path}")
             set(varying_def_to_use "${potential_varying_path}")
         else()
@@ -172,5 +172,5 @@ function(compile_all_shaders)
     endforeach()
 
     set(${ARG_SHADER_FILES_OUTPUT_VAR} "${compiled_shader_list_accumulator}" PARENT_SCOPE)
-    message(STATUS "All discovered and compiled shader binary files: ${compiled_shader_list_accumulator}")
+    # message(STATUS "All discovered and compiled shader binary files: ${compiled_shader_list_accumulator}")
 endfunction()

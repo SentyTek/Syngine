@@ -1,4 +1,7 @@
 #include "SynginePhys.h"
+#include <thread> //for hardware_concurrency
+
+#include "Components/CameraComponent.h"
 #include "Jolt/Core/Factory.h"
 #include "Jolt/Core/TempAllocator.h"
 #include "Jolt/Geometry/IndexedTriangle.h"
@@ -15,9 +18,6 @@
 #include "Jolt/RegisterTypes.h"
 #include "SDL3/SDL_log.h"
 #include <Jolt/Core/JobSystemSingleThreaded.h> //for single threaded fallback
-#include <thread> //for hardware_concurrency
-
-//Jolt includes
 #include <Jolt/Core/Memory.h>
 #include <Jolt/Core/StreamWrapper.h>
 #include <Jolt/Core/IssueReporting.h>
@@ -46,11 +46,19 @@ bool Phys::AssertFailedImpl(const char* inExpression, const char* inMessage, con
 Phys::Phys() {}
 Phys::~Phys() { Shutdown(); }
 
-void Phys::Init() {
+void Phys::Init(bool debug) {
+
     RegisterDefaultAllocator();
     Trace = TraceImpl;
     JPH_IF_ENABLE_ASSERTS(AssertFailed = AssertFailedImpl;)
     Factory::sInstance = new Factory();
+
+    // Set Jolt's debug renderer to our custom debug renderer if debugging is enabled
+    if (debug) {
+        mDebugRenderer = new Syngine::DebugRender();
+        JPH::DebugRenderer::sInstance = mDebugRenderer;
+    }
+
     RegisterTypes();
 
     //We need a temp allocator for temp allocations during physics update.
@@ -97,12 +105,35 @@ void Phys::Shutdown() {
         delete mJobSystem;
         mJobSystem = nullptr;
     }
+
+    if (mDebugRenderer) {
+        delete mDebugRenderer;
+        mDebugRenderer = nullptr;
+    }
 }
 
 void Phys::Update(float deltaTime, int collisionSteps) {
     if (!Factory::sInstance) return;
 
     mPhysicsSystem.Update(deltaTime, collisionSteps, mTempAllocator, mJobSystem);
+}
+
+void Phys::DrawDebug(int                 width,
+                     int                 height,
+                     bgfx::ProgramHandle program,
+                     Syngine::Camera     camera,
+                     Syngine::Camera     finalCam) {
+    if (mDebugRenderer) {
+        JPH::BodyManager::DrawSettings drawSettings;
+        drawSettings.mDrawShapeWireframe = true;
+        //drawSettings.mDrawShape = false;
+        
+        mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
+        mDebugRenderer->DrawFrustum(camera);
+        mDebugRenderer->RenderLines(finalCam.view, finalCam.proj, width, height, program);
+
+        mDebugRenderer->ClearLines();
+    }
 }
 
 BodyID Phys::CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer, float mass) {

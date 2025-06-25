@@ -43,7 +43,7 @@ if(MSVC)
 endif()
 
 project(Syngine)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_C_COMPILER "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc")
 set(CMAKE_CXX_COMPILER "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++")
@@ -56,6 +56,7 @@ add_library(Syngine STATIC
     src/helpers.cpp
     src/SyngineGameobjects.cpp
     src/SynginePhys.cpp
+    src/SyngineDebug.cpp
     src/Components/MeshComponent.cpp
     src/Components/TransformComponent.cpp
     src/Components/RigidbodyComponent.cpp
@@ -113,18 +114,13 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
 set(JOLT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(JOLT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(JOLT_PROFILE_ENABLED OFF CACHE BOOL "" FORCE)
+if(APPLE)
+add_compile_options(-frtti)
+endif()
 
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_BINARIES shaderc ON CACHE BOOL "" FORCE)
-
-# Set it as a CACHE variable for persistence and to influence BGFX's CMake scripts.
-# The FORCE ensures it's set even if it was different in the cache.
-set(BX_CONFIG_DEBUG ${LOCAL_BX_CONFIG_DEBUG} CACHE BOOL "Enable BGFX debug mode (controls BGFX library compilation)" FORCE)
-
-# Also set it as a normal variable in the current scope *before* adding BGFX.
-# This can sometimes help if BGFX checks for a non-cache variable directly.
-set(BX_CONFIG_DEBUG ${LOCAL_BX_CONFIG_DEBUG})
 
 if(APPLE) # cocoa is really picky and requires entire renderer to be single threaded
     set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)

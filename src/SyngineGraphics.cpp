@@ -8,6 +8,7 @@
 #include "bgfx/defines.h"
 #include "bx/math.h"
 #include "SynComponents.h"
+#include "helpers.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
@@ -16,6 +17,7 @@
 
 #include <bgfx/platform.h>
 #include <cstdint>
+#include <vector>
 
 #if BX_PLATFORM_OSX
 #include "SynOSXMetalBridge.h"
@@ -74,6 +76,13 @@ int Graphics::CreateRenderer() {
     //create renderer
     if (!this->win) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to create renderer for");
+        return 1;
+    }
+
+    // Check if required folders exist (shaders, meshes)
+    if (!CheckRequiredFolders()) {
+        SDL_DestroyWindow(this->win);
+        SDL_Quit();
         return 1;
     }
 
@@ -154,6 +163,8 @@ int Graphics::CreateRenderer() {
     this->handles.uniforms["u_skyColorNight"] = bgfx::createUniform("u_skyColorNight", bgfx::UniformType::Vec4);
     this->handles.uniforms["u_sunColorDay"]   = bgfx::createUniform("u_sunColorDay", bgfx::UniformType::Vec4);
     this->handles.uniforms["u_sunColorRise"]  = bgfx::createUniform("u_sunColorRise", bgfx::UniformType::Vec4);
+
+    this->handles.uniforms["u_billboard"] = bgfx::createUniform("u_billboard", bgfx::UniformType::Vec4);
     
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
@@ -170,17 +181,64 @@ int Graphics::CreateRenderer() {
         }
     }
 
-    //create default shader
-    size_t defaultProg = AddProgram("shaders/default.vert.sc.bin", "shaders/default.frag.sc.bin", "default");
+    //create default shaders
+    size_t defaultProg = AddProgram("shaders/default.vert.sc.bin",
+                                    "shaders/default.frag.sc.bin",
+                                    "default");
     if (defaultProg == (size_t)-1) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create default program");
         bgfx::shutdown();
         SDL_DestroyWindow(this->win);
         SDL_Quit();
         return 1;
     }
 
-        // Dummy buffer to make metal happy
+    size_t debugProg = AddProgram("shaders/debug.vert.sc.bin",
+                                  "shaders/debug.frag.sc.bin",
+                                  "debugger");
+    if (debugProg == (size_t)-1) {
+        bgfx::shutdown();
+        SDL_DestroyWindow(this->win);
+        SDL_Quit();
+        return 1;
+    }
+
+    size_t billboardProg = AddProgram("shaders/billboard.vert.sc.bin",
+                                      "shaders/billboard.frag.sc.bin",
+                                      "billboard");
+    if (billboardProg == (size_t)-1) {
+        bgfx::shutdown();
+        SDL_DestroyWindow(this->win);
+        SDL_Quit();
+        return 1;
+    }
+
+    // create billboard buffers
+    static const float billboardVertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
+                                               0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
+                                               0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
+                                               -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
+    static const uint16_t billboardIndices[]  = { 0, 1, 2, 0, 2, 3 };
+
+    bgfx::VertexLayout billboardLayout;
+    billboardLayout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
+        .end();
+    this->billboardVbh = bgfx::createVertexBuffer(
+        bgfx::copy(billboardVertices, sizeof(billboardVertices)),
+        billboardLayout);
+    this->billboardIbh = bgfx::createIndexBuffer(
+        bgfx::copy(billboardIndices, sizeof(billboardIndices)));
+    
+    if (!bgfx::isValid(this->billboardVbh) || !bgfx::isValid(this->billboardIbh)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create billboard buffers");
+        bgfx::shutdown();
+        SDL_DestroyWindow(this->win);
+        SDL_Quit();
+        return 1;
+    }
+
+    // Dummy buffer to make metal happy
 #if BX_PLATFORM_OSX
     static bgfx::VertexBufferHandle fullscreenDummyVBH = BGFX_INVALID_HANDLE;
 
@@ -210,6 +268,21 @@ int Graphics::DestroyRenderer() {
         return 1;
     }
 
+    // Default cleanup
+    if(bgfx::isValid(this->billboardVbh)) {
+        bgfx::destroy(this->billboardVbh);
+        this->billboardVbh = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->billboardIbh)) {
+        bgfx::destroy(this->billboardIbh);
+        this->billboardIbh = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(this->handles.dummy)) {
+        bgfx::destroy(this->handles.dummy);
+        this->handles.dummy = BGFX_INVALID_HANDLE;
+    }
+
+    // Destroy all programs and uniforms
     for (auto& program : this->handles.programs) {
         bgfx::destroy(program.program);
         program.program = BGFX_INVALID_HANDLE;
@@ -223,10 +296,13 @@ int Graphics::DestroyRenderer() {
     }
     this->handles.uniforms.clear();
 
-    if (bgfx::isValid(this->handles.dummy)) {
-        bgfx::destroy(this->handles.dummy);
-        this->handles.dummy = BGFX_INVALID_HANDLE;
+    // Clear gizmos
+    for (auto& gizmo : this->gizmoRegistry) {
+        if (bgfx::isValid(gizmo.second.texture)) {
+            bgfx::destroy(gizmo.second.texture);
+        }
     }
+    this->gizmoRegistry.clear();
 
     bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
     SDL_Log("goodbye renderer");
@@ -312,6 +388,14 @@ int Graphics::RemoveProgram(bool all) {
     }
 }
 
+bgfx::UniformHandle Graphics::GetUniform(const char* name) const {
+    auto it = this->handles.uniforms.find(name);
+    if (it != this->handles.uniforms.end()) {
+        return it->second;
+    }
+    return BGFX_INVALID_HANDLE;
+}
+
 void Graphics::DestroyWindow() { //dw this is effectively the destructor
     if (!this->win) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No app to destroy");
@@ -324,7 +408,68 @@ void Graphics::DestroyWindow() { //dw this is effectively the destructor
     SDL_Log("goodbye world");
 }
 
-int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir, CameraComponent* camera) {
+void Graphics::RegisterGizmo(const std::string& tag, float size) {
+    
+    std::string resolvedPath = resolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
+    const char* path = resolvedPath.c_str();
+    bgfx::TextureHandle texture = SynLoadTextureFromFile(path);
+    if (bgfx::isValid(texture)) {
+        gizmoRegistry[tag] = { texture, size };
+    }
+}
+
+void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
+                            CameraComponent*         camera) {
+    unsigned short viewId = 26; // View ID for gizmos
+    bgfx::setViewRect(viewId, 0, 0, bgfx::BackbufferRatio::Equal);
+    bgfx::setViewTransform(
+        viewId, camera->GetCamera().view, camera->GetCamera().proj);
+    bgfx::touch(viewId);
+
+    Program billboardProgram = GetProgram("billboard");
+    if(!bgfx::isValid(billboardProgram.program)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Billboard program not found");
+        return;
+    }
+
+    bgfx::UniformHandle billboardUniform = GetUniform("u_billboard");
+    if (!bgfx::isValid(billboardUniform)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Billboard uniform not found");
+        return;
+    }
+
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
+                   BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_LEQUAL);
+
+    for (auto go : gameObjects) {
+        auto it = gizmoRegistry.find(go->gizmo);
+        if (it != gizmoRegistry.end()) {
+            auto* comp =
+                go->GetComponent<Syngine::CameraComponent>();
+            if (comp) {
+                const Gizmo& gizmo = it->second;
+                const float* pos   = comp->GetPosition();
+
+                // Pack center position and size into a vec4
+                float billboardData[4] = { pos[0], pos[1], pos[2], gizmo.size };
+                bgfx::setUniform(billboardUniform, billboardData);
+
+                // Dummy model matrix for billboard
+                float modelMtx[16];
+                bx::mtxIdentity(modelMtx);
+
+                // And finally render
+                bgfx::setTransform(modelMtx);
+                bgfx::setVertexBuffer(0, this->billboardVbh);
+                bgfx::setIndexBuffer(this->billboardIbh);
+                bgfx::setTexture(0, GetUniform("s_albedo"), gizmo.texture);
+                bgfx::submit(viewId, billboardProgram.program);
+            }
+        }
+    }
+}
+
+int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
     const Program& terrainProgram = GetProgram("terrain");
     const Program& skyProgram = GetProgram("sky");
     const Program& defaultProgram = GetProgram("default");
@@ -474,6 +619,11 @@ int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightD
         bgfx::setUniform(handles.uniforms["u_lightDir"], &lightDir);
 
         bgfx::submit(MAIN_VIEW, currentProg.program);
+    }
+
+    // Render gizmos
+    if(debug) {
+        RenderGizmos(gameObjects, camera);
     }
 
     bgfx::frame(); // submit the frame

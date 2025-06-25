@@ -10,7 +10,8 @@ struct App {
     Graphics* graphics;
     SynModelLoader* synModels;
     std::vector<GameObject*> gameObjects;
-    Phys* physicsManager;
+    Phys*                    physicsManager;
+    bool                     debug = true;
 };
 
 class Core {

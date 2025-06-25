@@ -29,7 +29,7 @@ Core::Core() {
     this->app->synModels = new AssimpLoader(); // Initialize the model loader
 
     this->app->physicsManager = new Phys(); // Initialize the physics manager
-    this->app->physicsManager->Init(); // Initialize the physics system
+    this->app->physicsManager->Init(this->app->debug); // Initialize the physics system
 }
 
 Core::~Core() {
@@ -85,12 +85,13 @@ int Core::SyngineEventLoop() {
         return 1;
     }
 
-    GameObject* player = new GameObject("player", "default");
+    GameObject* player = new GameObject("player");
 
     player->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
     player->AddComponent(Syngine::SYN_COMPONENT_PLAYER);
     player->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
     player->AddComponent(Syngine::SYN_COMPONENT_CAMERA);
+    this->app->graphics->RegisterGizmo("camera_render");
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
@@ -125,6 +126,7 @@ int Core::SyngineEventLoop() {
     float mouseX, mouseY;
 
     CameraComponent* cam = new CameraComponent(nullptr);
+    cam->SetFarPlane(2000);
     // FinalCam specifically is so we can keep track of both the player camera
     // and the editor camera, switching between them as needed.
     CameraComponent* finalCam = new CameraComponent(nullptr);
@@ -251,6 +253,14 @@ int Core::SyngineEventLoop() {
                                        Layers::MOVING,
                                        shapeParams);
                     this->app->gameObjects.push_back(sphere);
+                } else if (event.key.key == SDLK_F1) {
+                    // Toggle debug mode
+                    this->app->debug = !this->app->debug;
+                    if (this->app->debug) {
+                        SDL_Log("Debug mode enabled");
+                    } else {
+                        SDL_Log("Debug mode disabled");
+                    }
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {
@@ -457,9 +467,23 @@ int Core::SyngineEventLoop() {
                 }
             }
         }
-        
+
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(this->app->gameObjects, lightDir, finalCam); // render frame
+            this->app->graphics->RenderFrame(this->app->gameObjects,
+                                             lightDir,
+                                             finalCam,
+                                             this->app->debug);
+
+            if (this->app->debug) {
+                // christ on a stick this call is ridiculous
+                this->app->physicsManager->DrawDebug(
+                    this->app->graphics->width,
+                    this->app->graphics->height,
+                    this->app->graphics->GetProgram("debugger").program,
+                    this->app->gameObjects[0]
+                        ->GetComponent<Syngine::CameraComponent>()
+                        ->GetCamera(), finalCam->GetCamera());
+            }
         }
 
         if (oneSec >= 1.0f) {
