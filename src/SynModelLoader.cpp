@@ -10,7 +10,47 @@
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
 
-using namespace Syngine;
+namespace Syngine {
+
+/* Base class */
+std::vector<MeshData> SynModelLoader::loadedMeshes;
+
+// Returns a vector of all loaded meshes
+std::vector<MeshData>& SynModelLoader::getMeshes() { return loadedMeshes; }
+
+// Returns a pointer to a mesh by its ID, or nullptr if not found.
+// ID param is the index in the meshes vector, returned from the LoadModel function.
+MeshData* SynModelLoader::getMeshById(int id) {
+    for (auto& mesh : loadedMeshes) {
+        if (mesh.id == id) {
+            return &mesh;
+        }
+    }
+    return nullptr; // not found
+}
+
+
+void SynModelLoader::UnloadAll() {
+    for (auto& mesh : loadedMeshes) {
+        for (auto& mat : mesh.materials) {
+            if (bgfx::isValid(mat.albedo)) {
+                bgfx::destroy(mat.albedo);
+            }
+            if (bgfx::isValid(mat.normalMap)) {
+                bgfx::destroy(mat.normalMap);
+            }
+            if (bgfx::isValid(mat.heightMap)) {
+                bgfx::destroy(mat.heightMap);
+            }
+        }
+        mesh.materials.clear();
+        bgfx::destroy(mesh.vbh);
+        bgfx::destroy(mesh.ibh);
+    }
+    loadedMeshes.clear();
+}
+
+/* Assimp importer */
 
 //Returns true if the model was loaded successfully, false otherwise
 bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
@@ -33,6 +73,29 @@ bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTe
     }
 
     MeshData meshData;
+    if (!processScene(meshData, scene, path, loadTextures)) {
+        SDL_Log("Failed to process scene for model: %s", path.c_str());
+        return false;
+    }
+    meshData.hasTextures = loadTextures;
+    meshData.path        = path;
+    meshData.id          = loadedMeshes.size();
+
+    try {
+        meshData.lastWriteTime = std::filesystem::last_write_time(path);
+    } catch (const std::filesystem::filesystem_error& e) {
+        SDL_Log("Failed to get last write time for %s: %s", path.c_str(), e.what());
+    }
+    meshData.valid = true; // Mark as valid after processing
+
+    SDL_Log("Loaded mesh %s", path.c_str());
+    loadedMeshes.push_back(meshData);
+    out = meshData;
+    return true;
+}
+
+bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const std::string& path, bool loadTextures) {
+
     meshData.numVertices = scene->mNumMeshes > 0 ? scene->mMeshes[0]->mNumVertices : 0;
 
     aiMesh* mesh = scene->mMeshes[0]; //only loads first mesh for now
@@ -287,35 +350,73 @@ bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTe
 
     meshData.numMaterials = meshData.materials.size();
 
-    //and output
+    // and output
     meshData.vbh = vbh;
     meshData.ibh = ibh;
-    meshData.hasTextures = loadTextures;
-    out = meshData;
-    meshes.push_back(meshData); //store mesh data for later use
+
     return true;
 }
 
-void AssimpLoader::UnloadAll() {
-    for (auto& mesh : meshes) {
-        for (auto& mat : mesh.materials) {
-            if (bgfx::isValid(mat.albedo)) {
-                bgfx::destroy(mat.albedo);
-            }
-            if (bgfx::isValid(mat.normalMap)) {
-                bgfx::destroy(mat.normalMap);
-            }
-            if (bgfx::isValid(mat.heightMap)) {
-                bgfx::destroy(mat.heightMap);
-            }
-        }
-        mesh.materials.clear();
-        bgfx::destroy(mesh.vbh);
-        bgfx::destroy(mesh.ibh);
+// Reloads a model by its ID, returns true if successful
+bool AssimpLoader::ReloadModel(MeshData& out, int id) {
+    MeshData* mesh = getMeshById(id);
+    if (!mesh) {
+        SDL_Log("Mesh with ID %d not found", id);
+        return false;
     }
-    meshes.clear();
+    mesh->valid = false; // Mark as invalid before reloading
+
+    Assimp::Importer importer;
+    const uint16_t   flags = aiProcess_JoinIdenticalVertices |
+                           aiProcess_CalcTangentSpace |
+                           aiProcess_GenSmoothNormals;
+    const aiScene* scene = importer.ReadFile(mesh->path, flags);
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->HasMeshes()) {
+        SDL_Log("Error reloading model: %s", importer.GetErrorString());
+        return false;
+    }
+
+    MeshData temp;
+    if (!processScene(temp, scene, mesh->path, mesh->hasTextures)) {
+        SDL_Log("Failed to process scene for model: %s", mesh->path.c_str());
+        return false;
+    }
+
+    // Unload existing resources
+    bgfx::destroy(mesh->vbh);
+    bgfx::destroy(mesh->ibh);
+    for (auto& mat : mesh->materials) {
+        if (bgfx::isValid(mat.albedo)) {
+            bgfx::destroy(mat.albedo);
+        }
+        if (bgfx::isValid(mat.normalMap)) {
+            bgfx::destroy(mat.normalMap);
+        }
+        if (bgfx::isValid(mat.heightMap)) {
+            bgfx::destroy(mat.heightMap);
+        }
+    }
+
+    mesh->vertices = std::move(temp.vertices);
+    mesh->indices  = std::move(temp.indices);
+    mesh->materials = std::move(temp.materials);
+    mesh->numVertices = temp.numVertices;
+    mesh->numIndices  = temp.numIndices;
+    mesh->numMaterials = temp.numMaterials;
+    mesh->vbh          = temp.vbh;
+    mesh->ibh          = temp.ibh;
+    mesh->id           = loadedMeshes.size(); // Update ID to the new index
+
+    try {
+        mesh->lastWriteTime = std::filesystem::last_write_time(mesh->path);
+    } catch (const std::filesystem::filesystem_error& e) {
+        SDL_Log("Failed to get last write time for %s: %s", mesh->path.c_str(), e.what());
+    }
+    mesh->valid = true;
+
+    SDL_Log("Reloaded mesh %s", mesh->path.c_str());
+    out = *mesh; // Update output with reloaded data
+    return true;
 }
 
-std::vector<MeshData>& SynModelLoader::getMeshes() {
-    return meshes;
-}
+} // namespace Syngine

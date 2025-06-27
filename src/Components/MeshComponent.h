@@ -19,7 +19,8 @@ class MeshComponent : public Syngine::Component {
     Components getComponentType() override;
     
     int LoadMesh(const std::string& path, bool loadTextures = true); //Load a mesh from a file
-    int UnloadMesh(); //Unload the mesh data
+    int UnloadMesh(); // Unload the mesh data
+    int ReloadMesh(); // Reload the mesh data from the file, useful for hot-reloading
 };
 
 } // namespace Syngine

@@ -20,6 +20,8 @@
 #include "bx/math.h"
 #include "bgfx/defines.h"
 
+#include <filesystem>
+
 using namespace Syngine;
 
 Core::Core() {
@@ -260,6 +262,21 @@ int Core::SyngineEventLoop() {
                         SDL_Log("Debug mode enabled");
                     } else {
                         SDL_Log("Debug mode disabled");
+                    }
+                } else if (event.key.key == SDLK_F5) {
+                    // Reload changed assets
+                    for (auto& go : this->app->gameObjects) {
+                        MeshComponent* mc = go->GetComponent<MeshComponent>();
+                        if (!mc) continue;
+                        MeshData& mesh = mc->meshData;
+                        if (!mesh.valid) continue;
+                        if (mesh.lastWriteTime !=
+                            std::filesystem::last_write_time(mesh.path)) {
+                            SDL_Log("previoud ID: %d", mesh.id);
+
+                            mc->ReloadMesh();
+                            SDL_Log("new id: %d", mesh.id);
+                        }
                     }
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {

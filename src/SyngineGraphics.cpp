@@ -539,6 +539,7 @@ int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightD
             continue;
         }
         MeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;
+        if (!mesh.valid) continue; // Skip invalid meshes
         
         bool isDefault = false;
         Program currentProg;

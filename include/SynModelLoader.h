@@ -1,10 +1,16 @@
 #pragma once
 #include <vector>
 #include <string>
+#include <filesystem>
 
 #include <bgfx/bgfx.h>
 
-namespace Syngine {;
+// forward declaration of assimp scene because i cant actually include it for
+// some stupid reason
+struct aiScene;
+
+namespace Syngine {
+
 struct Vertex {
     float pos[3] = {0.0f, 0.0f, 0.0f};
     float normal[3] = {0.0f, 0.0f, 0.0f};
@@ -32,26 +38,40 @@ struct MeshData {
     std::vector<uint32_t> indices;
     std::vector<Material> materials;
     bgfx::VertexBufferHandle vbh;
-    bgfx::IndexBufferHandle ibh;
-    uint32_t numVertices;
-    uint32_t numIndices;
-    uint8_t numMaterials;
-    bool hasTextures = true;
+    bgfx::IndexBufferHandle  ibh;
+    uint32_t                 numVertices;
+    uint32_t                 numIndices;
+    uint8_t                  numMaterials;
+    bool                     hasTextures = true;
+    std::string              path        = "";
+    int                      id          = 0;
+    std::filesystem::file_time_type lastWriteTime; // for tracking changes
+    bool                            valid = false; // Meshes are hardly ever actually invalid, but this is useful for reloading
 };
 
 class SynModelLoader {
     protected:
-    std::vector<MeshData> meshes;
+      static std::vector<MeshData> loadedMeshes;
     public:
-    virtual bool LoadModel(MeshData& out, const std::string& path, bool loadTextures) = 0;
-    virtual void UnloadAll() = 0;
-    std::vector<MeshData>& getMeshes();
+    // Loads a model from the specified path, returns true if successful
+    virtual bool
+    LoadModel(MeshData& out, const std::string& path, bool loadTextures) = 0;
+    // Reloads a model by its ID, returns true if successful
+    virtual bool ReloadModel(MeshData& out, int id) = 0;
+    static void UnloadAll();
+    static std::vector<MeshData>& getMeshes();
+    static MeshData* getMeshById(int id);
 };
 
 class AssimpLoader : public SynModelLoader {
-    public:
-    bool LoadModel( MeshData& out, const std::string& path, bool loadTextures) override;
-    void UnloadAll() override;
+  public:
+    bool LoadModel(MeshData&          out,
+                   const std::string& path,
+                   bool               loadTextures) override;
+    bool ReloadModel(MeshData& out, int id) override;
+
+  private:
+    static bool processScene(MeshData& meshData, const aiScene* scene, const std::string& path, bool loadTextures);
 };
 
 } // namespace Syngine
