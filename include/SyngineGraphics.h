@@ -28,8 +28,11 @@ enum ViewID : bgfx::ViewId {
 // Program structure to hold shader program information
 struct Program {
     bgfx::ProgramHandle program = BGFX_INVALID_HANDLE;
-    std::string name = "empty";
-    uint8_t viewId = 0;
+    unsigned short      viewId  = -1;
+    std::string         name    = "empty";
+    std::string         vsPath  = "";
+    std::string         fsPath  = "";
+    int                 id      = 0;
 };
 
 // Handles structure to manage shader programs and uniforms
@@ -55,15 +58,27 @@ class Graphics {
     Graphics(const char* title, int width, int height);
 
     // Create a window for rendering, returns 0 on success, non-zero on failure
-    // Create a renderer, returns 0 on success, non-zero on failure
     int CreateWindow();
+    // Create a renderer, returns 0 on success, non-zero on failure
     int CreateRenderer();
 
     int DestroyRenderer();
     // Destroy the window, cleans up resources. Returns nothing.
     void DestroyWindow();
 
-    size_t AddProgram(const char* vsPath, const char* fsPath, const char* name);
+    // Load a shader from a file path, returns index of the shader or -1 on failure.
+    // Optional param `viewId` can be used to specify the view ID for the shader (e.g. VIEW_FOWARD, VIEW_DEBUG, etc.)
+    int AddProgram(const char*     vsPath,
+                   const char*     fsPath,
+                   const char*     name,
+                   Syngine::ViewID viewId = Syngine::VIEW_FOWARD);
+    // Load a shader from a file path, returns index of the shader or -1 on failure. Assumes both vs and fs have same name.
+    // Optional param `viewId` can be used to specify the view ID for the shader (e.g. VIEW_FOWARD, VIEW_DEBUG, etc.)
+    int AddProgram(const char*     path,
+                   const char*     name,
+                   Syngine::ViewID viewId = Syngine::VIEW_FOWARD);
+
+    // Get program by name, returns Program with invalid handle if not found
     Program GetProgram(const char* name) const;
     // Get program by index, returns Program with invalid handle if index is out of bounds
     Program GetProgram(int index) const;
@@ -75,6 +90,12 @@ class Graphics {
     // Removes a program by name, returns true if successful
     bool     RemoveProgram(const char* name);
 
+    // Reloads a program by name, returns true if successful
+    bool ReloadProgram(const char* name);
+    // Reloads all programs, returns true if successful
+    bool ReloadAllPrograms();
+
+    // Get a uniform handle by name, returns BGFX_INVALID_HANDLE if not found
     bgfx::UniformHandle GetUniform(const char* name) const;
 
     // Render frame

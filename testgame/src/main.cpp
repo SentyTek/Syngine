@@ -1,4 +1,5 @@
 #include "SyngineCore.h"
+#include "SyngineGraphics.h"
 
 int main(int argc, char* argv[]) {
     //create window
@@ -14,19 +15,17 @@ int main(int argc, char* argv[]) {
         graphics.DestroyWindow();
         return 1;
     }
-    
-    //Sky program is created first, as it is the background
-    //This implies that shaders are loaded in the order they should be rendered
-    //Ex: sky -> terrain -> models -> post processing
-    size_t skyProg = graphics.AddProgram("shaders/sky.vert.sc.bin", "shaders/sky.frag.sc.bin", "sky");
-    if (skyProg == (size_t)-1) {
+
+    // Shader programs can be created arbitrarily, being supplied an optional
+    // ViewID to match the rendering view (e.g. VIEW_FOWARD, VIEW_SKY, VIEW_DEBUG, etc.)
+    if (graphics.AddProgram("shaders/sky", "sky", Syngine::VIEW_SKY) == -1) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create program");
         graphics.DestroyRenderer();
         graphics.DestroyWindow();
         return 1;
     }
-    size_t terProg = graphics.AddProgram("shaders/terrain.vert.sc.bin", "shaders/terrain.frag.sc.bin", "terrain");
-    if (terProg == (size_t)-1) {
+    
+    if (graphics.AddProgram("shaders/terrain", "terrain") == -1) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create program");
         graphics.DestroyRenderer();
         graphics.DestroyWindow();
@@ -52,7 +51,7 @@ int main(int argc, char* argv[]) {
     }
     syngine.app->gameObjects.clear();
     syngine.DetachGraphics();
-    graphics.RemoveProgram(true);
+    graphics.RemoveAllPrograms();
     graphics.DestroyRenderer();
     graphics.DestroyWindow();
     SDL_Quit();

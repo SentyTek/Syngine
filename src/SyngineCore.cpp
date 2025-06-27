@@ -278,6 +278,9 @@ int Core::SyngineEventLoop() {
                             SDL_Log("new id: %d", mesh.id);
                         }
                     }
+                } else if (event.key.key == SDLK_F6) {
+                    // Reload all shaders
+                    this->app->graphics->ReloadAllPrograms();
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {

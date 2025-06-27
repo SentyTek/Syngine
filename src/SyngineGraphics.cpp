@@ -309,7 +309,7 @@ int Graphics::DestroyRenderer() {
     return 0;
 }
 
-size_t Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* name) {
+int Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* name, Syngine::ViewID viewId) {
     bgfx::ShaderHandle vs = LoadShader(vsPath);
     bgfx::ShaderHandle fs = LoadShader(fsPath);
     bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
@@ -317,36 +317,55 @@ size_t Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* 
         programHandle = bgfx::createProgram(vs, fs, true);
     }
 
-    if (bgfx::isValid(programHandle)) {
-        Program prog;
-        prog.program = programHandle;
-        prog.name = name;
-        prog.viewId = this->handles.programs.size();
-        this->handles.programs.push_back(prog);
-    } else {
+    if (!bgfx::isValid(programHandle)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create program %s", name);
-        if (bgfx::isValid(vs)) {
-            bgfx::destroy(vs);
-        }
-        if (bgfx::isValid(fs)) {
-            bgfx::destroy(fs);
-        }
+        bgfx::destroy(vs);
+        bgfx::destroy(fs);
         return -1;
     }
-    return this->handles.programs.size() - 1;
+
+    Program prog;
+    prog.program = programHandle;
+    prog.name    = name;
+    prog.viewId  = viewId;
+    prog.vsPath  = vsPath;
+    prog.fsPath  = fsPath;
+
+    this->handles.programs.push_back(prog);
+    SDL_Log("Program %s created successfully", name);
+    return this->handles.programs.size() - 1; // return the index of the new program
 }
 
-Program Graphics::GetProgram(size_t index) const {
-    if (index < 0 || index >= this->handles.programs.size()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program index %zu", index);
-        return Program();
+int Graphics::AddProgram(const char* path, const char* name, Syngine::ViewID viewId) {
+    // Load the shader from the given path
+    bgfx::ShaderHandle vs = LoadShader((std::string(path) + ".vert.sc.bin").c_str());
+    bgfx::ShaderHandle fs = LoadShader((std::string(path) + ".frag.sc.bin").c_str());
+    
+    if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load shaders for program %s", name);
+        return -1;
     }
-    if (!bgfx::isValid(this->handles.programs[index].program)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %zu is not valid", index);
-        return Program();
-    } 
-    return this->handles.programs[index];
+
+    bgfx::ProgramHandle programHandle = bgfx::createProgram(vs, fs, true);
+    if (!bgfx::isValid(programHandle)) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create program %s", name);
+        bgfx::destroy(vs);
+        bgfx::destroy(fs);
+        return -1;
+    }
+
+    Program prog;
+    prog.program = programHandle;
+    prog.name = name;
+    prog.viewId  = viewId;
+    prog.vsPath  = std::string(path) + ".vert.sc.bin";
+    prog.fsPath  = std::string(path) + ".frag.sc.bin";
+
+    this->handles.programs.push_back(prog);
+    SDL_Log("Program %s created successfully", name);
+    return this->handles.programs.size() - 1; // return the index of the new program
 }
+
 Program Graphics::GetProgram(const char* name) const {
     for (const auto& program : this->handles.programs) {
         if (program.name == name && bgfx::isValid(program.program)) {
@@ -357,7 +376,7 @@ Program Graphics::GetProgram(const char* name) const {
     return Program();
 }
 
-int Graphics::RemoveProgram(size_t index) {
+bool Graphics::RemoveProgram(int index) {
     if (index < 0 || index >= this->handles.programs.size()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program index %zu", index);
         return -1;
@@ -366,8 +385,8 @@ int Graphics::RemoveProgram(size_t index) {
     this->handles.programs.erase(this->handles.programs.begin() + index);
     return 0;
 }
-int Graphics::RemoveProgram(const char* name) {
-    for (size_t i = 0; i < this->handles.programs.size(); ++i) {
+bool Graphics::RemoveProgram(const char* name) {
+    for (int i = 0; i < this->handles.programs.size(); ++i) {
         if (this->handles.programs[i].name == name) {
             return RemoveProgram(i);
         }
@@ -375,16 +394,47 @@ int Graphics::RemoveProgram(const char* name) {
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %s not found", name);
     return -1;
 }
-int Graphics::RemoveProgram(bool all) {
-    if (all) {
-        for (auto& program : this->handles.programs) {
-            bgfx::destroy(program.program);
+bool Graphics::RemoveAllPrograms() {
+    for (auto& program : this->handles.programs) {
+        if (!bgfx::isValid(program.program)) {
+            continue; // Skip invalid programs
         }
-        this->handles.programs.clear();
-        return 0;
-    } else {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No program to remove");
-        return -1;
+        bgfx::destroy(program.program);
+    }
+    this->handles.programs.clear();
+    return 0;
+}
+
+bool Graphics::ReloadProgram(const char* name) {
+    for (auto& prog : this->handles.programs) {
+        if (prog.name == name) {
+            bgfx::ShaderHandle vs = LoadShader(prog.vsPath.c_str());
+            bgfx::ShaderHandle fs = LoadShader(prog.fsPath.c_str());
+            bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
+
+            if (!bgfx::isValid(newProgram)) {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to reload program %s", name);
+                bgfx::destroy(vs);
+                bgfx::destroy(fs);
+                return false;
+            }
+
+            bgfx::destroy(prog.program); // Destroy old program
+            prog.program = newProgram;   // Update to new program
+            SDL_Log("Program %s reloaded successfully", name);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Graphics::ReloadAllPrograms() {
+    SDL_Log("Reloading all shader programs...");
+    for (const auto& prog : this->handles.programs) { // Are we sure looping through every program several times is okay?
+        if (!ReloadProgram(prog.name.c_str())) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to reload program %s", prog.name.c_str());
+            return false;
+        }
     }
 }
 
