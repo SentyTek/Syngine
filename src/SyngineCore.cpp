@@ -91,32 +91,18 @@ int Core::SyngineEventLoop() {
 
     player->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
     player->AddComponent(Syngine::SYN_COMPONENT_PLAYER);
-    player->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
     player->AddComponent(Syngine::SYN_COMPONENT_CAMERA);
     this->app->graphics->RegisterGizmo("camera_render");
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
 
-    RigidbodyComponent* rbComp =
-        player->GetComponent<RigidbodyComponent>();
-    if (!rbComp) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get RigidbodyComponent for player");
-        delete player; // Clean up the player object
-        return 1;
-    }
-    rbComp->Init(pTransform,
-                 this->app->physicsManager,
-                 PhysicsShapes::CAPSULE,
-                 { 60.0f, 0.3f, 0.1f }, // mass, friction, restitution
-                 JPH::EMotionType::Dynamic,
-                 Layers::MOVING,
-                 { 0.7f, 0.3f });
 
+    
     player->GetComponent<PlayerComponent>()->Init(
         player->GetComponent<CameraComponent>(),
         this->app->graphics->win,
-        rbComp);
+        this->app->physicsManager);
     
     this->app->gameObjects.push_back(player);
     
@@ -137,7 +123,7 @@ int Core::SyngineEventLoop() {
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch =
     bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
-    const float moveSpeed = 2.0f; // Speed of camera movement
+    const float moveSpeed = 3.0f; // Speed of camera movement
     const float sprintMult = 2.0f;
     const float crouchSpeed = 0.5f;
     
@@ -485,6 +471,14 @@ int Core::SyngineEventLoop() {
                 if (physComp && physComp->isEnabled) {
                     physComp->Update(simulate);
                 }
+            }
+        }
+
+        // Post-physics update for player component
+        // (I do not like the two if playermode here but eh)
+        if (playerMode) {
+            if (player->GetComponent<PlayerComponent>()) {
+                player->GetComponent<PlayerComponent>()->PostPhysicsUpdate();
             }
         }
 
