@@ -35,6 +35,14 @@ float RigidbodyComponent::GetMass() const { return mass; }
 float RigidbodyComponent::GetFriction() const { return friction; }
 float RigidbodyComponent::GetRestitution() const { return restitution; }
 
+// Initialize the RigidbodyComponent with the given parameters.
+// @param transform The TransformComponent associated with this rigidbody.
+// @param physicsManager The physics manager to use for creating the rigidbody.
+// @param shape The shape of the rigidbody (e.g., sphere, box, mesh).
+// @param parameters A vector containing the mass, friction, and restitution values. If mass is 0, Jolt will calculate it based on the shape.
+// @param motionType The motion type of the rigidbody (e.g., dynamic, kinematic).
+// @param layer The object layer for the rigidbody.
+// @param shapeParameters Additional parameters for the shape, such as radius for sphere or full extents for box.
 void RigidbodyComponent::Init(TransformComponent*       transform,
                               Syngine::Phys*            physicsManager,
                               PhysicsShapes             shape,
@@ -48,8 +56,8 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
     }
     this->physicsManager = physicsManager;
     this->transform      = transform;
-    this->friction       = parameters[0];
-    this->mass           = parameters[1];
+    this->mass           = parameters[0];
+    this->friction       = parameters[1];
     this->restitution    = parameters[2];
     this->shape          = shape;
     this->shapeParameters = shapeParameters;
@@ -135,7 +143,7 @@ void RigidbodyComponent::Update(bool simulate) {
     if(simulate) {
         // Smoothly lerp the TransformComponent towards the physics body's
         // position and rotation over time
-        static const float lerpAlpha = 1.0f / 3.0f;
+        static const float lerpAlpha = 1.0f / 5.0f;
 
         RVec3 physicsPos = bodyInterface.GetPosition(bodyID);
         Quat  physicsRot = bodyInterface.GetRotation(bodyID);

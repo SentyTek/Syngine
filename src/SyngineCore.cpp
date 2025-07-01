@@ -210,12 +210,17 @@ int Core::SyngineEventLoop() {
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
                     RigidbodyComponent* physComp = cube->GetComponent<RigidbodyComponent>();
-                    std::vector<float> shapeParams = {1.0f, 1.0f, 1.0f}; // full extents
+                    std::vector<float> shapeParams = { 1.0f,
+                                                       1.0f,
+                                                       1.0f }; // full extents
+                    std::vector<float> params      = {
+                        0.0f, 0.7f, 0.02f
+                    }; // mass, friction, restitution
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
                                        PhysicsShapes::BOX,
-                                       {1000.0f, 0.7f, 0.02f}, // mass, friction, restitution
+                                       params,
                                        JPH::EMotionType::Dynamic,
                                        Layers::MOVING,
                                        shapeParams);
@@ -231,12 +236,17 @@ int Core::SyngineEventLoop() {
                     TransformComponent* tComp = sphere->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
                     RigidbodyComponent* physComp = sphere->GetComponent<RigidbodyComponent>();
-                    std::vector<float> shapeParams = { 0.95f }; // half extents for sphere shape (diameter)
+                    std::vector<float> shapeParams = { // half extents for sphere shape (diameter)
+                        0.95f
+                    };
+                    std::vector<float> params = {
+                        0.0f, 0.7f, 0.02f
+                    }; // mass, friction, restitution
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
                                        PhysicsShapes::SPHERE,
-                                       {520.0f, 0.7f, 0.02f}, // mass, friction, restitution
+                                       params,
                                        JPH::EMotionType::Dynamic,
                                        Layers::MOVING,
                                        shapeParams);

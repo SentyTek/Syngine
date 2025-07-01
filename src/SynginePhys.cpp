@@ -281,7 +281,7 @@ BodyID Phys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EM
     return capsule->GetID();
 }
 
-    BodyID Phys::CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeight, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
+BodyID Phys::CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeight, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
     BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
     CylinderShapeSettings cylinderShapeSettings(halfHeight, radius);
     ShapeSettings::ShapeResult cylinderShapeResult = cylinderShapeSettings.Create();

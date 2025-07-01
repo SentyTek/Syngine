@@ -333,7 +333,7 @@ int Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* nam
 
     this->handles.programs.push_back(prog);
     SDL_Log("Program %s created successfully", name);
-    return this->handles.programs.size() - 1; // return the index of the new program
+    return (int)this->handles.programs.size() - 1; // return the index of the new program
 }
 
 int Graphics::AddProgram(const char* path, const char* name, Syngine::ViewID viewId) {
@@ -363,7 +363,7 @@ int Graphics::AddProgram(const char* path, const char* name, Syngine::ViewID vie
 
     this->handles.programs.push_back(prog);
     SDL_Log("Program %s created successfully", name);
-    return this->handles.programs.size() - 1; // return the index of the new program
+    return (int)this->handles.programs.size() - 1; // return the index of the new program
 }
 
 Program Graphics::GetProgram(const char* name) const {
@@ -379,11 +379,11 @@ Program Graphics::GetProgram(const char* name) const {
 bool Graphics::RemoveProgram(int index) {
     if (index < 0 || index >= this->handles.programs.size()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Invalid program index %zu", index);
-        return -1;
+        return false;
     }
     bgfx::destroy(this->handles.programs[index].program);
     this->handles.programs.erase(this->handles.programs.begin() + index);
-    return 0;
+    return true;
 }
 bool Graphics::RemoveProgram(const char* name) {
     for (int i = 0; i < this->handles.programs.size(); ++i) {
@@ -392,7 +392,7 @@ bool Graphics::RemoveProgram(const char* name) {
         }
     }
     SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Program %s not found", name);
-    return -1;
+    return false;
 }
 bool Graphics::RemoveAllPrograms() {
     for (auto& program : this->handles.programs) {
@@ -402,7 +402,7 @@ bool Graphics::RemoveAllPrograms() {
         bgfx::destroy(program.program);
     }
     this->handles.programs.clear();
-    return 0;
+    return true;
 }
 
 bool Graphics::ReloadProgram(const char* name) {
@@ -436,6 +436,7 @@ bool Graphics::ReloadAllPrograms() {
             return false;
         }
     }
+    return true;
 }
 
 bgfx::UniformHandle Graphics::GetUniform(const char* name) const {
