@@ -10,8 +10,26 @@
 #include "SDL3/SDL_events.h"
 
 #include "Jolt/Physics/Character/Character.h"
+#include "bx/math.h"
 
 namespace Syngine {
+
+enum class PlayerState {
+    IDLE      = 0,
+    WALKING   = 1,
+    SPRINTING = 2,
+    CROUCHING = 3,
+    JUMPING   = 4,
+    FALLING   = 5,
+    SLIDING   = 6,
+    CLIMBING  = 7,
+    SWIMMING  = 8,
+    DEAD      = 9,
+    SLEEPING  = 10,
+    SITTING   = 11,
+    INVALID   = 12,
+};
+
 class PlayerComponent : public Syngine::Component {
   public:
     static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER;
@@ -19,35 +37,62 @@ class PlayerComponent : public Syngine::Component {
     PlayerComponent(GameObject* owner);
     ~PlayerComponent();
 
+    // Gets the component type
     Syngine::Components getComponentType() override;
-    void                Init(Syngine::CameraComponent* camera,
-                             SDL_Window*               win,
-                             Syngine::Phys*            physicsManager);
-    void                HandleInput(const SDL_Event& event,
-                                    bool             simulate,
-                                    float            mouseSens,
-                                    float            maxPitchAndle);
-    void                Update(const bool* keystate,
-                               float       moveSpeed,
-                               float       sprintMult,
-                               float       crouchSpeed);
-    void                PostPhysicsUpdate();
-    
 
-    float currentYaw = 0.0f;
-    float currentPitch = 0.0f;
-    float eyeHeight = 1.8f; // Default eye height for player camera
+    // Initializes the player component with camera, window, and physics manager.
+    // @param camera The camera component for the player.
+    // @param win The SDL window for rendering.
+    // @param physicsManager The physics manager for the player.
+    void Init(Syngine::CameraComponent* camera,
+              SDL_Window*               win,
+              Syngine::Phys*            physicsManager);
+
+    // Handles input events for the player component.
+    // @param event The SDL Events.
+    void HandleInput(const SDL_Event& event);
+
+    // Updates the player. Mostly handles movement, physics, and updating the state.
+    // @param keystate The current state of the keyboard.
+    // @param simulate Whether to simulate physics or not.
+    void Update(const bool* keystate, bool simulate);
+    // Updates position and camera after physics simulation.
+    void PostPhysicsUpdate();
+    // Gets the current player state.
+    // @return The current player state.
+    PlayerState GetPlayerState() const;
+
+   
+    float maxPitchAngle = 89.0f; // Max vertical angle for the camera pitch (in degrees).
+    float currentPitch  = 0.0f; // Current pitch of the camera (in degrees).
+    float currentYaw    = 0.0f; // Current yaw of the camera (in degrees).
+    
+    float sprintMult    = 2.0f; // Multiplier for sprinting speed.
+    float crouchSpeed   = 0.5f; // Speed when crouching.
+    float moveSpeed     = 3.0f; // Default movement speed of the player.
+    float mouseSens     = 0.002f; // Mouse sensitivity for camera movement.
 
   private:
-    GameObject*         m_owner     = nullptr;
-    TransformComponent* m_transform = nullptr;
+    GameObject*               m_owner     = nullptr;
+    TransformComponent*       m_transform = nullptr;
     Syngine::CameraComponent* m_camera    = nullptr;
     SDL_Window*               m_window    = nullptr;
-    bool  isGrounded = false;
-    float m_targetEyeHeight = 1.8f;
+
+    float m_targetEyeHeight = 1.3f;  // offset from transform pos (center of player) (default is 1.3m) (this is init value, "real" value in in impl/Update)
     float m_targetFov       = 70.0f;
     float m_targetMoveSpeed = 2.0f;
     float m_moveSpeed       = 2.0f;
+    float m_eyeHeight       = 1.3f;
+
+    PlayerState m_playerState = PlayerState::IDLE;
+    bool        m_simulate    = false;
+
+    bx::Vec3 m_moveDirection = { 0.0f,
+                                 0.0f,
+                                 0.0f }; // Direction of movement in world space
+    JPH::Vec3 m_newVelocity   = { 0.0f,
+                                 0.0f,
+                                 0.0f }; // New velocity to be applied to the character
 
     Syngine::Phys* m_physicsManager = nullptr;
     JPH::Ref<JPH::Character> m_character;

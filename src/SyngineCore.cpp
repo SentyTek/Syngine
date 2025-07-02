@@ -96,16 +96,27 @@ int Core::SyngineEventLoop() {
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
-
-
     
     player->GetComponent<PlayerComponent>()->Init(
         player->GetComponent<CameraComponent>(),
         this->app->graphics->win,
         this->app->physicsManager);
-    
+
     this->app->gameObjects.push_back(player);
-    
+
+    // fun slide box
+    /*GameObject* box = new GameObject("box", "default");
+    box->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+    box->AddComponent(Syngine::SYN_COMPONENT_MESH);
+    box->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
+    MeshComponent* meshComp = box->GetComponent<MeshComponent>();
+    meshComp->LoadMesh(resolveOSPath("meshes/cube.glb"), false);
+    TransformComponent* tComp = box->GetComponent<TransformComponent>();
+    tComp->SetPosition(0.0f, 5.0f, 0.0f);
+    tComp->SetScale(30.0f, 1.0f, 30.0f);
+    box->GetComponent<RigidbodyComponent>()->Init(tComp, this->app->physicsManager, PhysicsShapes::BOX, { 0.0f, 0.5f, 0.5f }, JPH::EMotionType::Static, Syngine::Layers::NON_MOVING, {30.0f, 1.0f, 30.0f});
+    this->app->gameObjects.push_back(box);*/
+
     bool running = true;
     bool playerMode = false; // False is editor mode, True is player mode
     bool simulate = false; // Toggles the physics simulation (always true in player mode)
@@ -308,7 +319,7 @@ int Core::SyngineEventLoop() {
                     PlayerComponent* playerComp =
                         player->GetComponent<PlayerComponent>();
                     if (playerComp)
-                        playerComp->HandleInput(event, playerMode, sensitivity, maxPitch);
+                        playerComp->HandleInput(event);
                 }
             }
         }
@@ -470,8 +481,9 @@ int Core::SyngineEventLoop() {
 
         if (playerMode) {
             if (player->GetComponent<PlayerComponent>()) {
-                player->GetComponent<PlayerComponent>()->Update(
-                    keystate, moveSpeed, sprintMult, crouchSpeed);
+                player->GetComponent<PlayerComponent>()->Update(keystate,
+                                                                playerMode);
+                SDL_Log("player state: %d", player->GetComponent<PlayerComponent>()->GetPlayerState());
             }
         }
 
