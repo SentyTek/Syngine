@@ -103,7 +103,13 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
                 SDL_Log("RigidbodyComponent::Init: No mesh component or mesh loaded for mesh shape.");
                 return;
             }
-            bodyID = physicsManager->CreateMeshBody(posVec, rotationQuat, meshComp->meshData, motionType, layer);
+
+            JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
+            if (!shapeParameters.empty()) {
+                scale = JPH::Vec3(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
+            }
+
+            bodyID = physicsManager->CreateMeshBody(posVec, rotationQuat, meshComp->meshData, motionType, layer, scale);
             break;
         }
         case PhysicsShapes::CAPSULE: {
