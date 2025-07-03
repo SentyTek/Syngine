@@ -483,7 +483,6 @@ int Core::SyngineEventLoop() {
             if (player->GetComponent<PlayerComponent>()) {
                 player->GetComponent<PlayerComponent>()->Update(keystate,
                                                                 playerMode);
-                SDL_Log("player state: %d", player->GetComponent<PlayerComponent>()->GetPlayerState());
             }
         }
 

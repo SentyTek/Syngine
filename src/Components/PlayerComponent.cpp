@@ -3,6 +3,7 @@
 #include "Components.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "SDL3/SDL_events.h"
+#include "SDL3/SDL_keycode.h"
 #include "SyngineGraphics.h"
 #include "TransformComponent.h"
 #include "SyngineGameobject.h"
@@ -84,24 +85,26 @@ void PlayerComponent::HandleInput(const SDL_Event& event) {
         return;
     }
 
-    if (event.type == SDL_EVENT_MOUSE_MOTION && m_simulate) {
-        float dx = event.motion.xrel * mouseSens;
-        float dy = event.motion.yrel * mouseSens;
+    if (m_simulate) {
+        if (event.type == SDL_EVENT_MOUSE_MOTION) {
+            float dx = event.motion.xrel * mouseSens;
+            float dy = event.motion.yrel * mouseSens;
 
-        currentYaw += dx;
-        currentPitch -= dy;
+            currentYaw += dx;
+            currentPitch -= dy;
 
-        // Clamp pitch to avoid gimbal lock
-        currentPitch = bx::clamp(currentPitch, -maxPitchAngle, maxPitchAngle);
+            // Clamp pitch to avoid gimbal lock
+            currentPitch = bx::clamp(currentPitch, -bx::toRad(maxPitchAngle), bx::toRad(maxPitchAngle));
 
-        // Lock mouse position to the center of the window
-        int w, h;
-        SDL_GetWindowSize(m_window, &w, &h);
-        float x = w / 2.0f, y = h / 2.0f;
-        SDL_WarpMouseInWindow(m_window, x, y);
-    } else if (event.type == SDL_EVENT_KEY_UP) {
-        if (event.key.key == SDL_SCANCODE_LCTRL && m_playerState == PlayerState::SLIDING) {
-            m_playerState = PlayerState::IDLE; // Stop sliding when releasing crouch
+            // Lock mouse position to the center of the window
+            int w, h;
+            SDL_GetWindowSize(m_window, &w, &h);
+            float x = w / 2.0f, y = h / 2.0f;
+            SDL_WarpMouseInWindow(m_window, x, y);
+        } else if (event.type == SDL_EVENT_KEY_UP) {
+            if (event.key.key == SDLK_LCTRL && m_playerState == PlayerState::SLIDING) {
+                m_playerState = PlayerState::IDLE; // Stop sliding when releasing crouch
+            }
         }
     }
 }
@@ -111,114 +114,124 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent is missing a required component");
         return;
     }
+    m_prevPlayerState = m_playerState;
 
     m_simulate = simulate;
-    m_playerState = PlayerState::IDLE;
+    if (m_playerState != PlayerState::SLIDING) {
+        m_playerState = PlayerState::IDLE;
+    }
 
     if (m_simulate) {
         bool isGrounded = m_character->GetGroundState() ==
                           JPH::Character::EGroundState::OnGround;
 
-        if (!isGrounded) {
+        if (!isGrounded && m_playerState != PlayerState::SLIDING) {
             m_playerState = PlayerState::FALLING;
         }
-        
 
         // Calculate the target move speed, eye height, and FOV based on input
-        m_targetMoveSpeed = moveSpeed;
+        if (m_playerState != PlayerState::SLIDING) {
+            m_targetMoveSpeed = moveSpeed;
+        }
         m_targetEyeHeight = 1.3f;
-        m_targetFov       = 70.0f;
-        if (keystate[SDL_SCANCODE_LSHIFT] && isGrounded) {
+        m_targetFov       = 70.0f;   
+        if (enableSprinting && keystate[SDL_SCANCODE_LSHIFT] && m_playerState != PlayerState::SLIDING) {
             m_targetMoveSpeed *= sprintMult;
             m_targetFov = 90.0f;
             m_playerState = PlayerState::SPRINTING;
         }
-        if (keystate[SDL_SCANCODE_LCTRL] && isGrounded) {
-            if (m_playerState != PlayerState::SLIDING) {
-                m_targetMoveSpeed *= crouchSpeed;
-                m_targetEyeHeight = 0.7f;
-                m_targetFov       = 60.0f;
-            }
-        }
-        if (keystate[SDL_SCANCODE_LSHIFT] && keystate[SDL_SCANCODE_LCTRL] && isGrounded) {
-            // If both sprint and crouch are pressed, we slide
-            m_playerState = PlayerState::SLIDING;
-            m_targetMoveSpeed *= sprintMult * 1.5f; // Increase speed while sliding
-            m_targetEyeHeight = 0.7f; // Lower eye height while sliding
-            m_targetFov       = 100.0f; // Wider FOV while sliding
+        if (enableCrouching && keystate[SDL_SCANCODE_LCTRL] && m_playerState != PlayerState::SLIDING) {
+            m_targetMoveSpeed *= crouchSpeed;
+            m_targetEyeHeight = 0.7f;
+            m_targetFov       = 60.0f;
+            m_playerState = PlayerState::CROUCHING;
         }
 
+        // If both sprint and crouch are pressed, we slide
+        if (enableSliding && keystate[SDL_SCANCODE_LSHIFT] && keystate[SDL_SCANCODE_LCTRL] && isGrounded && m_prevPlayerState == PlayerState::SPRINTING) {
+            m_playerState = PlayerState::SLIDING;
+            m_targetMoveSpeed *= sprintMult * 1.45f; // Increase speed while sliding
+            m_targetEyeHeight = 0.7f;
+            m_targetFov       = 100.0f;
+        }
+        
         // Low friction when sliding
         if (m_playerState == PlayerState::SLIDING) {
             BodyInterface& bodyInterface = m_physicsManager->GetBodyInterface();
-            bodyInterface.SetFriction(m_character->GetBodyID(), 0.05f);
+            bodyInterface.SetFriction(m_character->GetBodyID(), 0.15f);
             m_targetFov = 100.0f;
-            m_targetMoveSpeed *= (sprintMult * 1.5f);
+            m_targetEyeHeight = 0.7f; // Lower eye height when sliding
+            m_targetMoveSpeed -= 0.015f;
+            if (m_targetMoveSpeed < 0.01f) {
+                m_targetMoveSpeed = 0.0f;
+            }
         } else {
             BodyInterface& bodyInterface = m_physicsManager->GetBodyInterface();
             bodyInterface.SetFriction(m_character->GetBodyID(), 0.45f);
             // Reset move direction
             m_moveDirection = { 0.0f, 0.0f, 0.0f };
         }
-
-
+        
         // For ground movement, typically we want to ignore the Y component
         // Y gets applied separately for jumping or falling
         bx::Vec3 forward =
-            bx::normalize(bx::Vec3(sinf(currentYaw), 0.0f, cosf(currentYaw)));
-        bx::Vec3 right = bx::normalize(bx::Vec3(
-            sinf(currentYaw - bx::kPiHalf), 0.0f, cosf(currentYaw - bx::kPiHalf)));
+        bx::normalize(bx::Vec3(sinf(currentYaw), 0.0f, cosf(currentYaw)));
+        bx::Vec3 right =
+            bx::normalize(bx::Vec3(sinf(currentYaw - bx::kPiHalf),
+                                   0.0f,
+                                   cosf(currentYaw - bx::kPiHalf)));
 
-        if (m_playerState != PlayerState::SLIDING) {
-            if (keystate[SDL_SCANCODE_W]) {
-                m_moveDirection = bx::add(m_moveDirection, forward);
+            if (enableMovement && m_playerState != PlayerState::SLIDING) {
+                if (keystate[SDL_SCANCODE_W]) {
+                    m_moveDirection = bx::add(m_moveDirection, forward);
+                }
+                if (keystate[SDL_SCANCODE_S]) {
+                    m_moveDirection = bx::sub(m_moveDirection, forward);
+                }
+                if (keystate[SDL_SCANCODE_A]) {
+                    m_moveDirection = bx::add(m_moveDirection, right);
+                }
+                if (keystate[SDL_SCANCODE_D]) {
+                    m_moveDirection = bx::sub(m_moveDirection, right);
+                }
             }
-            if (keystate[SDL_SCANCODE_S]) {
-                m_moveDirection = bx::sub(m_moveDirection, forward);
-            }
-            if (keystate[SDL_SCANCODE_A]) {
-                m_moveDirection = bx::add(m_moveDirection, right);
-            }
-            if (keystate[SDL_SCANCODE_D]) {
-                m_moveDirection = bx::sub(m_moveDirection, right);
-            }
-        }
-
-        if (m_character) {
-            JPH::Vec3 desiredHorizontalVel(0, 0, 0);
-            if (bx::length(m_moveDirection) > 0.001f) {
-                m_moveDirection = bx::normalize(m_moveDirection);
-                desiredHorizontalVel.SetX(m_moveDirection.x * m_moveSpeed);
-                desiredHorizontalVel.SetZ(m_moveDirection.z * m_moveSpeed);
-                m_playerState = PlayerState::WALKING;
-            }
-
-            // Get current velocity and preserve the vertical component (for gravity)
-            JPH::Vec3 currentVel = m_character->GetLinearVelocity();
-            m_newVelocity = JPH::Vec3(desiredHorizontalVel.GetX(),
-                                    currentVel.GetY(),
-                                    desiredHorizontalVel.GetZ());
-
             
-            // JUMP! *van halen guitar solo*
-            if (keystate[SDL_SCANCODE_SPACE] && isGrounded) {
-                const float jumpForce = 5.0f;
-                m_newVelocity.SetY(jumpForce);
-                m_playerState = PlayerState::JUMPING;
+            if (m_character) {
+                JPH::Vec3 desiredHorizontalVel(0, 0, 0);
+                if (bx::length(m_moveDirection) > 0.001f) {
+                    m_moveDirection = bx::normalize(m_moveDirection);
+                    desiredHorizontalVel.SetX(m_moveDirection.x * m_moveSpeed);
+                    desiredHorizontalVel.SetZ(m_moveDirection.z * m_moveSpeed);
+                    if (m_playerState != PlayerState::SLIDING && m_playerState != PlayerState::CROUCHING && m_playerState != PlayerState::SPRINTING) {
+                        // If not sliding or crouching, we are walking
+                        m_playerState = PlayerState::WALKING;
+                    }
+                }
+                
+                // Get current velocity and preserve the vertical component (for gravity)
+                JPH::Vec3 currentVel = m_character->GetLinearVelocity();
+                m_newVelocity = JPH::Vec3(desiredHorizontalVel.GetX(),
+                currentVel.GetY(),
+                desiredHorizontalVel.GetZ());
+                
+                // JUMP! *van halen guitar solo*
+                if (enableJumping && keystate[SDL_SCANCODE_SPACE] && isGrounded && m_playerState != PlayerState::SLIDING) {
+                    const float jumpForce = 5.0f;
+                    m_newVelocity.SetY(jumpForce);
+                }
+                
+            } else {
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent has no character object!");
             }
-
-        } else {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent has no character object!");
         }
-    }
-
-    // Update the character
-    m_character->SetRotation(
-        JPH::Quat::sRotation(JPH::Vec3::sAxisY(), currentYaw));
-
-    m_character->SetLinearVelocity(m_newVelocity);
-
-    // Update some lerps
+        
+        // Update the character
+        m_character->SetRotation(
+            JPH::Quat::sRotation(JPH::Vec3::sAxisY(), currentYaw));
+            
+        m_character->SetLinearVelocity(m_newVelocity);
+            
+            // Update some lerps
     m_camera->SetFOV(bx::lerp(m_camera->GetFOV(), m_targetFov, 0.1f));
     m_eyeHeight = bx::lerp(m_eyeHeight, m_targetEyeHeight, 0.1f);
     m_moveSpeed = bx::lerp(m_moveSpeed, m_targetMoveSpeed, 0.1f);

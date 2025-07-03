@@ -19,15 +19,14 @@ enum class PlayerState {
     WALKING   = 1,
     SPRINTING = 2,
     CROUCHING = 3,
-    JUMPING   = 4,
-    FALLING   = 5,
-    SLIDING   = 6,
-    CLIMBING  = 7,
-    SWIMMING  = 8,
-    DEAD      = 9,
-    SLEEPING  = 10,
-    SITTING   = 11,
-    INVALID   = 12,
+    FALLING   = 4,
+    SLIDING   = 5,
+    CLIMBING  = 6,
+    SWIMMING  = 7,
+    DEAD      = 8,
+    SLEEPING  = 9,
+    SITTING   = 10,
+    INVALID   = 11,
 };
 
 class PlayerComponent : public Syngine::Component {
@@ -72,6 +71,12 @@ class PlayerComponent : public Syngine::Component {
     float moveSpeed     = 3.0f; // Default movement speed of the player.
     float mouseSens     = 0.002f; // Mouse sensitivity for camera movement.
 
+    bool enableMovement  = true; // Whether player movement is enabled (on by default).
+    bool enableSliding   = true; // Whether player sliding is enabled (on by default).
+    bool enableJumping   = true; // Whether player jumping is enabled (on by default).
+    bool enableSprinting = true; // Whether player sprinting is enabled (on by default).
+    bool enableCrouching = true; // Whether player crouching is enabled (on by default).
+
   private:
     GameObject*               m_owner     = nullptr;
     TransformComponent*       m_transform = nullptr;
@@ -85,6 +90,7 @@ class PlayerComponent : public Syngine::Component {
     float m_eyeHeight       = 1.3f;
 
     PlayerState m_playerState = PlayerState::IDLE;
+    PlayerState m_prevPlayerState = PlayerState::IDLE;
     bool        m_simulate    = false;
 
     bx::Vec3 m_moveDirection = { 0.0f,
