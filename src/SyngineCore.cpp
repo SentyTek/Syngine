@@ -112,9 +112,9 @@ int Core::SyngineEventLoop() {
     MeshComponent* meshComp = box->GetComponent<MeshComponent>();
     meshComp->LoadMesh(resolveOSPath("meshes/cube.glb"), false);
     TransformComponent* tComp = box->GetComponent<TransformComponent>();
-    tComp->SetPosition(0.0f, 5.0f, 0.0f);
-    tComp->SetScale(30.0f, 1.0f, 30.0f);
-    box->GetComponent<RigidbodyComponent>()->Init(tComp, this->app->physicsManager, PhysicsShapes::BOX, { 0.0f, 0.5f, 0.5f }, JPH::EMotionType::Static, Syngine::Layers::NON_MOVING, {30.0f, 1.0f, 30.0f});
+    tComp->SetPosition(15.0f, 0.0f, 0.0f);
+    tComp->SetScale(1.0f, 15.0f, 15.0f);
+    box->GetComponent<RigidbodyComponent>()->Init(tComp, this->app->physicsManager, PhysicsShapes::BOX, { 0.0f, 0.5f, 0.5f }, JPH::EMotionType::Static, Syngine::Layers::NON_MOVING, {1.0f, 15.0f, 15.0f});
     this->app->gameObjects.push_back(box);*/
 
     bool running = true;
@@ -219,11 +219,11 @@ int Core::SyngineEventLoop() {
                     MeshComponent* meshComp = cube->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
                     RigidbodyComponent* physComp = cube->GetComponent<RigidbodyComponent>();
-                    std::vector<float> shapeParams = { 1.0f,
-                                                       1.0f,
-                                                       1.0f }; // full extents
+                    std::vector<float> shapeParams = { 2.0f,
+                                                       2.0f,
+                                                       2.0f }; // full extents
                     std::vector<float> params      = {
                         0.0f, 0.7f, 0.02f
                     }; // mass, friction, restitution
@@ -245,10 +245,10 @@ int Core::SyngineEventLoop() {
                     MeshComponent* meshComp = sphere->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = sphere->GetComponent<TransformComponent>();
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
                     RigidbodyComponent* physComp = sphere->GetComponent<RigidbodyComponent>();
                     std::vector<float> shapeParams = { // half extents for sphere shape (diameter)
-                        0.95f
+                        2.9f
                     };
                     std::vector<float> params = {
                         0.0f, 0.7f, 0.02f
@@ -290,7 +290,7 @@ int Core::SyngineEventLoop() {
                     this->app->graphics->ReloadAllPrograms();
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                if (event.button.button == SDL_BUTTON_RIGHT) {
+                if (event.button.button == SDL_BUTTON_RIGHT && !playerMode) {
                     rmb = true;
                     mouseX = event.button.x;
                     mouseY = event.button.y;

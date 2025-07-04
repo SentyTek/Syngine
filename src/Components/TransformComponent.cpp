@@ -7,7 +7,7 @@ namespace Syngine {
 TransformComponent::TransformComponent(GameObject* owner) {
     position[0] = position[1] = position[2] = 0.0f;
     rotation[0] = rotation[1] = rotation[2] = 0.0f; rotation[3] = 1.0f; // Quaternion identity
-    scale[0] = scale[1] = scale[2] = 1.0f;
+    scale[0] = scale[1] = scale[2] = 0.5f;
     this->m_owner = owner;
 }
 
@@ -74,10 +74,12 @@ void TransformComponent::SetRotation(float x, float y, float z, float w) {
     rotation[3] = w;
 }
 
+// Sets the scale of the transform component.
+// Note that the params are FULL EXTENT, not half extents.
 void TransformComponent::SetScale(float x, float y, float z) {
-    scale[0] = x;
-    scale[1] = y;
-    scale[2] = z;
+    scale[0] = x/2;
+    scale[1] = y/2;
+    scale[2] = z/2;
 }
 
 void TransformComponent::GetModelMatrix(float* result) {

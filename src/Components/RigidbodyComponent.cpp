@@ -74,7 +74,7 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
     switch (shape) {
         case PhysicsShapes::SPHERE: {
             if (shapeParameters.empty()) { SDL_Log("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
-            float radius = shapeParameters[0];
+            float radius = shapeParameters[0]/2;
             bodyID = physicsManager->CreateSphere(posVec, radius, motionType, layer, mass);
             break;
         }
@@ -84,7 +84,7 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
                         "box shape.");
                 return;
             }
-            JPH::Vec3 shapeParametersVec(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
+            JPH::Vec3 shapeParametersVec(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
             bodyID         = physicsManager->CreateBox(posVec,
                                                rotationQuat,
                                                shapeParametersVec,
@@ -104,9 +104,9 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
                 return;
             }
 
-            JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
+            JPH::Vec3 scale(0.5f, 0.5f, 0.5f);
             if (!shapeParameters.empty()) {
-                scale = JPH::Vec3(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
+                scale = JPH::Vec3(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
             }
 
             bodyID = physicsManager->CreateMeshBody(posVec, rotationQuat, meshComp->meshData, motionType, layer, scale);
