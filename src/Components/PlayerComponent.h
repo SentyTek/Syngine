@@ -8,9 +8,10 @@
 #include "Components/TransformComponent.h"
 
 #include "SDL3/SDL_events.h"
-
-#include "Jolt/Physics/Character/Character.h"
 #include "bx/math.h"
+
+#include "Jolt/Jolt.h"
+#include "Jolt/Physics/Character/Character.h"
 
 namespace Syngine {
 
@@ -61,10 +62,10 @@ class PlayerComponent : public Syngine::Component {
     // @return The current player state.
     PlayerState GetPlayerState() const;
 
+    float* GetRotation() const;
+    void SetRotation(float yaw, float pitch);
    
     float maxPitchAngle = 89.0f; // Max vertical angle for the camera pitch (in degrees).
-    float currentPitch  = 0.0f; // Current pitch of the camera (in degrees).
-    float currentYaw    = 0.0f; // Current yaw of the camera (in degrees).
     
     float sprintMult    = 2.0f; // Multiplier for sprinting speed.
     float crouchSpeed   = 0.5f; // Speed when crouching.
@@ -88,6 +89,9 @@ class PlayerComponent : public Syngine::Component {
     float m_targetMoveSpeed = 2.0f;
     float m_moveSpeed       = 2.0f;
     float m_eyeHeight       = 1.3f;
+
+    float m_currentPitch  = 0.0f;
+    float m_currentYaw    = 0.0f;
 
     PlayerState m_playerState = PlayerState::IDLE;
     PlayerState m_prevPlayerState = PlayerState::IDLE;

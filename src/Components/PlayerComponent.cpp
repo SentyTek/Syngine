@@ -90,11 +90,11 @@ void PlayerComponent::HandleInput(const SDL_Event& event) {
             float dx = event.motion.xrel * mouseSens;
             float dy = event.motion.yrel * mouseSens;
 
-            currentYaw += dx;
-            currentPitch -= dy;
+            m_currentYaw += dx;
+            m_currentPitch -= dy;
 
             // Clamp pitch to avoid gimbal lock
-            currentPitch = bx::clamp(currentPitch, -bx::toRad(maxPitchAngle), bx::toRad(maxPitchAngle));
+            m_currentPitch = bx::clamp(m_currentPitch, -bx::toRad(maxPitchAngle), bx::toRad(maxPitchAngle));
 
             // Lock mouse position to the center of the window
             int w, h;
@@ -142,7 +142,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
         }
         if (enableCrouching && keystate[SDL_SCANCODE_LCTRL] && m_playerState != PlayerState::SLIDING) {
             m_targetMoveSpeed *= crouchSpeed;
-            m_targetEyeHeight = 0.7f;
+            //m_targetEyeHeight = 0.7f;
             m_targetFov       = 60.0f;
             m_playerState = PlayerState::CROUCHING;
         }
@@ -151,17 +151,17 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
         if (enableSliding && keystate[SDL_SCANCODE_LSHIFT] && keystate[SDL_SCANCODE_LCTRL] && isGrounded && m_prevPlayerState == PlayerState::SPRINTING) {
             m_playerState = PlayerState::SLIDING;
             m_targetMoveSpeed *= sprintMult * 1.45f; // Increase speed while sliding
-            m_targetEyeHeight = 0.7f;
+            //m_targetEyeHeight = 0.7f;
             m_targetFov       = 100.0f;
         }
         
         // Low friction when sliding
         if (m_playerState == PlayerState::SLIDING) {
             BodyInterface& bodyInterface = m_physicsManager->GetBodyInterface();
-            bodyInterface.SetFriction(m_character->GetBodyID(), 0.15f);
+            bodyInterface.SetFriction(m_character->GetBodyID(), 0.25f);
             m_targetFov = 100.0f;
-            m_targetEyeHeight = 0.7f; // Lower eye height when sliding
-            m_targetMoveSpeed -= 0.015f;
+            //m_targetEyeHeight = 0.7f; // Lower eye height when sliding
+            m_targetMoveSpeed -= 0.025f;
             if (m_targetMoveSpeed < 0.01f) {
                 m_targetMoveSpeed = 0.0f;
             }
@@ -171,15 +171,36 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
             // Reset move direction
             m_moveDirection = { 0.0f, 0.0f, 0.0f };
         }
+
+        // Shrink collider when crouching or sliding
+        if (m_playerState == PlayerState::CROUCHING || m_playerState == PlayerState::SLIDING) {
+            if (m_prevPlayerState != PlayerState::CROUCHING && m_prevPlayerState != PlayerState::SLIDING) {
+                m_character->SetShape(new JPH::CapsuleShape(0.5f, 0.5f), 0.1f); // Half height and radius
+            }
+            m_targetEyeHeight = 0.7f; // Lower eye height when crouching or sliding
+        } else { // Reset sizes only when state changes
+            if (m_prevPlayerState == PlayerState::CROUCHING || m_prevPlayerState == PlayerState::SLIDING) {
+                // Adjust position to avoid sinking into the ground
+                m_transform->position[1] += 0.5f;
+                m_character->SetPosition(JPH::RVec3(m_transform->position[0],
+                                                    m_transform->position[1],
+                                                    m_transform->position[2]));
+
+                // Reset to normal size
+                m_character->SetShape(new JPH::CapsuleShape(1.0f, 0.5f),
+                                      0.1f); // Reset to normal size
+            }
+            m_targetEyeHeight = 1.3f; // Normal eye height
+        }
         
         // For ground movement, typically we want to ignore the Y component
         // Y gets applied separately for jumping or falling
-        bx::Vec3 forward =
-        bx::normalize(bx::Vec3(sinf(currentYaw), 0.0f, cosf(currentYaw)));
+        bx::Vec3 forward = bx::normalize(
+            bx::Vec3(sinf(m_currentYaw), 0.0f, cosf(m_currentYaw)));
         bx::Vec3 right =
-            bx::normalize(bx::Vec3(sinf(currentYaw - bx::kPiHalf),
+            bx::normalize(bx::Vec3(sinf(m_currentYaw - bx::kPiHalf),
                                    0.0f,
-                                   cosf(currentYaw - bx::kPiHalf)));
+                                   cosf(m_currentYaw - bx::kPiHalf)));
 
             if (enableMovement && m_playerState != PlayerState::SLIDING) {
                 if (keystate[SDL_SCANCODE_W]) {
@@ -227,8 +248,8 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
         
         // Update the character
         m_character->SetRotation(
-            JPH::Quat::sRotation(JPH::Vec3::sAxisY(), currentYaw));
-            
+            JPH::Quat::sRotation(JPH::Vec3::sAxisY(), m_currentYaw));
+
         m_character->SetLinearVelocity(m_newVelocity);
             
             // Update some lerps
@@ -254,7 +275,7 @@ void PlayerComponent::PostPhysicsUpdate() {
     bx::Vec3   currentPos = { m_transform->position[0],
                               m_transform->position[1],
                               m_transform->position[2] };
-    bx::Vec3   newPos     = bx::lerp(currentPos, targetPos, 0.1f);
+    bx::Vec3   newPos     = bx::lerp(currentPos, targetPos, 0.2f);
     m_transform->position[0] = newPos.x;
     m_transform->position[1] = newPos.y;
     m_transform->position[2] = newPos.z;
@@ -263,7 +284,7 @@ void PlayerComponent::PostPhysicsUpdate() {
     m_camera->SetPosition(m_transform->position[0],
                           m_transform->position[1] + m_eyeHeight,
                           m_transform->position[2]);
-    m_camera->SetAngles(currentYaw, currentPitch);
+    m_camera->SetAngles(m_currentYaw, m_currentPitch);
 }
 
 PlayerState PlayerComponent::GetPlayerState() const {
@@ -273,6 +294,21 @@ PlayerState PlayerComponent::GetPlayerState() const {
     }
 
     return m_playerState;
+}
+
+float* PlayerComponent::GetRotation() const {
+    static float rotation[2];
+    rotation[0] = m_currentYaw;
+    rotation[1] = m_currentPitch;
+    return rotation;
+}
+
+void PlayerComponent::SetRotation(float yaw, float pitch) {
+    if (pitch < -maxPitchAngle || pitch > maxPitchAngle) {
+        return;
+    }
+    m_currentYaw = yaw;
+    m_currentPitch = pitch;
 }
 
 } // namespace Syngine
