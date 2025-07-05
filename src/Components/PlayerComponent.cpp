@@ -57,7 +57,7 @@ void PlayerComponent::Init(Syngine::CameraComponent*    camera,
     settings->mMaxSlopeAngle                  = bx::kPi / 4.0f; // 45 degrees
     settings->mLayer = Syngine::Layers::MOVING; // Set to the moving layer
     settings->mShape =
-        new JPH::CapsuleShape(1.0f, 0.5f); // Half height and radius
+        new JPH::CapsuleShape(0.45f, 0.5f); // Half (quarter?) height and radius
     settings->mFriction = 0.45f;
     settings->mMass     = 80.0f;
 
@@ -133,7 +133,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
         if (m_playerState != PlayerState::SLIDING) {
             m_targetMoveSpeed = moveSpeed;
         }
-        m_targetEyeHeight = 1.3f;
+        m_targetEyeHeight = 0.5f;
         m_targetFov       = 70.0f;   
         if (enableSprinting && keystate[SDL_SCANCODE_LSHIFT] && m_playerState != PlayerState::SLIDING) {
             m_targetMoveSpeed *= sprintMult;
@@ -175,9 +175,9 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
         // Shrink collider when crouching or sliding
         if (m_playerState == PlayerState::CROUCHING || m_playerState == PlayerState::SLIDING) {
             if (m_prevPlayerState != PlayerState::CROUCHING && m_prevPlayerState != PlayerState::SLIDING) {
-                m_character->SetShape(new JPH::CapsuleShape(0.5f, 0.5f), 0.1f); // Half height and radius
+                m_character->SetShape(new JPH::CapsuleShape(0.25f, 0.5f), 0.1f); // Half height and radius
             }
-            m_targetEyeHeight = 0.7f; // Lower eye height when crouching or sliding
+            m_targetEyeHeight = 0.2f; // Lower eye height when crouching or sliding
         } else { // Reset sizes only when state changes
             if (m_prevPlayerState == PlayerState::CROUCHING || m_prevPlayerState == PlayerState::SLIDING) {
                 // Adjust position to avoid sinking into the ground
@@ -187,10 +187,10 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
                                                     m_transform->position[2]));
 
                 // Reset to normal size
-                m_character->SetShape(new JPH::CapsuleShape(1.0f, 0.5f),
+                m_character->SetShape(new JPH::CapsuleShape(0.45f, 0.5f),
                                       0.1f); // Reset to normal size
             }
-            m_targetEyeHeight = 1.3f; // Normal eye height
+            m_targetEyeHeight = 0.5f; // Normal eye height
         }
         
         // For ground movement, typically we want to ignore the Y component
@@ -221,8 +221,8 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
                 JPH::Vec3 desiredHorizontalVel(0, 0, 0);
                 if (bx::length(m_moveDirection) > 0.001f) {
                     m_moveDirection = bx::normalize(m_moveDirection);
-                    desiredHorizontalVel.SetX(m_moveDirection.x * m_moveSpeed);
-                    desiredHorizontalVel.SetZ(m_moveDirection.z * m_moveSpeed);
+                    desiredHorizontalVel.SetX(m_moveDirection.x * m_realMoveSpeed);
+                    desiredHorizontalVel.SetZ(m_moveDirection.z * m_realMoveSpeed);
                     if (m_playerState != PlayerState::SLIDING && m_playerState != PlayerState::CROUCHING && m_playerState != PlayerState::SPRINTING) {
                         // If not sliding or crouching, we are walking
                         m_playerState = PlayerState::WALKING;
@@ -237,7 +237,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
                 
                 // JUMP! *van halen guitar solo*
                 if (enableJumping && keystate[SDL_SCANCODE_SPACE] && isGrounded && m_playerState != PlayerState::SLIDING) {
-                    const float jumpForce = 5.0f;
+                    const float jumpForce = 4.0f;
                     m_newVelocity.SetY(jumpForce);
                 }
                 
@@ -255,7 +255,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
             // Update some lerps
     m_camera->SetFOV(bx::lerp(m_camera->GetFOV(), m_targetFov, 0.1f));
     m_eyeHeight = bx::lerp(m_eyeHeight, m_targetEyeHeight, 0.1f);
-    m_moveSpeed = bx::lerp(m_moveSpeed, m_targetMoveSpeed, 0.1f);
+    m_realMoveSpeed = bx::lerp(m_realMoveSpeed, m_targetMoveSpeed, 0.1f);
 }
 
 void PlayerComponent::PostPhysicsUpdate() {

@@ -69,7 +69,7 @@ class PlayerComponent : public Syngine::Component {
     
     float sprintMult    = 2.0f; // Multiplier for sprinting speed.
     float crouchSpeed   = 0.5f; // Speed when crouching.
-    float moveSpeed     = 3.0f; // Default movement speed of the player.
+    float moveSpeed     = 1.5f; // Default movement speed of the player.
     float mouseSens     = 0.002f; // Mouse sensitivity for camera movement.
 
     bool enableMovement  = true; // Whether player movement is enabled (on by default).
@@ -84,11 +84,11 @@ class PlayerComponent : public Syngine::Component {
     Syngine::CameraComponent* m_camera    = nullptr;
     SDL_Window*               m_window    = nullptr;
 
-    float m_targetEyeHeight = 1.3f;  // offset from transform pos (center of player) (default is 1.3m) (this is init value, "real" value in in impl/Update)
+    float m_targetEyeHeight = 0.5f;  // offset from transform pos (center of player) (default is 0.5m) (this is init value, "real" value in in impl/Update)
     float m_targetFov       = 70.0f;
-    float m_targetMoveSpeed = 2.0f;
-    float m_moveSpeed       = 2.0f;
-    float m_eyeHeight       = 1.3f;
+    float m_targetMoveSpeed = 1.0f;
+    float m_eyeHeight       = 0.5f;
+    float m_realMoveSpeed   = 1.0f;
 
     float m_currentPitch  = 0.0f;
     float m_currentYaw    = 0.0f;
