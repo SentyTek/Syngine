@@ -45,6 +45,8 @@ endif()
 project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
 
+set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
+
 # create the executable
 add_library(Syngine STATIC
     src/SyngineCore.cpp
@@ -144,10 +146,10 @@ endif()
 
 # configure all third party files by calling their cmake scripts
 # EXECLUDE_FROM_ALL is used so that its install targets and configs cont pollute upwards into the parent project
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/JoltPhysics/build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
 
 if(APPLE)
 set_target_properties(shaderc PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO") # Don't sign shaderc binary on macOS
@@ -170,21 +172,21 @@ endif()
 target_include_directories(Syngine
     PUBLIC
         # Engine public headers directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/Components
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib
+        ${CMAKE_CURRENT_LIST_DIR}/include
+        ${CMAKE_CURRENT_LIST_DIR}/include/Components
+        ${CMAKE_CURRENT_LIST_DIR}/lib
 
         # Third-party headers needed by engine's public headers
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/SDL/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bx/include   # Often needed by bgfx headers
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bimg/include # Often needed by bgfx headers
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/third_party/JoltPhysics
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/SDL/include
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bgfx/include
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bx/include   # Often needed by bgfx headers
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bimg/include # Often needed by bgfx headers
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/assimp/include
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics
     PRIVATE
         # Engine private headers/sources directory
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/Components
+        ${CMAKE_CURRENT_LIST_DIR}/src
+        ${CMAKE_CURRENT_LIST_DIR}/src/Components
 )
 
 # --- Link Libraries ---
@@ -198,4 +200,7 @@ target_link_libraries(Syngine PRIVATE
     Jolt
 )
 
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangdConfig.cmake)
 clangdConfigure(Syngine)
+
+include(cmake/SyngineGame.cmake)
