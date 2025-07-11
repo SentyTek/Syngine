@@ -128,7 +128,7 @@ int Graphics::CreateRenderer() {
         return 1;
     }
     #else
-    #warning "Platform not supported
+    #warning "Platform not supported"
     bgInit.platformData.ndt = NULL;
     bgInit.platformData.nwh = NULL;
     #endif

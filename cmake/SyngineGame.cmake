@@ -60,7 +60,7 @@ endif()
 if(APPLE)
     target_compile_definitions(${name} PRIVATE BX_PLATFORM_OSX=1)
 elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(${name} PRIVATE BX_PLATFORM_LINUX=1)
+    target_compile_definitions(${name} PRIVATE BX_PLATFORM_LINUX=1 BX_CONFIG_DEBUG=1)
 endif()
 
 if(MSVC)
