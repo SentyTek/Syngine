@@ -9,6 +9,9 @@ list(REMOVE_AT ARGV 0)
 add_executable(${name} "${sources}")
 target_link_libraries(${name} PRIVATE Syngine)
 
+# Game's source dir is assumed to be its CMakeLists
+set(${name}_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR})
+
 # Compile shaders
 set(SHADER_SOURCE_DIR_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
@@ -26,34 +29,15 @@ compile_all_shaders(
 
 if(ALL_COMPILED_SHADER_BINARIES)
     message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
-    add_custom_target(Shaders ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
-    add_dependencies(${name} Shaders)
+    add_custom_target(${name}_Shaders ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
+    add_dependencies(${name} ${name}_Shaders)
 else()
     message(STATUS "No shaders compiled.")
-    add_custom_target(Shaders ALL)
+    add_custom_target(${name}_Shaders ALL)
 endif()
 
-set(SHADER_SOURCE_DIR_ROOT "${SYNGINE_SOURCE_DIR}/default/shaders")
-set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
-file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR}) #ensure exists
-set(BGFX_CORE_INCLUDE_DIR "${SYNGINE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src")
-
-set(ALL_COMPILED_SHADER_BINARIES)
-
-compile_all_shaders(
-    SOURCE_DIRECTORY      ${SHADER_SOURCE_DIR_ROOT}
-    OUTPUT_DIRECTORY      ${SHADER_OUTPUT_DIR}
-    BGFX_SRC_INCLUDE_DIRS ${BGFX_CORE_INCLUDE_DIR}
-    SHADER_FILES_OUTPUT_VAR ALL_COMPILED_SHADER_BINARIES
-)
-
-if(ALL_COMPILED_SHADER_BINARIES)
-    message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
-    add_custom_target(Shaders2 ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
-    add_dependencies(${name} Shaders2)
-else()
-    message(STATUS "No shaders compiled.")
-    add_custom_target(Shaders2 ALL)
+if(SYNGINE_DEFAULT_SHADERS_COMPILED)
+    add_dependencies(${name} DefaultShaders)
 endif()
 
 # add platform specific flags

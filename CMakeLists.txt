@@ -202,6 +202,37 @@ target_link_libraries(Syngine PRIVATE
     Jolt
 )
 
+include(${SYNGINE_SOURCE_DIR}/cmake/bgfxshaderc.cmake)
+
+set(SHADER_SOURCE_DIR_ROOT "${SYNGINE_SOURCE_DIR}/default/shaders")
+set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
+file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR}) #ensure exists
+set(BGFX_CORE_INCLUDE_DIR "${SYNGINE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src")
+
+set(ALL_COMPILED_SHADER_BINARIES)
+
+compile_all_shaders(
+    SOURCE_DIRECTORY      ${SHADER_SOURCE_DIR_ROOT}
+    OUTPUT_DIRECTORY      ${SHADER_OUTPUT_DIR}
+    BGFX_SRC_INCLUDE_DIRS ${BGFX_CORE_INCLUDE_DIR}
+    SHADER_FILES_OUTPUT_VAR ALL_COMPILED_SHADER_BINARIES
+)
+
+if(ALL_COMPILED_SHADER_BINARIES)
+    message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
+    add_custom_target(DefaultShaders ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
+    set(SYNGINE_DEFAULT_SHADERS_COMPILED ON CACHE BOOL "Whether or not default shaders were compiled" FORCE)
+else()
+    message(STATUS "No shaders compiled.")
+    set(SYNGINE_DEFAULT_SHADERS_COMPILED OFF CACHE BOOL "Whether or not default shaders were compiled" FORCE)
+endif()
+
+
+if (PROJECT_IS_TOP_LEVEL)
+    # Only add tests if Syngine is top level
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tests)
+endif()
+
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangdConfig.cmake)
 clangdConfigure(Syngine)
 
