@@ -149,6 +149,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE
 
 if(APPLE)
 set_target_properties(shaderc PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO") # Don't sign shaderc binary on macOS
+set(CMAKE_OSX_SYSROOT "macosx" CACHE STRING "macOS SDK root")
 endif()
 
 # Set config-specific preprocessor definitions for Syngine
