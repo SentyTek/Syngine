@@ -1,5 +1,11 @@
+# Engine main CMakelists
 cmake_minimum_required(VERSION 3.16)
+project(Syngine)
+set(CMAKE_CXX_STANDARD 20)
+set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
 
+# Use static runtime on MSVC. Several libraries we use require this.
+# Please don't change this.
 if(MSVC)
     # For Debug configurations: Change /MDd to /MTd
     string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG_TEMP "${CMAKE_C_FLAGS_DEBUG}")
@@ -42,12 +48,7 @@ if(MSVC)
     )
 endif()
 
-project(Syngine)
-set(CMAKE_CXX_STANDARD 20)
-
-set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
-
-# create the executable
+# Add all required source files.
 add_library(Syngine STATIC
     src/SyngineCore.cpp
     src/SyngineGraphics.cpp
@@ -63,91 +64,84 @@ add_library(Syngine STATIC
     src/Components/CameraComponent.cpp
 )
 
+# Apple needs Obj-C++ files for Metal rendering
 if(APPLE)
     target_sources(Syngine PRIVATE
         src/SynOSXMetalBridge.mm
     )
 endif()
 
-if(MSVC)
-    set(ASSIMP_MSVC_STATIC_RUNTIME ON CACHE BOOL "Force Assimp to use static MSVC runtime (/MT or /MTd)" FORCE)
-endif()
+# --- Dependency configuration ---
+# Function to set a default option if not already defined
+function(set_default_option var value docstring)
+    if(NOT DEFINED ${var})
+        set(${var} ${value} CACHE BOOL "${docstring}")
+    endif()
+endfunction()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_CONFIGURATION_TYPES MATCHES "Debug")
-    set(LOCAL_BX_CONFIG_DEBUG ON)
-else()
-    set(LOCAL_BX_CONFIG_DEBUG OFF)
-endif()
-set(BX_CONFIG_DEBUG ${LOCAL_BX_CONFIG_DEBUG} CACHE BOOL "Enable BGFX debug mode" FORCE)
-set(BX_CONFIG_DEBUG ${LOCAL_BX_CONFIG_DEBUG}) # Also set as normal variable
+# SDL3 Options
+set_default_option(SDL_TEST OFF "Build SDL tests")
+set_default_option(SDL_SHARED OFF "Build SDL as a shared library")
+set_default_option(SDL_STATIC ON "Build SDL as a static library")
+set_default_option(SDL_AUDIO_DISABLED ON "Disable SDL audio subsystem")
+set_default_option(SDL_SENSOR_DISABLED OFF "Disable SDL sensor subsystem")
+set_default_option(SDL_LOADSO_DISABLED ON "Disable SDL dynamic loading subsystem")
 
-# set what gets built
-set(SDL_TEST OFF CACHE BOOL "" FORCE)
-set(SDL_SHARED OFF CACHE BOOL "" FORCE)
-set(SDL_STATIC ON CACHE BOOL "" FORCE)
-set(SDL_AUDIO_DISABLED ON CACHE BOOL "" FORCE)
-set(SDL_SENSOR_DISABLED OFF CACHE BOOL "" FORCE) # SDL sensor needs to be on idk
-set(SDL_LOADSO_DISABLED ON CACHE BOOL "" FORCE)
+# Assimp Options
+set_default_option(BUILD_SHARED_LIBS OFF "Build Assimp as a shared library")
+set_default_option(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT OFF "Disable all exporters by default")
+set_default_option(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF "Disable all importers by default")
+set_default_option(ASSIMP_BUILD_ASSIMP_TOOLS OFF "Disable building Assimp tools")
+set_default_option(ASSIMP_BUILD_TESTS OFF "Disable building Assimp tests")
+set_default_option(ASSIMP_BUILD_GLTF_IMPORTER ON "Enable glTF importer")
+set_default_option(ASSIMP_INSTALL OFF "Disable installing Assimp targets and config files")
 
+# Jolt Physics Options
+set_default_option(JOLT_BUILD_EXAMPLES OFF "Disable building Jolt examples")
+set_default_option(JOLT_BUILD_TESTS OFF "Disable building Jolt tests")
+set_default_option(JOLT_PROFILE_ENABLED OFF "Disable Jolt profiling")
+
+# BGFX Options
+set_default_option(BGFX_BUILD_TOOLS ON "Enable building BGFX tools")
+set_default_option(BGFX_BUILD_EXAMPLES OFF "Disable building BGFX examples")
+set_default_option(BGFX_BUILD_TOOLS_BINARIES shaderc ON "Enable building shaderc tool")
+
+# Set platform specific options for BGFX and SDL
 if(APPLE)
-set(SDL_RENDER_DISABLED OFF CACHE BOOL "" FORCE) # Apple requires it enabled
-else()
-set(SDL_RENDER_DISABLED ON CACHE BOOL "" FORCE)
-endif()
+    set_default_option(BGFX_CONFIG_MULTITHREADED OFF "Disable multithreaded rendering for BGFX on Apple platforms")
+    set_default_option(SDL_VIDEO_VULKAN OFF "Disable Vulkan support in SDL on Apple platforms")
+    set_default_option(SDL_RENDER_DISABLED OFF "Enable SDL rendering subsystem on Apple platforms")
 
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE) # assimp
-set(ASSIMP_BUILD_ALL_EXPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE BOOL "" FORCE) # Enable glTF importer
-set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF "Disable Direct3D 12 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF "Disable Direct3D 9 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_OPENGL OFF "Disable OpenGL Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_VULKAN OFF "Disable Vulkan Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_METAL ON "Enable Metal Renderer")
 
-set(JOLT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(JOLT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(JOLT_PROFILE_ENABLED OFF CACHE BOOL "" FORCE)
-if(UNIX)
-    # Set to on, so jolt compiles with rtti on unix systems
-    set(CPP_RTTI_ENABLED ON CACHE BOOL "" FORCE)
-    target_compile_options(Syngine PUBLIC -frtti)
-endif()
+    add_compile_options(-frtti) # Jolt needs RTTI on Apple platforms
+elseif(MSVC)
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 ON "Enable Direct3D 12 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF "Disable Direct3D 9 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_OPENGL OFF "Disable OpenGL Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_VULKAN OFF "Disable Vulkan Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_METAL OFF "Disable Metal Renderer")
+    set_default_option(SDL_RENDER_DISABLED ON "Disable SDL rendering subsystem on Windows platforms")
+else() # Linux and other Unix-like systems
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF "Disable Direct3D 12 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF "Disable Direct3D 9 Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_OPENGL OFF "Disable OpenGL Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_VULKAN ON "Enable Vulkan Renderer")
+    set_default_option(BGFX_CONFIG_RENDERER_METAL OFF "Disable Metal Renderer")
+    set_default_option(SDL_RENDER_DISABLED ON "Disable SDL rendering subsystem on Linux/Unix platforms")
 
-set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
-set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(BGFX_BUILD_TOOLS_BINARIES shaderc ON CACHE BOOL "" FORCE)
-
-if(APPLE) # cocoa is really picky and requires entire renderer to be single threaded
-    set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)
-    set(SDL_VIDEO_VULKAN OFF CACHE BOOL "" FORCE)
-
-    set(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF CACHE BOOL "Disable Direct3D 12 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF CACHE BOOL "Disable Direct3D 11 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF CACHE BOOL "Disable Direct3D 9 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_OPENGL OFF CACHE BOOL "Disable OpenGL Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_VULKAN OFF CACHE BOOL "Disable Vulkan Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_METAL ON CACHE BOOL "Enable Metal Renderer" FORCE)
-endif()
-
-if(MSVC)
-    set(BGFX_CONFIG_RENDERER_DIRECT3D12 ON CACHE BOOL "Enable Direct3D 12 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF CACHE BOOL "Disable Direct3D 11 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF CACHE BOOL "Disable Direct3D 9 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_OPENGL OFF CACHE BOOL "Disable OpenGL Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_VULKAN OFF CACHE BOOL "Disable Vulkan Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_METAL OFF CACHE BOOL "Disable Metal Renderer" FORCE)
-endif()
-
-if(UNIX AND NOT APPLE)
-    set(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF CACHE BOOL "Disable Direct3D 12 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF CACHE BOOL "Disable Direct3D 11 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_DIRECT3D9 OFF CACHE BOOL "Disable Direct3D 9 Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_OPENGL OFF CACHE BOOL "Disable OpenGL Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_VULKAN ON CACHE BOOL "Enable Vulkan Renderer" FORCE)
-    set(BGFX_CONFIG_RENDERER_METAL OFF CACHE BOOL "Disable Metal Renderer" FORCE)
+    add_compile_options(-frtti) # Jolt needs RTTI on Unix platforms
 endif()
 
 # configure all third party files by calling their cmake scripts
-# EXECLUDE_FROM_ALL is used so that its install targets and configs cont pollute upwards into the parent project
+# EXCLUDE_FROM_ALL is used so that its install targets and configs cont pollute upwards into the parent project
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
@@ -157,16 +151,16 @@ if(APPLE)
 set_target_properties(shaderc PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO") # Don't sign shaderc binary on macOS
 endif()
 
+# Set config-specific preprocessor definitions for Syngine
+target_compile_definitions(Syngine PRIVATE
+    "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"
+    "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>"
+)
+
 if(MSVC)
     target_compile_options(Syngine PRIVATE
-        "$<$<CONFIG:Debug>:/MTd>"
-        "$<$<NOT:$<CONFIG:Debug>>:/MT>" # For Release, RelWithDebInfo, MinSizeRel
-    )
-
-    # Also ensure the BX_CONFIG_DEBUG preprocessor macro is set for Syngine
-    target_compile_definitions(Syngine PRIVATE
-        "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"
-        "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>"
+        /Zc:__cplusplus
+        /Zc:preprocessor
     )
 endif()
 
@@ -202,38 +196,11 @@ target_link_libraries(Syngine PRIVATE
     Jolt
 )
 
-include(${SYNGINE_SOURCE_DIR}/cmake/bgfxshaderc.cmake)
-
-set(SHADER_SOURCE_DIR_ROOT "${SYNGINE_SOURCE_DIR}/default/shaders")
-set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
-file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR}) #ensure exists
-set(BGFX_CORE_INCLUDE_DIR "${SYNGINE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src")
-
-set(ALL_COMPILED_SHADER_BINARIES)
-
-compile_all_shaders(
-    SOURCE_DIRECTORY      ${SHADER_SOURCE_DIR_ROOT}
-    OUTPUT_DIRECTORY      ${SHADER_OUTPUT_DIR}
-    BGFX_SRC_INCLUDE_DIRS ${BGFX_CORE_INCLUDE_DIR}
-    SHADER_FILES_OUTPUT_VAR ALL_COMPILED_SHADER_BINARIES
-)
-
-if(ALL_COMPILED_SHADER_BINARIES)
-    message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
-    add_custom_target(DefaultShaders ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
-    set(SYNGINE_DEFAULT_SHADERS_COMPILED ON CACHE BOOL "Whether or not default shaders were compiled" FORCE)
-else()
-    message(STATUS "No shaders compiled.")
-    set(SYNGINE_DEFAULT_SHADERS_COMPILED OFF CACHE BOOL "Whether or not default shaders were compiled" FORCE)
-endif()
-
-
+# If Syngine is the top-level project, add tests
 if (PROJECT_IS_TOP_LEVEL)
-    # Only add tests if Syngine is top level
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tests)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangdConfig.cmake)
-clangdConfigure(Syngine)
 
 include(cmake/SyngineGame.cmake)
