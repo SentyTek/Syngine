@@ -34,7 +34,7 @@ Graphics::Graphics(const char* title, int width, int height) {
     this->win = nullptr;
 };
 
-int Graphics::CreateWindow() {
+int Graphics::CreateGameWindow() {
     //bgInit
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SDL could not initialize! SDL_Error: %s", SDL_GetError());

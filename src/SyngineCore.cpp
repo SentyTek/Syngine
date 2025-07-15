@@ -1,6 +1,21 @@
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <stdio.h>
+#include <intrin.h>
+
+#elif __APPLE__
+
+
+#else
+
+
+#endif
+
 #include "SyngineCore.h"
 #include "Components/CameraComponent.h"
 #include "SDL3/SDL_scancode.h"
+#include "SDL3/SDL_video.h"
 #include "SyngineGameobject.h"
 #include "SynginePhys.h"
 #include "Components.h"
@@ -558,4 +573,93 @@ int Core::DeleteGameobject(GameObject* gameobject) {
     delete gameobject; // delete the gameobject
     gameobject = nullptr; // set to null to avoid dangling pointer
     return 0;
+}
+
+std::string Core::GetSystemSpecifications() {
+    std::string specs;
+#ifdef _WIN32
+    // On Windows, gather system information using Windows API
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+
+    // Get OS
+    const char* platform = SDL_GetPlatform();
+    specs += "Operating System: " + std::string(platform) + "\n";
+
+    // Get CPU info (why on EARTH is this so complicated?)
+    std::string cpu;
+    int         CPUInfo[4] = { -1 };
+    char        CPUBrandString[0x40]; // Buffer for CPU brand string
+
+    // Get the highest extended function supported by CPUID
+    __cpuid(CPUInfo, 0x80000000);
+    unsigned int nExIds = CPUInfo[0];
+
+    // Get the CPU brand string if supported
+    for (unsigned int i = 0x80000002; i <= nExIds && i <= 0x80000004; ++i) {
+        __cpuid(CPUInfo, i);
+        // Copy returned values into the CPU brand string buffer
+        memcpy(CPUBrandString + (i - 0x80000002) * 16, CPUInfo, sizeof(CPUInfo));
+    }
+    CPUBrandString[sizeof(CPUBrandString) - 1] = '\0'; // Null-terminate the string
+    cpu = std::string(CPUBrandString);
+    specs += "CPU: " + cpu + "\n";
+
+    // Get arch
+    std::string cpuArch;
+    switch (sysInfo.wProcessorArchitecture) {
+        case PROCESSOR_ARCHITECTURE_AMD64: cpuArch = "x64"; break;
+        case PROCESSOR_ARCHITECTURE_INTEL: cpuArch = "x86"; break;
+        case PROCESSOR_ARCHITECTURE_ARM:   cpuArch = "ARM"; break;
+        case PROCESSOR_ARCHITECTURE_ARM64: cpuArch = "ARM64"; break;
+        default:                            cpuArch = "Unknown"; break;
+    }
+    specs += "CPU Architecture: " + cpuArch + "\n";
+    specs += "Number of processors: " +
+             std::to_string(sysInfo.dwNumberOfProcessors) + "\n";
+
+    // Get total physical memory
+    MEMORYSTATUSEX statex;
+    statex.dwLength = sizeof(statex);
+    GlobalMemoryStatusEx(&statex);
+    specs += "Total Physical Memory (MB): " +
+             std::to_string(statex.ullTotalPhys / (1024 * 1024)) + "\n";
+
+    // Get display size
+    SDL_DisplayID dId = SDL_GetDisplayForWindow(app->graphics->win);
+    SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
+    specs += "Display Resolution: " + std::to_string(disMode.w) + "x" +
+             std::to_string(disMode.h) + "\n";
+
+    // Get window resolution
+    int w, h;
+    SDL_GetWindowSize(app->graphics->win, &w, &h);
+    specs += "Window Resolution: " + std::to_string(w) + "x" +
+             std::to_string(h) + "\n";
+
+    // Get various GPU info from bgfx
+    const bgfx::Caps* caps = bgfx::getCaps();
+    if (caps) {
+        specs += "GPU Vendor ID: " + std::to_string(caps->vendorId) + "\n";
+        specs += "GPU Device ID: " + std::to_string(caps->deviceId) + "\n";
+        specs +=
+            "Max Texture Size: " + std::to_string(caps->limits.maxTextureSize) +
+            "\n";
+        specs +=
+            "Compute Shader support: " +
+            std::string((caps->supported & BGFX_CAPS_COMPUTE) ? "Yes" : "No") +
+            "\n";
+        specs += "3D Textures support: " +
+                 std::string((caps->supported & BGFX_CAPS_TEXTURE_3D) ? "Yes"
+                                                                      : "No") +
+                 "\n";
+    } else {
+        specs += "GPU Info: Not available\n";
+    }
+#elif __APPLE__
+
+#else
+
+#endif
+return specs;
 }

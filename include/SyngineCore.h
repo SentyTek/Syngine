@@ -6,6 +6,7 @@
 #include "SynginePhys.h"
 
 namespace Syngine {
+
 struct App {
     Graphics* graphics;
     SynModelLoader* synModels;
@@ -15,7 +16,7 @@ struct App {
 };
 
 class Core {
-    public:
+  public:
     App* app;
 
     Core();
@@ -28,7 +29,9 @@ class Core {
     GameObject* FindGameobjectByID(long id);
     GameObject* FindGameobjectByName(std::string name);
     int CreateGameobject(GameObject* gameobject);
-    int DeleteGameobject(GameObject* gameobject);
+    int         DeleteGameobject(GameObject* gameobject);
+
+    std::string GetSystemSpecifications();
 };
 
 } // namespace Syngine

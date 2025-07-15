@@ -47,7 +47,7 @@ void CameraComponent::Update(int viewId, int width, int height) {
     bx::mtxLookAt(cam.view, eyeVec, targetVec, upVec);
 
     bx::mtxLookAt(cam.view, eyeVec, targetVec, upVec);
-    bx::mtxProj(cam.proj, cam.fov, aspect, cam.near, cam.far, bgfx::getCaps()->homogeneousDepth);
+    bx::mtxProj(cam.proj, cam.fov, aspect, cam.nearPlane, cam.farPlane, bgfx::getCaps()->homogeneousDepth);
     bgfx::setViewTransform(viewId, cam.view, cam.proj);
 }
 
@@ -75,13 +75,13 @@ void CameraComponent::SetFOV(float fov) {
 float CameraComponent::GetFOV() const { return this->camera.fov; }
 
 void CameraComponent::SetFarPlane(float farPlane) {
-    if (farPlane < 0.0f && farPlane > this->camera.near && farPlane > 50000.0f) {
+    if (farPlane < 0.0f && farPlane > this->camera.nearPlane && farPlane > 50000.0f) {
         return;
     }
-    this->camera.far = farPlane;
+    this->camera.farPlane = farPlane;
 }
 
-float CameraComponent::GetFarPlane() const { return this->camera.far; }
+float CameraComponent::GetFarPlane() const { return this->camera.farPlane; }
 
 void CameraComponent::SetAngles(float yaw, float pitch) {
     this->camera.yaw = yaw;
