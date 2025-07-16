@@ -1,4 +1,5 @@
 #include "SynginePhys.h"
+#include "SyngineLogger.h"
 #include <thread> //for hardware_concurrency
 
 #include "Components/CameraComponent.h"
@@ -35,12 +36,12 @@ void Phys::TraceImpl(const char* inFMT, ...) {
     va_end(list);
 
     //print to the tty
-    SDL_LogMessage(SDL_LOG_CATEGORY_APPLICATION, SDL_LOG_PRIORITY_INFO, "Jolt Trace: %s", buffer);
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Jolt Trace: %s", buffer);
 }
 
 bool Phys::AssertFailedImpl(const char* inExpression, const char* inMessage, const char* inFile, uint32_t inLine) {
     //format
-    SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Jolt Assert Failed: %s\n%s\nFile: %s\nLine: %u", inExpression, inMessage, inFile, inLine);
+    Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Jolt Assert Failed: %s\n%s\nFile: %s\nLine: %u", inExpression, inMessage, inFile, inLine);
     return true; //true to break, false to continue
 }
 
@@ -84,14 +85,14 @@ void Phys::Init(bool debug) {
     mPhysicsSystem.SetBodyActivationListener(&mBodyActivationListener);
     mPhysicsSystem.SetContactListener(&mContactListener);
 
-    SDL_Log("Jolt initialized");
+    Syngine::Logger::Info("Jolt initialized successfully");
 }
 
 void Phys::Shutdown() {
     if (!Factory::sInstance) //Already shutdown
         return;
-    
-    SDL_Log("Shutting down Jolt");
+
+    Syngine::Logger::Info("Shutting down Jolt");
 
     UnregisterTypes();
     delete Factory::sInstance;
@@ -142,7 +143,7 @@ BodyID Phys::CreateSphere(RVec3Arg position, float radius, EMotionType motionTyp
     SphereShapeSettings sphereShapeSettings(radius);
     ShapeSettings::ShapeResult sphereShapeResult = sphereShapeSettings.Create();
     if (sphereShapeResult.HasError()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateSphere: Failed to create sphere shape: %s", sphereShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateSphere: Failed to create sphere shape: %s", sphereShapeResult.GetError().c_str());
         return BodyID();
     }
     ShapeRefC sphereShape = sphereShapeResult.Get();
@@ -157,7 +158,7 @@ BodyID Phys::CreateSphere(RVec3Arg position, float radius, EMotionType motionTyp
 
     Body *sphere = bodyInterface.CreateBody(sphereSettings);
     if (!sphere) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateSphere: Failed to create sphere body.");
+        Syngine::Logger::Error("SynginePhys::CreateSphere: Failed to create sphere body.");
         return BodyID();
     }
     bodyInterface.AddBody(sphere->GetID(), EActivation::Activate);
@@ -170,7 +171,7 @@ BodyID Phys::CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, 
     BoxShapeSettings box_shape_settings(halfExtent);
     ShapeSettings::ShapeResult box_shape_result = box_shape_settings.Create();
     if (box_shape_result.HasError()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateBox: Failed to create box shape: %s", box_shape_result.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateBox: Failed to create box shape: %s", box_shape_result.GetError().c_str());
         return BodyID();
     }
     ShapeRefC box_shape = box_shape_result.Get();
@@ -186,7 +187,7 @@ BodyID Phys::CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, 
 
     Body *box = body_interface.CreateBody(box_settings);
     if (!box) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateBox: Failed to create box body.");
+        Syngine::Logger::Error("SynginePhys::CreateBox: Failed to create box body.");
         return BodyID();
     }
     body_interface.AddBody(box->GetID(), EActivation::Activate);
@@ -196,7 +197,7 @@ BodyID Phys::CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, 
 BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale) {
     BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
     if (meshData.numVertices == 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Mesh data is empty.");
+        Syngine::Logger::Error("SynginePhys::CreateMeshBody: Mesh data is empty.");
         return BodyID(); // Return an invalid BodyID
     }
 
@@ -222,7 +223,7 @@ BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData&
     }
 
     if (vertices.empty() || triangles.empty()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: No valid vertices or triangles found in mesh data.");
+        Syngine::Logger::Error("SynginePhys::CreateMeshBody: No valid vertices or triangles found in mesh data.");
         return BodyID();
     }
 
@@ -230,7 +231,7 @@ BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData&
     
     ShapeSettings::ShapeResult meshShapeResult = meshShapeSettings.Create();
     if (meshShapeResult.HasError()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Failed to create mesh shape: %s", meshShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateMeshBody: Failed to create mesh shape: %s", meshShapeResult.GetError().c_str());
         return BodyID();
     }
     ShapeRefC meshShape = meshShapeResult.Get();
@@ -240,7 +241,7 @@ BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData&
         ScaledShapeSettings scaledShapeSettings(meshShape, scale);
         ShapeSettings::ShapeResult scaledShapeResult = scaledShapeSettings.Create();
         if (scaledShapeResult.HasError()) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Failed to create scaled mesh shape: %s", scaledShapeResult.GetError().c_str());
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateMeshBody: Failed to create scaled mesh shape: %s", scaledShapeResult.GetError().c_str());
             return BodyID();
         }
         meshShape = scaledShapeResult.Get();
@@ -257,7 +258,7 @@ BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData&
 
     Body* body = bodyInterface.CreateBody(meshSettings);
     if (!body) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Failed to create body for mesh.");
+        Syngine::Logger::Error("SynginePhys::CreateMeshBody: Failed to create body for mesh.");
         return BodyID(); // Return an invalid BodyID
     }
     bodyInterface.AddBody(body->GetID(), EActivation::Activate);
@@ -269,7 +270,7 @@ BodyID Phys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EM
     CapsuleShapeSettings capsuleShapeSettings(halfHeight, radius);
     ShapeSettings::ShapeResult capsuleShapeResult = capsuleShapeSettings.Create();
     if (capsuleShapeResult.HasError()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCapsule: Failed to create capsule shape: %s", capsuleShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCapsule: Failed to create capsule shape: %s", capsuleShapeResult.GetError().c_str());
         return BodyID(); 
     }
     ShapeRefC capsuleShape = capsuleShapeResult.Get();
@@ -287,7 +288,7 @@ BodyID Phys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EM
 
     Body* capsule = bodyInterface.CreateBody(capsuleSettings);
     if (!capsule) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCapsule: Failed to create capsule body.");
+        Syngine::Logger::Error("SynginePhys::CreateCapsule: Failed to create capsule body.");
         return BodyID(); 
     }
     bodyInterface.AddBody(capsule->GetID(), EActivation::Activate);
@@ -299,7 +300,7 @@ BodyID Phys::CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeigh
     CylinderShapeSettings cylinderShapeSettings(halfHeight, radius);
     ShapeSettings::ShapeResult cylinderShapeResult = cylinderShapeSettings.Create();
     if (cylinderShapeResult.HasError()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCylinder: Failed to create cylinder shape: %s", cylinderShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCylinder: Failed to create cylinder shape: %s", cylinderShapeResult.GetError().c_str());
         return BodyID();
     }
     ShapeRefC cylinderShape = cylinderShapeResult.Get();
@@ -316,7 +317,7 @@ BodyID Phys::CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeigh
 
     Body* cylinder = bodyInterface.CreateBody(cylinderSettings);
     if (!cylinder) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateCylinder: Failed to create cylinder body.");
+        Syngine::Logger::Error("SynginePhys::CreateCylinder: Failed to create cylinder body.");
         return BodyID();
     }
     bodyInterface.AddBody(cylinder->GetID(), EActivation::Activate);

@@ -2,6 +2,7 @@
 #include "bgfx/bgfx.h"
 #include <string>
 #include <SDL3/SDL.h>
+#include "SyngineLogger.h"
 
 // This function resolves the full relative path to resourced files based on platform.
 // macOS uses a different path structure than other because of the app bundle structure.
@@ -45,7 +46,10 @@ inline bool CheckRequiredFolders() {
     for (const char* folder : requiredFolders) {
         std::string fullPath = resolveOSPath(folder);
         if (!SDL_GetPathInfo(fullPath.c_str(), nullptr)) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Required folder '%s' does not exist in game dir: %s", folder, fullPath.c_str());
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                 "Required folder '%s' does not exist in game dir: %s",
+                                 folder,
+                                 fullPath.c_str());
             return false;
         }
     }

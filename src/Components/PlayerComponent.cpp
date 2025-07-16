@@ -1,6 +1,7 @@
 #include "PlayerComponent.h"
 #include "CameraComponent.h"
 #include "Components.h"
+#include "SyngineLogger.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
@@ -48,8 +49,8 @@ void PlayerComponent::Init(Syngine::CameraComponent*    camera,
     m_window = win;
 
     if (!m_owner || !m_transform || !m_camera) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "PlayerComponent is missing a required component");
+        Syngine::Logger::Error(
+            "PlayerComponent is missing a required component");
         return;
     }
 
@@ -81,7 +82,7 @@ void PlayerComponent::Init(Syngine::CameraComponent*    camera,
 
 void PlayerComponent::HandleInput(const SDL_Event& event) {
     if (!m_transform || !m_camera) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent is missing a required component");
+        Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
     }
 
@@ -111,7 +112,7 @@ void PlayerComponent::HandleInput(const SDL_Event& event) {
 
 void PlayerComponent::Update(const bool* keystate, bool simulate) {
     if (!m_transform || !m_camera) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent is missing a required component");
+        Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
     }
     m_prevPlayerState = m_playerState;
@@ -242,7 +243,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
                 }
                 
             } else {
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent has no character object!");
+                Syngine::Logger::Error("PlayerComponent has no character object!");
             }
         }
         
@@ -260,7 +261,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
 
 void PlayerComponent::PostPhysicsUpdate() {
     if (!m_transform || !m_camera) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent is missing a required component");
+        Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
     }
 
@@ -289,7 +290,7 @@ void PlayerComponent::PostPhysicsUpdate() {
 
 PlayerState PlayerComponent::GetPlayerState() const {
     if (!m_character) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "PlayerComponent has no character object!");
+        Syngine::Logger::Error("PlayerComponent has no character object!");
         return PlayerState::INVALID;
     }
 

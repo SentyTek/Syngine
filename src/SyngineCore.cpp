@@ -13,22 +13,23 @@
 #endif
 
 #include "SyngineCore.h"
-#include "Components/CameraComponent.h"
-#include "SDL3/SDL_scancode.h"
-#include "SDL3/SDL_video.h"
 #include "SyngineGameobject.h"
+#include "SyngineLogger.h"
 #include "SynginePhys.h"
 #include "Components.h"
-#include "MeshComponent.h"
-#include "RigidbodyComponent.h"
-#include "TransformComponent.h"
+#include "Components/CameraComponent.h"
 #include "PlayerComponent.h"
+#include "TransformComponent.h"
+#include "RigidbodyComponent.h"
+#include "MeshComponent.h"
 #include "helpers.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_mouse.h"
 #include "SDL3/SDL_timer.h"
+#include "SDL3/SDL_scancode.h"
+#include "SDL3/SDL_video.h"
 
 #include "bx/bx.h"
 #include "bx/constants.h"
@@ -74,7 +75,7 @@ Core::~Core() {
 int Core::AttachGraphics(Graphics* graphics) {
     //attach graphics to app
     if (!graphics) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No graphics object provided to attach");
+        Syngine::Logger::Error("No graphics object provided to attach");
         return 1;
     }
     
@@ -85,7 +86,7 @@ int Core::AttachGraphics(Graphics* graphics) {
 int Core::DetachGraphics() {
     //detach graphics from app
     if (!this->app->graphics) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No graphics object to detach");
+        Syngine::Logger::Error("No graphics object to detach");
         return 1;
     }
     
@@ -95,10 +96,10 @@ int Core::DetachGraphics() {
 
 int Core::SyngineEventLoop() {
     //main loop. this will obviously be replaced with a more complex and modular/multi-threaded loop in the Future
-    SDL_Log("Entering event loop");
+    Syngine::Logger::Info("Entering event loop");
 
     if (!this->app->graphics || !this->app->graphics->win) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Graphics not initialized or window not created");
+        Syngine::Logger::Error("Graphics not initialized or window not created");
         return 1;
     }
 
@@ -281,9 +282,9 @@ int Core::SyngineEventLoop() {
                     // Toggle debug mode
                     this->app->debug = !this->app->debug;
                     if (this->app->debug) {
-                        SDL_Log("Debug mode enabled");
+                        Syngine::Logger::Info("Debug mode enabled");
                     } else {
-                        SDL_Log("Debug mode disabled");
+                        Syngine::Logger::Info("Debug mode disabled");
                     }
                 } else if (event.key.key == SDLK_F5) {
                     // Reload changed assets
@@ -294,10 +295,7 @@ int Core::SyngineEventLoop() {
                         if (!mesh.valid) continue;
                         if (mesh.lastWriteTime !=
                             std::filesystem::last_write_time(mesh.path)) {
-                            SDL_Log("previoud ID: %d", mesh.id);
-
                             mc->ReloadMesh();
-                            SDL_Log("new id: %d", mesh.id);
                         }
                     }
                 } else if (event.key.key == SDLK_F6) {
@@ -451,7 +449,7 @@ int Core::SyngineEventLoop() {
             if (player && player->GetComponent<CameraComponent>()) {
                 finalCam = player->GetComponent<CameraComponent>();
             } else {
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Player or CameraComponent not found");
+                Syngine::Logger::Error("Player or CameraComponent not found");
                 return 1;
             }
         }
@@ -560,7 +558,7 @@ int Core::SyngineEventLoop() {
     }
     
     this->app->synModels->UnloadAll();
-    SDL_Log("Exiting event loop");
+    Syngine::Logger::Info("Exiting event loop");
     return 0;
 }
 
@@ -584,7 +582,7 @@ std::string Core::GetSystemSpecifications() {
 
     // Get OS
     const char* platform = SDL_GetPlatform();
-    specs += "Operating System: " + std::string(platform) + "\n";
+    specs += "\tOperating System: " + std::string(platform) + "\n";
 
     // Get CPU info (why on EARTH is this so complicated?)
     std::string cpu;
@@ -603,7 +601,7 @@ std::string Core::GetSystemSpecifications() {
     }
     CPUBrandString[sizeof(CPUBrandString) - 1] = '\0'; // Null-terminate the string
     cpu = std::string(CPUBrandString);
-    specs += "CPU: " + cpu + "\n";
+    specs += "\tCPU: " + cpu + "\n";
 
     // Get arch
     std::string cpuArch;
@@ -614,47 +612,47 @@ std::string Core::GetSystemSpecifications() {
         case PROCESSOR_ARCHITECTURE_ARM64: cpuArch = "ARM64"; break;
         default:                            cpuArch = "Unknown"; break;
     }
-    specs += "CPU Architecture: " + cpuArch + "\n";
-    specs += "Number of processors: " +
+    specs += "\tCPU Architecture: " + cpuArch + "\n";
+    specs += "\tNumber of processors: " +
              std::to_string(sysInfo.dwNumberOfProcessors) + "\n";
 
     // Get total physical memory
     MEMORYSTATUSEX statex;
     statex.dwLength = sizeof(statex);
     GlobalMemoryStatusEx(&statex);
-    specs += "Total Physical Memory (MB): " +
+    specs += "\tTotal Physical Memory (MB): " +
              std::to_string(statex.ullTotalPhys / (1024 * 1024)) + "\n";
 
     // Get display size
     SDL_DisplayID dId = SDL_GetDisplayForWindow(app->graphics->win);
     SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
-    specs += "Display Resolution: " + std::to_string(disMode.w) + "x" +
+    specs += "\tDisplay Resolution: " + std::to_string(disMode.w) + "x" +
              std::to_string(disMode.h) + "\n";
 
     // Get window resolution
     int w, h;
     SDL_GetWindowSize(app->graphics->win, &w, &h);
-    specs += "Window Resolution: " + std::to_string(w) + "x" +
+    specs += "\tWindow Resolution: " + std::to_string(w) + "x" +
              std::to_string(h) + "\n";
 
     // Get various GPU info from bgfx
     const bgfx::Caps* caps = bgfx::getCaps();
     if (caps) {
-        specs += "GPU Vendor ID: " + std::to_string(caps->vendorId) + "\n";
-        specs += "GPU Device ID: " + std::to_string(caps->deviceId) + "\n";
+        specs += "\tGPU Vendor ID: " + std::to_string(caps->vendorId) + "\n";
+        specs += "\tGPU Device ID: " + std::to_string(caps->deviceId) + "\n";
         specs +=
-            "Max Texture Size: " + std::to_string(caps->limits.maxTextureSize) +
+            "\tMax Texture Size: " + std::to_string(caps->limits.maxTextureSize) +
             "\n";
         specs +=
-            "Compute Shader support: " +
+            "\tCompute Shader support: " +
             std::string((caps->supported & BGFX_CAPS_COMPUTE) ? "Yes" : "No") +
             "\n";
-        specs += "3D Textures support: " +
+        specs += "\t3D Textures support: " +
                  std::string((caps->supported & BGFX_CAPS_TEXTURE_3D) ? "Yes"
                                                                       : "No") +
                  "\n";
     } else {
-        specs += "GPU Info: Not available\n";
+        specs += "\tGPU Info: Not available\n";
     }
 #elif __APPLE__
 

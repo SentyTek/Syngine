@@ -8,9 +8,9 @@ class DebugRender;
 #include "SynModelLoader.h"
 #include "SyngineDebug.h"
 #include "bgfx/bgfx.h"
-#include <Jolt/Jolt.h>
 
 //Jolt includes
+#include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/TempAllocator.h>

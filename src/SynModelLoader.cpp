@@ -1,4 +1,5 @@
 #include "SynModelLoader.h"
+#include "SyngineLogger.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 #include "defines.h"
@@ -63,18 +64,18 @@ bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTe
     //read file. ideally use some kind of post processing (tangents, join indices, etc), but this is a simple example
     const aiScene* scene = importer.ReadFile(path, flags);
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->HasMeshes()) {
-        SDL_Log("Error loading model: %s", importer.GetErrorString());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Error loading model: %s", importer.GetErrorString());
         return false;
     }
 
     if(scene->mNumMeshes == 0) {
-        SDL_Log("No meshes found in model: %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "No meshes found in model: %s", path.c_str());
         return false;
     }
 
     MeshData meshData;
     if (!processScene(meshData, scene, path, loadTextures)) {
-        SDL_Log("Failed to process scene for model: %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to process scene for model: %s", path.c_str());
         return false;
     }
     meshData.hasTextures = loadTextures;
@@ -84,11 +85,11 @@ bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTe
     try {
         meshData.lastWriteTime = std::filesystem::last_write_time(path);
     } catch (const std::filesystem::filesystem_error& e) {
-        SDL_Log("Failed to get last write time for %s: %s", path.c_str(), e.what());
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Failed to get last write time for %s: %s", path.c_str(), e.what()); // e.what() lol what a name
     }
     meshData.valid = true; // Mark as valid after processing
 
-    SDL_Log("Loaded mesh %s", path.c_str());
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Loaded mesh %s", path.c_str());
     loadedMeshes.push_back(meshData);
     out = meshData;
     return true;
@@ -168,7 +169,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
                     vertex.tangent[2] = t.z;
                 }
             }
-            SDL_Log("No tangents for mesh %s", path.c_str());
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN, "No tangents for mesh %s", path.c_str());
         }
 
         meshData.vertices.push_back(vertex);
@@ -183,7 +184,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             meshData.indices.push_back(face.mIndices[1]);
             meshData.indices.push_back(face.mIndices[2]);
         } else {
-            SDL_Log("Face %d has %d indices, not 3", i, face.mNumIndices);
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Face %d has %d indices, not 3", i, face.mNumIndices);
         }
     }
 
@@ -212,7 +213,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
 
     //checks
     if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
-        SDL_Log("Failed to create vertex/index buffer");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create vertex/index buffer");
         return false;
     }
 
@@ -243,7 +244,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
                         texPath.C_Str() //for debugging or caching
                     );
                     if(!bgfx::isValid(texHandle)) {
-                        SDL_Log("Failed to load texture %s", texPath.C_Str());
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load texture %s", texPath.C_Str());
                         return false;
                     }
                     mat.albedo = texHandle;
@@ -265,7 +266,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
                         normPath.C_Str() //for debugging or caching
                     );
                     if(!bgfx::isValid(texHandle)) {
-                        SDL_Log("Failed to load normal map %s", normPath.C_Str());
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load normal map %s", normPath.C_Str());
                         return false;
                     }
                     mat.normalMap = texHandle;
@@ -281,13 +282,13 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             if (std::filesystem::exists(heightPath)) {
                 bgfx::TextureHandle texHandle = SynLoadTextureFromFile(heightPath.c_str());
                 if (!bgfx::isValid(texHandle)) {
-                    SDL_Log("Failed to load height map %s", heightPath.c_str());
+                    Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load height map %s", heightPath.c_str());
                     return false;
                 }
                 mat.heightMap = texHandle;
             } else {
+                Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Height map not found for object %s", path.c_str());
                 mat.heightMap = SynCreateFlatTexture();
-                SDL_Log("Height map not found for object %s", path.c_str());
             }
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);
@@ -339,7 +340,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
 
     //Ensure at least one material exists
     if(meshData.materials.empty()) {
-        SDL_Log("Warning: Mesh %s had no materials, using default.", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Mesh %s had no materials, using default.", path.c_str());
         Material mat;
         mat.albedo = BGFX_INVALID_HANDLE;
         mat.normalMap = BGFX_INVALID_HANDLE;
@@ -361,7 +362,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
 bool AssimpLoader::ReloadModel(MeshData& out, int id) {
     MeshData* mesh = getMeshById(id);
     if (!mesh) {
-        SDL_Log("Mesh with ID %d not found", id);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Mesh with ID %d not found", id);
         return false;
     }
     mesh->valid = false; // Mark as invalid before reloading
@@ -372,13 +373,13 @@ bool AssimpLoader::ReloadModel(MeshData& out, int id) {
                            aiProcess_GenSmoothNormals;
     const aiScene* scene = importer.ReadFile(mesh->path, flags);
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->HasMeshes()) {
-        SDL_Log("Error reloading model: %s", importer.GetErrorString());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Error reloading model: %s", importer.GetErrorString());
         return false;
     }
 
     MeshData temp;
     if (!processScene(temp, scene, mesh->path, mesh->hasTextures)) {
-        SDL_Log("Failed to process scene for model: %s", mesh->path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to process scene for model: %s", mesh->path.c_str());
         return false;
     }
 
@@ -410,11 +411,11 @@ bool AssimpLoader::ReloadModel(MeshData& out, int id) {
     try {
         mesh->lastWriteTime = std::filesystem::last_write_time(mesh->path);
     } catch (const std::filesystem::filesystem_error& e) {
-        SDL_Log("Failed to get last write time for %s: %s", mesh->path.c_str(), e.what());
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Failed to get last write time for %s: %s", mesh->path.c_str(), e.what());
     }
     mesh->valid = true;
 
-    SDL_Log("Reloaded mesh %s", mesh->path.c_str());
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Reloaded mesh %s", mesh->path.c_str());
     out = *mesh; // Update output with reloaded data
     return true;
 }
