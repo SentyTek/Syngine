@@ -44,7 +44,8 @@ class Logger {
 
     // Log a message to disk with an optional log level
     static void Log(const std::string& message,
-                    LogLevel           level = LogLevel::INFO);
+                    LogLevel           level     = LogLevel::INFO,
+                    bool               toConsole = true);
     // Log a formatted message to disk with a log level
     static void LogF(LogLevel level, const char* fmt, ...);
     // Log an error
