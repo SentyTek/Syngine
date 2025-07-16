@@ -14,6 +14,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
 
 add_subdirectory(engine)
+
+if(WIN32)
+    set(CMAKE_WIN32_EXECUTABLE ON)
+endif()
+
+
 add_executable(${EXECUTABLE_NAME}
     src/main.cpp
 )

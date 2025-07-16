@@ -54,6 +54,7 @@ add_library(Syngine STATIC
     src/SyngineGameobjects.cpp
     src/SynginePhys.cpp
     src/SyngineDebug.cpp
+    src/SyngineLogger.cpp
     src/Components/MeshComponent.cpp
     src/Components/TransformComponent.cpp
     src/Components/RigidbodyComponent.cpp
