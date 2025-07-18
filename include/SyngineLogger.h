@@ -24,7 +24,6 @@ class Logger {
 
     static std::string GetTimestamp();
     static std::string LogLevelToString(LogLevel level);
-    static std::filesystem::path GetLogFolderPath();
 
     static inline std::string appName = "SyngineGame";
     static inline std::unique_ptr<std::ofstream> logFile = nullptr;

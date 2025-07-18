@@ -24,18 +24,12 @@ std::string Logger::LogLevelToString(LogLevel level) {
     }
 }
 
-// Gets the path to the log folder, creates it if it doesn't exist
-// Path depends on OS, and boy do I love platform-specific code
-std::filesystem::path Logger::GetLogFolderPath() {
-    return Syngine::GetAppdataPath(appName) / "logs";
-}
-
 void Logger::SetAutoFlush(bool enable) { autoFlush = enable; }
 
 void Logger::Init(const std::string& appname,
                   const std::filesystem::path& logPath) {
     appName = appname;
-    std::filesystem::path logFolder = GetLogFolderPath();
+    std::filesystem::path logFolder = Syngine::GetAppdataPath(appName) / "logs";
     if (logFolder.empty()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log folder path is empty, cannot initialize logger.");
         return;
