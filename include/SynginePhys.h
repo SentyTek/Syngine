@@ -197,11 +197,13 @@ namespace Syngine {
                          EMotionType motionType,
                          ObjectLayer layer,
                          float       mass = 0.0f);
-        BodyID CreateMeshBody(RVec3Arg           position,
-                              QuatArg            rotation,
-                              const MeshData& meshData,
-                              EMotionType        motionType,
-                              ObjectLayer        layer);
+        BodyID CreateMeshBody(RVec3Arg         position,
+                              QuatArg          rotation,
+                              const MeshData&  meshData,
+                              EMotionType      motionType,
+                              ObjectLayer      layer,
+                              const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f));
+        
         BodyID CreateCapsule(RVec3Arg    position,
                              float       radius,
                              float       halfHeight,

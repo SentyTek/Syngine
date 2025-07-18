@@ -20,6 +20,8 @@
 #include "bx/math.h"
 #include "bgfx/defines.h"
 
+#include <filesystem>
+
 using namespace Syngine;
 
 Core::Core() {
@@ -89,35 +91,32 @@ int Core::SyngineEventLoop() {
 
     player->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
     player->AddComponent(Syngine::SYN_COMPONENT_PLAYER);
-    player->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
     player->AddComponent(Syngine::SYN_COMPONENT_CAMERA);
     this->app->graphics->RegisterGizmo("camera_render");
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
-
-    RigidbodyComponent* rbComp =
-        player->GetComponent<RigidbodyComponent>();
-    if (!rbComp) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get RigidbodyComponent for player");
-        delete player; // Clean up the player object
-        return 1;
-    }
-    rbComp->Init(pTransform,
-                 this->app->physicsManager,
-                 PhysicsShapes::CAPSULE,
-                 { 60.0f, 0.3f, 0.1f }, // mass, friction, restitution
-                 JPH::EMotionType::Dynamic,
-                 Layers::MOVING,
-                 { 0.7f, 0.3f });
-
+    
     player->GetComponent<PlayerComponent>()->Init(
         player->GetComponent<CameraComponent>(),
         this->app->graphics->win,
-        rbComp);
-    
+        this->app->physicsManager);
+
     this->app->gameObjects.push_back(player);
-    
+
+    // fun slide box
+    /*GameObject* box = new GameObject("box", "default");
+    box->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+    box->AddComponent(Syngine::SYN_COMPONENT_MESH);
+    box->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
+    MeshComponent* meshComp = box->GetComponent<MeshComponent>();
+    meshComp->LoadMesh(resolveOSPath("meshes/cube.glb"), false);
+    TransformComponent* tComp = box->GetComponent<TransformComponent>();
+    tComp->SetPosition(15.0f, 0.0f, 0.0f);
+    tComp->SetScale(1.0f, 15.0f, 15.0f);
+    box->GetComponent<RigidbodyComponent>()->Init(tComp, this->app->physicsManager, PhysicsShapes::BOX, { 0.0f, 0.5f, 0.5f }, JPH::EMotionType::Static, Syngine::Layers::NON_MOVING, {1.0f, 15.0f, 15.0f});
+    this->app->gameObjects.push_back(box);*/
+
     bool running = true;
     bool playerMode = false; // False is editor mode, True is player mode
     bool simulate = false; // Toggles the physics simulation (always true in player mode)
@@ -135,7 +134,7 @@ int Core::SyngineEventLoop() {
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch =
     bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
-    const float moveSpeed = 2.0f; // Speed of camera movement
+    const float moveSpeed = 3.0f; // Speed of camera movement
     const float sprintMult = 2.0f;
     const float crouchSpeed = 0.5f;
     
@@ -220,14 +219,19 @@ int Core::SyngineEventLoop() {
                     MeshComponent* meshComp = cube->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
                     RigidbodyComponent* physComp = cube->GetComponent<RigidbodyComponent>();
-                    std::vector<float> shapeParams = {1.0f, 1.0f, 1.0f}; // full extents
+                    std::vector<float> shapeParams = { 2.0f,
+                                                       2.0f,
+                                                       2.0f }; // full extents
+                    std::vector<float> params      = {
+                        0.0f, 0.7f, 0.02f
+                    }; // mass, friction, restitution
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
                                        PhysicsShapes::BOX,
-                                       {1000.0f, 0.7f, 0.02f}, // mass, friction, restitution
+                                       params,
                                        JPH::EMotionType::Dynamic,
                                        Layers::MOVING,
                                        shapeParams);
@@ -241,14 +245,19 @@ int Core::SyngineEventLoop() {
                     MeshComponent* meshComp = sphere->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = sphere->GetComponent<TransformComponent>();
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
                     RigidbodyComponent* physComp = sphere->GetComponent<RigidbodyComponent>();
-                    std::vector<float> shapeParams = { 0.95f }; // half extents for sphere shape (diameter)
+                    std::vector<float> shapeParams = { // half extents for sphere shape (diameter)
+                        2.9f
+                    };
+                    std::vector<float> params = {
+                        0.0f, 0.7f, 0.02f
+                    }; // mass, friction, restitution
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
                                        PhysicsShapes::SPHERE,
-                                       {520.0f, 0.7f, 0.02f}, // mass, friction, restitution
+                                       params,
                                        JPH::EMotionType::Dynamic,
                                        Layers::MOVING,
                                        shapeParams);
@@ -261,9 +270,27 @@ int Core::SyngineEventLoop() {
                     } else {
                         SDL_Log("Debug mode disabled");
                     }
+                } else if (event.key.key == SDLK_F5) {
+                    // Reload changed assets
+                    for (auto& go : this->app->gameObjects) {
+                        MeshComponent* mc = go->GetComponent<MeshComponent>();
+                        if (!mc) continue;
+                        MeshData& mesh = mc->meshData;
+                        if (!mesh.valid) continue;
+                        if (mesh.lastWriteTime !=
+                            std::filesystem::last_write_time(mesh.path)) {
+                            SDL_Log("previoud ID: %d", mesh.id);
+
+                            mc->ReloadMesh();
+                            SDL_Log("new id: %d", mesh.id);
+                        }
+                    }
+                } else if (event.key.key == SDLK_F6) {
+                    // Reload all shaders
+                    this->app->graphics->ReloadAllPrograms();
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                if (event.button.button == SDL_BUTTON_RIGHT) {
+                if (event.button.button == SDL_BUTTON_RIGHT && !playerMode) {
                     rmb = true;
                     mouseX = event.button.x;
                     mouseY = event.button.y;
@@ -292,7 +319,7 @@ int Core::SyngineEventLoop() {
                     PlayerComponent* playerComp =
                         player->GetComponent<PlayerComponent>();
                     if (playerComp)
-                        playerComp->HandleInput(event, playerMode, sensitivity, maxPitch);
+                        playerComp->HandleInput(event);
                 }
             }
         }
@@ -454,8 +481,8 @@ int Core::SyngineEventLoop() {
 
         if (playerMode) {
             if (player->GetComponent<PlayerComponent>()) {
-                player->GetComponent<PlayerComponent>()->Update(
-                    keystate, moveSpeed, sprintMult, crouchSpeed);
+                player->GetComponent<PlayerComponent>()->Update(keystate,
+                                                                playerMode);
             }
         }
 
@@ -465,6 +492,14 @@ int Core::SyngineEventLoop() {
                 if (physComp && physComp->isEnabled) {
                     physComp->Update(simulate);
                 }
+            }
+        }
+
+        // Post-physics update for player component
+        // (I do not like the two if playermode here but eh)
+        if (playerMode) {
+            if (player->GetComponent<PlayerComponent>()) {
+                player->GetComponent<PlayerComponent>()->PostPhysicsUpdate();
             }
         }
 

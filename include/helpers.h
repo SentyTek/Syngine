@@ -43,10 +43,6 @@ inline bool CheckRequiredFolders() {
     };
 
     for (const char* folder : requiredFolders) {
-        if (!SDL_GetBasePath()) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get base path");
-            return false;
-        }
         std::string fullPath = resolveOSPath(folder);
         if (!SDL_GetPathInfo(fullPath.c_str(), nullptr)) {
             SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Required folder '%s' does not exist in game dir: %s", folder, fullPath.c_str());

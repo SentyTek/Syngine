@@ -10,6 +10,7 @@
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
 #include "Jolt/Physics/Collision/Shape/MeshShape.h"
+#include "Jolt/Physics/Collision/Shape/ScaledShape.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
@@ -192,7 +193,7 @@ BodyID Phys::CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, 
     return box->GetID();
 }
 
-BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer) {
+BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale) {
     BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
     if (meshData.numVertices == 0) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Mesh data is empty.");
@@ -233,6 +234,18 @@ BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData&
         return BodyID();
     }
     ShapeRefC meshShape = meshShapeResult.Get();
+
+    // Apply scale to the mesh shape if provided
+    if (scale != JPH::Vec3::sReplicate(1.0f)) {
+        ScaledShapeSettings scaledShapeSettings(meshShape, scale);
+        ShapeSettings::ShapeResult scaledShapeResult = scaledShapeSettings.Create();
+        if (scaledShapeResult.HasError()) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "SynginePhys::CreateMeshBody: Failed to create scaled mesh shape: %s", scaledShapeResult.GetError().c_str());
+            return BodyID();
+        }
+        meshShape = scaledShapeResult.Get();
+    }
+
     BodyCreationSettings meshSettings(meshShape, position, rotation, motionType, layer);
 
     // For static meshes, mass properties are not strictly required, as Jolt treats them as infinite mass.
@@ -281,7 +294,7 @@ BodyID Phys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EM
     return capsule->GetID();
 }
 
-    BodyID Phys::CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeight, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
+BodyID Phys::CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeight, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
     BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
     CylinderShapeSettings cylinderShapeSettings(halfHeight, radius);
     ShapeSettings::ShapeResult cylinderShapeResult = cylinderShapeSettings.Create();

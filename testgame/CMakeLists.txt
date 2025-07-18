@@ -34,7 +34,7 @@ compile_all_shaders(
 )
 
 if(ALL_COMPILED_SHADER_BINARIES)
-    # message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
+    message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
     add_custom_target(Shaders ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
     add_dependencies(${EXECUTABLE_NAME} Shaders)
 else()
@@ -57,7 +57,7 @@ compile_all_shaders(
 )
 
 if(ALL_COMPILED_SHADER_BINARIES)
-    # message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
+    message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
     add_custom_target(Shaders2 ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
     add_dependencies(${EXECUTABLE_NAME} Shaders2)
 else()
@@ -156,12 +156,7 @@ if(APPLE)
         message(WARNING "Meshes source directory not found: ${MESHES_SOURCE_DIR}")
     endif()
 
-    # Yippee copying required assets to the bundle
-    set_property(SOURCE ${COMPILED_SHADER_VS} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/shaders")
-    set_property(SOURCE ${COMPILED_SHADER_FS} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/shaders")
-    set_property(SOURCE ${CMAKE_SOURCE_DIR}/meshes PROPERTY MACOSX_PACKAGE_LOCATION "Resources/meshes")
-
-    # Engine default files
+    # --- Copy engine/default subfolders except 'shaders' into bundle Resources ---
     set(ENGINE_DEFAULT_DIR "${CMAKE_SOURCE_DIR}/engine/default")
     if(EXISTS "${ENGINE_DEFAULT_DIR}")
         file(GLOB ENGINE_DEFAULT_SUBDIRS RELATIVE "${ENGINE_DEFAULT_DIR}" "${ENGINE_DEFAULT_DIR}/*")
@@ -175,13 +170,18 @@ if(APPLE)
                     endif()
                     target_sources(${EXECUTABLE_NAME} PRIVATE "${abs_default_file}")
                     set_property(SOURCE "${abs_default_file}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources/default/${subdir}")
-                    # message(STATUS "Bundling engine default file for macOS: ${abs_default_file} -> Resources/default/${subdir}/${default_file_relative}")
+                    message(STATUS "Bundling engine default file for macOS: ${abs_default_file} -> Resources/default/${subdir}/${default_file_relative}")
                 endforeach()
             endif()
         endforeach()
     else()
         message(WARNING "Engine default directory not found: ${ENGINE_DEFAULT_DIR}")
     endif()
+
+    # Set the location within the macOS bundle's Resources directory
+    set_property(SOURCE ${COMPILED_SHADER_VS} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/shaders")
+    set_property(SOURCE ${COMPILED_SHADER_FS} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/shaders")
+    set_property(SOURCE ${CMAKE_SOURCE_DIR}/meshes PROPERTY MACOSX_PACKAGE_LOCATION "Resources/meshes")
 
     # --- Add other resources using your macro ---
     add_resource("${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png")
@@ -196,6 +196,7 @@ set_target_properties(${EXECUTABLE_NAME} PROPERTIES
     XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
     RESOURCE "${RESOURCE_FILES_FOR_TARGET}"
+    XCODE_ATTRIBUTE_SDKROOT "macosx"
 )
 endif()
 
