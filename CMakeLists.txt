@@ -51,6 +51,7 @@ add_library(Syngine STATIC
     src/SyngineGraphics.cpp
     src/SynModelLoader.cpp
     src/helpers.cpp
+    src/FsUtils.cpp
     src/SyngineGameobjects.cpp
     src/SynginePhys.cpp
     src/SyngineDebug.cpp

@@ -13,13 +13,14 @@ struct App {
     std::vector<GameObject*> gameObjects;
     Phys*                    physicsManager;
     bool                     debug = true;
+    std::string              appName;
 };
 
 class Core {
   public:
     App* app;
 
-    Core();
+    Core(std::string appName = "SyngineGame");
     ~Core();
     int AttachGraphics(Graphics* graphics);
     int DetachGraphics();

@@ -1,23 +1,8 @@
 #include "SDL3/SDL_messagebox.h"
-#ifdef _WIN32
-#define NOMINMAX
-#include <ShlObj.h>
-#include <knownfolders.h>
-#include <winerror.h>
-
-#elif __APPLE__
-#include "CoreServices/CoreServices.h"
-#include <iostream>
-
-#else
-#include <iostream>
-#include <cstdlib>
-
-#endif
-
 #include "SyngineLogger.h"
 #include "SDL3/SDL.h"
 #include <fstream>
+#include "FsUtils.h"
 
 namespace Syngine {
 
@@ -42,61 +27,7 @@ std::string Logger::LogLevelToString(LogLevel level) {
 // Gets the path to the log folder, creates it if it doesn't exist
 // Path depends on OS, and boy do I love platform-specific code
 std::filesystem::path Logger::GetLogFolderPath() {
-    std::filesystem::path logFolder;
-#ifdef _WIN32
-    // On Windows, use the user's Roaming AppData folder.
-    PWSTR path = nullptr;
-    HRESULT hr = SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &path);
-    if (SUCCEEDED(hr)) {
-        // Compose the log folder path: AppData\Roaming\SentyTek\<appName>\logs
-        logFolder = std::filesystem::path(path) / "SentyTek" / appName / "logs";
-        CoTaskMemFree(path);
-    } else {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "Failed to get AppData path for log.");
-    }
-
-#elif __APPLE__
-    // On macOS, use the user's Application Support folder.
-    FSRef ref;
-    OSType folderType = kApplicationSupportFolderType;
-    char   path[PATH_MAX];
-
-    // Find the Application Support folder.
-    OSStatus status =
-        FSFindFolder(kUserDomain, folderType, kCreateFolder, &ref);
-    if (status != noErr) {
-        std::cerr << "Error finding Application Support folder: " << status
-                  << std::endl;
-        return "";
-    }
-    // Convert FSRef to a filesystem path.
-    if (FSRefMakePath(&ref, (UInt8*)path, sizeof(path) != noErr)) {
-        std::cerr << "Error converting FSRef to path." << std::endl;
-        return "";
-    }
-
-    // Compose the log folder path: ~/Library/Application Support/SentyTek/<appName>/logs
-    logFolder = std::filesystem::path(path) / "SentyTek" / appName / "logs";
-
-#else
-    // On Linux and other platforms, use XDG_DATA_HOME.
-    const char* homeDir = std::getenv("XDG_DATA_HOME");
-
-    if (!homeDir) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "XDG_DATA_HOME not set for log path.");
-    }
-
-    // Compose the log folder path: $XDG_DATA_HOME/SentyTek/<appName>/logs (or ~/.local/share/SentyTek/<appName>/logs)
-    logFolder = std::filesystem::path(homeDir) / "SentyTek" / appName / "logs";
-    
-#endif
-    // Log an error if the path could not be determined.
-    if (logFolder.empty()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "Failed to determine log folder path.");
-    }
-    return logFolder;
+    return Syngine::GetAppdataPath(appName) / "logs";
 }
 
 void Logger::SetAutoFlush(bool enable) { autoFlush = enable; }

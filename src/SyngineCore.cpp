@@ -40,9 +40,10 @@
 
 using namespace Syngine;
 
-Core::Core() {
+Core::Core(std::string appName) {
     //initialize app
     this->app = new App();
+    this->app->appName = appName;
     this->app->graphics = nullptr; // No graphics attached initially
     this->app->synModels = new AssimpLoader(); // Initialize the model loader
 

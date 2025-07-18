@@ -22,7 +22,7 @@ int AppMain(int argc, char* argv[]) {
     Syngine::Logger::Log("Starting " + std::string(appName));
 
     // Create window
-    Syngine::Core syngine;
+    Syngine::Core syngine(appName);
     Syngine::Graphics graphics(appName, 1600, 900);
 
     if (graphics.CreateGameWindow() != 0) {
