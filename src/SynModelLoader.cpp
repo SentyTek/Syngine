@@ -238,7 +238,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
                 const aiTexture* tex = scene->GetEmbeddedTexture(texPath.C_Str());
                 if(tex->mHeight == 0) {
                     //compressed texture
-                    bgfx::TextureHandle texHandle = SynLoadTextureFromMemory(
+                    bgfx::TextureHandle texHandle = Syngine::LoadTextureFromMemory(
                         (const uint8_t*)tex->pcData,
                         tex->mWidth,
                         texPath.C_Str() //for debugging or caching
@@ -260,7 +260,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
                 const aiTexture* normTex = scene->GetEmbeddedTexture(normPath.C_Str());
                 if(normTex->mHeight == 0) {
                     //compressed texture
-                    bgfx::TextureHandle texHandle = SynLoadTextureFromMemory(
+                    bgfx::TextureHandle texHandle = Syngine::LoadTextureFromMemory(
                         (const uint8_t*)normTex->pcData,
                         normTex->mWidth,
                         normPath.C_Str() //for debugging or caching
@@ -280,7 +280,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             std::string heightPath = path.substr(0, path.find_last_of('.')) + "_height.png";
 
             if (std::filesystem::exists(heightPath)) {
-                bgfx::TextureHandle texHandle = SynLoadTextureFromFile(heightPath.c_str());
+                bgfx::TextureHandle texHandle = Syngine::LoadTextureFromFile(heightPath.c_str());
                 if (!bgfx::isValid(texHandle)) {
                     Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load height map %s", heightPath.c_str());
                     return false;
@@ -288,7 +288,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
                 mat.heightMap = texHandle;
             } else {
                 Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Height map not found for object %s", path.c_str());
-                mat.heightMap = SynCreateFlatTexture();
+                mat.heightMap = Syngine::CreateFlatTexture();
             }
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);
@@ -300,7 +300,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             Material mat;
             mat.albedo = BGFX_INVALID_HANDLE;
             mat.normalMap = BGFX_INVALID_HANDLE;
-            mat.heightMap = SynCreateFlatTexture();
+            mat.heightMap = Syngine::CreateFlatTexture();
             mat.name = "default_material";
             meshData.materials.push_back(mat);
         }
@@ -324,7 +324,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
 
                 mat.albedo = BGFX_INVALID_HANDLE;
                 mat.normalMap = BGFX_INVALID_HANDLE;
-                mat.heightMap = SynCreateFlatTexture();
+                mat.heightMap = Syngine::CreateFlatTexture();
                 mat.name = "material_" + std::to_string(i);
                 meshData.materials.push_back(mat);
             }
@@ -332,7 +332,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             Material mat;
             mat.albedo = BGFX_INVALID_HANDLE;
             mat.normalMap = BGFX_INVALID_HANDLE;
-            mat.heightMap = SynCreateFlatTexture();
+            mat.heightMap = Syngine::CreateFlatTexture();
             mat.name = "default_material";
             meshData.materials.push_back(mat);
         }
@@ -344,7 +344,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
         Material mat;
         mat.albedo = BGFX_INVALID_HANDLE;
         mat.normalMap = BGFX_INVALID_HANDLE;
-        mat.heightMap = SynCreateFlatTexture();
+        mat.heightMap = Syngine::CreateFlatTexture();
         mat.name = "default_material";
         meshData.materials.push_back(mat);
     }

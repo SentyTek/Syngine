@@ -47,8 +47,9 @@ std::filesystem::path GetAppdataPath(const std::string& appName) {
                   << std::endl;
         return "";
     }
+    
     // Convert FSRef to a filesystem path.
-    if (FSRefMakePath(&ref, (UInt8*)path, sizeof(path) != noErr)) {
+    if (FSRefMakePath(&ref, (UInt8*)path, sizeof(path)) != noErr) {
         std::cerr << "Error converting FSRef to path." << std::endl;
         return "";
     }

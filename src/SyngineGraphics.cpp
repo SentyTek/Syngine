@@ -458,7 +458,7 @@ void Graphics::RegisterGizmo(const std::string& tag, float size) {
     
     std::string resolvedPath = resolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
     const char* path = resolvedPath.c_str();
-    bgfx::TextureHandle texture = SynLoadTextureFromFile(path);
+    bgfx::TextureHandle texture = Syngine::LoadTextureFromFile(path);
     if (bgfx::isValid(texture)) {
         gizmoRegistry[tag] = { texture, size };
     }

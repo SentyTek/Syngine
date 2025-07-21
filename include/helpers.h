@@ -4,8 +4,10 @@
 #include <SDL3/SDL.h>
 #include "SyngineLogger.h"
 
-// This function resolves the full relative path to resourced files based on platform.
-// macOS uses a different path structure than other because of the app bundle structure.
+namespace Syngine {
+
+// This function resolves the full relative path to resourced files based on
+// platform. macOS uses a different path structure than other because of the app bundle structure.
 inline std::string resolveOSPath(const char* path)
 {
 #ifdef __APPLE__
@@ -30,12 +32,15 @@ inline std::string resolveOSPath(const char* path)
 #endif
 }
 
-bgfx::TextureHandle SynLoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
-bgfx::TextureHandle SynLoadTextureFromFile(const char* path);
-bgfx::TextureHandle SynCreateFlatTexture();
+// Loads a texture from memory
+bgfx::TextureHandle
+LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
+// Loads a texture from file
+bgfx::TextureHandle LoadTextureFromFile(const char* path);
+// Creates a flat texture
+bgfx::TextureHandle CreateFlatTexture();
 
-int SynCreateQuad(int viewId);
-
+// Checks if required folders exist in the game directory
 inline bool CheckRequiredFolders() {
     const char* requiredFolders[] = {
         "shaders",
@@ -55,3 +60,5 @@ inline bool CheckRequiredFolders() {
     }
     return true;
 }
+
+} // namespace Syngine

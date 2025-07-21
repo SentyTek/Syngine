@@ -5,6 +5,8 @@
 #include <intrin.h>
 
 #elif __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
 
 
 #else
@@ -624,17 +626,45 @@ std::string Core::GetSystemSpecifications() {
     specs += "\tTotal Physical Memory (MB): " +
              std::to_string(statex.ullTotalPhys / (1024 * 1024)) + "\n";
 
+#elif __APPLE__
+    // On macOS, gather system information using sysctl
+    specs += "\tOperating System: macOS\n";
+    try {
+        char cpuBrand[256];
+        size_t size = sizeof(cpuBrand);
+        sysctlbyname("machdep.cpu.brand_string", cpuBrand, &size, NULL, 0);
+        specs += "\tProcessor: " + std::string(cpuBrand) + "\n";
+
+        // Get logical CPU count
+        int cpuProc = 0;
+        size = sizeof(cpuProc);
+        sysctlbyname("machdep.cpu.core_count", &cpuProc, &size, NULL, 0);
+        specs += "\tNumber of processors: " + std::to_string(cpuProc) + "\n";
+
+        // Get RAM info
+        uint64_t ramSize = 0;
+        size = sizeof(ramSize);
+        sysctlbyname("hw.memsize", &ramSize, &size, NULL, 0);
+        specs += "\tRAM: " + std::to_string(ramSize / (1024 * 1024)) + " MB\n";
+    } catch (const std::exception& e) {
+        specs += "\tError getting macOS system info: " + std::string(e.what()) + "\n";
+    }
+    
+#else
+
+#endif
+
     // Get display size
     SDL_DisplayID dId = SDL_GetDisplayForWindow(app->graphics->win);
     SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
     specs += "\tDisplay Resolution: " + std::to_string(disMode.w) + "x" +
-             std::to_string(disMode.h) + "\n";
+                std::to_string(disMode.h) + "\n";
 
     // Get window resolution
     int w, h;
     SDL_GetWindowSize(app->graphics->win, &w, &h);
     specs += "\tWindow Resolution: " + std::to_string(w) + "x" +
-             std::to_string(h) + "\n";
+                std::to_string(h) + "\n";
 
     // Get various GPU info from bgfx
     const bgfx::Caps* caps = bgfx::getCaps();
@@ -649,16 +679,11 @@ std::string Core::GetSystemSpecifications() {
             std::string((caps->supported & BGFX_CAPS_COMPUTE) ? "Yes" : "No") +
             "\n";
         specs += "\t3D Textures support: " +
-                 std::string((caps->supported & BGFX_CAPS_TEXTURE_3D) ? "Yes"
-                                                                      : "No") +
-                 "\n";
+                    std::string((caps->supported & BGFX_CAPS_TEXTURE_3D) ? "Yes"
+                                                                        : "No") +
+                    "\n";
     } else {
         specs += "\tGPU Info: Not available\n";
     }
-#elif __APPLE__
-
-#else
-
-#endif
 return specs;
 }
