@@ -8,9 +8,8 @@
 #include <sys/types.h>
 #include <sys/sysctl.h>
 
-
 #else
-
+#include "sys/utsname.h"
 
 #endif
 
@@ -649,9 +648,42 @@ std::string Core::GetSystemSpecifications() {
     } catch (const std::exception& e) {
         specs += "\tError getting macOS system info: " + std::string(e.what()) + "\n";
     }
-    
-#else
 
+#else
+    // Get OS
+    struct utsname sysInfo;
+    if (uname(&sysInfo) < 0) {
+        specs += "\tError getting OS info\n";
+        return specs;
+    }
+    specs += "\tOperating System: " + std::string(sysInfo.sysname) + " " + std::string(sysInfo.release) + "\n";
+
+    // Get CPU info (name, architecture, etc.)
+    std::ifstream cpuInfoFile("/proc/cpuinfo");
+    std::string   line;
+    std::string   cpuBrand = "Unknown";
+
+    if (cpuInfoFile.is_open()) {
+        while (std::getline(cpuInfoFile, line)) {
+            if (line.find("model name") != std::string::npos) {
+                cpuBrand = line.substr(line.find(":") + 2);
+                break;
+            }
+        }
+        cpuInfoFile.close();
+    }
+    specs += "\tCPU: " + cpuBrand + "\n";
+
+    specs += "\tCPU Architecture: " + std::string(sysInfo.machine) + "\n";
+
+    // Get number of processors
+    long numProcessors = sysconf(_SC_NPROCESSORS_ONLN);
+    specs += "\tNumber of processors: " + std::to_string(numProcessors) + "\n";
+
+    // Get total physical memory
+    long totalMemory = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE);
+    specs += "\tTotal Physical Memory (MB): " +
+             std::to_string(totalMemory / (1024 * 1024)) + "\n";
 #endif
 
     // Get display size

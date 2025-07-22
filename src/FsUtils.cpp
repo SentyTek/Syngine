@@ -1,3 +1,4 @@
+#include "SDL3/SDL_log.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <ShlObj.h>
@@ -60,13 +61,25 @@ std::filesystem::path GetAppdataPath(const std::string& appName) {
 #else
     // On Linux and other platforms, use XDG_DATA_HOME.
     const char* homeDir = std::getenv("XDG_DATA_HOME");
+    std::string homePath;
 
     if (!homeDir) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "XDG_DATA_HOME not set for AppData path.");
-    }
+        SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION,
+                     "XDG_DATA_HOME not set for AppData path.");
+        
+        // Fallback to manual home directory resolution
+        homeDir = std::getenv("HOME");
+        if (!homeDir) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                "HOME environment variable not set for AppData path.");
+        }
 
+        homePath = std::string(homeDir) + "/.local/share"; // Default fallback to ~/.local/share
+    }
+    
     // Compose the AppData folder path: $XDG_DATA_HOME/SentyTek/<appName> (or ~/.local/share/SentyTek/<appName>)
-    appDataFolder = std::filesystem::path(homeDir) / "SentyTek" / appName;
+    appDataFolder = std::filesystem::path(homePath) / "SentyTek" / appName;
+    SDL_Log("%s", appDataFolder.string().c_str());
 
 #endif
     // Log an error if the path could not be determined.

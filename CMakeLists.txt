@@ -106,7 +106,7 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
 set(JOLT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(JOLT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(JOLT_PROFILE_ENABLED OFF CACHE BOOL "" FORCE)
-if(APPLE)
+if(UNIX)
 add_compile_options(-frtti)
 endif()
 
@@ -149,7 +149,7 @@ endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/JoltPhysics/build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/JoltPhysics/Build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
 
 if(APPLE)
 set_target_properties(shaderc PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO") # Don't sign shaderc binary on macOS
