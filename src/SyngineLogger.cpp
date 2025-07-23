@@ -159,6 +159,7 @@ void Logger::LogHardwareInfo(Syngine::Core& core) {
         return;
     }
 
+    // This is a bit messy but it avoids duplicating code in multiple places
     Syngine::HardwareSpecs specs = core.GetSystemSpecifications();
     std::string            specsStr = "\nSystem Specifications:\n";
     specsStr += "\tOperating System: " + specs.osName + "\n";
@@ -176,7 +177,7 @@ void Logger::LogHardwareInfo(Syngine::Core& core) {
     
     specsStr += "\tGPU Vendor ID: " + std::to_string(specs.gpuVendorID) + "\n";
     specsStr += "\tGPU Device ID: " + std::to_string(specs.gpuDeviceID) + "\n";
-    
+
     specsStr +=
         "\tMax Texture Size: " + std::to_string(specs.maxTextureSize) + "\n";
     specsStr += "\tSupports Compute Shaders: " +
