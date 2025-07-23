@@ -1,3 +1,4 @@
+#include <cwchar>
 #if defined(_WIN32)
 #define NOMINMAX
 #include <Windows.h>
@@ -8,6 +9,19 @@
 #include "SyngineGraphics.h"
 #include "SyngineLogger.h"
 #include <string>
+
+#if defined(_WIN32)
+void EnableConsole() {
+    AllocConsole();
+
+    // Redirect standard output to the console
+    FILE* fp;
+    freopen_s(&fp, "CONOUT$", "w", stdout);
+    freopen_s(&fp, "CONOUT$", "w", stderr);
+    freopen_s(&fp, "CONIN$", "r", stdin);
+    std::ios::sync_with_stdio();
+}
+#endif
 
 void ErrorAndExit(const std::string& message, int code) {
     Syngine::Logger::LogF(Syngine::LogLevel::FATAL, "%s", message.c_str());
@@ -26,19 +40,19 @@ int AppMain(int argc, char* argv[]) {
     Syngine::Graphics graphics(appName, 1600, 900);
 
     if (graphics.CreateGameWindow() != 0) {
-        ErrorAndExit("Failed to create window! If any errors are listed above, these will likely fix it!", 1);
+        ErrorAndExit("Failed to create window! Check the log for details.", 1);
     }
 
     // Create renderer
     if (graphics.CreateRenderer() != 0) {
         graphics.DestroyWindow();
-        ErrorAndExit("Failed to create renderer! If any errors are listed above, these will likely fix it!", 1);
+        ErrorAndExit("Failed to create renderer! Check the log for details.", 1);
     }
 
     // Attach graphics to core
     if (syngine.AttachGraphics(&graphics) != 0) {
         graphics.DestroyWindow();
-        ErrorAndExit("Failed to attach graphics to core", 1);
+        ErrorAndExit("Failed to attach graphics to core. Check the log for details.", 1);
     }
 
     Syngine::Logger::LogHardwareInfo(syngine);
@@ -48,13 +62,13 @@ int AppMain(int argc, char* argv[]) {
     if (graphics.AddProgram("shaders/sky", "sky", Syngine::VIEW_SKY) == -1) {
         graphics.DestroyRenderer();
         graphics.DestroyWindow();
-        ErrorAndExit("Failed to create program", 1);
+        ErrorAndExit("Failed to create program. Check the log for details.", 1);
     }
     
     if (graphics.AddProgram("shaders/terrain", "terrain") == -1) {
         graphics.DestroyRenderer();
         graphics.DestroyWindow();
-        ErrorAndExit("Failed to create program", 1);
+        ErrorAndExit("Failed to create program. Check the log for details.", 1);
     }
 
     // Run event loop
@@ -90,6 +104,13 @@ int WINAPI WinMain(HINSTANCE hInstance,
         int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, nullptr, 0, nullptr, nullptr);
         argv[i] = new char[len];
         WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argv[i], len, nullptr, nullptr);
+    }
+
+    for (int i = 0; i < argc; ++i) {
+        if (wcscmp(argvW[i], L"--console") == 0) {
+            EnableConsole();
+            break;
+        }
     }
 
     // Call the main application function

@@ -1,8 +1,16 @@
 #include "SDL3/SDL_messagebox.h"
 #include "SyngineLogger.h"
 #include "SDL3/SDL.h"
+#include <cstdio>
 #include <fstream>
 #include "FsUtils.h"
+#include "SyngineCore.h"
+#include <chrono>
+#include <ctime>
+#include <cstdarg>
+#include <string_view>
+#include <vector>
+#include <cstdlib>
 
 namespace Syngine {
 
@@ -14,7 +22,8 @@ std::string Logger::GetTimestamp() {
     return std::string(buf);
 }
 
-std::string Logger::LogLevelToString(LogLevel level) {
+[[nodiscard]]
+std::string Logger::LogLevelToString(LogLevel level) noexcept {
     switch (level) {
         case LogLevel::INFO:  return "INFO";
         case LogLevel::WARN:  return "WARN";
@@ -23,8 +32,6 @@ std::string Logger::LogLevelToString(LogLevel level) {
         default:              return "UNKNOWN";
     }
 }
-
-void Logger::SetAutoFlush(bool enable) { autoFlush = enable; }
 
 void Logger::Init(const std::string& appname,
                   const std::filesystem::path& logPath) {
@@ -97,35 +104,41 @@ void Logger::Shutdown() {
     }
 }
 
-void Logger::Log(const std::string& message, LogLevel level, bool toConsole) {
+void Logger::Log(const std::string_view message, LogLevel level, bool toConsole) {
     if (!logFile || !logFile->is_open()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log file is not open. Message: %s", message.c_str());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Attempted to log while file is not open. Message: %s", message.data());
         return;
     }
 
     std::lock_guard<std::mutex> lock(logMutex);
-    (*logFile) << "[" << GetTimestamp() << "] "
-               << "[" << LogLevelToString(level) << "] "
-               << message << std::endl;
-    if (autoFlush) {
-        logFile->flush();
+
+    try {
+        (*logFile) << "[" << GetTimestamp() << "] "
+                << "[" << LogLevelToString(level) << "] "
+                << message << std::endl;
+        if (autoFlush) {
+            logFile->flush();
+        }
+    } catch (const std::exception& e) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to log message: %s", e.what());
     }
+
     if (toConsole) {
         switch (level) {
             case LogLevel::INFO:
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s", message.c_str());
+                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
                 break;
             case LogLevel::WARN:
-                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "%s", message.c_str());
+                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
                 break;
             case LogLevel::ERR: 
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.c_str());
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
                 break;
             case LogLevel::FATAL:
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.c_str());
+                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
                 break;
             default:
-                SDL_Log("%s", message.c_str());
+                SDL_Log("%s", message.data());
                 break;
         }
     }
@@ -133,8 +146,8 @@ void Logger::Log(const std::string& message, LogLevel level, bool toConsole) {
     if (level == LogLevel::FATAL) {
         Shutdown();
         SDL_LogError(
-            SDL_LOG_CATEGORY_APPLICATION, "Fatal error: %s", message.c_str());
-        std::string finalMessage = appName + " has encountered a fatal error and needs to close:\n\n" + message;
+            SDL_LOG_CATEGORY_APPLICATION, "Fatal error: %s", message.data());
+        std::string finalMessage = appName + " has encountered a fatal error and needs to close:\n\n" + message.data();
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal Error", finalMessage.c_str(), nullptr);
         exit(EXIT_FAILURE);
     }
@@ -146,36 +159,69 @@ void Logger::LogHardwareInfo(Syngine::Core& core) {
         return;
     }
 
-    Logger::Log("System Specifications:\n" + core.GetSystemSpecifications(), LogLevel::INFO);
+    Syngine::HardwareSpecs specs = core.GetSystemSpecifications();
+    std::string            specsStr = "\nSystem Specifications:\n";
+    specsStr += "\tOperating System: " + specs.osName + "\n";
+    specsStr += "\tCPU: " + specs.cpuModel + "\n";
+    specsStr += "\tCPU Architecture: " + specs.cpuArch + "\n";
+    specsStr +=
+        "\tNumber of processors: " + std::to_string(specs.cpuCores) + "\n";
+    specsStr +=
+        "\tTotal Physical Memory (MB): " + std::to_string(specs.ramMB) + "\n";
+    
+    specsStr += "\tDisplay Resolution: " + std::to_string(specs.screenWidth) +
+                "x" + std::to_string(specs.screenHeight) + "\n";
+    specsStr += "\tWindow Resolution: " + std::to_string(specs.winWidth) + "x" +
+                std::to_string(specs.winHeight) + "\n";
+    
+    specsStr += "\tGPU Vendor ID: " + std::to_string(specs.gpuVendorID) + "\n";
+    specsStr += "\tGPU Device ID: " + std::to_string(specs.gpuDeviceID) + "\n";
+    
+    specsStr +=
+        "\tMax Texture Size: " + std::to_string(specs.maxTextureSize) + "\n";
+    specsStr += "\tSupports Compute Shaders: " +
+                std::string(specs.supportsCompute ? "Yes" : "No") + "\n";
+    specsStr += "\tSupports 3D Textures: " +
+                std::string(specs.supports3DTextures ? "Yes" : "No") + "\n";
+
+    Logger::Log(specsStr, LogLevel::INFO);
 }
 
 void Logger::LogF(LogLevel level, const char* fmt, ...) {
-    char buffer[1024];
+    if (!fmt) return;
 
     va_list args;
     va_start(args, fmt);
 
-    int len = vsnprintf(buffer, sizeof(buffer), fmt, args);
-    va_end(args);
+    // Get required buffer data
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+    int len = vsnprintf(nullptr, 0, fmt, argsCopy);
+    va_end(argsCopy);
 
-    std::string message;
-    if (len < static_cast<int>(sizeof(buffer))) {
-        message = buffer;
-    } else {
-        // Allocate large enough heap buffer
-        std::vector<char> heapBuf(len + 1);
-        va_start(args, fmt);
-        vsnprintf(heapBuf.data(), heapBuf.size(), fmt, args);
+    if (len < 0) {
         va_end(args);
-        message = std::string(heapBuf.data());
+        return;
     }
 
-    Log(message, level);
+    // Allocate buffer and format the string
+    std::vector<char> buffer(len + 1);
+    vsnprintf(buffer.data(), buffer.size(), fmt, args);
+    va_end(args);
+
+    Log(std::string(buffer.data()), level);
 }
 
-void Logger::Error(const std::string& message) { Log(message, LogLevel::ERR); }
-void Logger::Info(const std::string& message) { Log(message, LogLevel::INFO); }
-void Logger::Warn(const std::string& message) { Log(message, LogLevel::WARN); }
-void Logger::Fatal(const std::string& message) { Log(message, LogLevel::FATAL); }
+void Logger::Error(const std::string_view message) { Log(message, LogLevel::ERR); }
+void Logger::Info(const std::string_view message) { Log(message, LogLevel::INFO); }
+void Logger::Warn(const std::string_view message) { Log(message, LogLevel::WARN); }
+void Logger::Fatal(const std::string_view message) { Log(message, LogLevel::FATAL); }
+
+void Logger::Flush() {
+    std::lock_guard<std::mutex> lock(logMutex);
+    if (logFile && logFile->is_open()) {
+        logFile->flush();
+    }
+}
 
 } // namespace Syngine

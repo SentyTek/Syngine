@@ -23,7 +23,9 @@ class Logger {
     Logger() = default; // Private constructor for singleton pattern
 
     static std::string GetTimestamp();
-    static std::string LogLevelToString(LogLevel level);
+
+    [[nodiscard]]
+    static std::string LogLevelToString(LogLevel level) noexcept;
 
     static inline std::string appName = "SyngineGame";
     static inline std::unique_ptr<std::ofstream> logFile = nullptr;
@@ -42,25 +44,36 @@ class Logger {
     static void Shutdown();
 
     // Log a message to disk with an optional log level
-    static void Log(const std::string& message,
+    static void Log(const std::string_view message,
                     LogLevel           level     = LogLevel::INFO,
                     bool               toConsole = true);
     // Log a formatted message to disk with a log level
     static void LogF(LogLevel level, const char* fmt, ...);
     // Log an error
-    static void Error(const std::string& message);
+    static void Error(const std::string_view message);
     // Log informational message
-    static void Info(const std::string& message);
+    static void Info(const std::string_view message);
     // Log a warning
-    static void Warn(const std::string& message);
+    static void Warn(const std::string_view message);
     // Log a fatal error and shutdown the logger
-    static void Fatal(const std::string& message);
+    static void Fatal(const std::string_view message);
 
     // Log hardware info
     static void LogHardwareInfo(Syngine::Core& core);
 
     // Set the autoflush behavior. Flushing is good for debug, but can be bad on performance.
-    static void SetAutoFlush(bool enable);
+    static inline void SetAutoFlush(bool enable) noexcept {
+        autoFlush = enable;
+    }
+
+    // Force flush the log file
+    static void Flush();
+
+    // Returns true if the log file is open
+    [[nodiscard]]
+    static inline bool IsOpen() noexcept {
+        return logFile && logFile->is_open();
+    }
 };
 
 } // namespace Syngine

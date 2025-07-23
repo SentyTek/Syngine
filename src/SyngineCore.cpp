@@ -575,8 +575,8 @@ int Core::DeleteGameobject(GameObject* gameobject) {
     return 0;
 }
 
-std::string Core::GetSystemSpecifications() {
-    std::string specs;
+Syngine::HardwareSpecs Core::GetSystemSpecifications() {
+    Syngine::HardwareSpecs specs;
 #ifdef _WIN32
     // On Windows, gather system information using Windows API
     SYSTEM_INFO sysInfo;
@@ -584,7 +584,7 @@ std::string Core::GetSystemSpecifications() {
 
     // Get OS
     const char* platform = SDL_GetPlatform();
-    specs += "\tOperating System: " + std::string(platform) + "\n";
+    specs.osName = std::string(platform);
 
     // Get CPU info (why on EARTH is this so complicated?)
     std::string cpu;
@@ -603,7 +603,7 @@ std::string Core::GetSystemSpecifications() {
     }
     CPUBrandString[sizeof(CPUBrandString) - 1] = '\0'; // Null-terminate the string
     cpu = std::string(CPUBrandString);
-    specs += "\tCPU: " + cpu + "\n";
+    specs.cpuModel = cpu;
 
     // Get arch
     std::string cpuArch;
@@ -614,49 +614,47 @@ std::string Core::GetSystemSpecifications() {
         case PROCESSOR_ARCHITECTURE_ARM64: cpuArch = "ARM64"; break;
         default:                            cpuArch = "Unknown"; break;
     }
-    specs += "\tCPU Architecture: " + cpuArch + "\n";
-    specs += "\tNumber of processors: " +
-             std::to_string(sysInfo.dwNumberOfProcessors) + "\n";
+    specs.cpuArch = cpuArch;
+    specs.cpuCores = sysInfo.dwNumberOfProcessors;
 
     // Get total physical memory
     MEMORYSTATUSEX statex;
     statex.dwLength = sizeof(statex);
     GlobalMemoryStatusEx(&statex);
-    specs += "\tTotal Physical Memory (MB): " +
-             std::to_string(statex.ullTotalPhys / (1024 * 1024)) + "\n";
+    specs.ramMB = statex.ullTotalPhys / (1024 * 1024);
 
 #elif __APPLE__
     // On macOS, gather system information using sysctl
-    specs += "\tOperating System: macOS\n";
+    specs.osName = "macOS";
     try {
         char cpuBrand[256];
         size_t size = sizeof(cpuBrand);
         sysctlbyname("machdep.cpu.brand_string", cpuBrand, &size, NULL, 0);
-        specs += "\tProcessor: " + std::string(cpuBrand) + "\n";
+        specs.cpuModel = std::string(cpuBrand);
 
         // Get logical CPU count
         int cpuProc = 0;
         size = sizeof(cpuProc);
         sysctlbyname("machdep.cpu.core_count", &cpuProc, &size, NULL, 0);
-        specs += "\tNumber of processors: " + std::to_string(cpuProc) + "\n";
+        specs.cpuCores = cpuProc;
 
         // Get RAM info
         uint64_t ramSize = 0;
         size = sizeof(ramSize);
         sysctlbyname("hw.memsize", &ramSize, &size, NULL, 0);
-        specs += "\tRAM: " + std::to_string(ramSize / (1024 * 1024)) + " MB\n";
+        specs.ramMB = ramSize / (1024 * 1024);
     } catch (const std::exception& e) {
-        specs += "\tError getting macOS system info: " + std::string(e.what()) + "\n";
+        specs.ramMB = 0;
     }
 
 #else
     // Get OS
     struct utsname sysInfo;
     if (uname(&sysInfo) < 0) {
-        specs += "\tError getting OS info\n";
+        specs.osName = "Unknown";
         return specs;
     }
-    specs += "\tOperating System: " + std::string(sysInfo.sysname) + " " + std::string(sysInfo.release) + "\n";
+    specs.osName = std::string(sysInfo.sysname) + " " + std::string(sysInfo.release);
 
     // Get CPU info (name, architecture, etc.)
     std::ifstream cpuInfoFile("/proc/cpuinfo");
@@ -672,50 +670,45 @@ std::string Core::GetSystemSpecifications() {
         }
         cpuInfoFile.close();
     }
-    specs += "\tCPU: " + cpuBrand + "\n";
+    specs.cpuModel = cpuBrand;
 
-    specs += "\tCPU Architecture: " + std::string(sysInfo.machine) + "\n";
+    specs.cpuArch = std::string(sysInfo.machine);
 
     // Get number of processors
     long numProcessors = sysconf(_SC_NPROCESSORS_ONLN);
-    specs += "\tNumber of processors: " + std::to_string(numProcessors) + "\n";
+    specs.cpuCores = numProcessors;
 
     // Get total physical memory
     long totalMemory = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE);
-    specs += "\tTotal Physical Memory (MB): " +
-             std::to_string(totalMemory / (1024 * 1024)) + "\n";
+    specs.ramMB = totalMemory / (1024 * 1024);
 #endif
 
     // Get display size
     SDL_DisplayID dId = SDL_GetDisplayForWindow(app->graphics->win);
     SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
-    specs += "\tDisplay Resolution: " + std::to_string(disMode.w) + "x" +
-                std::to_string(disMode.h) + "\n";
+    specs.screenWidth = disMode.w;
+    specs.screenHeight = disMode.h;
 
     // Get window resolution
     int w, h;
     SDL_GetWindowSize(app->graphics->win, &w, &h);
-    specs += "\tWindow Resolution: " + std::to_string(w) + "x" +
-                std::to_string(h) + "\n";
+    specs.winWidth = w;
+    specs.winHeight = h;
 
     // Get various GPU info from bgfx
     const bgfx::Caps* caps = bgfx::getCaps();
     if (caps) {
-        specs += "\tGPU Vendor ID: " + std::to_string(caps->vendorId) + "\n";
-        specs += "\tGPU Device ID: " + std::to_string(caps->deviceId) + "\n";
-        specs +=
-            "\tMax Texture Size: " + std::to_string(caps->limits.maxTextureSize) +
-            "\n";
-        specs +=
-            "\tCompute Shader support: " +
-            std::string((caps->supported & BGFX_CAPS_COMPUTE) ? "Yes" : "No") +
-            "\n";
-        specs += "\t3D Textures support: " +
-                    std::string((caps->supported & BGFX_CAPS_TEXTURE_3D) ? "Yes"
-                                                                        : "No") +
-                    "\n";
+        specs.gpuVendorID = caps->vendorId;
+        specs.gpuDeviceID = caps->deviceId;
+        specs.maxTextureSize = caps->limits.maxTextureSize;
+        specs.supportsCompute = (caps->supported & BGFX_CAPS_COMPUTE) != 0;
+        specs.supports3DTextures = (caps->supported & BGFX_CAPS_TEXTURE_3D) != 0;
     } else {
-        specs += "\tGPU Info: Not available\n";
+        specs.gpuVendorID = 0;
+        specs.gpuDeviceID = 0;
+        specs.maxTextureSize = 0;
+        specs.supportsCompute = false;
+        specs.supports3DTextures = false;
     }
-return specs;
+    return specs;
 }
