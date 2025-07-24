@@ -3,34 +3,9 @@
 #include <string>
 #include <SDL3/SDL.h>
 #include "SyngineLogger.h"
+#include "FsUtils.h"
 
 namespace Syngine {
-
-// This function resolves the full relative path to resourced files based on
-// platform. macOS uses a different path structure than other because of the app bundle structure.
-inline std::string resolveOSPath(const char* path)
-{
-#ifdef __APPLE__
-    // SDL_GetBasePath() returns ".../Contents/MacOS/"
-    const char* base = SDL_GetBasePath();
-    std::string p(base);
-    
-    // swap "MacOS/" -> "Resources/"
-    size_t pos = p.find("MacOS/");
-    if (pos != std::string::npos)
-    {
-        p.replace(pos, 6, "Resources/");
-    }
-    else
-    {
-        
-    }
-    p += path; // e.g. "shaders/vs_simple.sc.bin"
-    return p;
-#else
-    return std::string(path);
-#endif
-}
 
 // Loads a texture from memory
 bgfx::TextureHandle
@@ -49,7 +24,7 @@ inline bool CheckRequiredFolders() {
     };
 
     for (const char* folder : requiredFolders) {
-        std::string fullPath = resolveOSPath(folder);
+        std::string fullPath = Syngine::ResolveOSPath(folder);
         if (!SDL_GetPathInfo(fullPath.c_str(), nullptr)) {
             Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                                  "Required folder '%s' does not exist in game dir: %s",
