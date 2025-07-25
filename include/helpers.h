@@ -3,6 +3,23 @@
 #include <string>
 #include <SDL3/SDL.h>
 
+namespace Syngine {
+
+enum class SynPlatform {
+	DARWIN, WINDOWS, LINUX,
+};
+
+#if defined(_WIN32)
+	constexpr SynPlatform currentPlatform = SynPlatform::WINDOWS;
+#elif defined(__APPLE__)
+	constexpr SynPlatform currentPlatform = SynPlatform::DARWIN;
+#elif defined(__linux__)
+	constexpr SynPlatform currentPlatform = SynPlatform::LINUX;
+#else
+	static_assert(false, "Unsupported patform: not defined in SynPlatform");
+#endif
+};
+
 // This function resolves the full relative path to resourced files based on platform.
 // macOS uses a different path structure than other because of the app bundle structure.
 inline std::string resolveOSPath(const char* path)
