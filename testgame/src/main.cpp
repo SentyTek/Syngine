@@ -8,6 +8,7 @@
 #include "SyngineCore.h"
 #include "SyngineGraphics.h"
 #include "SyngineLogger.h"
+#include "Registry.h"
 #include <string>
 
 #if defined(_WIN32)
@@ -75,13 +76,18 @@ int AppMain(int argc, char* argv[]) {
     syngine.SyngineEventLoop(); // Note that this is a blocking call, it will run until the window is closed or quit event is triggered
 
     // Cleanup and quit
-    for(size_t i = 0; i < syngine.app->gameObjects.size(); ++i) {
+    /*for(size_t i = 0; i < syngine.app->gameObjects.size(); ++i) {
         Syngine::GameObject* gameObject = syngine.app->gameObjects[i];
         if (gameObject) {
             syngine.DeleteGameobject(gameObject);
         }
     }
-    syngine.app->gameObjects.clear();
+    syngine.app->gameObjects.clear();*/
+
+    for (auto& [id, gameObject] : Syngine::Registry::GetAllGameObjects()) {
+        syngine.DeleteGameobject(gameObject);
+    }
+    Syngine::Registry::Clear();
     syngine.DetachGraphics();
     graphics.RemoveAllPrograms();
     graphics.DestroyRenderer();

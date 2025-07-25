@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <map>
 
@@ -99,7 +100,7 @@ class Graphics {
     bgfx::UniformHandle GetUniform(const char* name) const;
 
     // Render frame
-    int RenderFrame(std::vector<GameObject*> modelLoader,
+    int RenderFrame(std::unordered_map<int, GameObject*> modelLoader,
                     bx::Vec3&                lightDir,
                     CameraComponent*         camera,
                     bool                     debug = false);

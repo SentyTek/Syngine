@@ -38,6 +38,11 @@ class Registry {
     static std::vector<GameObject*>
     GetGameObjectsWithComponent(Syngine::Components type) noexcept;
 
+    // Get all GameObjects in the registry.
+    // Returns a reference to the unordered_map of all GameObjects.
+    static inline std::unordered_map<int, GameObject*>& GetAllGameObjects() noexcept {
+        return m_AllObjects;
+    }
     // Get all GameObjects that have physics enabled.
     // Returns a vector of GameObjects that have physics enabled.
     static inline std::vector<GameObject*> GetPhysicsObjects() noexcept {

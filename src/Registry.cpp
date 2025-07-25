@@ -24,16 +24,14 @@ int Registry::AddGameObject(GameObject* gameObject) noexcept {
     gameObject->SetID(id);
 
     // Update indexed sublists
-    if (gameObject->IsActive()) {
-        if (gameObject->HasComponent(Syngine::SYN_COMPONENT_RENDERABLE)) {
-            m_RenderableObjects.push_back(gameObject);
-        }
-        if (gameObject->HasComponent(Syngine::SYN_COMPONENT_RIGIDBODY)) {
-            m_PhysicsObjects.push_back(gameObject);
-        }
-        if (gameObject->HasComponent(Syngine::SYN_COMPONENT_SCRIPT)) {
-            m_ScriptedObjects.push_back(gameObject);
-        }
+    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_RENDERABLE)) {
+        m_RenderableObjects.push_back(gameObject);
+    }
+    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_RIGIDBODY)) {
+        m_PhysicsObjects.push_back(gameObject);
+    }
+    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_SCRIPT)) {
+        m_ScriptedObjects.push_back(gameObject);
     }
 
     return id;

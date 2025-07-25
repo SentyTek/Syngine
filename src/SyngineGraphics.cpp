@@ -515,7 +515,7 @@ void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
     }
 }
 
-int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
+int Graphics::RenderFrame(std::unordered_map<int, GameObject*> gameObjects, bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
     const Program& terrainProgram = GetProgram("terrain");
     const Program& skyProgram = GetProgram("sky");
     const Program& defaultProgram = GetProgram("default");
@@ -575,8 +575,8 @@ int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightD
     const uint32_t samplerFlags =
     BGFX_SAMPLER_MIN_ANISOTROPIC |
     BGFX_SAMPLER_MAG_ANISOTROPIC;
-    
-    for (auto& gameObject : gameObjects) {
+
+    for (auto& [id, gameObject] : gameObjects) {
         if (!gameObject) {
             Syngine::Logger::Error("GameObject is null");
             continue;
@@ -669,8 +669,12 @@ int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightD
     }
 
     // Render gizmos
-    if(debug) {
-        RenderGizmos(gameObjects, camera);
+    if (debug) {
+        std::vector<GameObject*> goVector;
+        for (const auto& [id, go] : gameObjects) {
+            goVector.push_back(go);
+        }
+        RenderGizmos(goVector, camera);
     }
 
     bgfx::frame(); // submit the frame

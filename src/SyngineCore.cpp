@@ -17,6 +17,7 @@
 #include "SyngineGameobject.h"
 #include "SyngineLogger.h"
 #include "SynginePhys.h"
+#include "Registry.h"
 #include "Components.h"
 #include "Components/CameraComponent.h"
 #include "PlayerComponent.h"
@@ -120,7 +121,7 @@ int Core::SyngineEventLoop() {
         this->app->graphics->win,
         this->app->physicsManager);
 
-    this->app->gameObjects.push_back(player);
+    Registry::AddGameObject(player);
 
     // fun slide box
     /*GameObject* box = new GameObject("box", "default");
@@ -220,7 +221,7 @@ int Core::SyngineEventLoop() {
                                 {}
                             );
                     }
-                    this->app->gameObjects.push_back(model);
+                    Registry::AddGameObject(model);
                 } else if (event.key.key == SDLK_ESCAPE) {
                     playerMode = !playerMode;
                     simulate = playerMode; // Always simulate in player mode
@@ -253,7 +254,7 @@ int Core::SyngineEventLoop() {
                                        JPH::EMotionType::Dynamic,
                                        Layers::MOVING,
                                        shapeParams);
-                    this->app->gameObjects.push_back(cube);
+                    Registry::AddGameObject(cube);
                 } else if (event.key.key == SDLK_2) {
                     std::string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
@@ -279,7 +280,7 @@ int Core::SyngineEventLoop() {
                                        JPH::EMotionType::Dynamic,
                                        Layers::MOVING,
                                        shapeParams);
-                    this->app->gameObjects.push_back(sphere);
+                    Registry::AddGameObject(sphere);
                 } else if (event.key.key == SDLK_F1) {
                     // Toggle debug mode
                     this->app->debug = !this->app->debug;
@@ -290,8 +291,9 @@ int Core::SyngineEventLoop() {
                     }
                 } else if (event.key.key == SDLK_F5) {
                     // Reload changed assets
-                    for (auto& go : this->app->gameObjects) {
-                        MeshComponent* mc = go->GetComponent<MeshComponent>();
+                    for (auto& go : Registry::GetAllGameObjects()) {
+                        if (!go.second) continue;
+                        MeshComponent* mc = go.second->GetComponent<MeshComponent>();
                         if (!mc) continue;
                         MeshData& mesh = mc->meshData;
                         if (!mesh.valid) continue;
@@ -501,7 +503,7 @@ int Core::SyngineEventLoop() {
             }
         }
 
-        for (auto* gameObject : this->app->gameObjects) {
+        for (auto& [id, gameObject] : Registry::GetAllGameObjects()) {
             if (gameObject) {
                 RigidbodyComponent* physComp = gameObject->GetComponent<RigidbodyComponent>();
                 if (physComp && physComp->isEnabled) {
@@ -519,7 +521,7 @@ int Core::SyngineEventLoop() {
         }
 
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(this->app->gameObjects,
+            this->app->graphics->RenderFrame(Registry::GetAllGameObjects(),
                                              lightDir,
                                              finalCam,
                                              this->app->debug);
@@ -530,7 +532,7 @@ int Core::SyngineEventLoop() {
                     this->app->graphics->width,
                     this->app->graphics->height,
                     this->app->graphics->GetProgram("debugger").program,
-                    this->app->gameObjects[0]
+                    Registry::GetGameObjectByName("player") // Player object has the camera
                         ->GetComponent<Syngine::CameraComponent>()
                         ->GetCamera(), finalCam->GetCamera());
             }
@@ -548,7 +550,7 @@ int Core::SyngineEventLoop() {
             SDL_Log("Frame: %d, Gameobjects: %d, Sim: %s, Mode: %s, FPS/TPS: "
                     "%d/%d, Camera coords: (%.1f, %.1f, %.1f)",
                     frame,
-                    (int)this->app->gameObjects.size(),
+                    (int)Registry::GetGameObjectCount(),
                     simulate ? "ON" : "OFF",
                     playerMode ? "Player" : "Editor",
                     lastFPS,
