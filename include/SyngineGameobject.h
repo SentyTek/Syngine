@@ -17,23 +17,42 @@ using namespace std;
 */
 namespace Syngine {
 class GameObject {
-    long id; // Unique ID for the gameobject
-    map<Syngine::Components, unique_ptr<Syngine::Component>> components; //Map of components attached to the gameobject
-    public:
-        string name; //Name of the gameoject
-        string type; // Type of object, used for shader selection.
-        string gizmo; //Gizmo tag for the gameobject, used for debugging and visualization
-        
-        GameObject(string name, string type = "default"); //Constructor
-        ~GameObject();
+  private:
+    // Unique ID for the gameobject
+    long id;
+    // Map of components attached to the gameobject
+    map<Syngine::Components, unique_ptr<Syngine::Component>> components;
+    // Whether the gameobject is active or not
+    bool isActive = true;
+  public:
+     // Name of the gameobject, used for identification and debugging
+    string name;
+    // Type of the gameobject, used for categorization and filtering.
+    // Type can be used to categorize gameobjects, e.g., "player", "enemy", "item"
+    string type;
+    // Gizmo type for rendering in the editor, e.g., "camera_render", "mesh_render"
+    string gizmo;
 
-        long GetID(); //Get the ID of the gameobject
-        int AddComponent(Syngine::Components type); //Add a component to the gameobject
-        int RemoveComponent(Syngine::Components type); //Remove a component from the gameobject
-        bool HasComponent(Syngine::Components type); //Check if the gameobject has a component
+    GameObject(string name, string type = "default");
+    ~GameObject();
 
-        template<typename T>
-        T* GetComponent(); //Get a component of the gameobject
+    // Get the ID of the gameobject
+    inline long GetID() noexcept { return this->id; };
+    // Set the ID of the gameobject
+    void SetID(long id) noexcept;
+    // Check if the gameobject is active
+    inline bool IsActive() const noexcept { return this->isActive; }
+    // Set the active state of the gameobject
+    void SetActive(bool active) noexcept;
+    // Add a component to the gameobject
+    int AddComponent(Syngine::Components type);
+    // Remove a component from the gameobject
+    int RemoveComponent(Syngine::Components type);
+    // Check if the gameobject has a component of the specified type
+    bool HasComponent(Syngine::Components type);
+
+    // Get a component of the specified type
+    template <typename T> T* GetComponent();
 };
 
 template<typename T>

@@ -1,4 +1,5 @@
 #include "SyngineGameobject.h"
+#include "Registry.h"
 
 #include "Components/MeshComponent.h"
 #include "Components/TransformComponent.h"
@@ -17,8 +18,9 @@ GameObject::GameObject(string name, string type) {
 
 GameObject::~GameObject() {}
 
-long GameObject::GetID() {
-    return this->id;
+void GameObject::SetID(long id) noexcept { this->id = id; }
+void GameObject::SetActive(bool active) noexcept {
+    this->isActive = active;
 }
 
 int GameObject::AddComponent(Syngine::Components type) {
