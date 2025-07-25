@@ -6,9 +6,10 @@ namespace Syngine {
 
 // Static member initialization
 std::unordered_map<int, GameObject*> Registry::m_AllObjects;
-std::vector<GameObject*> Registry::m_PhysicsObjects;
-std::vector<GameObject*> Registry::m_RenderableObjects;
-std::vector<GameObject*> Registry::m_ScriptedObjects;
+std::vector<GameObject*>             Registry::m_PhysicsObjects;
+std::vector<GameObject*>             Registry::m_RenderableObjects;
+std::vector<GameObject*>             Registry::m_ScriptedObjects;
+std::vector<GameObject*>             Registry::m_Gizmos;
 
 // Add/remove functions
 int Registry::AddGameObject(GameObject* gameObject) noexcept {
@@ -32,6 +33,9 @@ int Registry::AddGameObject(GameObject* gameObject) noexcept {
     }
     if (gameObject->HasComponent(Syngine::SYN_COMPONENT_SCRIPT)) {
         m_ScriptedObjects.push_back(gameObject);
+    }
+    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_CAMERA)) {
+        m_Gizmos.push_back(gameObject);
     }
 
     return id;
@@ -57,6 +61,7 @@ int Registry::RemoveGameObject(GameObject* gameObject) noexcept {
     removeFrom(m_RenderableObjects);
     removeFrom(m_PhysicsObjects);
     removeFrom(m_ScriptedObjects);
+    removeFrom(m_Gizmos);
 
     return 0; // Success
 }
@@ -67,6 +72,7 @@ void Registry::Clear() noexcept {
     m_PhysicsObjects.clear();
     m_RenderableObjects.clear();
     m_ScriptedObjects.clear();
+    m_Gizmos.clear();
 }
 
 int Registry::RemoveGameObjectById(int id) noexcept {
@@ -136,6 +142,8 @@ void Registry::NotifyComponentAdded(GameObject*         gameobject,
         case Syngine::SYN_COMPONENT_SCRIPT:
             m_ScriptedObjects.push_back(gameobject);
             break;
+        case Syngine::SYN_COMPONENT_CAMERA:
+            m_Gizmos.push_back(gameobject);
         default:
             break; // No action for other component types
     }
@@ -159,6 +167,8 @@ void Registry::NotifyComponentRemoved(GameObject*         gameobject,
         case Syngine::SYN_COMPONENT_SCRIPT:
             removeFrom(m_ScriptedObjects);
             break;
+        case Syngine::SYN_COMPONENT_CAMERA:
+            removeFrom(m_Gizmos);
         default:
             break; // No action for other component types
     }

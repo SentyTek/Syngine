@@ -57,6 +57,10 @@ class Registry {
     static inline std::vector<GameObject*> GetScriptedObjects() noexcept {
         return m_ScriptedObjects;
     }
+    // Get all GameObjects that are gizmos.
+    static inline std::vector<GameObject*> GetGizmos() noexcept {
+        return m_Gizmos;
+    }
 
     // Get the total number of GameObjects in the registry.
     static inline size_t GetGameObjectCount() noexcept {
@@ -85,6 +89,7 @@ class Registry {
     static std::vector<GameObject*> m_PhysicsObjects; // GameObjects with physics enabled
     static std::vector<GameObject*> m_RenderableObjects; // GameObjects that are renderable
     static std::vector<GameObject*> m_ScriptedObjects; // GameObjects that have a script attached
+    static std::vector<GameObject*> m_Gizmos; // GameObjects that are gizmos
 };
 
 } // namespace Syngine

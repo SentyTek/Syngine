@@ -123,19 +123,6 @@ int Core::SyngineEventLoop() {
 
     Registry::AddGameObject(player);
 
-    // fun slide box
-    /*GameObject* box = new GameObject("box", "default");
-    box->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
-    box->AddComponent(Syngine::SYN_COMPONENT_MESH);
-    box->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
-    MeshComponent* meshComp = box->GetComponent<MeshComponent>();
-    meshComp->LoadMesh(resolveOSPath("meshes/cube.glb"), false);
-    TransformComponent* tComp = box->GetComponent<TransformComponent>();
-    tComp->SetPosition(15.0f, 0.0f, 0.0f);
-    tComp->SetScale(1.0f, 15.0f, 15.0f);
-    box->GetComponent<RigidbodyComponent>()->Init(tComp, this->app->physicsManager, PhysicsShapes::BOX, { 0.0f, 0.5f, 0.5f }, JPH::EMotionType::Static, Syngine::Layers::NON_MOVING, {1.0f, 15.0f, 15.0f});
-    this->app->gameObjects.push_back(box);*/
-
     bool running = true;
     bool playerMode = false; // False is editor mode, True is player mode
     bool simulate = false; // Toggles the physics simulation (always true in player mode)
@@ -149,11 +136,11 @@ int Core::SyngineEventLoop() {
     // and the editor camera, switching between them as needed.
     CameraComponent* finalCam = new CameraComponent(nullptr);
     bx::Vec3 startDir = {180.0f, 0.0f, 90.0f};
-    
+
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch =
     bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
-    const float moveSpeed = 3.0f; // Speed of camera movement
+    float editorMoveSpeed = 3.0f; // Speed of camera movement
     const float sprintMult = 2.0f;
     const float crouchSpeed = 0.5f;
     
@@ -204,9 +191,7 @@ int Core::SyngineEventLoop() {
                     //load model
                     std::string modelPath = Syngine::ResolveOSPath("meshes/ground.glb");
                     GameObject* model = new GameObject("ground", "terrain");
-                    model->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
-                    model->AddComponent(Syngine::SYN_COMPONENT_MESH);
-                    model->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
+                    model->AddComponent(Syngine::SYN_COMPONENT_PHYSICS);
                     MeshComponent* meshComp = model->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath);
                     RigidbodyComponent* physComp = model->GetComponent<RigidbodyComponent>();
@@ -232,9 +217,7 @@ int Core::SyngineEventLoop() {
                 } else if (event.key.key == SDLK_1) {
                     std::string modelPath = Syngine::ResolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
-                    cube->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
-                    cube->AddComponent(Syngine::SYN_COMPONENT_MESH);
-                    cube->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
+                    cube->AddComponent(Syngine::SYN_COMPONENT_PHYSICS);
                     MeshComponent* meshComp = cube->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
@@ -258,16 +241,14 @@ int Core::SyngineEventLoop() {
                 } else if (event.key.key == SDLK_2) {
                     std::string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
-                    sphere->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
-                    sphere->AddComponent(Syngine::SYN_COMPONENT_MESH);
-                    sphere->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
+                    sphere->AddComponent(Syngine::SYN_COMPONENT_PHYSICS);
                     MeshComponent* meshComp = sphere->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = sphere->GetComponent<TransformComponent>();
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
                     RigidbodyComponent* physComp = sphere->GetComponent<RigidbodyComponent>();
                     std::vector<float> shapeParams = { // half extents for sphere shape (diameter)
-                        2.9f
+                        1.9f
                     };
                     std::vector<float> params = {
                         0.0f, 0.7f, 0.02f
@@ -329,6 +310,21 @@ int Core::SyngineEventLoop() {
                 cy = bx::clamp(cy, -maxPitch, maxPitch);
                 // Update camera angles
                 cam->SetAngles(cx, cy);
+            } else if (event.type == SDL_EVENT_MOUSE_WHEEL && !playerMode) {
+                // Mouse wheel scroll
+                if (event.wheel.y > 0) {
+                    // Scroll up
+                    editorMoveSpeed += 0.5f; // Increase speed
+                    if (editorMoveSpeed > 100.0f) {
+                        editorMoveSpeed = 100.0f; // Cap speed
+                    }
+                } else if (event.wheel.y < 0) {
+                    // Scroll down
+                    editorMoveSpeed -= 0.5f; // Decrease speed
+                    if (editorMoveSpeed < 0.0f) {
+                        editorMoveSpeed = 0.0f; // Cap speed
+                    }
+                }
             }
 
             if (playerMode) {
@@ -353,9 +349,9 @@ int Core::SyngineEventLoop() {
         // camera mode stuff
         if (!playerMode) {
             // camera movement
-            float realSpeed = moveSpeed; // Default speed
-            if (keystate[SDL_SCANCODE_LSHIFT]) realSpeed = moveSpeed * sprintMult;
-            if (keystate[SDL_SCANCODE_LCTRL]) realSpeed = moveSpeed * crouchSpeed;
+            float realSpeed = editorMoveSpeed; // Default speed
+            if (keystate[SDL_SCANCODE_LSHIFT]) realSpeed = editorMoveSpeed * sprintMult;
+            if (keystate[SDL_SCANCODE_LCTRL]) realSpeed = editorMoveSpeed * crouchSpeed;
 
             if (keystate[SDL_SCANCODE_W]) {
                 float yaw, pitch;
@@ -503,13 +499,8 @@ int Core::SyngineEventLoop() {
             }
         }
 
-        for (auto& [id, gameObject] : Registry::GetAllGameObjects()) {
-            if (gameObject) {
-                RigidbodyComponent* physComp = gameObject->GetComponent<RigidbodyComponent>();
-                if (physComp && physComp->isEnabled) {
-                    physComp->Update(simulate);
-                }
-            }
+        for (auto& gameObject : Registry::GetPhysicsObjects()) {
+            gameObject->GetComponent<RigidbodyComponent>()->Update(simulate);
         }
 
         // Post-physics update for player component
@@ -521,8 +512,7 @@ int Core::SyngineEventLoop() {
         }
 
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(Registry::GetAllGameObjects(),
-                                             lightDir,
+            this->app->graphics->RenderFrame(lightDir,
                                              finalCam,
                                              this->app->debug);
 

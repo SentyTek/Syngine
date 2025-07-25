@@ -1,14 +1,12 @@
 #include "SyngineGraphics.h"
-#include "Components.h"
-#include "Components/CameraComponent.h"
 #include "ShaderUtils.h"
-#include "SynModelLoader.h"
 #include "SyngineLogger.h"
-#include "TransformComponent.h"
-#include "bgfx/bgfx.h"
-#include "bgfx/defines.h"
-#include "bx/math.h"
+#include "Registry.h"
+#include "Components.h"
 #include "SynComponents.h"
+#include "SynModelLoader.h"
+#include "TransformComponent.h"
+#include "Components/CameraComponent.h"
 #include "helpers.h"
 
 #include <SDL3/SDL_init.h>
@@ -17,6 +15,9 @@
 #include <SDL3/SDL_properties.h>
 
 #include <bgfx/platform.h>
+#include "bgfx/bgfx.h"
+#include "bgfx/defines.h"
+#include "bx/math.h"
 #include <cstdint>
 #include <vector>
 
@@ -464,8 +465,7 @@ void Graphics::RegisterGizmo(const std::string& tag, float size) {
     }
 }
 
-void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
-                            CameraComponent*         camera) {
+void Graphics::RenderGizmos(CameraComponent* camera) {
     unsigned short viewId = 26; // View ID for gizmos
     bgfx::setViewRect(viewId, 0, 0, bgfx::BackbufferRatio::Equal);
     bgfx::setViewTransform(
@@ -487,7 +487,10 @@ void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_LEQUAL);
 
-    for (auto go : gameObjects) {
+    // Get all gizmos from the registry
+    std::vector<GameObject*> gizmos = Registry::GetGizmos();
+
+    for (auto go : gizmos) {
         auto it = gizmoRegistry.find(go->gizmo);
         if (it != gizmoRegistry.end()) {
             auto* comp =
@@ -515,7 +518,7 @@ void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
     }
 }
 
-int Graphics::RenderFrame(std::unordered_map<int, GameObject*> gameObjects, bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
+int Graphics::RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
     const Program& terrainProgram = GetProgram("terrain");
     const Program& skyProgram = GetProgram("sky");
     const Program& defaultProgram = GetProgram("default");
@@ -571,12 +574,13 @@ int Graphics::RenderFrame(std::unordered_map<int, GameObject*> gameObjects, bx::
     //prepare render
     uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA | BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
 
-    
-    const uint32_t samplerFlags =
-    BGFX_SAMPLER_MIN_ANISOTROPIC |
-    BGFX_SAMPLER_MAG_ANISOTROPIC;
 
-    for (auto& [id, gameObject] : gameObjects) {
+    const uint32_t samplerFlags =
+        BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
+
+    std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
+
+    for (auto& gameObject : gameObjects) {
         if (!gameObject) {
             Syngine::Logger::Error("GameObject is null");
             continue;
@@ -670,11 +674,7 @@ int Graphics::RenderFrame(std::unordered_map<int, GameObject*> gameObjects, bx::
 
     // Render gizmos
     if (debug) {
-        std::vector<GameObject*> goVector;
-        for (const auto& [id, go] : gameObjects) {
-            goVector.push_back(go);
-        }
-        RenderGizmos(goVector, camera);
+        RenderGizmos(camera);
     }
 
     bgfx::frame(); // submit the frame
