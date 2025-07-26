@@ -1,8 +1,16 @@
 #pragma once
+
+// Forward declarations
+namespace Syngine {
+class DebugRender;
+}
+
 #include "SynModelLoader.h"
-#include <Jolt/Jolt.h>
+#include "SyngineDebug.h"
+#include "bgfx/bgfx.h"
 
 //Jolt includes
+#include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/TempAllocator.h>
@@ -156,14 +164,15 @@ namespace Syngine {
         }
     };
 
-    class SynginePhys {
+    class Phys {
         public:
-        SynginePhys();
-        ~SynginePhys();
+        Phys();
+        ~Phys();
 
-        void Init();
+        void Init(bool debug);
         void Shutdown();
         void Update(float deltaTime, int collisionSteps);
+        void DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam);
 
         BodyInterface& GetBodyInterface() { return mPhysicsSystem.GetBodyInterface(); }
         PhysicsSystem& GetPhysicsSystem() { return mPhysicsSystem; }
@@ -188,11 +197,13 @@ namespace Syngine {
                          EMotionType motionType,
                          ObjectLayer layer,
                          float       mass = 0.0f);
-        BodyID CreateMeshBody(RVec3Arg           position,
-                              QuatArg            rotation,
-                              const SynMeshData& meshData,
-                              EMotionType        motionType,
-                              ObjectLayer        layer);
+        BodyID CreateMeshBody(RVec3Arg         position,
+                              QuatArg          rotation,
+                              const MeshData&  meshData,
+                              EMotionType      motionType,
+                              ObjectLayer      layer,
+                              const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f));
+        
         BodyID CreateCapsule(RVec3Arg    position,
                              float       radius,
                              float       halfHeight,
@@ -221,6 +232,8 @@ namespace Syngine {
         //Listeners
         SynContactListener mContactListener;
         SynBodyActivationListener mBodyActivationListener;
+
+        DebugRender* mDebugRenderer = nullptr;
 
         //Jolt foundation for tracing and asserts
         static void TraceImpl(const char* inFMT, ...);

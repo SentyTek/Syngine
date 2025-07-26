@@ -43,7 +43,7 @@ if(MSVC)
 endif()
 
 project(Syngine)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # create the executable
 add_library(Syngine STATIC
@@ -51,17 +51,28 @@ add_library(Syngine STATIC
     src/SyngineGraphics.cpp
     src/SynModelLoader.cpp
     src/helpers.cpp
+    src/FsUtils.cpp
     src/SyngineGameobjects.cpp
     src/SynginePhys.cpp
+    src/SyngineDebug.cpp
+    src/SyngineLogger.cpp
     src/Components/MeshComponent.cpp
     src/Components/TransformComponent.cpp
     src/Components/RigidbodyComponent.cpp
     src/Components/PlayerComponent.cpp
+    src/Components/CameraComponent.cpp
 )
 
 if(APPLE)
     target_sources(Syngine PRIVATE
         src/SynOSXMetalBridge.mm
+        
+        # get the headers to show up in Xcode
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/CameraComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/MeshComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/PlayerComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/RigidbodyComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/TransformComponent.h
     )
 endif()
 
@@ -84,6 +95,7 @@ set(SDL_STATIC ON CACHE BOOL "" FORCE)
 set(SDL_AUDIO_DISABLED ON CACHE BOOL "" FORCE)
 set(SDL_SENSOR_DISABLED OFF CACHE BOOL "" FORCE) # SDL sensor needs to be on idk
 set(SDL_LOADSO_DISABLED ON CACHE BOOL "" FORCE)
+
 if(APPLE)
 set(SDL_RENDER_DISABLED OFF CACHE BOOL "" FORCE) # Apple requires it enabled
 else()
@@ -101,18 +113,13 @@ set(ASSIMP_INSTALL OFF CACHE BOOL "" FORCE)
 set(JOLT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(JOLT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(JOLT_PROFILE_ENABLED OFF CACHE BOOL "" FORCE)
+if(UNIX)
+add_compile_options(-frtti)
+endif()
 
 set(BGFX_BUILD_TOOLS ON CACHE BOOL "" FORCE)
 set(BGFX_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(BGFX_BUILD_TOOLS_BINARIES shaderc ON CACHE BOOL "" FORCE)
-
-# Set it as a CACHE variable for persistence and to influence BGFX's CMake scripts.
-# The FORCE ensures it's set even if it was different in the cache.
-set(BX_CONFIG_DEBUG ${LOCAL_BX_CONFIG_DEBUG} CACHE BOOL "Enable BGFX debug mode (controls BGFX library compilation)" FORCE)
-
-# Also set it as a normal variable in the current scope *before* adding BGFX.
-# This can sometimes help if BGFX checks for a non-cache variable directly.
-set(BX_CONFIG_DEBUG ${LOCAL_BX_CONFIG_DEBUG})
 
 if(APPLE) # cocoa is really picky and requires entire renderer to be single threaded
     set(BGFX_CONFIG_MULTITHREADED OFF CACHE BOOL "" FORCE)
@@ -149,7 +156,11 @@ endif()
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/JoltPhysics/build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/third_party/JoltPhysics/Build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
+
+if(APPLE)
+set_target_properties(shaderc PROPERTIES XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED "NO") # Don't sign shaderc binary on macOS
+endif()
 
 if(MSVC)
     target_compile_options(Syngine PRIVATE

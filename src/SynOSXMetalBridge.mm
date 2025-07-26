@@ -2,6 +2,7 @@
 #import <Cocoa/Cocoa.h>
 #endif
 
+#include "SyngineLogger.h"
 #include <stdint.h>
 #include <SDL3/SDL.h>
 
@@ -30,7 +31,8 @@ extern "C" void* GetSYNMetalView(SDL_Window* win) {
     NSView* metalView = FindTaggedView(contentView, tag);
 
     if (!metalView) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get Metal view from window");
+        // Must be LogF for Obj-C reasons
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to get Metal view from window");
         return nullptr;
     }
 

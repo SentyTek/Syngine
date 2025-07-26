@@ -2,34 +2,35 @@
 #include <memory>
 #include <string>
 #include <map>
-
-class GameObject; // Forward declaration to resolve circular dependency
 #include "Components.h"
-class SynComponent; // Forward declaration of SynComponent
 
 using namespace std;
 
 /*
-    Syngine Gameobjects are the base class for all game objects used within a game.
-    They are used to represent objects in the game world, such as players, enemies, and items.
-    They are also used to represent objects that are not directly related to the game world, such as UI elements and menus.
+    Syngine Gameobjects are the base class for all game objects used within a
+   game. They are used to represent objects in the game world, such as players,
+   enemies, and items. They are also used to represent objects that are not
+   directly related to the game world, such as UI elements and menus.
 
-    Gameobjects can then have various components attached to them, such as a mesh, transform, physics, AI, PlayerController, etc.
+    Gameobjects can then have various components attached to them, such as a
+   mesh, transform, physics, AI, PlayerController, etc.
 */
+namespace Syngine {
 class GameObject {
     long id; // Unique ID for the gameobject
-    map<SynComponents, unique_ptr<SynComponent>> components; //Map of components attached to the gameobject
+    map<Syngine::Components, unique_ptr<Syngine::Component>> components; //Map of components attached to the gameobject
     public:
         string name; //Name of the gameoject
-        string type; //Type of object, used for shader selection.
+        string type; // Type of object, used for shader selection.
+        string gizmo; //Gizmo tag for the gameobject, used for debugging and visualization
         
-        GameObject(string name, string type);
+        GameObject(string name, string type = "default"); //Constructor
         ~GameObject();
 
         long GetID(); //Get the ID of the gameobject
-        int AddComponent(SynComponents type); //Add a component to the gameobject
-        int RemoveComponent(SynComponents type); //Remove a component from the gameobject
-        bool HasComponent(SynComponents type); //Check if the gameobject has a component
+        int AddComponent(Syngine::Components type); //Add a component to the gameobject
+        int RemoveComponent(Syngine::Components type); //Remove a component from the gameobject
+        bool HasComponent(Syngine::Components type); //Check if the gameobject has a component
 
         template<typename T>
         T* GetComponent(); //Get a component of the gameobject
@@ -44,3 +45,5 @@ T* GameObject::GetComponent() {
     
     return dynamic_cast<T*>(it->second.get());
 }
+
+} // namespace Syngine

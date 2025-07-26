@@ -23,17 +23,17 @@ enum class PhysicsShapes {
    world. It holds the BodyID and the shape of the physics body from Jolt, among
    other properties.
 */
-class RigidbodyComponent : public SynComponent {
+class RigidbodyComponent : public Syngine::Component {
   public:
-    static constexpr SynComponents componentType = SYN_COMPONENT_RIGIDBODY;
+    static constexpr Syngine::Components componentType = SYN_COMPONENT_RIGIDBODY;
 
     RigidbodyComponent(GameObject* owner);
     ~RigidbodyComponent();
 
-    SynComponents getComponentType() override;
+    Syngine::Components getComponentType() override;
 
     void Init(TransformComponent*       transform,
-              Syngine::SynginePhys*     physicsManager,
+              Syngine::Phys*     physicsManager,
               PhysicsShapes             shape,
               const std::vector<float>& parameters,
               JPH::EMotionType          motionType,
@@ -41,15 +41,22 @@ class RigidbodyComponent : public SynComponent {
               const std::vector<float>& shapeParameters);
     void Update(bool simulate);
     void Destroy();
-
+    
     JPH::BodyID           GetBodyID() const;
-    Syngine::SynginePhys* GetPhysicsManager() const;
+    Syngine::Phys* GetPhysicsManager() const;
+    float                 GetMass() const;
+    float                 GetFriction() const;
+    float                 GetRestitution() const;
 
     std::vector<float> GetShapeParameters() const;
 
+    void UpdateShapeParameters(const std::vector<float>& newShapeParameters);
+    void SetFriction(float newFriction);
+    void SetRestitution(float newRestitution);
+
   private:
     TransformComponent*   transform; // Reference to the transform component
-    Syngine::SynginePhys* physicsManager; // Reference to the physics manager
+    Syngine::Phys* physicsManager; // Reference to the physics manager
     JPH::BodyID           bodyID;         // ID of the physics body
     PhysicsShapes         shape;          // Shape of the physics body
     float                 mass = 0.0f;    // Mass of the physics body

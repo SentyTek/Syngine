@@ -1,35 +1,58 @@
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <stdio.h>
+#include <intrin.h>
+
+#elif __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
+
+#else
+#include "sys/utsname.h"
+
+#endif
+
 #include "SyngineCore.h"
-#include "SDL3/SDL_oldnames.h"
-#include "SDL3/SDL_scancode.h"
+#include "SyngineGameobject.h"
+#include "SyngineLogger.h"
 #include "SynginePhys.h"
 #include "Components.h"
-#include "MeshComponent.h"
-#include "RigidbodyComponent.h"
-#include "TransformComponent.h"
+#include "Components/CameraComponent.h"
 #include "PlayerComponent.h"
-#include "helpers.h"
+#include "TransformComponent.h"
+#include "RigidbodyComponent.h"
+#include "MeshComponent.h"
+#include "FsUtils.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_mouse.h"
 #include "SDL3/SDL_timer.h"
+#include "SDL3/SDL_scancode.h"
+#include "SDL3/SDL_video.h"
 
 #include "bx/bx.h"
 #include "bx/constants.h"
 #include "bx/math.h"
 #include "bgfx/defines.h"
 
-SyngineCore::SyngineCore() {
+#include <filesystem>
+
+using namespace Syngine;
+
+Core::Core(std::string appName) {
     //initialize app
-    this->app = new SyngineApp();
+    this->app = new App();
+    this->app->appName = appName;
     this->app->graphics = nullptr; // No graphics attached initially
     this->app->synModels = new AssimpLoader(); // Initialize the model loader
 
-    this->app->physicsManager = new Syngine::SynginePhys(); // Initialize the physics manager
-    this->app->physicsManager->Init(); // Initialize the physics system
+    this->app->physicsManager = new Phys(); // Initialize the physics manager
+    this->app->physicsManager->Init(this->app->debug); // Initialize the physics system
 }
 
-SyngineCore::~SyngineCore() {
+Core::~Core() {
     //cleanup
     if (this->app) {
         if (this->app->graphics) {
@@ -51,10 +74,10 @@ SyngineCore::~SyngineCore() {
     }
 }
 
-int SyngineCore::AttachGraphics(SyngineGraphics* graphics) {
+int Core::AttachGraphics(Graphics* graphics) {
     //attach graphics to app
     if (!graphics) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No graphics object provided to attach");
+        Syngine::Logger::Error("No graphics object provided to attach");
         return 1;
     }
     
@@ -62,10 +85,10 @@ int SyngineCore::AttachGraphics(SyngineGraphics* graphics) {
     return 0;
 }
 
-int SyngineCore::DetachGraphics() {
+int Core::DetachGraphics() {
     //detach graphics from app
     if (!this->app->graphics) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No graphics object to detach");
+        Syngine::Logger::Error("No graphics object to detach");
         return 1;
     }
     
@@ -73,61 +96,63 @@ int SyngineCore::DetachGraphics() {
     return 0;
 }
 
-int SyngineCore::SyngineEventLoop() {
+int Core::SyngineEventLoop() {
     //main loop. this will obviously be replaced with a more complex and modular/multi-threaded loop in the Future
-    SDL_Log("Entering event loop");
+    Syngine::Logger::Info("Entering event loop");
 
     if (!this->app->graphics || !this->app->graphics->win) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Graphics not initialized or window not created");
+        Syngine::Logger::Error("Graphics not initialized or window not created");
         return 1;
     }
 
-    GameObject* player = new GameObject("player", "default");
+    GameObject* player = new GameObject("player");
 
-    player->AddComponent(SYN_COMPONENT_TRANSFORM);
-    player->AddComponent(SYN_COMPONENT_PLAYER);
-    player->AddComponent(SYN_COMPONENT_RIGIDBODY);
+    player->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+    player->AddComponent(Syngine::SYN_COMPONENT_PLAYER);
+    player->AddComponent(Syngine::SYN_COMPONENT_CAMERA);
+    this->app->graphics->RegisterGizmo("camera_render");
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
-
-    Syngine::RigidbodyComponent* rbComp =
-        player->GetComponent<Syngine::RigidbodyComponent>();
-    if (!rbComp) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to get RigidbodyComponent for player");
-        delete player; // Clean up the player object
-        return 1;
-    }
-    rbComp->Init(pTransform,
-                 this->app->physicsManager,
-                 Syngine::PhysicsShapes::CAPSULE,
-                 { 60.0f, 0.3f, 0.1f }, // mass, friction, restitution
-                 JPH::EMotionType::Dynamic,
-                 Syngine::Layers::MOVING,
-                 { 0.7f, 0.3f });
-
-    player->GetComponent<PlayerComponent>()->Initialize(
-        &(this->app->graphics->camera),
+    
+    player->GetComponent<PlayerComponent>()->Init(
+        player->GetComponent<CameraComponent>(),
         this->app->graphics->win,
-        rbComp);
-    
+        this->app->physicsManager);
+
     this->app->gameObjects.push_back(player);
-    
+
+    // fun slide box
+    /*GameObject* box = new GameObject("box", "default");
+    box->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+    box->AddComponent(Syngine::SYN_COMPONENT_MESH);
+    box->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
+    MeshComponent* meshComp = box->GetComponent<MeshComponent>();
+    meshComp->LoadMesh(resolveOSPath("meshes/cube.glb"), false);
+    TransformComponent* tComp = box->GetComponent<TransformComponent>();
+    tComp->SetPosition(15.0f, 0.0f, 0.0f);
+    tComp->SetScale(1.0f, 15.0f, 15.0f);
+    box->GetComponent<RigidbodyComponent>()->Init(tComp, this->app->physicsManager, PhysicsShapes::BOX, { 0.0f, 0.5f, 0.5f }, JPH::EMotionType::Static, Syngine::Layers::NON_MOVING, {1.0f, 15.0f, 15.0f});
+    this->app->gameObjects.push_back(box);*/
+
     bool running = true;
     bool playerMode = false; // False is editor mode, True is player mode
     bool simulate = false; // Toggles the physics simulation (always true in player mode)
     bool rmb = false;
     bool mouseState = false;
     float mouseX, mouseY;
-    
-    
-    Camera editorCam = Camera();
+
+    CameraComponent* cam = new CameraComponent(nullptr);
+    cam->SetFarPlane(2000);
+    // FinalCam specifically is so we can keep track of both the player camera
+    // and the editor camera, switching between them as needed.
+    CameraComponent* finalCam = new CameraComponent(nullptr);
     bx::Vec3 startDir = {180.0f, 0.0f, 90.0f};
     
     const float sensitivity = 0.002f; // Adjust sensitivity as needed
     const float maxPitch =
     bx::kPiHalf - 0.01f; // Limit pitch to avoid gimbal lock
-    const float moveSpeed = 2.0f; // Speed of camera movement
+    const float moveSpeed = 3.0f; // Speed of camera movement
     const float sprintMult = 2.0f;
     const float crouchSpeed = 0.5f;
     
@@ -157,7 +182,6 @@ int SyngineCore::SyngineEventLoop() {
         frameDisplay++;
 
         const bool* keystate    = SDL_GetKeyboardState(NULL);
-        Camera&     camera      = this->app->graphics->camera;
         bx::Vec3    moveVector  = { 0, 0, 0 };
 
         //event handling
@@ -177,22 +201,22 @@ int SyngineCore::SyngineEventLoop() {
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
                 if (event.key.key == SDLK_F) {
                     //load model
-                    std::string modelPath = resolveOSPath("meshes/ground.glb");
+                    std::string modelPath = Syngine::ResolveOSPath("meshes/ground.glb");
                     GameObject* model = new GameObject("ground", "terrain");
-                    model->AddComponent(SYN_COMPONENT_TRANSFORM);
-                    model->AddComponent(SYN_COMPONENT_MESH);
-                    model->AddComponent(SYN_COMPONENT_RIGIDBODY);
+                    model->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+                    model->AddComponent(Syngine::SYN_COMPONENT_MESH);
+                    model->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
                     MeshComponent* meshComp = model->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath);
-                    Syngine::RigidbodyComponent* physComp = model->GetComponent<Syngine::RigidbodyComponent>();
+                    RigidbodyComponent* physComp = model->GetComponent<RigidbodyComponent>();
                     if (physComp) {
                             physComp->Init(
                                 model->GetComponent<TransformComponent>(),
                                 this->app->physicsManager,
-                                Syngine::PhysicsShapes::MESH,
+                                PhysicsShapes::MESH,
                                 {0.0f, 0.8f, 0.1f},
                                 JPH::EMotionType::Static,
-                                Syngine::Layers::NON_MOVING,
+                                Layers::NON_MOVING,
                                 {}
                             );
                     }
@@ -205,50 +229,83 @@ int SyngineCore::SyngineEventLoop() {
                         simulate = !simulate;
                     }
                 } else if (event.key.key == SDLK_1) {
-                    string modelPath = resolveOSPath("meshes/cube.glb");
+                    string modelPath = Syngine::ResolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
-                    cube->AddComponent(SYN_COMPONENT_TRANSFORM);
-                    cube->AddComponent(SYN_COMPONENT_MESH);
-                    cube->AddComponent(SYN_COMPONENT_RIGIDBODY);
+                    cube->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+                    cube->AddComponent(Syngine::SYN_COMPONENT_MESH);
+                    cube->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
                     MeshComponent* meshComp = cube->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = cube->GetComponent<TransformComponent>();
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
-                    Syngine::RigidbodyComponent* physComp = cube->GetComponent<Syngine::RigidbodyComponent>();
-                    std::vector<float> shapeParams = {1.0f, 1.0f, 1.0f}; // half extents for box shape
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
+                    RigidbodyComponent* physComp = cube->GetComponent<RigidbodyComponent>();
+                    std::vector<float> shapeParams = { 2.0f,
+                                                       2.0f,
+                                                       2.0f }; // full extents
+                    std::vector<float> params      = {
+                        0.0f, 0.7f, 0.02f
+                    }; // mass, friction, restitution
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
-                                       Syngine::PhysicsShapes::BOX,
-                                       {1000.0f, 0.7f, 0.02f}, // mass, friction, restitution
+                                       PhysicsShapes::BOX,
+                                       params,
                                        JPH::EMotionType::Dynamic,
-                                       Syngine::Layers::MOVING,
+                                       Layers::MOVING,
                                        shapeParams);
                     this->app->gameObjects.push_back(cube);
                 } else if (event.key.key == SDLK_2) {
-                                        string modelPath = resolveOSPath("meshes/sphere.glb");
+                    string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
-                    sphere->AddComponent(SYN_COMPONENT_TRANSFORM);
-                    sphere->AddComponent(SYN_COMPONENT_MESH);
-                    sphere->AddComponent(SYN_COMPONENT_RIGIDBODY);
+                    sphere->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
+                    sphere->AddComponent(Syngine::SYN_COMPONENT_MESH);
+                    sphere->AddComponent(Syngine::SYN_COMPONENT_RIGIDBODY);
                     MeshComponent* meshComp = sphere->GetComponent<MeshComponent>();
                     if (meshComp) meshComp->LoadMesh(modelPath, false);
                     TransformComponent* tComp = sphere->GetComponent<TransformComponent>();
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f);
-                    Syngine::RigidbodyComponent* physComp = sphere->GetComponent<Syngine::RigidbodyComponent>();
-                    std::vector<float> shapeParams = { 0.95f }; // half extents for sphere shape (diameter)
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
+                    RigidbodyComponent* physComp = sphere->GetComponent<RigidbodyComponent>();
+                    std::vector<float> shapeParams = { // half extents for sphere shape (diameter)
+                        2.9f
+                    };
+                    std::vector<float> params = {
+                        0.0f, 0.7f, 0.02f
+                    }; // mass, friction, restitution
                     if (physComp)
                         physComp->Init(tComp,
                                        this->app->physicsManager,
-                                       Syngine::PhysicsShapes::SPHERE,
-                                       {520.0f, 0.7f, 0.02f}, // mass, friction, restitution
+                                       PhysicsShapes::SPHERE,
+                                       params,
                                        JPH::EMotionType::Dynamic,
-                                       Syngine::Layers::MOVING,
+                                       Layers::MOVING,
                                        shapeParams);
                     this->app->gameObjects.push_back(sphere);
+                } else if (event.key.key == SDLK_F1) {
+                    // Toggle debug mode
+                    this->app->debug = !this->app->debug;
+                    if (this->app->debug) {
+                        Syngine::Logger::Info("Debug mode enabled");
+                    } else {
+                        Syngine::Logger::Info("Debug mode disabled");
+                    }
+                } else if (event.key.key == SDLK_F5) {
+                    // Reload changed assets
+                    for (auto& go : this->app->gameObjects) {
+                        MeshComponent* mc = go->GetComponent<MeshComponent>();
+                        if (!mc) continue;
+                        MeshData& mesh = mc->meshData;
+                        if (!mesh.valid) continue;
+                        if (mesh.lastWriteTime !=
+                            std::filesystem::last_write_time(mesh.path)) {
+                            mc->ReloadMesh();
+                        }
+                    }
+                } else if (event.key.key == SDLK_F6) {
+                    // Reload all shaders
+                    this->app->graphics->ReloadAllPrograms();
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
-                if (event.button.button == SDL_BUTTON_RIGHT) {
+                if (event.button.button == SDL_BUTTON_RIGHT && !playerMode) {
                     rmb = true;
                     mouseX = event.button.x;
                     mouseY = event.button.y;
@@ -263,11 +320,13 @@ int SyngineCore::SyngineEventLoop() {
                 float dx = event.motion.xrel * sensitivity;
                 float dy = event.motion.yrel * sensitivity;
 
-                editorCam.yaw += dx;
-                editorCam.pitch -= dy;
-
-                // Clamp pitch to avoid gimbal lock
-                editorCam.pitch = bx::clamp(editorCam.pitch, -maxPitch, maxPitch);
+                float cx, cy = 0.0f;
+                cam->GetAngles(cx, cy);
+                cx += dx;
+                cy -= dy;
+                cy = bx::clamp(cy, -maxPitch, maxPitch);
+                // Update camera angles
+                cam->SetAngles(cx, cy);
             }
 
             if (playerMode) {
@@ -275,7 +334,7 @@ int SyngineCore::SyngineEventLoop() {
                     PlayerComponent* playerComp =
                         player->GetComponent<PlayerComponent>();
                     if (playerComp)
-                        playerComp->HandleInput(event, playerMode, sensitivity, maxPitch);
+                        playerComp->HandleInput(event);
                 }
             }
         }
@@ -297,78 +356,104 @@ int SyngineCore::SyngineEventLoop() {
             if (keystate[SDL_SCANCODE_LCTRL]) realSpeed = moveSpeed * crouchSpeed;
 
             if (keystate[SDL_SCANCODE_W]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
-                    cosf(editorCam.pitch) * sinf(editorCam.yaw),
-                    sinf(editorCam.pitch),
-                    cosf(editorCam.pitch) * cosf(editorCam.yaw)
+                    cosf(pitch) * sinf(yaw),
+                    sinf(pitch),
+                    cosf(pitch) * cosf(yaw)
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_S]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
-                    -cosf(editorCam.pitch) * sinf(editorCam.yaw),
-                    -sinf(editorCam.pitch),
-                    -cosf(editorCam.pitch) * cosf(editorCam.yaw)
+                    -cosf(pitch) * sinf(yaw),
+                    -sinf(pitch),
+                    -cosf(pitch) * cosf(yaw)
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_A]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
-                    sinf(editorCam.yaw - bx::kPiHalf),
+                    sinf(yaw - bx::kPiHalf),
                     0.0f,
-                    cosf(editorCam.yaw - bx::kPiHalf)
+                    cosf(yaw - bx::kPiHalf)
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_D]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
-                    sinf(editorCam.yaw + bx::kPiHalf),
+                    sinf(yaw + bx::kPiHalf),
                     0.0f,
-                    cosf(editorCam.yaw + bx::kPiHalf)
+                    cosf(yaw + bx::kPiHalf)
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_Q]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
                     0.0f,
                     -1.0f,
                     0.0f
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
             if (keystate[SDL_SCANCODE_E]) {
+                float yaw, pitch;
+                cam->GetAngles(yaw, pitch);
+                const float* posPtr = cam->GetPosition();
+                float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
+
                 moveVector = {
                     0.0f,
                     1.0f,
                     0.0f
                 };
                 moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-                moveVector = bx::add(bx::Vec3(editorCam.eye[0], editorCam.eye[1], editorCam.eye[2]), moveVector);
-                editorCam.eye[0] = moveVector.x;
-                editorCam.eye[1] = moveVector.y;
-                editorCam.eye[2] = moveVector.z;
+                moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
+                cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
             }
-            camera = editorCam; // Update the camera with the editor camera state
+            finalCam = cam;
+        } else {
+            // player mode, use player camera
+            if (player && player->GetComponent<CameraComponent>()) {
+                finalCam = player->GetComponent<CameraComponent>();
+            } else {
+                Syngine::Logger::Error("Player or CameraComponent not found");
+                return 1;
+            }
         }
 
         // simulation stuff
@@ -378,7 +463,6 @@ int SyngineCore::SyngineEventLoop() {
 
                 while(accumlator >= physicsTimestep) {
                     this->app->physicsManager->Update(physicsTimestep, physicsSteps);
-                    startDir.x += 0.5f * physicsTimestep;
                     physCounter++;
                     accumlator -= physicsTimestep;
                 }
@@ -387,15 +471,9 @@ int SyngineCore::SyngineEventLoop() {
 
         //sun
         if (keystate[SDL_SCANCODE_LEFT]) {
-            startDir.z += 2.0f;
-        }
-        if (keystate[SDL_SCANCODE_RIGHT]) {
-            startDir.z -= 2.0f;
-        }
-        if (keystate[SDL_SCANCODE_UP]) {
             startDir.x += 2.0f;
         }
-        if (keystate[SDL_SCANCODE_DOWN]) {
+        if (keystate[SDL_SCANCODE_RIGHT]) {
             startDir.x -= 2.0f;
         }
 
@@ -418,22 +496,44 @@ int SyngineCore::SyngineEventLoop() {
 
         if (playerMode) {
             if (player->GetComponent<PlayerComponent>()) {
-                player->GetComponent<PlayerComponent>()->Update(
-                    keystate, moveSpeed, sprintMult, crouchSpeed);
+                player->GetComponent<PlayerComponent>()->Update(keystate,
+                                                                playerMode);
             }
         }
 
         for (auto* gameObject : this->app->gameObjects) {
             if (gameObject) {
-                Syngine::RigidbodyComponent* physComp = gameObject->GetComponent<Syngine::RigidbodyComponent>();
+                RigidbodyComponent* physComp = gameObject->GetComponent<RigidbodyComponent>();
                 if (physComp && physComp->isEnabled) {
                     physComp->Update(simulate);
                 }
             }
         }
-        
+
+        // Post-physics update for player component
+        // (I do not like the two if playermode here but eh)
+        if (playerMode) {
+            if (player->GetComponent<PlayerComponent>()) {
+                player->GetComponent<PlayerComponent>()->PostPhysicsUpdate();
+            }
+        }
+
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(this->app->gameObjects, lightDir); // render frame
+            this->app->graphics->RenderFrame(this->app->gameObjects,
+                                             lightDir,
+                                             finalCam,
+                                             this->app->debug);
+
+            if (this->app->debug) {
+                // christ on a stick this call is ridiculous
+                this->app->physicsManager->DrawDebug(
+                    this->app->graphics->width,
+                    this->app->graphics->height,
+                    this->app->graphics->GetProgram("debugger").program,
+                    this->app->gameObjects[0]
+                        ->GetComponent<Syngine::CameraComponent>()
+                        ->GetCamera(), finalCam->GetCamera());
+            }
         }
 
         if (oneSec >= 1.0f) {
@@ -453,18 +553,18 @@ int SyngineCore::SyngineEventLoop() {
                     playerMode ? "Player" : "Editor",
                     lastFPS,
                     lastTPS,
-                    camera.eye[0],
-                    camera.eye[1],
-                    camera.eye[2]);
+                    finalCam->GetPosition()[0],
+                    finalCam->GetPosition()[1],
+                    finalCam->GetPosition()[2]);
         }
     }
     
     this->app->synModels->UnloadAll();
-    SDL_Log("Exiting event loop");
+    Syngine::Logger::Info("Exiting event loop");
     return 0;
 }
 
-int SyngineCore::DeleteGameobject(GameObject* gameobject) {
+int Core::DeleteGameobject(GameObject* gameobject) {
     if(!gameobject) return 0;
     MeshComponent* mesh = gameobject->GetComponent<MeshComponent>();
     if(mesh) {
@@ -473,4 +573,142 @@ int SyngineCore::DeleteGameobject(GameObject* gameobject) {
     delete gameobject; // delete the gameobject
     gameobject = nullptr; // set to null to avoid dangling pointer
     return 0;
+}
+
+Syngine::HardwareSpecs Core::GetSystemSpecifications() {
+    Syngine::HardwareSpecs specs;
+#ifdef _WIN32
+    // On Windows, gather system information using Windows API
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+
+    // Get OS
+    const char* platform = SDL_GetPlatform();
+    specs.osName = std::string(platform);
+
+    // Get CPU info (why on EARTH is this so complicated?)
+    std::string cpu;
+    int         CPUInfo[4] = { -1 };
+    char        CPUBrandString[0x40]; // Buffer for CPU brand string
+
+    // Get the highest extended function supported by CPUID
+    __cpuid(CPUInfo, 0x80000000);
+    unsigned int nExIds = CPUInfo[0];
+
+    // Get the CPU brand string if supported
+    for (unsigned int i = 0x80000002; i <= nExIds && i <= 0x80000004; ++i) {
+        __cpuid(CPUInfo, i);
+        // Copy returned values into the CPU brand string buffer
+        memcpy(CPUBrandString + (i - 0x80000002) * 16, CPUInfo, sizeof(CPUInfo));
+    }
+    CPUBrandString[sizeof(CPUBrandString) - 1] = '\0'; // Null-terminate the string
+    cpu = std::string(CPUBrandString);
+    specs.cpuModel = cpu;
+
+    // Get arch
+    std::string cpuArch;
+    switch (sysInfo.wProcessorArchitecture) {
+        case PROCESSOR_ARCHITECTURE_AMD64: cpuArch = "x64"; break;
+        case PROCESSOR_ARCHITECTURE_INTEL: cpuArch = "x86"; break;
+        case PROCESSOR_ARCHITECTURE_ARM:   cpuArch = "ARM"; break;
+        case PROCESSOR_ARCHITECTURE_ARM64: cpuArch = "ARM64"; break;
+        default:                            cpuArch = "Unknown"; break;
+    }
+    specs.cpuArch = cpuArch;
+    specs.cpuCores = sysInfo.dwNumberOfProcessors;
+
+    // Get total physical memory
+    MEMORYSTATUSEX statex;
+    statex.dwLength = sizeof(statex);
+    GlobalMemoryStatusEx(&statex);
+    specs.ramMB = statex.ullTotalPhys / (1024 * 1024);
+
+#elif __APPLE__
+    // On macOS, gather system information using sysctl
+    specs.osName = "macOS";
+    try {
+        char cpuBrand[256];
+        size_t size = sizeof(cpuBrand);
+        sysctlbyname("machdep.cpu.brand_string", cpuBrand, &size, NULL, 0);
+        specs.cpuModel = std::string(cpuBrand);
+
+        // Get logical CPU count
+        int cpuProc = 0;
+        size = sizeof(cpuProc);
+        sysctlbyname("machdep.cpu.core_count", &cpuProc, &size, NULL, 0);
+        specs.cpuCores = cpuProc;
+
+        // Get RAM info
+        uint64_t ramSize = 0;
+        size = sizeof(ramSize);
+        sysctlbyname("hw.memsize", &ramSize, &size, NULL, 0);
+        specs.ramMB = ramSize / (1024 * 1024);
+    } catch (const std::exception& e) {
+        specs.ramMB = 0;
+    }
+
+#else
+    // Get OS
+    struct utsname sysInfo;
+    if (uname(&sysInfo) < 0) {
+        specs.osName = "Unknown";
+        return specs;
+    }
+    specs.osName = std::string(sysInfo.sysname) + " " + std::string(sysInfo.release);
+
+    // Get CPU info (name, architecture, etc.)
+    std::ifstream cpuInfoFile("/proc/cpuinfo");
+    std::string   line;
+    std::string   cpuBrand = "Unknown";
+
+    if (cpuInfoFile.is_open()) {
+        while (std::getline(cpuInfoFile, line)) {
+            if (line.find("model name") != std::string::npos) {
+                cpuBrand = line.substr(line.find(":") + 2);
+                break;
+            }
+        }
+        cpuInfoFile.close();
+    }
+    specs.cpuModel = cpuBrand;
+
+    specs.cpuArch = std::string(sysInfo.machine);
+
+    // Get number of processors
+    long numProcessors = sysconf(_SC_NPROCESSORS_ONLN);
+    specs.cpuCores = numProcessors;
+
+    // Get total physical memory
+    long totalMemory = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE);
+    specs.ramMB = totalMemory / (1024 * 1024);
+#endif
+
+    // Get display size
+    SDL_DisplayID dId = SDL_GetDisplayForWindow(app->graphics->win);
+    SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
+    specs.screenWidth = disMode.w;
+    specs.screenHeight = disMode.h;
+
+    // Get window resolution
+    int w, h;
+    SDL_GetWindowSize(app->graphics->win, &w, &h);
+    specs.winWidth = w;
+    specs.winHeight = h;
+
+    // Get various GPU info from bgfx
+    const bgfx::Caps* caps = bgfx::getCaps();
+    if (caps) {
+        specs.gpuVendorID = caps->vendorId;
+        specs.gpuDeviceID = caps->deviceId;
+        specs.maxTextureSize = caps->limits.maxTextureSize;
+        specs.supportsCompute = (caps->supported & BGFX_CAPS_COMPUTE) != 0;
+        specs.supports3DTextures = (caps->supported & BGFX_CAPS_TEXTURE_3D) != 0;
+    } else {
+        specs.gpuVendorID = 0;
+        specs.gpuDeviceID = 0;
+        specs.maxTextureSize = 0;
+        specs.supportsCompute = false;
+        specs.supports3DTextures = false;
+    }
+    return specs;
 }

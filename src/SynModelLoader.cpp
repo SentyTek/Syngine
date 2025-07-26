@@ -1,4 +1,5 @@
 #include "SynModelLoader.h"
+#include "SyngineLogger.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 #include "defines.h"
@@ -10,8 +11,50 @@
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
 
+namespace Syngine {
+
+/* Base class */
+std::vector<MeshData> SynModelLoader::loadedMeshes;
+
+// Returns a vector of all loaded meshes
+std::vector<MeshData>& SynModelLoader::getMeshes() { return loadedMeshes; }
+
+// Returns a pointer to a mesh by its ID, or nullptr if not found.
+// ID param is the index in the meshes vector, returned from the LoadModel function.
+MeshData* SynModelLoader::getMeshById(int id) {
+    for (auto& mesh : loadedMeshes) {
+        if (mesh.id == id) {
+            return &mesh;
+        }
+    }
+    return nullptr; // not found
+}
+
+
+void SynModelLoader::UnloadAll() {
+    for (auto& mesh : loadedMeshes) {
+        for (auto& mat : mesh.materials) {
+            if (bgfx::isValid(mat.albedo)) {
+                bgfx::destroy(mat.albedo);
+            }
+            if (bgfx::isValid(mat.normalMap)) {
+                bgfx::destroy(mat.normalMap);
+            }
+            if (bgfx::isValid(mat.heightMap)) {
+                bgfx::destroy(mat.heightMap);
+            }
+        }
+        mesh.materials.clear();
+        bgfx::destroy(mesh.vbh);
+        bgfx::destroy(mesh.ibh);
+    }
+    loadedMeshes.clear();
+}
+
+/* Assimp importer */
+
 //Returns true if the model was loaded successfully, false otherwise
-bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loadTextures) {
+bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
     const uint16_t flags    = aiProcess_JoinIdenticalVertices
@@ -21,16 +64,39 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
     //read file. ideally use some kind of post processing (tangents, join indices, etc), but this is a simple example
     const aiScene* scene = importer.ReadFile(path, flags);
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->HasMeshes()) {
-        SDL_Log("Error loading model: %s", importer.GetErrorString());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Error loading model: %s", importer.GetErrorString());
         return false;
     }
 
     if(scene->mNumMeshes == 0) {
-        SDL_Log("No meshes found in model: %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "No meshes found in model: %s", path.c_str());
         return false;
     }
 
-    SynMeshData meshData;
+    MeshData meshData;
+    if (!processScene(meshData, scene, path, loadTextures)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to process scene for model: %s", path.c_str());
+        return false;
+    }
+    meshData.hasTextures = loadTextures;
+    meshData.path        = path;
+    meshData.id          = loadedMeshes.size();
+
+    try {
+        meshData.lastWriteTime = std::filesystem::last_write_time(path);
+    } catch (const std::filesystem::filesystem_error& e) {
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Failed to get last write time for %s: %s", path.c_str(), e.what()); // e.what() lol what a name
+    }
+    meshData.valid = true; // Mark as valid after processing
+
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Loaded mesh %s", path.c_str());
+    loadedMeshes.push_back(meshData);
+    out = meshData;
+    return true;
+}
+
+bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const std::string& path, bool loadTextures) {
+
     meshData.numVertices = scene->mNumMeshes > 0 ? scene->mMeshes[0]->mNumVertices : 0;
 
     aiMesh* mesh = scene->mMeshes[0]; //only loads first mesh for now
@@ -103,7 +169,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
                     vertex.tangent[2] = t.z;
                 }
             }
-            SDL_Log("No tangents for mesh %s", path.c_str());
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN, "No tangents for mesh %s", path.c_str());
         }
 
         meshData.vertices.push_back(vertex);
@@ -118,7 +184,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             meshData.indices.push_back(face.mIndices[1]);
             meshData.indices.push_back(face.mIndices[2]);
         } else {
-            SDL_Log("Face %d has %d indices, not 3", i, face.mNumIndices);
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Face %d has %d indices, not 3", i, face.mNumIndices);
         }
     }
 
@@ -134,9 +200,9 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
         .end(); //stride = 72 bytes
 
     //create buffers
-    const bgfx::Memory* mem = bgfx::alloc(meshData.vertices.size() * sizeof(Vertex));
+    const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.vertices.size() * sizeof(Vertex)));
     memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
-    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
+    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout, BGFX_BUFFER_COMPUTE_READ);
 
     mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
@@ -147,7 +213,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
 
     //checks
     if(!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
-        SDL_Log("Failed to create vertex/index buffer");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create vertex/index buffer");
         return false;
     }
 
@@ -172,13 +238,13 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
                 const aiTexture* tex = scene->GetEmbeddedTexture(texPath.C_Str());
                 if(tex->mHeight == 0) {
                     //compressed texture
-                    bgfx::TextureHandle texHandle = SynLoadTextureFromMemory(
+                    bgfx::TextureHandle texHandle = Syngine::LoadTextureFromMemory(
                         (const uint8_t*)tex->pcData,
                         tex->mWidth,
                         texPath.C_Str() //for debugging or caching
                     );
                     if(!bgfx::isValid(texHandle)) {
-                        SDL_Log("Failed to load texture %s", texPath.C_Str());
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load texture %s", texPath.C_Str());
                         return false;
                     }
                     mat.albedo = texHandle;
@@ -194,13 +260,13 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
                 const aiTexture* normTex = scene->GetEmbeddedTexture(normPath.C_Str());
                 if(normTex->mHeight == 0) {
                     //compressed texture
-                    bgfx::TextureHandle texHandle = SynLoadTextureFromMemory(
+                    bgfx::TextureHandle texHandle = Syngine::LoadTextureFromMemory(
                         (const uint8_t*)normTex->pcData,
                         normTex->mWidth,
                         normPath.C_Str() //for debugging or caching
                     );
                     if(!bgfx::isValid(texHandle)) {
-                        SDL_Log("Failed to load normal map %s", normPath.C_Str());
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load normal map %s", normPath.C_Str());
                         return false;
                     }
                     mat.normalMap = texHandle;
@@ -214,15 +280,15 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             std::string heightPath = path.substr(0, path.find_last_of('.')) + "_height.png";
 
             if (std::filesystem::exists(heightPath)) {
-                bgfx::TextureHandle texHandle = SynLoadTextureFromFile(heightPath.c_str());
+                bgfx::TextureHandle texHandle = Syngine::LoadTextureFromFile(heightPath.c_str());
                 if (!bgfx::isValid(texHandle)) {
-                    SDL_Log("Failed to load height map %s", heightPath.c_str());
+                    Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load height map %s", heightPath.c_str());
                     return false;
                 }
                 mat.heightMap = texHandle;
             } else {
-                mat.heightMap = SynCreateFlatTexture();
-                SDL_Log("Height map not found for object %s", path.c_str());
+                Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Height map not found for object %s", path.c_str());
+                mat.heightMap = Syngine::CreateFlatTexture();
             }
             mat.name = "material_" + std::to_string(i);
             meshData.materials.push_back(mat);
@@ -234,7 +300,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             Material mat;
             mat.albedo = BGFX_INVALID_HANDLE;
             mat.normalMap = BGFX_INVALID_HANDLE;
-            mat.heightMap = SynCreateFlatTexture();
+            mat.heightMap = Syngine::CreateFlatTexture();
             mat.name = "default_material";
             meshData.materials.push_back(mat);
         }
@@ -258,7 +324,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
 
                 mat.albedo = BGFX_INVALID_HANDLE;
                 mat.normalMap = BGFX_INVALID_HANDLE;
-                mat.heightMap = SynCreateFlatTexture();
+                mat.heightMap = Syngine::CreateFlatTexture();
                 mat.name = "material_" + std::to_string(i);
                 meshData.materials.push_back(mat);
             }
@@ -266,7 +332,7 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
             Material mat;
             mat.albedo = BGFX_INVALID_HANDLE;
             mat.normalMap = BGFX_INVALID_HANDLE;
-            mat.heightMap = SynCreateFlatTexture();
+            mat.heightMap = Syngine::CreateFlatTexture();
             mat.name = "default_material";
             meshData.materials.push_back(mat);
         }
@@ -274,46 +340,84 @@ bool AssimpLoader::LoadModel(SynMeshData& out, const std::string& path, bool loa
 
     //Ensure at least one material exists
     if(meshData.materials.empty()) {
-        SDL_Log("Warning: Mesh %s had no materials, using default.", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Mesh %s had no materials, using default.", path.c_str());
         Material mat;
         mat.albedo = BGFX_INVALID_HANDLE;
         mat.normalMap = BGFX_INVALID_HANDLE;
-        mat.heightMap = SynCreateFlatTexture();
+        mat.heightMap = Syngine::CreateFlatTexture();
         mat.name = "default_material";
         meshData.materials.push_back(mat);
     }
 
     meshData.numMaterials = meshData.materials.size();
 
-    //and output
+    // and output
     meshData.vbh = vbh;
     meshData.ibh = ibh;
-    meshData.hasTextures = loadTextures;
-    out = meshData;
-    meshes.push_back(meshData); //store mesh data for later use
+
     return true;
 }
 
-void AssimpLoader::UnloadAll() {
-    for (auto& mesh : meshes) {
-        for (auto& mat : mesh.materials) {
-            if (bgfx::isValid(mat.albedo)) {
-                bgfx::destroy(mat.albedo);
-            }
-            if (bgfx::isValid(mat.normalMap)) {
-                bgfx::destroy(mat.normalMap);
-            }
-            if (bgfx::isValid(mat.heightMap)) {
-                bgfx::destroy(mat.heightMap);
-            }
-        }
-        mesh.materials.clear();
-        bgfx::destroy(mesh.vbh);
-        bgfx::destroy(mesh.ibh);
+// Reloads a model by its ID, returns true if successful
+bool AssimpLoader::ReloadModel(MeshData& out, int id) {
+    MeshData* mesh = getMeshById(id);
+    if (!mesh) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Mesh with ID %d not found", id);
+        return false;
     }
-    meshes.clear();
+    mesh->valid = false; // Mark as invalid before reloading
+
+    Assimp::Importer importer;
+    const uint16_t   flags = aiProcess_JoinIdenticalVertices |
+                           aiProcess_CalcTangentSpace |
+                           aiProcess_GenSmoothNormals;
+    const aiScene* scene = importer.ReadFile(mesh->path, flags);
+    if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->HasMeshes()) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Error reloading model: %s", importer.GetErrorString());
+        return false;
+    }
+
+    MeshData temp;
+    if (!processScene(temp, scene, mesh->path, mesh->hasTextures)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to process scene for model: %s", mesh->path.c_str());
+        return false;
+    }
+
+    // Unload existing resources
+    bgfx::destroy(mesh->vbh);
+    bgfx::destroy(mesh->ibh);
+    for (auto& mat : mesh->materials) {
+        if (bgfx::isValid(mat.albedo)) {
+            bgfx::destroy(mat.albedo);
+        }
+        if (bgfx::isValid(mat.normalMap)) {
+            bgfx::destroy(mat.normalMap);
+        }
+        if (bgfx::isValid(mat.heightMap)) {
+            bgfx::destroy(mat.heightMap);
+        }
+    }
+
+    mesh->vertices = std::move(temp.vertices);
+    mesh->indices  = std::move(temp.indices);
+    mesh->materials = std::move(temp.materials);
+    mesh->numVertices = temp.numVertices;
+    mesh->numIndices  = temp.numIndices;
+    mesh->numMaterials = temp.numMaterials;
+    mesh->vbh          = temp.vbh;
+    mesh->ibh          = temp.ibh;
+    mesh->id           = loadedMeshes.size(); // Update ID to the new index
+
+    try {
+        mesh->lastWriteTime = std::filesystem::last_write_time(mesh->path);
+    } catch (const std::filesystem::filesystem_error& e) {
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Failed to get last write time for %s: %s", mesh->path.c_str(), e.what());
+    }
+    mesh->valid = true;
+
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Reloaded mesh %s", mesh->path.c_str());
+    out = *mesh; // Update output with reloaded data
+    return true;
 }
 
-std::vector<SynMeshData>& SynModelLoader::getMeshes() {
-    return meshes;
-}
+} // namespace Syngine

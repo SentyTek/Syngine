@@ -1,60 +1,132 @@
-#include "SyngineCore.h"
+#include <cwchar>
+#if defined(_WIN32)
+#define NOMINMAX
+#include <Windows.h>
+#endif
 
-int main(int argc, char* argv[]) {
-    //create window
-    SyngineCore syngine;
-    SyngineGraphics graphics("bakerman", 800, 600);
-    if (graphics.CreateWindow() != 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create window");
-        return 1;
+#include <SDL3/SDL.h>
+#include "SyngineCore.h"
+#include "SyngineGraphics.h"
+#include "SyngineLogger.h"
+#include <string>
+
+#if defined(_WIN32)
+void EnableConsole() {
+    AllocConsole();
+
+    // Redirect standard output to the console
+    FILE* fp;
+    freopen_s(&fp, "CONOUT$", "w", stdout);
+    freopen_s(&fp, "CONOUT$", "w", stderr);
+    freopen_s(&fp, "CONIN$", "r", stdin);
+    std::ios::sync_with_stdio();
+}
+#endif
+
+void ErrorAndExit(const std::string& message, int code) {
+    Syngine::Logger::LogF(Syngine::LogLevel::FATAL, "%s", message.c_str());
+    SDL_Quit();
+    exit(code);
+}
+
+int AppMain(int argc, char* argv[]) {
+    const char* appName = "Bakerman";
+
+    Syngine::Logger::Init(std::string(appName));
+    Syngine::Logger::Log("Starting " + std::string(appName));
+
+    // Create window
+    Syngine::Core syngine(appName);
+    Syngine::Graphics graphics(appName, 1600, 900);
+
+    if (graphics.CreateGameWindow() != 0) {
+        ErrorAndExit("Failed to create window! Check the log for details.", 1);
     }
-    //create renderer
+
+    // Create renderer
     if (graphics.CreateRenderer() != 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create renderer");
         graphics.DestroyWindow();
-        return 1;
+        ErrorAndExit("Failed to create renderer! Check the log for details.", 1);
+    }
+
+    // Attach graphics to core
+    if (syngine.AttachGraphics(&graphics) != 0) {
+        graphics.DestroyWindow();
+        ErrorAndExit("Failed to attach graphics to core. Check the log for details.", 1);
+    }
+
+    Syngine::Logger::LogHardwareInfo(syngine);
+
+    // Shader programs can be created arbitrarily, being supplied an optional
+    // ViewID to match the rendering view (e.g. VIEW_FOWARD, VIEW_SKY, VIEW_DEBUG, etc.)
+    if (graphics.AddProgram("shaders/sky", "sky", Syngine::VIEW_SKY) == -1) {
+        graphics.DestroyRenderer();
+        graphics.DestroyWindow();
+        ErrorAndExit("Failed to create program. Check the log for details.", 1);
     }
     
-    //Sky program is created first, as it is the background
-    //This implies that shaders are loaded in the order they should be rendered
-    //Ex: sky -> terrain -> models -> post processing
-    size_t skyProg = graphics.AddProgram("shaders/sky.vert.sc.bin", "shaders/sky.frag.sc.bin", "sky");
-    if (skyProg == (size_t)-1) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create program");
+    if (graphics.AddProgram("shaders/terrain", "terrain") == -1) {
         graphics.DestroyRenderer();
         graphics.DestroyWindow();
-        return 1;
-    }
-    size_t terProg = graphics.AddProgram("shaders/terrain.vert.sc.bin", "shaders/terrain.frag.sc.bin", "terrain");
-    if (terProg == (size_t)-1) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create program");
-        graphics.DestroyRenderer();
-        graphics.DestroyWindow();
-        return 1;
+        ErrorAndExit("Failed to create program. Check the log for details.", 1);
     }
 
-    //attach graphics to core
-    if (syngine.AttachGraphics(&graphics) != 0) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to attach graphics to core");
-        graphics.DestroyWindow();
-        return 1;
-    }
+    // Run event loop
+    syngine.SyngineEventLoop(); // Note that this is a blocking call, it will run until the window is closed or quit event is triggered
 
-    //run event loop
-    syngine.SyngineEventLoop(); //note that this is a blocking call, it will run until the window is closed or quit event is triggered
-
-    //cleanup
+    // Cleanup and quit
     for(size_t i = 0; i < syngine.app->gameObjects.size(); ++i) {
-        GameObject* gameObject = syngine.app->gameObjects[i];
+        Syngine::GameObject* gameObject = syngine.app->gameObjects[i];
         if (gameObject) {
             syngine.DeleteGameobject(gameObject);
         }
     }
     syngine.app->gameObjects.clear();
     syngine.DetachGraphics();
-    graphics.RemoveProgram(true);
+    graphics.RemoveAllPrograms();
     graphics.DestroyRenderer();
     graphics.DestroyWindow();
+    Syngine::Logger::Shutdown();
     SDL_Quit();
     return 0;
 }
+
+#if defined(_WIN32)
+int WINAPI WinMain(HINSTANCE hInstance,
+                   HINSTANCE hPrevInstance,
+                   LPSTR     lpCmd,
+                   int       nShowCmd) {
+    // Convert command line to argc/argv
+    int argc;
+    LPWSTR* argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
+    char** argv = new char*[argc];
+    for (int i = 0; i < argc; ++i) {
+        int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, nullptr, 0, nullptr, nullptr);
+        argv[i] = new char[len];
+        WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argv[i], len, nullptr, nullptr);
+    }
+
+    for (int i = 0; i < argc; ++i) {
+        if (wcscmp(argvW[i], L"--console") == 0) {
+            EnableConsole();
+            break;
+        }
+    }
+
+    // Call the main application function
+    int result = AppMain(argc, argv);
+
+    // Cleanup allocated memory
+    for (int i = 0; i < argc; ++i) {
+        delete[] argv[i];
+    }
+    delete[] argv;
+    LocalFree(argvW);
+    return result;
+}
+
+#else
+int main(int argc, char* argv[]) {
+    return AppMain(argc, argv);
+}
+#endif

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.10)
 project(bakerman)
 set(EXECUTABLE_NAME ${PROJECT_NAME})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 include(clangdConfig.cmake)
 include(bgfxshaderc.cmake)
 
@@ -14,6 +14,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
 
 add_subdirectory(engine)
+
+if(WIN32)
+    set(CMAKE_WIN32_EXECUTABLE ON)
+endif()
+
+
 add_executable(${EXECUTABLE_NAME}
     src/main.cpp
 )
@@ -42,6 +48,29 @@ else()
     add_custom_target(Shaders ALL)
 endif()
 
+set(SHADER_SOURCE_DIR_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/engine/default/shaders")
+set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
+file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR}) #ensure exists
+set(BGFX_CORE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/engine/third_party/bgfx.cmake/bgfx/src")
+
+set(ALL_COMPILED_SHADER_BINARIES)
+
+compile_all_shaders(
+    SOURCE_DIRECTORY      ${SHADER_SOURCE_DIR_ROOT}
+    OUTPUT_DIRECTORY      ${SHADER_OUTPUT_DIR}
+    BGFX_SRC_INCLUDE_DIRS ${BGFX_CORE_INCLUDE_DIR}
+    SHADER_FILES_OUTPUT_VAR ALL_COMPILED_SHADER_BINARIES
+)
+
+if(ALL_COMPILED_SHADER_BINARIES)
+    message(STATUS "Compiled shaders: ${ALL_COMPILED_SHADER_BINARIES}")
+    add_custom_target(Shaders2 ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
+    add_dependencies(${EXECUTABLE_NAME} Shaders2)
+else()
+    message(STATUS "No shaders compiled.")
+    add_custom_target(Shaders2 ALL)
+endif()
+
 # Include directories for the executable
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -53,7 +82,10 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE Syngine)
 if(APPLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_OSX=1)
 elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+        "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
+        "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
+    )
 endif()
 
 if(MSVC)
@@ -133,6 +165,28 @@ if(APPLE)
         message(WARNING "Meshes source directory not found: ${MESHES_SOURCE_DIR}")
     endif()
 
+    # --- Copy engine/default subfolders except 'shaders' into bundle Resources ---
+    set(ENGINE_DEFAULT_DIR "${CMAKE_SOURCE_DIR}/engine/default")
+    if(EXISTS "${ENGINE_DEFAULT_DIR}")
+        file(GLOB ENGINE_DEFAULT_SUBDIRS RELATIVE "${ENGINE_DEFAULT_DIR}" "${ENGINE_DEFAULT_DIR}/*")
+        foreach(subdir ${ENGINE_DEFAULT_SUBDIRS})
+            if(IS_DIRECTORY "${ENGINE_DEFAULT_DIR}/${subdir}" AND NOT "${subdir}" STREQUAL "shaders")
+                file(GLOB_RECURSE DEFAULT_SUBDIR_FILES RELATIVE "${ENGINE_DEFAULT_DIR}/${subdir}" "${ENGINE_DEFAULT_DIR}/${subdir}/*")
+                foreach(default_file_relative ${DEFAULT_SUBDIR_FILES})
+                    set(abs_default_file "${ENGINE_DEFAULT_DIR}/${subdir}/${default_file_relative}")
+                    if(IS_DIRECTORY "${abs_default_file}")
+                        continue()
+                    endif()
+                    target_sources(${EXECUTABLE_NAME} PRIVATE "${abs_default_file}")
+                    set_property(SOURCE "${abs_default_file}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources/default/${subdir}")
+                    message(STATUS "Bundling engine default file for macOS: ${abs_default_file} -> Resources/default/${subdir}/${default_file_relative}")
+                endforeach()
+            endif()
+        endforeach()
+    else()
+        message(WARNING "Engine default directory not found: ${ENGINE_DEFAULT_DIR}")
+    endif()
+
     # Set the location within the macOS bundle's Resources directory
     set_property(SOURCE ${COMPILED_SHADER_VS} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/shaders")
     set_property(SOURCE ${COMPILED_SHADER_FS} PROPERTY MACOSX_PACKAGE_LOCATION "Resources/shaders")
@@ -151,6 +205,7 @@ set_target_properties(${EXECUTABLE_NAME} PROPERTIES
     XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
     XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
     RESOURCE "${RESOURCE_FILES_FOR_TARGET}"
+    XCODE_ATTRIBUTE_SDKROOT "macosx"
 )
 endif()
 
@@ -221,5 +276,20 @@ if(WIN32 OR (UNIX AND NOT APPLE))
                 "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/icon.png"
             COMMENT "Copying icon.png to executable directory"
         )
+    endif()
+
+    # Copy engine defaults except the default/shaders folder
+    if(EXISTS "${CMAKE_SOURCE_DIR}/engine/default")
+        file(GLOB DEFAULT_SUBDIRS RELATIVE "${CMAKE_SOURCE_DIR}/engine/default" "${CMAKE_SOURCE_DIR}/engine/default/*")
+        foreach(subdir ${DEFAULT_SUBDIRS})
+            if(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/engine/default/${subdir}" AND NOT "${subdir}" STREQUAL "shaders")
+                add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        "${CMAKE_SOURCE_DIR}/engine/default/${subdir}"
+                        "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/default/${subdir}"
+                    COMMENT "Copying engine default subdir '${subdir}' to executable directory"
+                )
+            endif()
+        endforeach()
     endif()
 endif()
