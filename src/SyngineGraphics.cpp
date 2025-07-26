@@ -435,7 +435,7 @@ bool Graphics::ReloadAllPrograms() {
     return true;
 }
 
-bgfx::UniformHandle Graphics::GetUniform(const char* name) const {
+bgfx::UniformHandle Graphics::_GetUniform(const char* name) const {
     auto it = this->handles.uniforms.find(name);
     if (it != this->handles.uniforms.end()) {
         return it->second;
@@ -455,7 +455,7 @@ void Graphics::DestroyWindow() { //dw this is effectively the destructor
     Syngine::Logger::Info("Window destroyed successfully");
 }
 
-void Graphics::RegisterGizmo(const std::string& tag, float size) {
+void Graphics::_RegisterGizmo(const std::string& tag, float size) {
 
     std::string resolvedPath = Syngine::ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
     const char* path = resolvedPath.c_str();
@@ -465,7 +465,7 @@ void Graphics::RegisterGizmo(const std::string& tag, float size) {
     }
 }
 
-void Graphics::RenderGizmos(CameraComponent* camera) {
+void Graphics::_RenderGizmos(CameraComponent* camera) {
     unsigned short viewId = 26; // View ID for gizmos
     bgfx::setViewRect(viewId, 0, 0, bgfx::BackbufferRatio::Equal);
     bgfx::setViewTransform(
@@ -478,7 +478,7 @@ void Graphics::RenderGizmos(CameraComponent* camera) {
         return;
     }
 
-    bgfx::UniformHandle billboardUniform = GetUniform("u_billboard");
+    bgfx::UniformHandle billboardUniform = _GetUniform("u_billboard");
     if (!bgfx::isValid(billboardUniform)) {
         Syngine::Logger::Error("Billboard uniform not found");
         return;
@@ -511,14 +511,14 @@ void Graphics::RenderGizmos(CameraComponent* camera) {
                 bgfx::setTransform(modelMtx);
                 bgfx::setVertexBuffer(0, this->billboardVbh);
                 bgfx::setIndexBuffer(this->billboardIbh);
-                bgfx::setTexture(0, GetUniform("s_albedo"), gizmo.texture);
+                bgfx::setTexture(0, _GetUniform("s_albedo"), gizmo.texture);
                 bgfx::submit(viewId, billboardProgram.program);
             }
         }
     }
 }
 
-int Graphics::RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
+int Graphics::_RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
     const Program& terrainProgram = GetProgram("terrain");
     const Program& skyProgram = GetProgram("sky");
     const Program& defaultProgram = GetProgram("default");
@@ -674,7 +674,7 @@ int Graphics::RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool debu
 
     // Render gizmos
     if (debug) {
-        RenderGizmos(camera);
+        _RenderGizmos(camera);
     }
 
     bgfx::frame(); // submit the frame

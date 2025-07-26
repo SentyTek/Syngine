@@ -69,11 +69,11 @@ class Registry {
 
     // Internal call to notify the registry that a component has been added to a
     // GameObject. This is used to update the indexed sublists.
-    static void NotifyComponentAdded(GameObject*         gameobject,
+    static void _NotifyComponentAdded(GameObject*         gameobject,
                                      Syngine::Components type) noexcept;
     // Internal call to notify the registry that a component has been removed
     // from a GameObject. This is used to update the indexed sublists.
-    static void NotifyComponentRemoved(GameObject*         gameobject,
+    static void _NotifyComponentRemoved(GameObject*         gameobject,
                                        Syngine::Components type) noexcept;
     // Internal call to notify the registry that a GameObject is now active.
     // This is used to update the indexed sublists.

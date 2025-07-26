@@ -120,7 +120,7 @@ void Phys::Update(float deltaTime, int collisionSteps) {
     mPhysicsSystem.Update(deltaTime, collisionSteps, mTempAllocator, mJobSystem);
 }
 
-void Phys::DrawDebug(int                 width,
+void Phys::_DrawDebug(int                 width,
                      int                 height,
                      bgfx::ProgramHandle program,
                      Syngine::Camera     camera,

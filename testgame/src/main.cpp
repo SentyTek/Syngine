@@ -75,15 +75,7 @@ int AppMain(int argc, char* argv[]) {
     // Run event loop
     syngine.SyngineEventLoop(); // Note that this is a blocking call, it will run until the window is closed or quit event is triggered
 
-    // Cleanup and quit
-    /*for(size_t i = 0; i < syngine.app->gameObjects.size(); ++i) {
-        Syngine::GameObject* gameObject = syngine.app->gameObjects[i];
-        if (gameObject) {
-            syngine.DeleteGameobject(gameObject);
-        }
-    }
-    syngine.app->gameObjects.clear();*/
-
+    // Cleanup
     for (auto& [id, gameObject] : Syngine::Registry::GetAllGameObjects()) {
         syngine.DeleteGameobject(gameObject);
     }

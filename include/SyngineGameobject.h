@@ -39,7 +39,7 @@ class GameObject {
     // Get the ID of the gameobject
     inline long GetID() noexcept { return this->id; };
     // Set the ID of the gameobject
-    void SetID(long id) noexcept;
+    inline void _SetID(long id) noexcept { this->id = id; }
     // Check if the gameobject is active
     inline bool IsActive() const noexcept { return this->isActive; }
     // Set the active state of the gameobject
