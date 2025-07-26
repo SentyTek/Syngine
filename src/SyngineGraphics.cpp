@@ -456,7 +456,7 @@ void Graphics::DestroyWindow() { //dw this is effectively the destructor
 
 void Graphics::RegisterGizmo(const std::string& tag, float size) {
     
-    std::string resolvedPath = resolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
+    std::string resolvedPath = ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
     const char* path = resolvedPath.c_str();
     bgfx::TextureHandle texture = Syngine::LoadTextureFromFile(path);
     if (bgfx::isValid(texture)) {

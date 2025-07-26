@@ -12,7 +12,7 @@ inline bgfx::ShaderHandle LoadShader(const char* shaderPath)
 {
     namespace fs = std::filesystem;
 
-    std::string path = Syngine::resolveOSPath(shaderPath);
+    std::string path = Syngine::ResolveOSPath(shaderPath);
     if (!fs::exists(path))
     {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,

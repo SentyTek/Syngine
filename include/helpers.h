@@ -20,7 +20,6 @@ enum class SynPlatform {
 #else
 	static_assert(false, "Unsupported patform: not defined in SynPlatform");
 #endif
-};
 
 // Loads a texture from memory
 bgfx::TextureHandle

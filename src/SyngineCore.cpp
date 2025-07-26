@@ -23,7 +23,7 @@
 #include "TransformComponent.h"
 #include "RigidbodyComponent.h"
 #include "MeshComponent.h"
-#include "helpers.h"
+#include "FsUtils.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
@@ -201,7 +201,7 @@ int Core::SyngineEventLoop() {
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
                 if (event.key.key == SDLK_F) {
                     //load model
-                    std::string modelPath = resolveOSPath("meshes/ground.glb");
+                    std::string modelPath = Syngine::ResolveOSPath("meshes/ground.glb");
                     GameObject* model = new GameObject("ground", "terrain");
                     model->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
                     model->AddComponent(Syngine::SYN_COMPONENT_MESH);
@@ -229,7 +229,7 @@ int Core::SyngineEventLoop() {
                         simulate = !simulate;
                     }
                 } else if (event.key.key == SDLK_1) {
-                    string modelPath = resolveOSPath("meshes/cube.glb");
+                    string modelPath = Syngine::ResolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
                     cube->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
                     cube->AddComponent(Syngine::SYN_COMPONENT_MESH);
@@ -255,7 +255,7 @@ int Core::SyngineEventLoop() {
                                        shapeParams);
                     this->app->gameObjects.push_back(cube);
                 } else if (event.key.key == SDLK_2) {
-                                        string modelPath = resolveOSPath("meshes/sphere.glb");
+                    string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
                     sphere->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
                     sphere->AddComponent(Syngine::SYN_COMPONENT_MESH);
