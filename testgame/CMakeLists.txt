@@ -14,6 +14,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
 
 add_subdirectory(engine)
+
+if(WIN32)
+    set(CMAKE_WIN32_EXECUTABLE ON)
+endif()
+
+
 add_executable(${EXECUTABLE_NAME}
     src/main.cpp
 )
@@ -76,7 +82,10 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE Syngine)
 if(APPLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_OSX=1)
 elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
+    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+        "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
+        "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
+    )
 endif()
 
 if(MSVC)

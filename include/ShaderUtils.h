@@ -6,32 +6,36 @@
 #include <filesystem>
 #include <string>
 #include "helpers.h"
+#include "SyngineLogger.h"
 
 inline bgfx::ShaderHandle LoadShader(const char* shaderPath)
 {
     namespace fs = std::filesystem;
 
-    std::string path = resolveOSPath(shaderPath);
+    std::string path = Syngine::resolveOSPath(shaderPath);
     if (!fs::exists(path))
     {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "LoadShader: file not found: %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               "LoadShader: file not found: %s",
+                               path.c_str());
         return BGFX_INVALID_HANDLE;
     }
 
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     if (!file)
     {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "LoadShader: unable to open: %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               "LoadShader: unable to open: %s",
+                               path.c_str());
         return BGFX_INVALID_HANDLE;
     }
 
     auto size = file.tellg();
     if (size <= 0)
     {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "LoadShader: bad size: %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               "LoadShader: bad size: %s",
+                               path.c_str());
         return BGFX_INVALID_HANDLE;
     }
 
@@ -39,8 +43,9 @@ inline bgfx::ShaderHandle LoadShader(const char* shaderPath)
     std::vector<uint8_t> buffer((size_t)size);
     if (!file.read(reinterpret_cast<char*>(buffer.data()), size))
     {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "LoadShader: read failed: %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               "LoadShader: read failed: %s",
+                               path.c_str());
         return BGFX_INVALID_HANDLE;
     }
 

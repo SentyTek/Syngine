@@ -1,4 +1,5 @@
 #include "Components/MeshComponent.h"
+#include "SyngineLogger.h"
 #include "SynModelLoader.h"
 #include "SyngineGameobject.h"
 #include "bgfx/bgfx.h"
@@ -18,7 +19,7 @@ int MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
     // Load the mesh data from the file
     AssimpLoader loader;
     if (!loader.LoadModel(this->meshData, path, loadTextures)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to load mesh from %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load mesh from %s", path.c_str());
         return 1; // Error loading mesh
     }
     return 0; // Success
@@ -55,12 +56,12 @@ int MeshComponent::UnloadMesh() {
 int MeshComponent::ReloadMesh() {
     // Reload the mesh data from the file
     if (this->meshData.path.empty()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No mesh path set for reloading");
+        Syngine::Logger::Error("No mesh path set for reloading");
         return 1; // Error: no path set
     }
     AssimpLoader loader;
     if (!loader.ReloadModel(this->meshData, this->meshData.id)) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to reload mesh from %s", this->meshData.path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to reload mesh from %s", this->meshData.path.c_str());
         return 1; // Error reloading mesh
     }
     return 0; // Success

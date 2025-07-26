@@ -58,7 +58,7 @@ class Graphics {
     Graphics(const char* title, int width, int height);
 
     // Create a window for rendering, returns 0 on success, non-zero on failure
-    int CreateWindow();
+    int CreateGameWindow();
     // Create a renderer, returns 0 on success, non-zero on failure
     int CreateRenderer();
 

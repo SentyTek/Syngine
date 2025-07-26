@@ -1,5 +1,6 @@
 #include "RigidbodyComponent.h"
 #include "Components.h"
+#include "SyngineLogger.h"
 #include "Jolt/Math/Quat.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
@@ -51,7 +52,7 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
                               JPH::ObjectLayer          layer,
                               const std::vector<float>& shapeParameters) {
     if (parameters.size() < 3) {
-        SDL_Log("RigidbodyComponent::Init: Not enough parameters provided.");
+        Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters provided.");
         return;
     }
     this->physicsManager = physicsManager;
@@ -73,15 +74,14 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
 
     switch (shape) {
         case PhysicsShapes::SPHERE: {
-            if (shapeParameters.empty()) { SDL_Log("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
+            if (shapeParameters.empty()) { Syngine::Logger::Error("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
             float radius = shapeParameters[0]/2;
             bodyID = physicsManager->CreateSphere(posVec, radius, motionType, layer, mass);
             break;
         }
         case PhysicsShapes::BOX: {
             if (shapeParameters.size() < 3) {
-                SDL_Log("RigidbodyComponent::Init: Not enough parameters for "
-                        "box shape.");
+                Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for box shape.");
                 return;
             }
             JPH::Vec3 shapeParametersVec(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
@@ -95,12 +95,12 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
         }
         case PhysicsShapes::MESH: {
             if(!m_owner) {
-                SDL_Log("RigidbodyComponent::Init: No owner game object provided for mesh shape.");
+                Syngine::Logger::Error("RigidbodyComponent::Init: No owner game object provided for mesh shape.");
                 return;
             }
             MeshComponent* meshComp = m_owner->GetComponent<MeshComponent>();
             if (!meshComp ) {
-                SDL_Log("RigidbodyComponent::Init: No mesh component or mesh loaded for mesh shape.");
+                Syngine::Logger::Error("RigidbodyComponent::Init: No mesh component or mesh loaded for mesh shape.");
                 return;
             }
 
@@ -113,14 +113,14 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
             break;
         }
         case PhysicsShapes::CAPSULE: {
-            if (shapeParameters.size() < 2) { SDL_Log("RigidbodyComponent::Init: Not enough parameters for capsule shape."); return; }
+            if (shapeParameters.size() < 2) { Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for capsule shape."); return; }
             float radius = shapeParameters[0];
             float halfHeight = shapeParameters[1];
             bodyID = physicsManager->CreateCapsule(posVec, radius, halfHeight, motionType, layer, mass);
             break;
         }
         case PhysicsShapes::CYLINDER: {
-            if (shapeParameters.size() < 2) { SDL_Log("RigidbodyComponent::Init: Not enough parameters for cylinder shape."); return; }
+            if (shapeParameters.size() < 2) { Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for cylinder shape."); return; }
             float radius = shapeParameters[1];
             float halfHeight = shapeParameters[0];
             bodyID = physicsManager->CreateCylinder(posVec, rotationQuat, radius, halfHeight, motionType, layer, mass);
@@ -198,7 +198,7 @@ void RigidbodyComponent::Destroy() {
 
 void RigidbodyComponent::UpdateShapeParameters(const std::vector<float>& newShapeParameters) {
     if (bodyID.IsInvalid() || !physicsManager) {
-        SDL_Log("RigidbodyComponent::UpdateShapeParameters: Invalid body ID or physics manager.");
+        Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: Invalid body ID or physics manager.");
         return;
     }
 
@@ -212,7 +212,7 @@ void RigidbodyComponent::UpdateShapeParameters(const std::vector<float>& newShap
     switch (this->shape) {
     case PhysicsShapes::SPHERE: {
         if (this->shapeParameters.empty()) {
-            SDL_Log("RigidbodyComponent::UpdateShapeParameters: No radius provided for sphere shape.");
+            Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: No radius provided for sphere shape.");
             return;
         }
         float radius = this->shapeParameters[0];
@@ -221,7 +221,7 @@ void RigidbodyComponent::UpdateShapeParameters(const std::vector<float>& newShap
     }
     case PhysicsShapes::BOX: {
         if (this->shapeParameters.size() < 3) {
-            SDL_Log("RigidbodyComponent::UpdateShapeParameters: Not enough parameters for box shape.");
+            Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: Not enough parameters for box shape.");
             return;
         }
         JPH::Vec3 extents(this->shapeParameters[0],
@@ -232,7 +232,7 @@ void RigidbodyComponent::UpdateShapeParameters(const std::vector<float>& newShap
     }
     case PhysicsShapes::CAPSULE: {
             if (this->shapeParameters.size() < 2) {
-                SDL_Log("RigidbodyComponent::UpdateShapeParameters: Not enough parameters for capsule shape (expected 2: radius, halfHeightOfCylinder).");
+                Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: Not enough parameters for capsule shape (expected 2: radius, halfHeightOfCylinder).");
                 return;
             }
             float radius = this->shapeParameters[0];
@@ -242,7 +242,7 @@ void RigidbodyComponent::UpdateShapeParameters(const std::vector<float>& newShap
         }
     case PhysicsShapes::CYLINDER: {
         if (this->shapeParameters.size() < 2) {
-            SDL_Log("RigidbodyComponent::UpdateShapeParameters: Not enough parameters for cylinder shape (expected 2: radius, halfHeight).");
+            Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: Not enough parameters for cylinder shape (expected 2: radius, halfHeight).");
             return;
         }
         float radius = this->shapeParameters[0];
@@ -251,29 +251,29 @@ void RigidbodyComponent::UpdateShapeParameters(const std::vector<float>& newShap
         break;
     }
     default:
-        SDL_Log("RigidbodyComponent::UpdateShapeParameters: Unsupported shape type for update.");
+        Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: Unsupported shape type for update.");
         return;
     }
 
     if (shape) {
         bodyInterface.SetShape(bodyID, shape, true, JPH::EActivation::Activate);
     } else if (this->shape != PhysicsShapes::MESH) {
-        SDL_Log("RigidbodyComponent::UpdateShapeParameters: Failed to create shape for the specified type.");
+        Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: Failed to create shape for the specified type.");
         return;
     }
 }
 
 void RigidbodyComponent::SetFriction(float newFriction) {
     if (newFriction < 0.0f) {
-        SDL_Log("RigidbodyComponent::SetFriction: Friction cannot be negative.");
+        Syngine::Logger::Warn("RigidbodyComponent::SetFriction: Friction cannot be negative.");
         return;
     }
     if (newFriction > 1.0f) {
-        SDL_Log("RigidbodyComponent::SetFriction: Friction cannot be greater than 1.0.");
+        Syngine::Logger::Warn("RigidbodyComponent::SetFriction: Friction cannot be greater than 1.0.");
         return;
     }
     if (bodyID.IsInvalid() || !physicsManager) {
-        SDL_Log("RigidbodyComponent::SetFriction: Invalid body ID or physics manager.");
+        Syngine::Logger::Error("RigidbodyComponent::SetFriction: Invalid body ID or physics manager.");
         return;
     }
 
@@ -283,15 +283,15 @@ void RigidbodyComponent::SetFriction(float newFriction) {
 
 void RigidbodyComponent::SetRestitution(float newRestitution) {
     if (newRestitution < 0.0f) {
-        SDL_Log("RigidbodyComponent::SetRestitution: Restitution cannot be negative.");
+        Syngine::Logger::Warn("RigidbodyComponent::SetRestitution: Restitution cannot be negative.");
         return;
     }
     if (newRestitution > 1.0f) {
-        SDL_Log("RigidbodyComponent::SetRestitution: Restitution cannot be greater than 1.0.");
+        Syngine::Logger::Warn("RigidbodyComponent::SetRestitution: Restitution cannot be greater than 1.0.");
         return;
     }
     if (bodyID.IsInvalid() || !physicsManager) {
-        SDL_Log("RigidbodyComponent::SetRestitution: Invalid body ID or physics manager.");
+        Syngine::Logger::Error("RigidbodyComponent::SetRestitution: Invalid body ID or physics manager.");
         return;
     }
 

@@ -1,19 +1,36 @@
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <stdio.h>
+#include <intrin.h>
+
+#elif __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
+
+#else
+#include "sys/utsname.h"
+
+#endif
+
 #include "SyngineCore.h"
-#include "Components/CameraComponent.h"
-#include "SDL3/SDL_scancode.h"
 #include "SyngineGameobject.h"
+#include "SyngineLogger.h"
 #include "SynginePhys.h"
 #include "Components.h"
-#include "MeshComponent.h"
-#include "RigidbodyComponent.h"
-#include "TransformComponent.h"
+#include "Components/CameraComponent.h"
 #include "PlayerComponent.h"
+#include "TransformComponent.h"
+#include "RigidbodyComponent.h"
+#include "MeshComponent.h"
 #include "helpers.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_mouse.h"
 #include "SDL3/SDL_timer.h"
+#include "SDL3/SDL_scancode.h"
+#include "SDL3/SDL_video.h"
 
 #include "bx/bx.h"
 #include "bx/constants.h"
@@ -24,9 +41,10 @@
 
 using namespace Syngine;
 
-Core::Core() {
+Core::Core(std::string appName) {
     //initialize app
     this->app = new App();
+    this->app->appName = appName;
     this->app->graphics = nullptr; // No graphics attached initially
     this->app->synModels = new AssimpLoader(); // Initialize the model loader
 
@@ -59,7 +77,7 @@ Core::~Core() {
 int Core::AttachGraphics(Graphics* graphics) {
     //attach graphics to app
     if (!graphics) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No graphics object provided to attach");
+        Syngine::Logger::Error("No graphics object provided to attach");
         return 1;
     }
     
@@ -70,7 +88,7 @@ int Core::AttachGraphics(Graphics* graphics) {
 int Core::DetachGraphics() {
     //detach graphics from app
     if (!this->app->graphics) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "No graphics object to detach");
+        Syngine::Logger::Error("No graphics object to detach");
         return 1;
     }
     
@@ -80,10 +98,10 @@ int Core::DetachGraphics() {
 
 int Core::SyngineEventLoop() {
     //main loop. this will obviously be replaced with a more complex and modular/multi-threaded loop in the Future
-    SDL_Log("Entering event loop");
+    Syngine::Logger::Info("Entering event loop");
 
     if (!this->app->graphics || !this->app->graphics->win) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Graphics not initialized or window not created");
+        Syngine::Logger::Error("Graphics not initialized or window not created");
         return 1;
     }
 
@@ -266,9 +284,9 @@ int Core::SyngineEventLoop() {
                     // Toggle debug mode
                     this->app->debug = !this->app->debug;
                     if (this->app->debug) {
-                        SDL_Log("Debug mode enabled");
+                        Syngine::Logger::Info("Debug mode enabled");
                     } else {
-                        SDL_Log("Debug mode disabled");
+                        Syngine::Logger::Info("Debug mode disabled");
                     }
                 } else if (event.key.key == SDLK_F5) {
                     // Reload changed assets
@@ -279,10 +297,7 @@ int Core::SyngineEventLoop() {
                         if (!mesh.valid) continue;
                         if (mesh.lastWriteTime !=
                             std::filesystem::last_write_time(mesh.path)) {
-                            SDL_Log("previoud ID: %d", mesh.id);
-
                             mc->ReloadMesh();
-                            SDL_Log("new id: %d", mesh.id);
                         }
                     }
                 } else if (event.key.key == SDLK_F6) {
@@ -436,7 +451,7 @@ int Core::SyngineEventLoop() {
             if (player && player->GetComponent<CameraComponent>()) {
                 finalCam = player->GetComponent<CameraComponent>();
             } else {
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Player or CameraComponent not found");
+                Syngine::Logger::Error("Player or CameraComponent not found");
                 return 1;
             }
         }
@@ -545,7 +560,7 @@ int Core::SyngineEventLoop() {
     }
     
     this->app->synModels->UnloadAll();
-    SDL_Log("Exiting event loop");
+    Syngine::Logger::Info("Exiting event loop");
     return 0;
 }
 
@@ -558,4 +573,142 @@ int Core::DeleteGameobject(GameObject* gameobject) {
     delete gameobject; // delete the gameobject
     gameobject = nullptr; // set to null to avoid dangling pointer
     return 0;
+}
+
+Syngine::HardwareSpecs Core::GetSystemSpecifications() {
+    Syngine::HardwareSpecs specs;
+#ifdef _WIN32
+    // On Windows, gather system information using Windows API
+    SYSTEM_INFO sysInfo;
+    GetSystemInfo(&sysInfo);
+
+    // Get OS
+    const char* platform = SDL_GetPlatform();
+    specs.osName = std::string(platform);
+
+    // Get CPU info (why on EARTH is this so complicated?)
+    std::string cpu;
+    int         CPUInfo[4] = { -1 };
+    char        CPUBrandString[0x40]; // Buffer for CPU brand string
+
+    // Get the highest extended function supported by CPUID
+    __cpuid(CPUInfo, 0x80000000);
+    unsigned int nExIds = CPUInfo[0];
+
+    // Get the CPU brand string if supported
+    for (unsigned int i = 0x80000002; i <= nExIds && i <= 0x80000004; ++i) {
+        __cpuid(CPUInfo, i);
+        // Copy returned values into the CPU brand string buffer
+        memcpy(CPUBrandString + (i - 0x80000002) * 16, CPUInfo, sizeof(CPUInfo));
+    }
+    CPUBrandString[sizeof(CPUBrandString) - 1] = '\0'; // Null-terminate the string
+    cpu = std::string(CPUBrandString);
+    specs.cpuModel = cpu;
+
+    // Get arch
+    std::string cpuArch;
+    switch (sysInfo.wProcessorArchitecture) {
+        case PROCESSOR_ARCHITECTURE_AMD64: cpuArch = "x64"; break;
+        case PROCESSOR_ARCHITECTURE_INTEL: cpuArch = "x86"; break;
+        case PROCESSOR_ARCHITECTURE_ARM:   cpuArch = "ARM"; break;
+        case PROCESSOR_ARCHITECTURE_ARM64: cpuArch = "ARM64"; break;
+        default:                            cpuArch = "Unknown"; break;
+    }
+    specs.cpuArch = cpuArch;
+    specs.cpuCores = sysInfo.dwNumberOfProcessors;
+
+    // Get total physical memory
+    MEMORYSTATUSEX statex;
+    statex.dwLength = sizeof(statex);
+    GlobalMemoryStatusEx(&statex);
+    specs.ramMB = statex.ullTotalPhys / (1024 * 1024);
+
+#elif __APPLE__
+    // On macOS, gather system information using sysctl
+    specs.osName = "macOS";
+    try {
+        char cpuBrand[256];
+        size_t size = sizeof(cpuBrand);
+        sysctlbyname("machdep.cpu.brand_string", cpuBrand, &size, NULL, 0);
+        specs.cpuModel = std::string(cpuBrand);
+
+        // Get logical CPU count
+        int cpuProc = 0;
+        size = sizeof(cpuProc);
+        sysctlbyname("machdep.cpu.core_count", &cpuProc, &size, NULL, 0);
+        specs.cpuCores = cpuProc;
+
+        // Get RAM info
+        uint64_t ramSize = 0;
+        size = sizeof(ramSize);
+        sysctlbyname("hw.memsize", &ramSize, &size, NULL, 0);
+        specs.ramMB = ramSize / (1024 * 1024);
+    } catch (const std::exception& e) {
+        specs.ramMB = 0;
+    }
+
+#else
+    // Get OS
+    struct utsname sysInfo;
+    if (uname(&sysInfo) < 0) {
+        specs.osName = "Unknown";
+        return specs;
+    }
+    specs.osName = std::string(sysInfo.sysname) + " " + std::string(sysInfo.release);
+
+    // Get CPU info (name, architecture, etc.)
+    std::ifstream cpuInfoFile("/proc/cpuinfo");
+    std::string   line;
+    std::string   cpuBrand = "Unknown";
+
+    if (cpuInfoFile.is_open()) {
+        while (std::getline(cpuInfoFile, line)) {
+            if (line.find("model name") != std::string::npos) {
+                cpuBrand = line.substr(line.find(":") + 2);
+                break;
+            }
+        }
+        cpuInfoFile.close();
+    }
+    specs.cpuModel = cpuBrand;
+
+    specs.cpuArch = std::string(sysInfo.machine);
+
+    // Get number of processors
+    long numProcessors = sysconf(_SC_NPROCESSORS_ONLN);
+    specs.cpuCores = numProcessors;
+
+    // Get total physical memory
+    long totalMemory = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE);
+    specs.ramMB = totalMemory / (1024 * 1024);
+#endif
+
+    // Get display size
+    SDL_DisplayID dId = SDL_GetDisplayForWindow(app->graphics->win);
+    SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
+    specs.screenWidth = disMode.w;
+    specs.screenHeight = disMode.h;
+
+    // Get window resolution
+    int w, h;
+    SDL_GetWindowSize(app->graphics->win, &w, &h);
+    specs.winWidth = w;
+    specs.winHeight = h;
+
+    // Get various GPU info from bgfx
+    const bgfx::Caps* caps = bgfx::getCaps();
+    if (caps) {
+        specs.gpuVendorID = caps->vendorId;
+        specs.gpuDeviceID = caps->deviceId;
+        specs.maxTextureSize = caps->limits.maxTextureSize;
+        specs.supportsCompute = (caps->supported & BGFX_CAPS_COMPUTE) != 0;
+        specs.supports3DTextures = (caps->supported & BGFX_CAPS_TEXTURE_3D) != 0;
+    } else {
+        specs.gpuVendorID = 0;
+        specs.gpuDeviceID = 0;
+        specs.maxTextureSize = 0;
+        specs.supportsCompute = false;
+        specs.supports3DTextures = false;
+    }
+    return specs;
 }

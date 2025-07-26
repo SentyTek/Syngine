@@ -2,6 +2,7 @@
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
 #include <cstdint>
+#include <string>
 #include <vector>
 #include <algorithm>
 
@@ -41,10 +42,14 @@ static void boxDownsample2x2(const uint8_t* src, int srcW, int srcH, std::vector
     }
 }
 
-bgfx::TextureHandle SynLoadTextureFromMemory(const uint8_t* data, size_t size, const char* name) {
+bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name) {
     int w, h, channels;
     stbi_uc* pixels = stbi_load_from_memory(data, size, &w, &h, &channels, 4);
-    if (!pixels) { SDL_Log("Failed to load embedded texture"); return BGFX_INVALID_HANDLE; }
+    if (!pixels) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               "Failed to load embedded texture");
+        return BGFX_INVALID_HANDLE;
+    }
 
     int mipCount = 1 + (int)floor(log2(std::max(w, h)));
     auto tex = bgfx::createTexture2D(
@@ -82,10 +87,12 @@ bgfx::TextureHandle SynLoadTextureFromMemory(const uint8_t* data, size_t size, c
     return tex;
 }
 
-bgfx::TextureHandle SynLoadTextureFromFile(const char* path) {
+bgfx::TextureHandle Syngine::LoadTextureFromFile(const char* path) {
     SDL_IOStream* rw = SDL_IOFromFile(path, "rb");
     if (!rw) {
-        SDL_Log("Failed to open file %s", path);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               "Failed to open file %s",
+                               path);
         return BGFX_INVALID_HANDLE;
     }
 
@@ -94,10 +101,10 @@ bgfx::TextureHandle SynLoadTextureFromFile(const char* path) {
     SDL_ReadIO(rw, data.data(), size);
     SDL_CloseIO(rw);
 
-    return SynLoadTextureFromMemory((uint8_t*)data.data(), size, path);
+    return Syngine::LoadTextureFromMemory((uint8_t*)data.data(), size, path);
 }
 
-bgfx::TextureHandle SynCreateFlatTexture() {
+bgfx::TextureHandle Syngine::CreateFlatTexture() {
     uint8_t data[4] = { 127, 127, 127, 127 }; // white color
     const bgfx::Memory* mem = bgfx::copy(data, sizeof(data));
     bgfx::TextureHandle tex = bgfx::createTexture2D(

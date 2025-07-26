@@ -7,8 +7,8 @@ struct Camera {
     float target[3] = {0.0f, 0.0f, 0.0f};
     float up[3] = {0.0f, 1.0f, 0.0f};
     float fov = 70.0f; //deg
-    float near = 0.1f;
-    float far = 100.0f;
+    float nearPlane = 0.1f;
+    float farPlane = 100.0f;
     float view[16];
     float proj[16];
 
