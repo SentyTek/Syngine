@@ -97,17 +97,17 @@ class Graphics {
     bool ReloadAllPrograms();
 
     // Get a uniform handle by name, returns BGFX_INVALID_HANDLE if not found
-    bgfx::UniformHandle GetUniform(const char* name) const;
+    bgfx::UniformHandle _GetUniform(const char* name) const;
 
     // Render frame
-    int RenderFrame(bx::Vec3&                lightDir,
+    int _RenderFrame(bx::Vec3&                lightDir,
                     CameraComponent*         camera,
                     bool                     debug = false);
 
     // Register a gizmo with a tag and optional size, loads texture from "default/gizmos/{tag}.png".
-    void RegisterGizmo(const std::string& tag, float size = 1.0f);
+    void _RegisterGizmo(const std::string& tag, float size = 1.0f);
     // Render gizmos for the given game objects, using the camera component for positioning.
-    void RenderGizmos(CameraComponent* camera);
+    void _RenderGizmos(CameraComponent* camera);
 
   private:
     std::string title;

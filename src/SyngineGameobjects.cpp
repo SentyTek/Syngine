@@ -19,7 +19,6 @@ GameObject::GameObject(string name, string type) {
 
 GameObject::~GameObject() {}
 
-void GameObject::SetID(long id) noexcept { this->id = id; }
 void GameObject::SetActive(bool active) noexcept {
     this->isActive = active;
 }

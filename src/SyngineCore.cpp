@@ -111,7 +111,7 @@ int Core::SyngineEventLoop() {
     player->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
     player->AddComponent(Syngine::SYN_COMPONENT_PLAYER);
     player->AddComponent(Syngine::SYN_COMPONENT_CAMERA);
-    this->app->graphics->RegisterGizmo("camera_render");
+    this->app->graphics->_RegisterGizmo("camera_render");
 
     TransformComponent* pTransform = player->GetComponent<TransformComponent>();
     pTransform->SetPosition(0.0f, 20.0f, 0.0f);
@@ -512,13 +512,13 @@ int Core::SyngineEventLoop() {
         }
 
         if (this->app && this->app->graphics) {
-            this->app->graphics->RenderFrame(lightDir,
+            this->app->graphics->_RenderFrame(lightDir,
                                              finalCam,
                                              this->app->debug);
 
             if (this->app->debug) {
                 // christ on a stick this call is ridiculous
-                this->app->physicsManager->DrawDebug(
+                this->app->physicsManager->_DrawDebug(
                     this->app->graphics->width,
                     this->app->graphics->height,
                     this->app->graphics->GetProgram("debugger").program,
