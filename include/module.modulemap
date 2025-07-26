@@ -1,0 +1,16 @@
+module Syngine {
+	// List of every header in the `include` directory
+	header "Components.h"
+	header "defines.h"
+	header "helpers.h"
+	header "ShaderUtils.h"
+	header "SynComponents.h"
+	header "SyngineCore.h"
+	header "SyngineGameobject.h"
+	header "SyngineGraphics.h"
+	header "SyngineLogger.h"
+	header "SynginePhys.h"
+	header "SynModelLoader.h"
+	
+	export *
+}
