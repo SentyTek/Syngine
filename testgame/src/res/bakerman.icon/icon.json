@@ -1,29 +1,47 @@
 {
-  "fill" : {
-    "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
-  },
+  "fill" : "automatic",
   "groups" : [
     {
       "blur-material" : null,
-      "hidden" : false,
       "layers" : [
         {
-          "blend-mode" : "normal",
-          "fill" : "none",
+          "fill-specializations" : [
+            {
+              "value" : "automatic"
+            },
+            {
+              "appearance" : "dark",
+              "value" : {
+                "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+              }
+            },
+            {
+              "appearance" : "tinted",
+              "value" : {
+                "solid" : "extended-gray:1.00000,1.00000"
+              }
+            }
+          ],
           "glass" : true,
           "hidden" : false,
-          "image-name" : "icon.png",
-          "name" : "icon"
+          "image-name" : "SFB-4.png",
+          "name" : "SFB-4",
+          "position" : {
+            "scale" : 1.25,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
         }
       ],
-      "lighting" : "combined",
       "shadow" : {
-        "kind" : "neutral",
+        "kind" : "layer-color",
         "opacity" : 0.5
       },
-      "specular" : true,
+      "specular" : false,
       "translucency" : {
-        "enabled" : false,
+        "enabled" : true,
         "value" : 0.5
       }
     }
@@ -32,8 +50,6 @@
     "circles" : [
       "watchOS"
     ],
-    "squares" : [
-      "macOS"
-    ]
+    "squares" : "shared"
   }
 }
