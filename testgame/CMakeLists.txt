@@ -6,6 +6,12 @@ set(CMAKE_CXX_STANDARD 20)
 include(clangdConfig.cmake)
 include(bgfxshaderc.cmake)
 
+if(APPLE)
+    # set the minimum deployment version for the asset compiler
+    # there's nothing stopping us from going earlier than 26.0 Tahoe as far as I know
+    set(MINIMUM_MACOS_VERSION 26.0)
+endif()
+
 # set the output directory for built objects.
 # This makes sure that the dynamic library goes into the build directory automatically.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
@@ -18,7 +24,6 @@ add_subdirectory(engine)
 if(WIN32)
     set(CMAKE_WIN32_EXECUTABLE ON)
 endif()
-
 
 add_executable(${EXECUTABLE_NAME}
     src/main.cpp
@@ -99,11 +104,6 @@ if(MSVC)
 endif()
 
 clangdConfigure(${EXECUTABLE_NAME})
-
-# to get an app icon on Apple, add it to the executable, then the image file in info.plist.in
-if(APPLE)
-    target_sources("${EXECUTABLE_NAME}" PRIVATE "src/icon.png")
-endif()
 
 # dealing with assets
 # if there's any non-code files, like images, audio, etc., we need to deal with per-platform
@@ -190,20 +190,56 @@ if(APPLE)
     set_property(SOURCE ${CMAKE_SOURCE_DIR}/meshes PROPERTY MACOSX_PACKAGE_LOCATION "Resources/meshes")
 
     # --- Add other resources using your macro ---
-    add_resource("${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png")
+endif()
+
+# --- Add the app icon for macOS ---
+if(APPLE)
+    set(ICON_NAME ${EXECUTABLE_NAME}.icon)
+    set(ICON_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/res/${ICON_NAME})
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR/build/build/.${EXECUTABLE_NAME}icon})
+    set(ICON_PACKAGE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/build/.${EXECUTABLE_NAME}icon)
+    set(ICON_PACKAGE ${ICON_PACKAGE_PATH}/Assets.car)
+    set(PLIST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/CMakeFiles/bakerman.dir/Info.plist)
+
+    add_custom_command(
+        OUTPUT "${ICON_PACKAGE}"
+        COMMAND xcrun actool
+            --compile ${ICON_PACKAGE_PATH}
+            --app-icon ${ICON_PATH}
+            --platform macosx
+            --minimum-deployment-target ${MINIMUM_MACOS_VERSION}
+            # add the new plist keys to CMake's existing generated plist
+            --output-partial-info-plist ${PLIST_PATH}
+            ${ICON_PATH}
+        DEPENDS "${ICON_PATH}"
+        COMMENT "Compiling app icon for macOS"
+    )
+
+    add_custom_target(${EXECUTABLE_NAME}-icon ALL
+        DEPENDS "${ICON_PACKAGE}"
+    )
+
+    add_dependencies(${EXECUTABLE_NAME} ${EXECUTABLE_NAME}-icon)
+    target_sources(${EXECUTABLE_NAME} PRIVATE ${ICON_PACKAGE})
+    set_property(SOURCE ${ICON_PACKAGE} PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
+
+    message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/Assets.car")
+    message(STATUS "Added macOS icon property list")
 endif()
 
 # --- Target Properties (macOS Bundle Info) ---
-set(RESOURCE_FILES_FOR_TARGET "src/icon.png")
 if(APPLE)
-set_target_properties(${EXECUTABLE_NAME} PROPERTIES
-    MACOSX_BUNDLE TRUE
-    XCODE_GENERATE_SCHEME TRUE
-    XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
-    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
-    RESOURCE "${RESOURCE_FILES_FOR_TARGET}"
-    XCODE_ATTRIBUTE_SDKROOT "macosx"
-)
+    set_target_properties(${EXECUTABLE_NAME} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist.in
+        XCODE_GENERATE_SCHEME TRUE
+        XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
+        XCODE_ATTRIBUTE_SDKROOT "macosx"
+        # tells Xcode to recognize the app icon
+        XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "${EXECUTABLE_NAME}"
+        XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS TRUE
+    )
 endif()
 
 #on macOS, we need to ensure the bundle is valid by calling fixup_bundle
