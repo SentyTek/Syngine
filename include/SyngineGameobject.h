@@ -48,15 +48,16 @@ class GameObject {
     inline bool IsActive() const noexcept { return this->isActive; }
     // Set the active state of the GameObject
     void SetActive(bool active) noexcept;
-    // Add a component to the gameobject
-    int AddComponent(Syngine::Components type);
-    // Remove a component from the gameobject
+    // Remove a component from the GameObject
     int RemoveComponent(Syngine::Components type);
     // Check if the GameObject has a component of the specified type
     bool HasComponent(Syngine::Components type);
 
     // Get a component of the specified type
     template <typename T> T* GetComponent();
+    
+    // Add a component to the GameObject
+    template <typename T, typename... Args> T* AddComponent(Args&&... args);
 };
 
 template<typename T>
@@ -67,6 +68,21 @@ T* GameObject::GetComponent() {
     }
     
     return dynamic_cast<T*>(it->second.get());
+}
+
+template <typename T, typename... Args>
+T* GameObject::AddComponent(Args&&... args) {
+    auto type = T::componentType;
+
+    if (components.contains(type)) return nullptr;
+
+    // Forward the arguments to the component constructor
+    std::unique_ptr<T> component = std::make_unique<T>(this, std::forward<Args>(args)...);
+    T* raw = component.get();
+
+    components[type] = std::move(component);
+    Syngine::Registry::_NotifyComponentAdded(this, type);
+    return raw;
 }
 
 } // namespace Syngine

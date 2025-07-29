@@ -119,19 +119,10 @@ int Core::SyngineEventLoop() {
 
     GameObject* player = new GameObject("player");
 
-    player->AddComponent(Syngine::SYN_COMPONENT_TRANSFORM);
-    player->AddComponent(Syngine::SYN_COMPONENT_PLAYER);
-    player->AddComponent(Syngine::SYN_COMPONENT_CAMERA);
-    this->app->graphics->_RegisterGizmo("camera_render");
-
-    TransformComponent* pTransform = player->GetComponent<TransformComponent>();
-    pTransform->SetPosition(0.0f, 20.0f, 0.0f);
-    
-    player->GetComponent<PlayerComponent>()->Init(
-        player->GetComponent<CameraComponent>(),
-        this->app->graphics->win,
-        this->app->physicsManager);
-
+    player->AddComponent<Syngine::TransformComponent>()->SetPosition(
+        0.0f, 20.0f, 0.0f);
+    auto* playerCamera = player->AddComponent<Syngine::CameraComponent>();
+    player->AddComponent<Syngine::PlayerComponent>(playerCamera, this->app->graphics->win);
     Registry::AddGameObject(player);
 
     bool running = true;
@@ -141,6 +132,7 @@ int Core::SyngineEventLoop() {
     bool mouseState = false;
     float mouseX, mouseY;
 
+    // Lol this is foul creating a component directly like this, but it works for now
     CameraComponent* cam = new CameraComponent(nullptr);
     cam->SetFarPlane(2000);
     // FinalCam specifically is so we can keep track of both the player camera
@@ -202,21 +194,20 @@ int Core::SyngineEventLoop() {
                     //load model
                     std::string modelPath = Syngine::ResolveOSPath("meshes/ground.glb");
                     GameObject* model = new GameObject("ground", "terrain");
-                    model->AddComponent(Syngine::SYN_COMPONENT_PHYSICS);
-                    MeshComponent* meshComp = model->GetComponent<MeshComponent>();
-                    if (meshComp) meshComp->LoadMesh(modelPath);
-                    RigidbodyComponent* physComp = model->GetComponent<RigidbodyComponent>();
-                    if (physComp) {
-                            physComp->Init(
-                                model->GetComponent<TransformComponent>(),
-                                this->app->physicsManager,
-                                PhysicsShapes::MESH,
-                                {0.0f, 0.8f, 0.1f},
-                                JPH::EMotionType::Static,
-                                Layers::NON_MOVING,
-                                {}
-                            );
-                    }
+                    Syngine::RigidbodyParameters params = {
+                        .shape           = PhysicsShapes::MESH,
+                        .mass            = 0.0f,
+                        .friction        = 0.8f,
+                        .restitution     = 0.1f,
+                        .shapeParameters = {},
+                        .motionType      = JPH::EMotionType::Static,
+                        .layer           = Layers::NON_MOVING
+                    };
+                    
+                    model->AddComponent<Syngine::TransformComponent>();
+                    model->AddComponent<Syngine::MeshComponent>(modelPath);
+                    model->AddComponent<Syngine::RigidbodyComponent>(params);
+
                     Registry::AddGameObject(model);
                 } else if (event.key.key == SDLK_ESCAPE) {
                     playerMode = !playerMode;
@@ -228,50 +219,53 @@ int Core::SyngineEventLoop() {
                 } else if (event.key.key == SDLK_1) {
                     std::string modelPath = Syngine::ResolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
-                    cube->AddComponent(Syngine::SYN_COMPONENT_PHYSICS);
-                    MeshComponent* meshComp = cube->GetComponent<MeshComponent>();
-                    if (meshComp) meshComp->LoadMesh(modelPath, false);
-                    TransformComponent* tComp = cube->GetComponent<TransformComponent>();
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
-                    RigidbodyComponent* physComp = cube->GetComponent<RigidbodyComponent>();
-                    std::vector<float> shapeParams = { 2.0f,
+
+                    std::vector<float> boxExtents = { 2.0f,
                                                        2.0f,
                                                        2.0f }; // full extents
-                    std::vector<float> params      = {
-                        0.0f, 0.7f, 0.02f
-                    }; // mass, friction, restitution
-                    if (physComp)
-                        physComp->Init(tComp,
-                                       this->app->physicsManager,
-                                       PhysicsShapes::BOX,
-                                       params,
-                                       JPH::EMotionType::Dynamic,
-                                       Layers::MOVING,
-                                       shapeParams);
+                    Syngine::RigidbodyParameters params     = {
+                            .shape           = PhysicsShapes::BOX,
+                            .mass            = 0.0f, // Static body
+                            .friction        = 0.7f,
+                            .restitution     = 0.02f,
+                            .shapeParameters = boxExtents,
+                            .motionType      = JPH::EMotionType::Dynamic,
+                            .layer           = Layers::MOVING
+                    };
+                    
+                    auto* tComp = cube->AddComponent<Syngine::TransformComponent>();
+                    if (tComp) {
+                        tComp->SetPosition(0.0f, 10.0f, 0.0f);
+                        tComp->SetScale(2.0f, 2.0f, 2.0f);
+                    }
+
+                    cube->AddComponent<Syngine::MeshComponent>(modelPath, false);
+                    cube->AddComponent<Syngine::RigidbodyComponent>(params);
+                    
                     Registry::AddGameObject(cube);
                 } else if (event.key.key == SDLK_2) {
                     std::string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
-                    sphere->AddComponent(Syngine::SYN_COMPONENT_PHYSICS);
-                    MeshComponent* meshComp = sphere->GetComponent<MeshComponent>();
-                    if (meshComp) meshComp->LoadMesh(modelPath, false);
-                    TransformComponent* tComp = sphere->GetComponent<TransformComponent>();
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
-                    RigidbodyComponent* physComp = sphere->GetComponent<RigidbodyComponent>();
-                    std::vector<float> shapeParams = { // half extents for sphere shape (diameter)
+
+                    std::vector<float> sphereExtents = { // Full extents for sphere shape (diameter)
                         1.9f
                     };
-                    std::vector<float> params = {
-                        0.0f, 0.7f, 0.02f
-                    }; // mass, friction, restitution
-                    if (physComp)
-                        physComp->Init(tComp,
-                                       this->app->physicsManager,
-                                       PhysicsShapes::SPHERE,
-                                       params,
-                                       JPH::EMotionType::Dynamic,
-                                       Layers::MOVING,
-                                       shapeParams);
+                    Syngine::RigidbodyParameters sphereParams = {
+                        .shape       = PhysicsShapes::SPHERE,
+                        .mass        = 0.0f, // Static body
+                        .friction    = 0.7f,
+                        .restitution = 0.02f,
+                        .shapeParameters = sphereExtents,
+                        .motionType = JPH::EMotionType::Dynamic,
+                        .layer = Layers::MOVING
+                    };
+
+                    auto* tComp = sphere->AddComponent<Syngine::TransformComponent>();
+                    sphere->AddComponent<Syngine::MeshComponent>(modelPath, false);
+                    sphere->AddComponent<Syngine::RigidbodyComponent>(sphereParams);
+
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
+
                     Registry::AddGameObject(sphere);
                 } else if (event.key.key == SDLK_F1) {
                     // Toggle debug mode

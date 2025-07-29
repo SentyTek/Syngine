@@ -22,6 +22,16 @@ enum class PhysicsShapes {
     MESH,
 };
 
+struct RigidbodyParameters {
+    PhysicsShapes shape = PhysicsShapes::BOX; // The shape of the rigidbody
+    float         mass = 0.0f;  // Mass of the rigidbody. If 0 (which it is by default), Jolt will calculate it based on the shape.
+    float         friction = 0.5f; // Friction coefficient
+    float         restitution = 0.5f; // Restitution coefficient (bounciness)
+    std::vector<float> shapeParameters = { 1.0f, 1.0f, 1.0f }; // Additional parameters for the shape, e.g., radius for sphere, half extents for box
+    JPH::EMotionType motionType = JPH::EMotionType::Dynamic; // Motion type of the rigidbody
+    JPH::ObjectLayer layer = Syngine::Layers::MOVING; // Layer of the rigidbody
+};
+
 /*
     Syngine Physics Component
     The RigidbodyComponent is used to represent a physics body in the game
@@ -32,18 +42,12 @@ class RigidbodyComponent : public Syngine::Component {
   public:
     static constexpr Syngine::Components componentType = SYN_COMPONENT_RIGIDBODY;
 
-    RigidbodyComponent(GameObject* owner);
+    RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params = {});
     ~RigidbodyComponent();
 
     Syngine::Components getComponentType() override;
 
-    void Init(TransformComponent*       transform,
-              Syngine::Phys*     physicsManager,
-              PhysicsShapes             shape,
-              const std::vector<float>& parameters,
-              JPH::EMotionType          motionType,
-              JPH::ObjectLayer          layer,
-              const std::vector<float>& shapeParameters);
+    void Init(Syngine::RigidbodyParameters params);
     void Update(bool simulate);
     void Destroy();
     
