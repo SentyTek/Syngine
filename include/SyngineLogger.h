@@ -1,5 +1,4 @@
 #pragma once
-#include "SyngineCore.h"
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -8,6 +7,8 @@
 #include <atomic>
 
 namespace Syngine {
+// Forward declaration of Core class
+class Core;
 
 // Log levels for the logger
 enum class LogLevel {
@@ -59,7 +60,7 @@ class Logger {
     static void Fatal(const std::string_view message);
 
     // Log hardware info
-    static void LogHardwareInfo(Syngine::Core& core);
+    static void LogHardwareInfo();
 
     // Set the autoflush behavior. Flushing is good for debug, but can be bad on performance.
     static inline void SetAutoFlush(bool enable) noexcept {

@@ -11,6 +11,23 @@ TransformComponent::TransformComponent(GameObject* owner) {
     this->m_owner = owner;
 }
 
+void TransformComponent::Init(std::vector<float> position,
+                              std::vector<float> rotation,
+                              std::vector<float> scale) {
+    this->position[0] = position[0];
+    this->position[1] = position[1];
+    this->position[2] = position[2];
+
+    this->rotation[0] = rotation[0];
+    this->rotation[1] = rotation[1];
+    this->rotation[2] = rotation[2];
+    this->rotation[3] = rotation[3];
+
+    this->scale[0] = scale[0];
+    this->scale[1] = scale[1];
+    this->scale[2] = scale[2];
+}
+
 Syngine::Components TransformComponent::getComponentType() {
     return SYN_COMPONENT_TRANSFORM;
 }

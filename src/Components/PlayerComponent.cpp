@@ -1,52 +1,45 @@
 #include "PlayerComponent.h"
 #include "CameraComponent.h"
+#include "TransformComponent.h"
 #include "Components.h"
 #include "SyngineLogger.h"
-#include "Jolt/Physics/Body/BodyInterface.h"
-#include "SDL3/SDL_events.h"
-#include "SDL3/SDL_keycode.h"
 #include "SyngineGraphics.h"
-#include "TransformComponent.h"
 #include "SyngineGameobject.h"
 #include "SynginePhys.h"
+#include "SyngineCore.h"
 
 #include "SDL3/SDL_mouse.h"
 #include "SDL3/SDL_scancode.h"
 #include "SDL3/SDL_video.h"
+#include "SDL3/SDL_events.h"
+#include "SDL3/SDL_keycode.h"
 
 #include "Jolt/Math/Vec3.h"
 #include "Jolt/Math/Real.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
 #include "Jolt/Physics/Character/Character.h"
 #include "Jolt/Physics/EActivation.h"
-#include "Jolt/Core/TempAllocator.h"
+#include "Jolt/Physics/Body/BodyInterface.h"
 
 #include "bx/math.h"
 
 #include <cmath>
 
 namespace Syngine {
-PlayerComponent::PlayerComponent(GameObject* owner) {
+PlayerComponent::PlayerComponent(GameObject*               owner,
+                                 Syngine::CameraComponent* camera,
+                                 SDL_Window*               win) {
     this->m_owner = owner;
-    m_transform = owner->GetComponent<TransformComponent>();
+    this->Init(camera, win);
 }
 
-PlayerComponent::~PlayerComponent() {
-    if (m_character) {
-        m_character->RemoveFromPhysicsSystem();
-        m_character = nullptr;
-    }
-}
+void PlayerComponent::Init(Syngine::CameraComponent* camera,
+                           SDL_Window*               win) {
+    m_transform   = m_owner->GetComponent<TransformComponent>();
 
-Syngine::Components PlayerComponent::getComponentType() {
-    return SYN_COMPONENT_PLAYER;
-}
-
-void PlayerComponent::Init(Syngine::CameraComponent*    camera,
-                           SDL_Window*                  win,
-                           Syngine::Phys* physicsManager) {
     m_camera = camera;
     m_window = win;
+    m_physicsManager = Syngine::Core::_GetApp()->physicsManager;
 
     if (!m_owner || !m_transform || !m_camera) {
         Syngine::Logger::Error(
@@ -70,14 +63,24 @@ void PlayerComponent::Init(Syngine::CameraComponent*    camera,
                                      initialPosition,
                                      JPH::Quat::sIdentity(),
                                      0,
-                                     &physicsManager->GetPhysicsSystem());
+                                     &m_physicsManager->GetPhysicsSystem());
     m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
 
     m_camera->SetPosition(m_transform->position[0],
                           m_transform->position[1],
                           m_transform->position[2]);
 
-    m_physicsManager = physicsManager;
+}
+
+PlayerComponent::~PlayerComponent() {
+    if (m_character) {
+        m_character->RemoveFromPhysicsSystem();
+        m_character = nullptr;
+    }
+}
+
+Syngine::Components PlayerComponent::getComponentType() {
+    return SYN_COMPONENT_PLAYER;
 }
 
 void PlayerComponent::HandleInput(const SDL_Event& event) {

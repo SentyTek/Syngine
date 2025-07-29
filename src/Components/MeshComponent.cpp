@@ -6,13 +6,18 @@
 #include <SDL3/SDL.h>
 
 namespace Syngine {
-MeshComponent::MeshComponent(GameObject* owner) {
+MeshComponent::MeshComponent(GameObject* owner, const std::string& path, bool loadTextures) {
     this->meshData = Syngine::MeshData();
     this->m_owner = owner;
+    this->Init(path, loadTextures);
 }
 
 Syngine::Components MeshComponent::getComponentType() {
     return SYN_COMPONENT_MESH;
+}
+
+void MeshComponent::Init(const std::string& path, bool loadTextures) {
+    this->LoadMesh(path, loadTextures);
 }
 
 int MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
