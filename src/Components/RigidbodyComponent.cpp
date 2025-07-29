@@ -1,5 +1,6 @@
 #include "RigidbodyComponent.h"
 #include "Components.h"
+#include "SyngineCore.h"
 #include "SyngineLogger.h"
 #include "Jolt/Math/Quat.h"
 #include "Jolt/Physics/Body/BodyInterface.h"

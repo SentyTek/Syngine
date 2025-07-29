@@ -19,11 +19,7 @@
 #include "SynginePhys.h"
 #include "Registry.h"
 #include "Components.h"
-#include "Components/CameraComponent.h"
-#include "PlayerComponent.h"
-#include "TransformComponent.h"
-#include "RigidbodyComponent.h"
-#include "MeshComponent.h"
+#include "SynComponents.h"
 #include "FsUtils.h"
 
 #include "SDL3/SDL_events.h"
@@ -37,6 +33,7 @@
 #include "bx/constants.h"
 #include "bx/math.h"
 #include "bgfx/defines.h"
+
 
 #include <filesystem>
 

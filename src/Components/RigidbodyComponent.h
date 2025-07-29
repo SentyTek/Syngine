@@ -1,9 +1,14 @@
 #pragma once
 #include "Components.h"
 #include "SynginePhys.h"
-#include "TransformComponent.h"
+#include "../src/Components/TransformComponent.h"
 
 namespace Syngine {
+// Forward declaration of TransformComponent
+class TransformComponent;
+
+// Enum for different physics shapes supported by the RigidbodyComponent.
+// These shapes are used to define the physical properties of the rigidbody.
 enum class PhysicsShapes {
     SPHERE,
     BOX,

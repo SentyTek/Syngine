@@ -1,10 +1,12 @@
 #pragma once
 #include "Components.h"
-#include "SyngineGameObject.h"
 #include <unordered_map>
+#include <string>
 #include <vector>
 
 namespace Syngine {
+// Forward declaration of GameObject
+class GameObject;
 
 // Registry class to manage GameObjects.
 // Owns all GameObjects, stores indexed sublists of GameObjects for fast lookups

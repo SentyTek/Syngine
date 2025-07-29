@@ -1,6 +1,7 @@
 #include "CameraComponent.h"
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
+#include "SyngineGameobject.h"
 
 #include <cmath>
 
@@ -14,9 +15,13 @@ CameraComponent::CameraComponent(GameObject* owner) {
     this->camera.target[0] = 0.0f;
     this->camera.target[1] = 0.0f;
     this->camera.target[2] = 0.0f;
-    this->camera.up[0] = 0.0f;
-    this->camera.up[1] = 1.0f;
-    this->camera.up[2] = 0.0f;
+    this->camera.up[0]     = 0.0f;
+    this->camera.up[1]     = 1.0f;
+    this->camera.up[2]     = 0.0f;
+
+    if (this->m_owner) {
+        this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+    }
 }
 
 CameraComponent::~CameraComponent() {

@@ -1,5 +1,7 @@
 #include "Registry.h"
 #include "Components.h"
+#include "SyngineGameobject.h"
+#include "SyngineCore.h"
 #include <string>
 
 namespace Syngine {
@@ -22,20 +24,22 @@ int Registry::AddGameObject(GameObject* gameObject) noexcept {
 
     // Add to the main map & assign ID
     m_AllObjects.insert({ id, gameObject });
-    gameObject->SetID(id);
+    gameObject->_SetID(id);
 
     // Update indexed sublists
-    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_RENDERABLE)) {
-        m_RenderableObjects.push_back(gameObject);
+    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_MESH) &&
+        gameObject->HasComponent(Syngine::SYN_COMPONENT_TRANSFORM)) {
+        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_MESH);
+        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_TRANSFORM);
     }
     if (gameObject->HasComponent(Syngine::SYN_COMPONENT_RIGIDBODY)) {
-        m_PhysicsObjects.push_back(gameObject);
+        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_RIGIDBODY);
     }
     if (gameObject->HasComponent(Syngine::SYN_COMPONENT_SCRIPT)) {
-        m_ScriptedObjects.push_back(gameObject);
+        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_SCRIPT);
     }
     if (gameObject->HasComponent(Syngine::SYN_COMPONENT_CAMERA)) {
-        m_Gizmos.push_back(gameObject);
+        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_CAMERA);
     }
 
     return id;
@@ -128,28 +132,43 @@ Registry::GetGameObjectsWithComponent(Syngine::Components type) noexcept {
 }
 
 // Internal notifications
-void Registry::NotifyComponentAdded(GameObject*         gameobject,
+void Registry::_NotifyComponentAdded(GameObject*         gameobject,
                                     Syngine::Components type) noexcept {
     if (!gameobject) return;
 
     switch (type) {
-        case Syngine::SYN_COMPONENT_RENDERABLE:
-            m_RenderableObjects.push_back(gameobject);
+        case Syngine::SYN_COMPONENT_MESH:
+        case Syngine::SYN_COMPONENT_TRANSFORM:
+            // If both Mesh and Transform components are present, add to renderable objects
+            if (gameobject->HasComponent(Syngine::SYN_COMPONENT_MESH) &&
+                gameobject->HasComponent(Syngine::SYN_COMPONENT_TRANSFORM)) {
+                // Check if already in the list
+                if (std::find(m_RenderableObjects.begin(), m_RenderableObjects.end(), gameobject) == m_RenderableObjects.end()) {
+                    m_RenderableObjects.push_back(gameobject);
+                }
+            }
             break;
         case Syngine::SYN_COMPONENT_RIGIDBODY:
-            m_PhysicsObjects.push_back(gameobject);
+            if (std::find(m_PhysicsObjects.begin(), m_PhysicsObjects.end(), gameobject) == m_PhysicsObjects.end()) {
+                m_PhysicsObjects.push_back(gameobject);
+            }
             break;
         case Syngine::SYN_COMPONENT_SCRIPT:
-            m_ScriptedObjects.push_back(gameobject);
+            if (std::find(m_ScriptedObjects.begin(), m_ScriptedObjects.end(), gameobject) == m_ScriptedObjects.end()) {
+                m_ScriptedObjects.push_back(gameobject);
+            }
             break;
         case Syngine::SYN_COMPONENT_CAMERA:
-            m_Gizmos.push_back(gameobject);
+            if (std::find(m_Gizmos.begin(), m_Gizmos.end(), gameobject) == m_Gizmos.end()) {
+                m_Gizmos.push_back(gameobject);
+                Syngine::Core::_GetApp()->graphics->_RegisterGizmo("camera_render");
+            }
         default:
             break; // No action for other component types
     }
 }
 
-void Registry::NotifyComponentRemoved(GameObject*         gameobject,
+void Registry::_NotifyComponentRemoved(GameObject*         gameobject,
                                       Syngine::Components type) noexcept {
     if (!gameobject) return;
 
@@ -158,8 +177,12 @@ void Registry::NotifyComponentRemoved(GameObject*         gameobject,
     };
 
     switch (type) {
-        case Syngine::SYN_COMPONENT_RENDERABLE:
-            removeFrom(m_RenderableObjects);
+        case Syngine::SYN_COMPONENT_MESH:
+        case Syngine::SYN_COMPONENT_TRANSFORM: // Trigger if either are removed, fully remove when both are gone
+            if (!gameobject->HasComponent(Syngine::SYN_COMPONENT_MESH) &&
+                !gameobject->HasComponent(Syngine::SYN_COMPONENT_TRANSFORM)) {
+                removeFrom(m_RenderableObjects);
+            }
             break;
         case Syngine::SYN_COMPONENT_RIGIDBODY:
             removeFrom(m_PhysicsObjects);

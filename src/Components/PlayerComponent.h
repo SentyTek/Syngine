@@ -1,11 +1,9 @@
 #pragma once
-#include "CameraComponent.h"
 #include "Components.h"
 #include "SDL3/SDL_video.h"
 #include "SyngineGraphics.h"
 #include "SyngineGameobject.h"
 #include "SynginePhys.h"
-#include "Components/TransformComponent.h"
 
 #include "SDL3/SDL_events.h"
 #include "bx/math.h"
@@ -14,6 +12,8 @@
 #include "Jolt/Physics/Character/Character.h"
 
 namespace Syngine {
+// Forward declaration of TransformComponent
+class TransformComponent;
 
 enum class PlayerState {
     IDLE      = 0,

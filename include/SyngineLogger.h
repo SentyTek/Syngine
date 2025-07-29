@@ -1,5 +1,4 @@
 #pragma once
-#include "SyngineCore.h"
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -8,6 +7,8 @@
 #include <atomic>
 
 namespace Syngine {
+// Forward declaration of Core class
+class Core;
 
 // Log levels for the logger
 enum class LogLevel {

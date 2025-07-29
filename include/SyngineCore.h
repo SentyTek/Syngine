@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include "SyngineGraphics.h"
 #include "SynModelLoader.h"
 #include "SyngineGameobject.h"
@@ -46,7 +45,7 @@ class Core {
     // Attach the graphics system to the core.
     // Returns 0 on success, non-zero on failure.
     int AttachGraphics(Graphics* graphics);
-    
+
     // Detach the graphics system from the core.
     // Returns 0 on success, non-zero on failure.
     int DetachGraphics();

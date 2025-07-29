@@ -1,12 +1,10 @@
 #pragma once
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include <map>
 
 #include <SDL3/SDL.h>
 #include <bgfx/bgfx.h>
-#include "SyngineGameobject.h"
 #include "bx/math.h"
 
 namespace Syngine {

@@ -456,10 +456,13 @@ void Graphics::DestroyWindow() { //dw this is effectively the destructor
 }
 
 void Graphics::_RegisterGizmo(const std::string& tag, float size) {
-
+    if (this->gizmoRegistry.find(tag) != this->gizmoRegistry.end())
+        return; // Gizmo already registered
+    
     std::string resolvedPath = Syngine::ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
     const char* path = resolvedPath.c_str();
     bgfx::TextureHandle texture = Syngine::LoadTextureFromFile(path);
+    
     if (bgfx::isValid(texture)) {
         gizmoRegistry[tag] = { texture, size };
     }

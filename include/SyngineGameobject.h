@@ -3,6 +3,9 @@
 #include <string>
 #include <map>
 #include "Components.h"
+#include "Registry.h"
+#include "SyngineLogger.h"
+#include "SynComponents.h"
 
 using namespace std;
 
@@ -16,18 +19,19 @@ using namespace std;
    mesh, transform, physics, AI, PlayerController, etc.
 */
 namespace Syngine {
+
 class GameObject {
   private:
-    // Unique ID for the gameobject
+    // Unique ID for the GameObject
     long id;
-    // Map of components attached to the gameobject
+    // Map of components attached to the GameObject
     map<Syngine::Components, unique_ptr<Syngine::Component>> components;
-    // Whether the gameobject is active or not
+    // Whether the GameObject is active or not
     bool isActive = true;
   public:
-     // Name of the gameobject, used for identification and debugging
+     // Name of the GameObject, used for identification and debugging
     string name;
-    // Type of the gameobject, used for categorization and filtering.
+    // Type of the GameObject, used for categorization and filtering.
     // Type can be used to categorize gameobjects, e.g., "player", "enemy", "item"
     string type;
     // Gizmo type for rendering in the editor, e.g., "camera_render", "mesh_render"
@@ -36,19 +40,19 @@ class GameObject {
     GameObject(string name, string type = "default");
     ~GameObject();
 
-    // Get the ID of the gameobject
+    // Get the ID of the GameObject
     inline long GetID() noexcept { return this->id; };
-    // Set the ID of the gameobject
+    // Set the ID of the GameObject
     inline void _SetID(long id) noexcept { this->id = id; }
-    // Check if the gameobject is active
+    // Check if the GameObject is active
     inline bool IsActive() const noexcept { return this->isActive; }
-    // Set the active state of the gameobject
+    // Set the active state of the GameObject
     void SetActive(bool active) noexcept;
     // Add a component to the gameobject
     int AddComponent(Syngine::Components type);
     // Remove a component from the gameobject
     int RemoveComponent(Syngine::Components type);
-    // Check if the gameobject has a component of the specified type
+    // Check if the GameObject has a component of the specified type
     bool HasComponent(Syngine::Components type);
 
     // Get a component of the specified type
