@@ -261,10 +261,9 @@ int Core::SyngineEventLoop() {
                     };
 
                     auto* tComp = sphere->AddComponent<Syngine::TransformComponent>();
+                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
                     sphere->AddComponent<Syngine::MeshComponent>(modelPath, false);
                     sphere->AddComponent<Syngine::RigidbodyComponent>(sphereParams);
-
-                    if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
 
                     Registry::AddGameObject(sphere);
                 } else if (event.key.key == SDLK_F1) {
