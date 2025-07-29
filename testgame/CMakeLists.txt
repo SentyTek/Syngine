@@ -96,12 +96,13 @@ if(MSVC)
         /Zc:preprocessor
     )
     set(BX_COMPILE_DEBUG 1)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
-        "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
-        "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
-    )
-    message(STATUS "Root: Set BX_CONFIG_DEBUG preprocessor definition for ${EXECUTABLE_NAME}.")
 endif()
+
+target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+    "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
+    "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
+)
+message(STATUS "Root: Set BX_CONFIG_DEBUG preprocessor definition for ${EXECUTABLE_NAME}.")
 
 clangdConfigure(${EXECUTABLE_NAME})
 
@@ -192,8 +193,11 @@ if(APPLE)
     # --- Add other resources using your macro ---
 endif()
 
-# --- Add the app icon for macOS ---
-if(APPLE)
+# --- Add the app icon ---
+if(MSVC)
+    # on Windows, we can use a resource file to set the icon
+    target_sources(${EXECUTABLE_NAME} PRIVATE "src/res/app.rc")
+elseif(APPLE)
     set(ICON_NAME ${EXECUTABLE_NAME}.icon)
     set(ICON_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/res/${ICON_NAME})
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR/build/build/.${EXECUTABLE_NAME}icon})
@@ -298,16 +302,6 @@ if(WIN32 OR (UNIX AND NOT APPLE))
                 "${CMAKE_SOURCE_DIR}/meshes"
                 "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/meshes"
             COMMENT "Copying meshes to executable directory"
-        )
-    endif()
-
-    # Copy icon
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png")
-        add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-                "${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png"
-                "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/icon.png"
-            COMMENT "Copying icon.png to executable directory"
         )
     endif()
 
