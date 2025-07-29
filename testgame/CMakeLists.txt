@@ -17,7 +17,11 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
+if(UNIX AND NOT APPLE)
+    set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local" CACHE INTERNAL "")
+else()
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
+endif()
 
 add_subdirectory(engine)
 
@@ -87,7 +91,7 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE Syngine)
 if(APPLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_OSX=1)
 elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
+    # target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
 endif()
 
 if(MSVC)
@@ -229,6 +233,26 @@ elseif(APPLE)
 
     message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/Assets.car")
     message(STATUS "Added macOS icon property list")
+else()
+    set(DESKTOP_FILE "${CMAKE_BINARY_DIR}/${EXECUTABLE_NAME}.desktop")
+    set(ICON_NAME "$ENV{HOME}/.local/share/pixmaps/${EXECUTABLE_NAME}.png")
+    set(ICON_SOURCE "${CMAKE_SOURCE_DIR}/src/res/icon.png")
+    set(ICON_TARGET "${CMAKE_BINARY_DIR}/${ICON_NAME}.png")
+    set(EXEC_PATH "$ENV{HOME}/.local/bin/${EXECUTABLE_NAME}")
+
+    # Configure .desktop file from template
+    configure_file("${CMAKE_SOURCE_DIR}/src/res/${EXECUTABLE_NAME}.desktop.in"
+                   "${DESKTOP_FILE}"
+                   @ONLY)
+    configure_file("${ICON_SOURCE}" "${ICON_TARGET}" COPYONLY)
+
+    # Install the .desktop file and icon
+    install(TARGETS ${EXECUTABLE_NAME}
+        RUNTIME DESTINATION bin
+        COMPONENT Runtime
+    )
+    install(FILES "${DESKTOP_FILE}" DESTINATION share/applications)
+    install(FILES "${ICON_TARGET}" DESTINATION share/pixmaps)
 endif()
 
 # --- Target Properties (macOS Bundle Info) ---
