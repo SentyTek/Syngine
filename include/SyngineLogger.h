@@ -60,7 +60,7 @@ class Logger {
     static void Fatal(const std::string_view message);
 
     // Log hardware info
-    static void LogHardwareInfo(Syngine::Core& core);
+    static void LogHardwareInfo();
 
     // Set the autoflush behavior. Flushing is good for debug, but can be bad on performance.
     static inline void SetAutoFlush(bool enable) noexcept {

@@ -36,11 +36,11 @@ struct App {
 // Core class to manage the application
 class Core {
   public:
-    // Pointer to the application state
-    App* app;
-
-    Core(std::string appName = "SyngineGame");
+    Core(const std::string& appName = "SyngineGame");
     ~Core();
+
+    static Core* _Get(); // Access global Core instance
+    static App* _GetApp(); // Access global App state instance
 
     // Attach the graphics system to the core.
     // Returns 0 on success, non-zero on failure.
@@ -62,8 +62,16 @@ class Core {
     // Returns 0 on success, non-zero on failure
     int DeleteGameobject(GameObject* gameobject);
 
+    // Get the physics manager.
+    // Returns a pointer to the physics manager, or nullptr if not initialized
+    Syngine::Phys * GetPhysicsManager();
+
     // Get system specifications
     Syngine::HardwareSpecs GetSystemSpecifications();
+
+  private:
+    static Core* s_instance;
+    App* app;
 };
 
 } // namespace Syngine

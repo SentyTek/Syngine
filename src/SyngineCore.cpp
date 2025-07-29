@@ -39,7 +39,15 @@
 
 using namespace Syngine;
 
-Core::Core(std::string appName) {
+Syngine::Core* Syngine::Core::s_instance = nullptr;
+
+Core::Core(const std::string& appName) {
+    if (s_instance) {
+        Syngine::Logger::Fatal("Only one instance of Core is allowed.");
+    }
+
+    s_instance = this;
+
     //initialize app
     this->app = new App();
     this->app->appName = appName;
@@ -69,7 +77,13 @@ Core::~Core() {
         }
         delete this->app;
         this->app = nullptr;
+        s_instance = nullptr; // Reset the singleton instance
     }
+}
+
+Syngine::Core* Syngine::Core::_Get() { return s_instance; }
+Syngine::App* Syngine::Core::_GetApp() {
+    return s_instance ? s_instance->app : nullptr;
 }
 
 int Core::AttachGraphics(Graphics* graphics) {
