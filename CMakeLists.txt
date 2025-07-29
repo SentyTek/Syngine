@@ -56,6 +56,7 @@ add_library(Syngine STATIC
     src/SynginePhys.cpp
     src/SyngineDebug.cpp
     src/SyngineLogger.cpp
+    src/Input.cpp
     src/Components/MeshComponent.cpp
     src/Components/TransformComponent.cpp
     src/Components/RigidbodyComponent.cpp
@@ -73,6 +74,7 @@ if(APPLE)
 		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/PlayerComponent.h
 		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/RigidbodyComponent.h
 		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/TransformComponent.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/include/Input.h
     )
 endif()
 
