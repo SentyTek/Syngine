@@ -1,11 +1,9 @@
 #pragma once
-#include "CameraComponent.h"
 #include "Components.h"
 #include "SDL3/SDL_video.h"
 #include "SyngineGraphics.h"
 #include "SyngineGameobject.h"
 #include "SynginePhys.h"
-#include "Components/TransformComponent.h"
 
 #include "SDL3/SDL_events.h"
 #include "bx/math.h"
@@ -14,6 +12,8 @@
 #include "Jolt/Physics/Character/Character.h"
 
 namespace Syngine {
+// Forward declaration of TransformComponent
+class TransformComponent;
 
 enum class PlayerState {
     IDLE      = 0,
@@ -34,19 +34,21 @@ class PlayerComponent : public Syngine::Component {
   public:
     static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER;
 
-    PlayerComponent(GameObject* owner);
+    PlayerComponent(GameObject*               owner,
+                    Syngine::CameraComponent* camera,
+                    SDL_Window*               win);
     ~PlayerComponent();
 
     // Gets the component type
     Syngine::Components getComponentType() override;
 
-    // Initializes the player component with camera, window, and physics manager.
-    // @param camera The camera component for the player.
-    // @param win The SDL window for rendering.
-    // @param physicsManager The physics manager for the player.
+    // Initializes the player component with camera, window, and physics
+    // manager.
+    // @param camera The camera component to use for the player.
+    // @param win The SDL window for the player.
+    // @param physicsManager The physics manager to use for the player.
     void Init(Syngine::CameraComponent* camera,
-              SDL_Window*               win,
-              Syngine::Phys*            physicsManager);
+              SDL_Window*               win);
 
     // Handles input events for the player component.
     // @param event The SDL Events.

@@ -1,5 +1,6 @@
 #include "RigidbodyComponent.h"
 #include "Components.h"
+#include "SyngineCore.h"
 #include "SyngineLogger.h"
 #include "Jolt/Math/Quat.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
@@ -18,8 +19,10 @@
 #include <vector>
 
 namespace Syngine {
-RigidbodyComponent::RigidbodyComponent(GameObject* owner)
-    : bodyID(BodyID()), shape(PhysicsShapes::BOX), mass(1.0f), friction(0.5f) { this->m_owner = owner; }
+RigidbodyComponent::RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params) {
+    this->m_owner = owner;
+    this->Init(params);
+}
 
 RigidbodyComponent::~RigidbodyComponent() {
     Destroy();
@@ -37,31 +40,14 @@ float RigidbodyComponent::GetFriction() const { return friction; }
 float RigidbodyComponent::GetRestitution() const { return restitution; }
 
 // Initialize the RigidbodyComponent with the given parameters.
-// @param transform The TransformComponent associated with this rigidbody.
-// @param physicsManager The physics manager to use for creating the rigidbody.
-// @param shape The shape of the rigidbody (e.g., sphere, box, mesh).
-// @param parameters A vector containing the mass, friction, and restitution values. If mass is 0, Jolt will calculate it based on the shape.
-// @param motionType The motion type of the rigidbody (e.g., dynamic, kinematic).
-// @param layer The object layer for the rigidbody.
-// @param shapeParameters Additional parameters for the shape, such as radius for sphere or full extents for box.
-void RigidbodyComponent::Init(TransformComponent*       transform,
-                              Syngine::Phys*            physicsManager,
-                              PhysicsShapes             shape,
-                              const std::vector<float>& parameters,
-                              JPH::EMotionType          motionType,
-                              JPH::ObjectLayer          layer,
-                              const std::vector<float>& shapeParameters) {
-    if (parameters.size() < 3) {
-        Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters provided.");
-        return;
-    }
-    this->physicsManager = physicsManager;
-    this->transform      = transform;
-    this->mass           = parameters[0];
-    this->friction       = parameters[1];
-    this->restitution    = parameters[2];
-    this->shape          = shape;
-    this->shapeParameters = shapeParameters;
+void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
+    this->physicsManager = Syngine::Core::_GetApp()->physicsManager;
+    this->transform      = this->m_owner->GetComponent<TransformComponent>();
+    this->mass           = params.mass;
+    this->friction       = params.friction;
+    this->restitution    = params.restitution;
+    this->shape          = params.shape;
+    this->shapeParameters = params.shapeParameters;
 
     if (!physicsManager || !transform) {
         return;
@@ -76,7 +62,7 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
         case PhysicsShapes::SPHERE: {
             if (shapeParameters.empty()) { Syngine::Logger::Error("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
             float radius = shapeParameters[0]/2;
-            bodyID = physicsManager->CreateSphere(posVec, radius, motionType, layer, mass);
+            bodyID = physicsManager->CreateSphere(posVec, radius, params.motionType, params.layer, mass);
             break;
         }
         case PhysicsShapes::BOX: {
@@ -88,8 +74,8 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
             bodyID         = physicsManager->CreateBox(posVec,
                                                rotationQuat,
                                                shapeParametersVec,
-                                               motionType,
-                                               layer,
+                                               params.motionType,
+                                               params.layer,
                                                mass);
             break;
         }
@@ -109,21 +95,21 @@ void RigidbodyComponent::Init(TransformComponent*       transform,
                 scale = JPH::Vec3(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
             }
 
-            bodyID = physicsManager->CreateMeshBody(posVec, rotationQuat, meshComp->meshData, motionType, layer, scale);
+            bodyID = physicsManager->CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale);
             break;
         }
         case PhysicsShapes::CAPSULE: {
             if (shapeParameters.size() < 2) { Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for capsule shape."); return; }
             float radius = shapeParameters[0];
             float halfHeight = shapeParameters[1];
-            bodyID = physicsManager->CreateCapsule(posVec, radius, halfHeight, motionType, layer, mass);
+            bodyID = physicsManager->CreateCapsule(posVec, radius, halfHeight, params.motionType, params.layer, mass);
             break;
         }
         case PhysicsShapes::CYLINDER: {
             if (shapeParameters.size() < 2) { Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for cylinder shape."); return; }
             float radius = shapeParameters[1];
             float halfHeight = shapeParameters[0];
-            bodyID = physicsManager->CreateCylinder(posVec, rotationQuat, radius, halfHeight, motionType, layer, mass);
+            bodyID = physicsManager->CreateCylinder(posVec, rotationQuat, radius, halfHeight, params.motionType, params.layer, mass);
             break;
         }
         default:

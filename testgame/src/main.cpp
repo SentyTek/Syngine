@@ -56,7 +56,7 @@ int AppMain(int argc, char* argv[]) {
         ErrorAndExit("Failed to attach graphics to core. Check the log for details.", 1);
     }
 
-    Syngine::Logger::LogHardwareInfo(syngine);
+    Syngine::Logger::LogHardwareInfo();
 
     // Shader programs can be created arbitrarily, being supplied an optional
     // ViewID to match the rendering view (e.g. VIEW_FOWARD, VIEW_SKY, VIEW_DEBUG, etc.)

@@ -12,6 +12,16 @@ class TransformComponent : public Syngine::Component {
         static constexpr Syngine::Components componentType = SYN_COMPONENT_TRANSFORM;
 
         TransformComponent(GameObject* owner);
+
+        // Initializes the transform component with default values.
+        // This is an entirely optional step, as the transform component can and is initialized
+        // directly in the constructor.
+        void Init(std::vector<float> position = {0.0f, 0.0f, 0.0f},
+                  std::vector<float> rotation = {0.0f, 0.0f, 0.0f, 1.0f},
+                  std::vector<float> scale = {1.0f, 1.0f, 1.0f});
+
+        void Update() {}; // No update logic needed for transform component
+        
         float position[3]; //Position of the gameobject
         float rotation[4]; //Rotation of the gameobject (Quaternion)
         float scale[3]; //Scale of the gameobject

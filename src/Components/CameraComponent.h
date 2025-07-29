@@ -24,6 +24,7 @@ class CameraComponent : public Syngine::Component {
     ~CameraComponent();
     Syngine::Components getComponentType() override;
 
+    void Init() {}; // No specific initialization needed
     void Update(int viewId, int width, int height);
 
     void SetPosition(float x, float y, float z);
