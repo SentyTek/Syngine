@@ -3,4 +3,4 @@ Name=Bakerman
 Exec=@EXEC_PATH@
 Icon=@ICON_NAME@
 Type=Application
-Category=Game;
+Categories=Game;

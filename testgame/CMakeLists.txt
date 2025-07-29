@@ -17,7 +17,11 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
+if(UNIX AND NOT APPLE)
+    set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local" CACHE INTERNAL "")
+else()
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
+endif()
 
 add_subdirectory(engine)
 
@@ -87,7 +91,7 @@ target_link_libraries(${EXECUTABLE_NAME} PRIVATE Syngine)
 if(APPLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_OSX=1)
 elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
+    # target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
 endif()
 
 if(MSVC)
@@ -96,12 +100,13 @@ if(MSVC)
         /Zc:preprocessor
     )
     set(BX_COMPILE_DEBUG 1)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
-        "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
-        "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
-    )
-    message(STATUS "Root: Set BX_CONFIG_DEBUG preprocessor definition for ${EXECUTABLE_NAME}.")
 endif()
+
+target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+    "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
+    "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
+)
+message(STATUS "Root: Set BX_CONFIG_DEBUG preprocessor definition for ${EXECUTABLE_NAME}.")
 
 clangdConfigure(${EXECUTABLE_NAME})
 
@@ -192,8 +197,11 @@ if(APPLE)
     # --- Add other resources using your macro ---
 endif()
 
-# --- Add the app icon for macOS ---
-if(APPLE)
+# --- Add the app icon ---
+if(MSVC)
+    # On Windows, we can use a resource file to set the icon
+    target_sources(${EXECUTABLE_NAME} PRIVATE "src/res/app.rc")
+elseif(APPLE)
     set(ICON_NAME ${EXECUTABLE_NAME}.icon)
     set(ICON_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/res/${ICON_NAME})
     file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR/build/build/.${EXECUTABLE_NAME}icon})
@@ -225,6 +233,26 @@ if(APPLE)
 
     message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/Assets.car")
     message(STATUS "Added macOS icon property list")
+else()
+    set(DESKTOP_FILE "${CMAKE_BINARY_DIR}/${EXECUTABLE_NAME}.desktop")
+    set(ICON_NAME "$ENV{HOME}/.local/share/pixmaps/${EXECUTABLE_NAME}.png")
+    set(ICON_SOURCE "${CMAKE_SOURCE_DIR}/src/res/icon.png")
+    set(ICON_TARGET "${CMAKE_BINARY_DIR}/${ICON_NAME}.png")
+    set(EXEC_PATH "$ENV{HOME}/.local/bin/${EXECUTABLE_NAME}")
+
+    # Configure .desktop file from template
+    configure_file("${CMAKE_SOURCE_DIR}/src/res/${EXECUTABLE_NAME}.desktop.in"
+                   "${DESKTOP_FILE}"
+                   @ONLY)
+    configure_file("${ICON_SOURCE}" "${ICON_TARGET}" COPYONLY)
+
+    # Install the .desktop file and icon
+    install(TARGETS ${EXECUTABLE_NAME}
+        RUNTIME DESTINATION bin
+        COMPONENT Runtime
+    )
+    install(FILES "${DESKTOP_FILE}" DESTINATION share/applications)
+    install(FILES "${ICON_TARGET}" DESTINATION share/pixmaps)
 endif()
 
 # --- Target Properties (macOS Bundle Info) ---
@@ -298,16 +326,6 @@ if(WIN32 OR (UNIX AND NOT APPLE))
                 "${CMAKE_SOURCE_DIR}/meshes"
                 "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/meshes"
             COMMENT "Copying meshes to executable directory"
-        )
-    endif()
-
-    # Copy icon
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png")
-        add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-                "${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png"
-                "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/icon.png"
-            COMMENT "Copying icon.png to executable directory"
         )
     endif()
 
