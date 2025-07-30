@@ -122,6 +122,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate, float deltaTim
     m_deltaTime = deltaTime;
 
     m_simulate = simulate;
+    // Sliding persists between frames, so we don't reset it here
     if (m_playerState != PlayerState::SLIDING) {
         m_playerState = PlayerState::IDLE;
     }
@@ -166,7 +167,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate, float deltaTim
             bodyInterface.SetFriction(m_character->GetBodyID(), 0.25f);
             m_targetFov = 100.0f;
             //m_targetEyeHeight = 0.7f; // Lower eye height when sliding
-            m_targetMoveSpeed -= 0.025f;
+            m_targetMoveSpeed -= 4.5f * m_deltaTime;
             if (m_targetMoveSpeed < 0.01f) {
                 m_targetMoveSpeed = 0.0f;
             }

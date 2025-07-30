@@ -1,15 +1,17 @@
-#include <cwchar>
 #if defined(_WIN32)
 #define NOMINMAX
 #include <Windows.h>
+#include <cwchar>
 #endif
+
+#include <string>
+#include <unordered_map>
 
 #include <SDL3/SDL.h>
 #include "SyngineCore.h"
 #include "SyngineGraphics.h"
 #include "SyngineLogger.h"
 #include "Registry.h"
-#include <string>
 
 #if defined(_WIN32)
 void EnableConsole() {
@@ -76,8 +78,12 @@ int AppMain(int argc, char* argv[]) {
     syngine.SyngineEventLoop(); // Note that this is a blocking call, it will run until the window is closed or quit event is triggered
 
     // Cleanup
-    for (auto& [id, gameObject] : Syngine::Registry::GetAllGameObjects()) {
-        syngine.DeleteGameobject(gameObject);
+    std::unordered_map<int, Syngine::GameObject*> all =
+        Syngine::Registry::GetAllGameObjects();
+    for (auto& [id, gameObject] : all) {
+        if (gameObject) {
+            syngine.DeleteGameobject(gameObject);
+        }
     }
     Syngine::Registry::Clear();
     syngine.DetachGraphics();
