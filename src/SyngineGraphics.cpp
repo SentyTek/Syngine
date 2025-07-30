@@ -86,14 +86,7 @@ int Graphics::CreateRenderer() {
         Syngine::Logger::Fatal("No app to create renderer for");
         return 1;
     }
-
-    // Check if required folders exist (shaders, meshes)
-    if (!CheckRequiredFolders()) {
-        SDL_DestroyWindow(this->win);
-        SDL_Quit();
-        return 1;
-    }
-
+    
     //initialize bgfx
     bgfx::Init bgInit;
     SDL_PropertiesID sdlProps = SDL_GetWindowProperties(this->win);

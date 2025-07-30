@@ -20,7 +20,7 @@
 #include "Registry.h"
 #include "Components.h"
 #include "SynComponents.h"
-#include "FsUtils.h"
+#include "helpers.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
@@ -48,14 +48,20 @@ Core::Core(const std::string& appName) {
 
     s_instance = this;
 
-    //initialize app
-    this->app = new App();
-    this->app->appName = appName;
-    this->app->graphics = nullptr; // No graphics attached initially
-    this->app->synModels = new AssimpLoader(); // Initialize the model loader
+    // initialize app
 
-    this->app->physicsManager = new Phys(); // Initialize the physics manager
-    this->app->physicsManager->Init(this->app->debug); // Initialize the physics system
+    // Check if required folders exist (shaders, meshes)
+    // CheckRequiredFolders will abort if any folder is missing
+    if (CheckRequiredFolders()) {
+        this->app = new App();
+        this->app->appName = appName;
+        this->app->graphics = nullptr; // No graphics attached initially
+        this->app->synModels = new AssimpLoader(); // Initialize the model loader
+
+        this->app->physicsManager = new Phys(); // Initialize the physics manager
+        this->app->physicsManager->Init(
+            this->app->debug); // Initialize the physics system
+    }
 }
 
 Core::~Core() {
@@ -123,7 +129,6 @@ int Core::SyngineEventLoop() {
         0.0f, 20.0f, 0.0f);
     auto* playerCamera = player->AddComponent<Syngine::CameraComponent>();
     player->AddComponent<Syngine::PlayerComponent>(playerCamera, this->app->graphics->win);
-    Registry::AddGameObject(player);
 
     bool running = true;
     bool playerMode = false; // False is editor mode, True is player mode
@@ -207,8 +212,6 @@ int Core::SyngineEventLoop() {
                     model->AddComponent<Syngine::TransformComponent>();
                     model->AddComponent<Syngine::MeshComponent>(modelPath);
                     model->AddComponent<Syngine::RigidbodyComponent>(params);
-
-                    Registry::AddGameObject(model);
                 } else if (event.key.key == SDLK_ESCAPE) {
                     playerMode = !playerMode;
                     simulate = playerMode; // Always simulate in player mode
@@ -241,8 +244,6 @@ int Core::SyngineEventLoop() {
 
                     cube->AddComponent<Syngine::MeshComponent>(modelPath, false);
                     cube->AddComponent<Syngine::RigidbodyComponent>(params);
-                    
-                    Registry::AddGameObject(cube);
                 } else if (event.key.key == SDLK_2) {
                     std::string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
@@ -264,8 +265,6 @@ int Core::SyngineEventLoop() {
                     if (tComp) tComp->SetPosition(0.0f, 10.0f, 0.0f), tComp->SetScale(2.0f, 2.0f, 2.0f);
                     sphere->AddComponent<Syngine::MeshComponent>(modelPath, false);
                     sphere->AddComponent<Syngine::RigidbodyComponent>(sphereParams);
-
-                    Registry::AddGameObject(sphere);
                 } else if (event.key.key == SDLK_F1) {
                     // Toggle debug mode
                     this->app->debug = !this->app->debug;
@@ -561,11 +560,13 @@ int Core::SyngineEventLoop() {
 }
 
 int Core::DeleteGameobject(GameObject* gameobject) {
-    if(!gameobject) return 0;
+    if (!gameobject) return 0;
+    Registry::RemoveGameObject(gameobject); // Remove from registry
+                                            // 
+    // Unload components
     MeshComponent* mesh = gameobject->GetComponent<MeshComponent>();
-    if(mesh) {
-        mesh->UnloadMesh();
-    }
+    if (mesh) mesh->UnloadMesh();
+
     delete gameobject; // delete the gameobject
     gameobject = nullptr; // set to null to avoid dangling pointer
     return 0;

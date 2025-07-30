@@ -26,7 +26,7 @@ inline bool CheckRequiredFolders() {
     for (const char* folder : requiredFolders) {
         std::string fullPath = Syngine::ResolveOSPath(folder);
         if (!SDL_GetPathInfo(fullPath.c_str(), nullptr)) {
-            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+            Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
                                  "Required folder '%s' does not exist in game dir: %s",
                                  folder,
                                  fullPath.c_str());

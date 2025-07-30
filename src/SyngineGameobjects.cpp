@@ -1,5 +1,6 @@
 #include "Components.h"
 #include "SyngineGameobject.h"
+#include "Registry.h"
 
 using namespace Syngine;
 
@@ -8,9 +9,13 @@ GameObject::GameObject(string name, string type) {
     this->type = type;
     this->id   = -1;
     this->gizmo = "none";
+
+    Registry::AddGameObject(this);
 }
 
-GameObject::~GameObject() {}
+GameObject::~GameObject() {
+    Registry::RemoveGameObject(this);
+}
 
 void GameObject::SetActive(bool active) noexcept {
     this->isActive = active;
