@@ -498,7 +498,7 @@ int Core::SyngineEventLoop() {
         if (playerMode) {
             if (player->GetComponent<PlayerComponent>()) {
                 player->GetComponent<PlayerComponent>()->Update(keystate,
-                                                                playerMode);
+                                                                playerMode, deltaTime);
             }
         }
 
