@@ -67,6 +67,13 @@ add_library(Syngine STATIC
 if(APPLE)
     target_sources(Syngine PRIVATE
         src/SynOSXMetalBridge.mm
+        
+        # get the headers to show up in Xcode
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/CameraComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/MeshComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/PlayerComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/RigidbodyComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/TransformComponent.h
     )
 endif()
 

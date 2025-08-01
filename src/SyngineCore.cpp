@@ -20,7 +20,7 @@
 #include "Registry.h"
 #include "Components.h"
 #include "SynComponents.h"
-#include "helpers.h"
+#include "FsUtils.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
@@ -220,7 +220,7 @@ int Core::SyngineEventLoop() {
                         simulate = !simulate;
                     }
                 } else if (event.key.key == SDLK_1) {
-                    std::string modelPath = Syngine::ResolveOSPath("meshes/cube.glb");
+                    string modelPath = Syngine::ResolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
 
                     std::vector<float> boxExtents = { 2.0f,
@@ -245,7 +245,7 @@ int Core::SyngineEventLoop() {
                     cube->AddComponent<Syngine::MeshComponent>(modelPath, false);
                     cube->AddComponent<Syngine::RigidbodyComponent>(params);
                 } else if (event.key.key == SDLK_2) {
-                    std::string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
+                    string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
 
                     std::vector<float> sphereExtents = { // Full extents for sphere shape (diameter)

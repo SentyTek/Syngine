@@ -87,12 +87,18 @@ target_include_directories(${EXECUTABLE_NAME} PRIVATE
 
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE Syngine)
 
-# add platform specific flags
+# Add platform specific flags (May need to remove some of these)
 if(APPLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_OSX=1)
 elseif(UNIX AND NOT APPLE)
     # target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
 endif()
+
+# Set BX_CONFIG_DEBUG
+target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+    "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
+    "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
+)
 
 if(MSVC)
     target_compile_options(${EXECUTABLE_NAME} PRIVATE
