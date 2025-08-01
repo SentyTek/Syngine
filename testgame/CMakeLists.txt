@@ -6,19 +6,28 @@ set(CMAKE_CXX_STANDARD 20)
 include(clangdConfig.cmake)
 include(bgfxshaderc.cmake)
 
+if(APPLE)
+    # set the minimum deployment version for the asset compiler
+    # there's nothing stopping us from going earlier than 26.0 Tahoe as far as I know
+    set(MINIMUM_MACOS_VERSION 26.0)
+endif()
+
 # set the output directory for built objects.
 # This makes sure that the dynamic library goes into the build directory automatically.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
+if(UNIX AND NOT APPLE)
+    set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local" CACHE INTERNAL "")
+else()
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL "")
+endif()
 
 add_subdirectory(engine)
 
 if(WIN32)
     set(CMAKE_WIN32_EXECUTABLE ON)
 endif()
-
 
 add_executable(${EXECUTABLE_NAME}
     src/main.cpp
@@ -78,15 +87,18 @@ target_include_directories(${EXECUTABLE_NAME} PRIVATE
 
 target_link_libraries(${EXECUTABLE_NAME} PRIVATE Syngine)
 
-# add platform specific flags
+# Add platform specific flags (May need to remove some of these)
 if(APPLE)
     target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_OSX=1)
 elseif(UNIX AND NOT APPLE)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
-        "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
-        "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
-    )
+    # target_compile_definitions(${EXECUTABLE_NAME} PRIVATE BX_PLATFORM_LINUX=1)
 endif()
+
+# Set BX_CONFIG_DEBUG
+target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+    "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
+    "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
+)
 
 if(MSVC)
     target_compile_options(${EXECUTABLE_NAME} PRIVATE
@@ -94,19 +106,15 @@ if(MSVC)
         /Zc:preprocessor
     )
     set(BX_COMPILE_DEBUG 1)
-    target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
-        "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
-        "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
-    )
-    message(STATUS "Root: Set BX_CONFIG_DEBUG preprocessor definition for ${EXECUTABLE_NAME}.")
 endif()
+
+target_compile_definitions(${EXECUTABLE_NAME} PRIVATE
+    "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
+    "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
+)
+message(STATUS "Root: Set BX_CONFIG_DEBUG preprocessor definition for ${EXECUTABLE_NAME}.")
 
 clangdConfigure(${EXECUTABLE_NAME})
-
-# to get an app icon on Apple, add it to the executable, then the image file in info.plist.in
-if(APPLE)
-    target_sources("${EXECUTABLE_NAME}" PRIVATE "src/icon.png")
-endif()
 
 # dealing with assets
 # if there's any non-code files, like images, audio, etc., we need to deal with per-platform
@@ -193,20 +201,79 @@ if(APPLE)
     set_property(SOURCE ${CMAKE_SOURCE_DIR}/meshes PROPERTY MACOSX_PACKAGE_LOCATION "Resources/meshes")
 
     # --- Add other resources using your macro ---
-    add_resource("${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png")
+endif()
+
+# --- Add the app icon ---
+if(MSVC)
+    # on Windows, we can use a resource file to set the icon
+    target_sources(${EXECUTABLE_NAME} PRIVATE "src/res/app.rc")
+elseif(APPLE)
+    set(ICON_NAME ${EXECUTABLE_NAME}.icon)
+    set(ICON_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/res/${ICON_NAME})
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR/build/build/.${EXECUTABLE_NAME}icon})
+    set(ICON_PACKAGE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/build/.${EXECUTABLE_NAME}icon)
+    set(ICON_PACKAGE ${ICON_PACKAGE_PATH}/Assets.car)
+    set(PLIST_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/CMakeFiles/bakerman.dir/Info.plist)
+
+    add_custom_command(
+        OUTPUT "${ICON_PACKAGE}"
+        COMMAND xcrun actool
+            --compile ${ICON_PACKAGE_PATH}
+            --app-icon ${ICON_PATH}
+            --platform macosx
+            --minimum-deployment-target ${MINIMUM_MACOS_VERSION}
+            # add the new plist keys to CMake's existing generated plist
+            --output-partial-info-plist ${PLIST_PATH}
+            ${ICON_PATH}
+        DEPENDS "${ICON_PATH}"
+        COMMENT "Compiling app icon for macOS"
+    )
+
+    add_custom_target(${EXECUTABLE_NAME}-icon ALL
+        DEPENDS "${ICON_PACKAGE}"
+    )
+
+    add_dependencies(${EXECUTABLE_NAME} ${EXECUTABLE_NAME}-icon)
+    target_sources(${EXECUTABLE_NAME} PRIVATE ${ICON_PACKAGE})
+    set_property(SOURCE ${ICON_PACKAGE} PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
+
+    message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/Assets.car")
+    message(STATUS "Added macOS icon property list")
+else()
+    set(DESKTOP_FILE "${CMAKE_BINARY_DIR}/${EXECUTABLE_NAME}.desktop")
+    set(ICON_NAME "$ENV{HOME}/.local/share/pixmaps/${EXECUTABLE_NAME}.png")
+    set(ICON_SOURCE "${CMAKE_SOURCE_DIR}/src/res/icon.png")
+    set(ICON_TARGET "${CMAKE_BINARY_DIR}/${ICON_NAME}.png")
+    set(EXEC_PATH "$ENV{HOME}/.local/bin/${EXECUTABLE_NAME}")
+
+    # Configure .desktop file from template
+    configure_file("${CMAKE_SOURCE_DIR}/src/res/${EXECUTABLE_NAME}.desktop.in"
+                   "${DESKTOP_FILE}"
+                   @ONLY)
+    configure_file("${ICON_SOURCE}" "${ICON_TARGET}" COPYONLY)
+
+    # Install the .desktop file and icon
+    install(TARGETS ${EXECUTABLE_NAME}
+        RUNTIME DESTINATION bin
+        COMPONENT Runtime
+    )
+    install(FILES "${DESKTOP_FILE}" DESTINATION share/applications)
+    install(FILES "${ICON_TARGET}" DESTINATION share/pixmaps)
 endif()
 
 # --- Target Properties (macOS Bundle Info) ---
-set(RESOURCE_FILES_FOR_TARGET "src/icon.png")
 if(APPLE)
-set_target_properties(${EXECUTABLE_NAME} PROPERTIES
-    MACOSX_BUNDLE TRUE
-    XCODE_GENERATE_SCHEME TRUE
-    XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
-    XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
-    RESOURCE "${RESOURCE_FILES_FOR_TARGET}"
-    XCODE_ATTRIBUTE_SDKROOT "macosx"
-)
+    set_target_properties(${EXECUTABLE_NAME} PROPERTIES
+        MACOSX_BUNDLE TRUE
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist.in
+        XCODE_GENERATE_SCHEME TRUE
+        XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
+        XCODE_ATTRIBUTE_SDKROOT "macosx"
+        # tells Xcode to recognize the app icon
+        XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "${EXECUTABLE_NAME}"
+        XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS TRUE
+    )
 endif()
 
 #on macOS, we need to ensure the bundle is valid by calling fixup_bundle
@@ -265,16 +332,6 @@ if(WIN32 OR (UNIX AND NOT APPLE))
                 "${CMAKE_SOURCE_DIR}/meshes"
                 "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/meshes"
             COMMENT "Copying meshes to executable directory"
-        )
-    endif()
-
-    # Copy icon
-    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png")
-        add_custom_command(TARGET ${EXECUTABLE_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy
-                "${CMAKE_CURRENT_SOURCE_DIR}/src/icon.png"
-                "$<TARGET_FILE_DIR:${EXECUTABLE_NAME}>/icon.png"
-            COMMENT "Copying icon.png to executable directory"
         )
     endif()
 

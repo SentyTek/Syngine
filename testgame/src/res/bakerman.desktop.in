@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Bakerman
+Exec=@EXEC_PATH@
+Icon=@ICON_NAME@
+Type=Application
+Categories=Game;

@@ -1,14 +1,17 @@
-#include <cwchar>
 #if defined(_WIN32)
 #define NOMINMAX
 #include <Windows.h>
+#include <cwchar>
 #endif
+
+#include <string>
+#include <unordered_map>
 
 #include <SDL3/SDL.h>
 #include "SyngineCore.h"
 #include "SyngineGraphics.h"
 #include "SyngineLogger.h"
-#include <string>
+#include "Registry.h"
 
 #if defined(_WIN32)
 void EnableConsole() {
@@ -55,7 +58,7 @@ int AppMain(int argc, char* argv[]) {
         ErrorAndExit("Failed to attach graphics to core. Check the log for details.", 1);
     }
 
-    Syngine::Logger::LogHardwareInfo(syngine);
+    Syngine::Logger::LogHardwareInfo();
 
     // Shader programs can be created arbitrarily, being supplied an optional
     // ViewID to match the rendering view (e.g. VIEW_FOWARD, VIEW_SKY, VIEW_DEBUG, etc.)
@@ -74,14 +77,15 @@ int AppMain(int argc, char* argv[]) {
     // Run event loop
     syngine.SyngineEventLoop(); // Note that this is a blocking call, it will run until the window is closed or quit event is triggered
 
-    // Cleanup and quit
-    for(size_t i = 0; i < syngine.app->gameObjects.size(); ++i) {
-        Syngine::GameObject* gameObject = syngine.app->gameObjects[i];
+    // Cleanup
+    std::unordered_map<int, Syngine::GameObject*> all =
+        Syngine::Registry::GetAllGameObjects();
+    for (auto& [id, gameObject] : all) {
         if (gameObject) {
             syngine.DeleteGameobject(gameObject);
         }
     }
-    syngine.app->gameObjects.clear();
+    Syngine::Registry::Clear();
     syngine.DetachGraphics();
     graphics.RemoveAllPrograms();
     graphics.DestroyRenderer();

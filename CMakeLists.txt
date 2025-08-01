@@ -48,6 +48,7 @@ set(CMAKE_CXX_STANDARD 20)
 # create the executable
 add_library(Syngine STATIC
     src/SyngineCore.cpp
+    src/Registry.cpp
     src/SyngineGraphics.cpp
     src/SynModelLoader.cpp
     src/helpers.cpp

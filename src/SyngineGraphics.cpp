@@ -1,14 +1,12 @@
 #include "SyngineGraphics.h"
-#include "Components.h"
-#include "Components/CameraComponent.h"
 #include "ShaderUtils.h"
-#include "SynModelLoader.h"
 #include "SyngineLogger.h"
-#include "TransformComponent.h"
-#include "bgfx/bgfx.h"
-#include "bgfx/defines.h"
-#include "bx/math.h"
+#include "Registry.h"
+#include "Components.h"
 #include "SynComponents.h"
+#include "SynModelLoader.h"
+#include "TransformComponent.h"
+#include "Components/CameraComponent.h"
 #include "helpers.h"
 
 #include <SDL3/SDL_init.h>
@@ -17,6 +15,9 @@
 #include <SDL3/SDL_properties.h>
 
 #include <bgfx/platform.h>
+#include "bgfx/bgfx.h"
+#include "bgfx/defines.h"
+#include "bx/math.h"
 #include <cstdint>
 #include <vector>
 
@@ -85,14 +86,7 @@ int Graphics::CreateRenderer() {
         Syngine::Logger::Fatal("No app to create renderer for");
         return 1;
     }
-
-    // Check if required folders exist (shaders, meshes)
-    if (!CheckRequiredFolders()) {
-        SDL_DestroyWindow(this->win);
-        SDL_Quit();
-        return 1;
-    }
-
+    
     //initialize bgfx
     bgfx::Init bgInit;
     SDL_PropertiesID sdlProps = SDL_GetWindowProperties(this->win);
@@ -434,7 +428,7 @@ bool Graphics::ReloadAllPrograms() {
     return true;
 }
 
-bgfx::UniformHandle Graphics::GetUniform(const char* name) const {
+bgfx::UniformHandle Graphics::_GetUniform(const char* name) const {
     auto it = this->handles.uniforms.find(name);
     if (it != this->handles.uniforms.end()) {
         return it->second;
@@ -454,18 +448,20 @@ void Graphics::DestroyWindow() { //dw this is effectively the destructor
     Syngine::Logger::Info("Window destroyed successfully");
 }
 
-void Graphics::RegisterGizmo(const std::string& tag, float size) {
+void Graphics::_RegisterGizmo(const std::string& tag, float size) {
+    if (this->gizmoRegistry.find(tag) != this->gizmoRegistry.end())
+        return; // Gizmo already registered
     
-    std::string resolvedPath = ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
+    std::string resolvedPath = Syngine::ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
     const char* path = resolvedPath.c_str();
     bgfx::TextureHandle texture = Syngine::LoadTextureFromFile(path);
+    
     if (bgfx::isValid(texture)) {
         gizmoRegistry[tag] = { texture, size };
     }
 }
 
-void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
-                            CameraComponent*         camera) {
+void Graphics::_RenderGizmos(CameraComponent* camera) {
     unsigned short viewId = 26; // View ID for gizmos
     bgfx::setViewRect(viewId, 0, 0, bgfx::BackbufferRatio::Equal);
     bgfx::setViewTransform(
@@ -478,7 +474,7 @@ void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
         return;
     }
 
-    bgfx::UniformHandle billboardUniform = GetUniform("u_billboard");
+    bgfx::UniformHandle billboardUniform = _GetUniform("u_billboard");
     if (!bgfx::isValid(billboardUniform)) {
         Syngine::Logger::Error("Billboard uniform not found");
         return;
@@ -487,7 +483,10 @@ void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_LEQUAL);
 
-    for (auto go : gameObjects) {
+    // Get all gizmos from the registry
+    std::vector<GameObject*> gizmos = Registry::GetGizmos();
+
+    for (auto go : gizmos) {
         auto it = gizmoRegistry.find(go->gizmo);
         if (it != gizmoRegistry.end()) {
             auto* comp =
@@ -508,14 +507,14 @@ void Graphics::RenderGizmos(std::vector<GameObject*> gameObjects,
                 bgfx::setTransform(modelMtx);
                 bgfx::setVertexBuffer(0, this->billboardVbh);
                 bgfx::setIndexBuffer(this->billboardIbh);
-                bgfx::setTexture(0, GetUniform("s_albedo"), gizmo.texture);
+                bgfx::setTexture(0, _GetUniform("s_albedo"), gizmo.texture);
                 bgfx::submit(viewId, billboardProgram.program);
             }
         }
     }
 }
 
-int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
+int Graphics::_RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
     const Program& terrainProgram = GetProgram("terrain");
     const Program& skyProgram = GetProgram("sky");
     const Program& defaultProgram = GetProgram("default");
@@ -571,11 +570,12 @@ int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightD
     //prepare render
     uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA | BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
 
-    
+
     const uint32_t samplerFlags =
-    BGFX_SAMPLER_MIN_ANISOTROPIC |
-    BGFX_SAMPLER_MAG_ANISOTROPIC;
-    
+        BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
+
+    std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
+
     for (auto& gameObject : gameObjects) {
         if (!gameObject) {
             Syngine::Logger::Error("GameObject is null");
@@ -669,8 +669,8 @@ int Graphics::RenderFrame(std::vector<GameObject*> gameObjects, bx::Vec3& lightD
     }
 
     // Render gizmos
-    if(debug) {
-        RenderGizmos(gameObjects, camera);
+    if (debug) {
+        _RenderGizmos(camera);
     }
 
     bgfx::frame(); // submit the frame

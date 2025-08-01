@@ -1,11 +1,9 @@
 #pragma once
-#include "CameraComponent.h"
 #include "Components.h"
 #include "SDL3/SDL_video.h"
 #include "SyngineGraphics.h"
 #include "SyngineGameobject.h"
 #include "SynginePhys.h"
-#include "Components/TransformComponent.h"
 
 #include "SDL3/SDL_events.h"
 #include "bx/math.h"
@@ -14,6 +12,8 @@
 #include "Jolt/Physics/Character/Character.h"
 
 namespace Syngine {
+// Forward declaration of TransformComponent
+class TransformComponent;
 
 enum class PlayerState {
     IDLE      = 0,
@@ -34,28 +34,32 @@ class PlayerComponent : public Syngine::Component {
   public:
     static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER;
 
-    PlayerComponent(GameObject* owner);
+    PlayerComponent(GameObject*               owner,
+                    Syngine::CameraComponent* camera,
+                    SDL_Window*               win);
     ~PlayerComponent();
 
     // Gets the component type
     Syngine::Components getComponentType() override;
 
-    // Initializes the player component with camera, window, and physics manager.
-    // @param camera The camera component for the player.
-    // @param win The SDL window for rendering.
-    // @param physicsManager The physics manager for the player.
+    // Initializes the player component with camera, window, and physics
+    // manager.
+    // @param camera The camera component to use for the player.
+    // @param win The SDL window for the player.
+    // @param physicsManager The physics manager to use for the player.
     void Init(Syngine::CameraComponent* camera,
-              SDL_Window*               win,
-              Syngine::Phys*            physicsManager);
+              SDL_Window*               win);
 
     // Handles input events for the player component.
     // @param event The SDL Events.
     void HandleInput(const SDL_Event& event);
 
-    // Updates the player. Mostly handles movement, physics, and updating the state.
+    // Updates the player. Mostly handles movement, physics, and updating the
+    // state.
     // @param keystate The current state of the keyboard.
     // @param simulate Whether to simulate physics or not.
-    void Update(const bool* keystate, bool simulate);
+    // @param deltaTime The time since the last update.
+    void Update(const bool* keystate, bool simulate, float deltaTime);
     // Updates position and camera after physics simulation.
     void PostPhysicsUpdate();
     // Gets the current player state.
@@ -71,6 +75,9 @@ class PlayerComponent : public Syngine::Component {
     float crouchSpeed   = 0.5f; // Speed when crouching.
     float moveSpeed     = 1.5f; // Default movement speed of the player.
     float mouseSens     = 0.002f; // Mouse sensitivity for camera movement.
+    float standHeight   = 0.5f;   // Height of the player when standing.
+    float crouchHeight  = 0.2f;   // Height of the player when crouching.
+    float playerRadius  = 0.35f;  // Radius of the player collider.
 
     bool enableMovement  = true; // Whether player movement is enabled (on by default).
     bool enableSliding   = true; // Whether player sliding is enabled (on by default).
@@ -95,7 +102,8 @@ class PlayerComponent : public Syngine::Component {
 
     PlayerState m_playerState = PlayerState::IDLE;
     PlayerState m_prevPlayerState = PlayerState::IDLE;
-    bool        m_simulate    = false;
+    bool        m_simulate        = false;
+    float       m_deltaTime       = 0.0f;
 
     bx::Vec3 m_moveDirection = { 0.0f,
                                  0.0f,

@@ -153,14 +153,14 @@ void Logger::Log(const std::string_view message, LogLevel level, bool toConsole)
     }
 }
 
-void Logger::LogHardwareInfo(Syngine::Core& core) {
+void Logger::LogHardwareInfo() {
     if (!logFile || !logFile->is_open()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log file is not open.");
         return;
     }
 
     // This is a bit messy but it avoids duplicating code in multiple places
-    Syngine::HardwareSpecs specs = core.GetSystemSpecifications();
+    Syngine::HardwareSpecs specs = Syngine::Core::_Get()->GetSystemSpecifications();
     std::string            specsStr = "\nSystem Specifications:\n";
     specsStr += "\tOperating System: " + specs.osName + "\n";
     specsStr += "\tCPU: " + specs.cpuModel + "\n";

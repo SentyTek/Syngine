@@ -3,6 +3,9 @@
 #include <string>
 #include <map>
 #include "Components.h"
+#include "Registry.h"
+#include "SyngineLogger.h"
+#include "SynComponents.h"
 
 using namespace std;
 
@@ -16,24 +19,45 @@ using namespace std;
    mesh, transform, physics, AI, PlayerController, etc.
 */
 namespace Syngine {
+
 class GameObject {
-    long id; // Unique ID for the gameobject
-    map<Syngine::Components, unique_ptr<Syngine::Component>> components; //Map of components attached to the gameobject
-    public:
-        string name; //Name of the gameoject
-        string type; // Type of object, used for shader selection.
-        string gizmo; //Gizmo tag for the gameobject, used for debugging and visualization
-        
-        GameObject(string name, string type = "default"); //Constructor
-        ~GameObject();
+  private:
+    // Unique ID for the GameObject
+    long id;
+    // Map of components attached to the GameObject
+    map<Syngine::Components, unique_ptr<Syngine::Component>> components;
+    // Whether the GameObject is active or not
+    bool isActive = true;
+  public:
+     // Name of the GameObject, used for identification and debugging
+    string name;
+    // Type of the GameObject, used for categorization and filtering.
+    // Type can be used to categorize gameobjects, e.g., "player", "enemy", "item"
+    string type;
+    // Gizmo type for rendering in the editor, e.g., "camera_render", "mesh_render"
+    string gizmo;
 
-        long GetID(); //Get the ID of the gameobject
-        int AddComponent(Syngine::Components type); //Add a component to the gameobject
-        int RemoveComponent(Syngine::Components type); //Remove a component from the gameobject
-        bool HasComponent(Syngine::Components type); //Check if the gameobject has a component
+    GameObject(string name, string type = "default");
+    ~GameObject();
 
-        template<typename T>
-        T* GetComponent(); //Get a component of the gameobject
+    // Get the ID of the GameObject
+    inline long GetID() noexcept { return this->id; };
+    // Set the ID of the GameObject
+    inline void _SetID(long id) noexcept { this->id = id; }
+    // Check if the GameObject is active
+    inline bool IsActive() const noexcept { return this->isActive; }
+    // Set the active state of the GameObject
+    void SetActive(bool active) noexcept;
+    // Remove a component from the GameObject
+    int RemoveComponent(Syngine::Components type);
+    // Check if the GameObject has a component of the specified type
+    bool HasComponent(Syngine::Components type);
+
+    // Get a component of the specified type
+    template <typename T> T* GetComponent();
+    
+    // Add a component to the GameObject
+    template <typename T, typename... Args> T* AddComponent(Args&&... args);
 };
 
 template<typename T>
@@ -44,6 +68,21 @@ T* GameObject::GetComponent() {
     }
     
     return dynamic_cast<T*>(it->second.get());
+}
+
+template <typename T, typename... Args>
+T* GameObject::AddComponent(Args&&... args) {
+    auto type = T::componentType;
+
+    if (components.contains(type)) return nullptr;
+
+    // Forward the arguments to the component constructor
+    std::unique_ptr<T> component = std::make_unique<T>(this, std::forward<Args>(args)...);
+    T* raw = component.get();
+
+    components[type] = std::move(component);
+    Syngine::Registry::_NotifyComponentAdded(this, type);
+    return raw;
 }
 
 } // namespace Syngine

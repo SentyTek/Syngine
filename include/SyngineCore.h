@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include "SyngineGraphics.h"
 #include "SynModelLoader.h"
 #include "SyngineGameobject.h"
@@ -29,7 +28,6 @@ struct HardwareSpecs {
 struct App {
     Graphics* graphics;
     SynModelLoader* synModels;
-    std::vector<GameObject*> gameObjects;
     Phys*                    physicsManager;
     bool                     debug = true;
     std::string              appName;
@@ -38,16 +36,16 @@ struct App {
 // Core class to manage the application
 class Core {
   public:
-    // Pointer to the application state
-    App* app;
-
-    Core(std::string appName = "SyngineGame");
+    Core(const std::string& appName = "SyngineGame");
     ~Core();
+
+    static Core* _Get(); // Access global Core instance
+    static App* _GetApp(); // Access global App state instance
 
     // Attach the graphics system to the core.
     // Returns 0 on success, non-zero on failure.
     int AttachGraphics(Graphics* graphics);
-    
+
     // Detach the graphics system from the core.
     // Returns 0 on success, non-zero on failure.
     int DetachGraphics();
@@ -55,12 +53,6 @@ class Core {
     // Main event loop, blocks until the application is closed.
     // Returns 0 on clean exit, non-zero on error.
     int SyngineEventLoop();
-
-    // Find a gameobject by its unique ID
-    GameObject* FindGameobjectByID(long id);
-
-    // Find a gameobject by its name (not guaranteed to be unique, returns first match)
-    GameObject* FindGameobjectByName(std::string name);
 
     // Add a new gameobject to the scene
     // Returns 0 on success, non-zero on failure
@@ -70,8 +62,16 @@ class Core {
     // Returns 0 on success, non-zero on failure
     int DeleteGameobject(GameObject* gameobject);
 
+    // Get the physics manager.
+    // Returns a pointer to the physics manager, or nullptr if not initialized
+    Syngine::Phys * GetPhysicsManager();
+
     // Get system specifications
     Syngine::HardwareSpecs GetSystemSpecifications();
+
+  private:
+    static Core* s_instance;
+    App* app;
 };
 
 } // namespace Syngine
