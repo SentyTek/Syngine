@@ -52,7 +52,7 @@ Core::Core(const std::string& appName) {
 
     // Check if required folders exist (shaders, meshes)
     // CheckRequiredFolders will abort if any folder is missing
-    if (CheckRequiredFolders()) {
+    if (Syngine::CheckRequiredFolders()) {
         this->app = new App();
         this->app->appName = appName;
         this->app->graphics = nullptr; // No graphics attached initially
