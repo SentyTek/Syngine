@@ -14,10 +14,10 @@ class Core;
 /// @section Logger
 /// @since v0.0.1
 enum class LogLevel {
-    INFO, /// Informational messages
-    WARN, /// Warning messages
-    ERR,  /// Error messages
-    FATAL, /// Fatal error messages. Will terminate the application
+    INFO, //* Informational messages
+    WARN, //* Warning messages
+    ERR,  //* Error messages
+    FATAL, //* Fatal error messages. Will terminate the application
 };
 
 /// @brief Logger class for logging messages

@@ -23,7 +23,7 @@ constexpr Platform CurrentPlatform = Platform::LINUX; //* The current platform i
 static_assert(false, "Unsupported platform: not defined in SynPlatform");
 #endif
 
-/// Loads a texture from memory
+/// @brief Loads a texture from memory
 /// @param data Pointer to the texture data in memory
 /// @param size Size of the texture data in bytes
 /// @param name Name of the texture for debugging purposes
@@ -31,12 +31,12 @@ static_assert(false, "Unsupported platform: not defined in SynPlatform");
 bgfx::TextureHandle
 LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
 
-/// Loads a texture from file
+/// @brief Loads a texture from file
 /// @param path Path to the texture file
 /// @return A bgfx::TextureHandle representing the loaded texture
 bgfx::TextureHandle LoadTextureFromFile(const char* path);
 
-/// Creates a flat texture, a 1x1 grey pixel texture
+/// @brief Creates a flat texture, a 1x1 grey pixel texture
 /// @return A bgfx::TextureHandle representing a flat texture
 bgfx::TextureHandle CreateFlatTexture();
 

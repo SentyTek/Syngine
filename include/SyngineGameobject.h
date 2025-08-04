@@ -9,15 +9,6 @@
 
 using namespace std;
 
-/*
-    Syngine GameObjects are the base class for all game objects used within a
-    game. They are used to represent objects in the game world, such as players,
-    enemies, and items. They are also used to represent objects that are not
-    directly related to the game world, such as UI elements and menus.
-
-    GameObjects can then have various components attached to them, such as a
-    mesh, transform, physics, AI, PlayerController, etc.
-*/
 namespace Syngine {
 
 /// @brief GameObject class representing an entity in the game world, such as a
