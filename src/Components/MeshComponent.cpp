@@ -1,3 +1,11 @@
+// ╒══════════════════ MeshComponent.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-20                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "Components/MeshComponent.h"
 #include "SyngineLogger.h"
 #include "SynModelLoader.h"
@@ -12,7 +20,12 @@ MeshComponent::MeshComponent(GameObject* owner, const std::string& path, bool lo
     this->Init(path, loadTextures);
 }
 
-Syngine::Components MeshComponent::getComponentType() {
+MeshComponent::~MeshComponent() {
+    // Unload the mesh data when the component is destroyed
+    this->UnloadMesh();
+}
+
+Syngine::Components MeshComponent::GetComponentType() {
     return SYN_COMPONENT_MESH;
 }
 
@@ -23,7 +36,7 @@ void MeshComponent::Init(const std::string& path, bool loadTextures) {
 int MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
     // Load the mesh data from the file
     AssimpLoader loader;
-    if (!loader.LoadModel(this->meshData, path, loadTextures)) {
+    if (!loader._LoadModel(this->meshData, path, loadTextures)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load mesh from %s", path.c_str());
         return 1; // Error loading mesh
     }
@@ -65,7 +78,7 @@ int MeshComponent::ReloadMesh() {
         return 1; // Error: no path set
     }
     AssimpLoader loader;
-    if (!loader.ReloadModel(this->meshData, this->meshData.id)) {
+    if (!loader._ReloadModel(this->meshData, this->meshData.id)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to reload mesh from %s", this->meshData.path.c_str());
         return 1; // Error reloading mesh
     }

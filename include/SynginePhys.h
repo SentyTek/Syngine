@@ -1,3 +1,11 @@
+// ╒══════════════════════ SynginePhys.h ═╕
+// │ Syngine                              │
+// │ Created 2025-05-21                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 
 // Forward declarations
@@ -29,36 +37,35 @@ class DebugRender;
 #include <SDL3/SDL_log.h>
 #include <cstdint>
 
-//Disables common Jolt warnings
+// Disables common Jolt warnings
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable : 4324)
 #endif
 
 using namespace JPH;
-
 namespace Syngine {
 
-    //Layer definitions for Joly
+    // Layer definitions for Jolt
     namespace Layers {
         static constexpr ObjectLayer NON_MOVING = 0;
         static constexpr ObjectLayer MOVING = 1;
         static constexpr ObjectLayer NUM_LAYERS = 2; 
     };
 
-    //BroadPhaseLayer definitions for Jolt
+    // BroadPhaseLayer definitions for Jolt
     namespace BroadPhaseLayers {
         static constexpr BroadPhaseLayer NON_MOVING(0);
         static constexpr BroadPhaseLayer MOVING(1);
         static constexpr uint32_t NUM_BP_LAYERS = 2; 
     };
 
-    //BroadPhaseLayerInterface implementation
-    //Defined a mapping between ObjectLayer and BroadPhaseLayer
+    // BroadPhaseLayerInterface implementation
+    // Defined a mapping between ObjectLayer and BroadPhaseLayer
     class BPLayerInterfaceImpl : public BroadPhaseLayerInterface {
         public:
         BPLayerInterfaceImpl() {
-            //Create a mapping table from object to broadphase layer
+            // Create a mapping table from object to broad phase layer
             mObjectToBroadPhase[Layers::NON_MOVING] = BroadPhaseLayers::NON_MOVING;
             mObjectToBroadPhase[Layers::MOVING] = BroadPhaseLayers::MOVING;
         }
@@ -91,7 +98,7 @@ namespace Syngine {
     };
 
     //ObjectVsBroadPhaseLayerFilter implementation
-    //Defines how object layers interact with broadphase layers
+    //Defines how object layers interact with broad phase layers
     class ObjectVsBroadPhaseLayerFilterImpl : public ObjectVsBroadPhaseLayerFilter {
         public:
         virtual bool ShouldCollide(ObjectLayer inLayer1, BroadPhaseLayer inLayer2) const override {
@@ -150,7 +157,7 @@ namespace Syngine {
         }
     };
 
-    //Body adtivation lister placeholder
+    //Body activation lister placeholder
     class SynBodyActivationListener : public BodyActivationListener {
         public:
         virtual void OnBodyActivated(const JPH::BodyID &inBodyID, uint64_t /*inBodyUserData*/) override
@@ -164,59 +171,163 @@ namespace Syngine {
         }
     };
 
+    /// @brief Physics manager class for Syngine
+    /// @section Physics
+    /// @since v0.0.1
     class Phys {
         public:
         Phys();
         ~Phys();
 
-        void Init(bool debug);
-        void Shutdown();
-        void Update(float deltaTime, int collisionSteps);
+        /// @brief Initialize the physics system
+        /// @param debug Whether to enable debug rendering
+        /// @return 0 on success, non-zero on failure
+        /// @since v0.0.1
+        /// @internal
+        void _Init(bool debug);
+
+        /// @brief Shutdown the physics system
+        /// @since v0.0.1
+        /// @internal
+        void _Shutdown();
+
+        /// @brief Update the physics system
+        /// @param deltaTime The time elapsed since the last update
+        /// @param collisionSteps The number of collision detection steps to perform
+        /// @since v0.0.1
+        /// @internal
+        void _Update(float deltaTime, int collisionSteps);
+
+        /// @brief Draw debug information
+        /// @param width Width of the viewport
+        /// @param height Height of the viewport
+        /// @param program Shader program to use for rendering
         void _DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam);
 
-        BodyInterface& GetBodyInterface() { return mPhysicsSystem.GetBodyInterface(); }
-        PhysicsSystem& GetPhysicsSystem() { return mPhysicsSystem; }
-        const BPLayerInterfaceImpl& GetBroadPhaseLayerInterface() const {
+        /// @brief Get the body interface for manipulating bodies
+        /// @return Reference to the body interface
+        /// @since v0.0.1
+        /// @internal
+        BodyInterface& _GetBodyInterface() {
+            return mPhysicsSystem.GetBodyInterface();
+        }
+
+        /// @brief Get the physics system
+        /// @return Reference to the physics system
+        /// @since v0.0.1
+        /// @internal
+        PhysicsSystem& _GetPhysicsSystem() { return mPhysicsSystem; }
+
+        /// @brief Get the broad phase layer interface
+        /// @return Reference to the broad phase layer interface
+        /// @since v0.0.1
+        /// @internal
+        const BPLayerInterfaceImpl& _GetBroadPhaseLayerInterface() const {
             return mBroadPhaseLayerInterface;
         }
-        const ObjectLayerPairFilterImpl& GetObjectLayerPairFilter() const {
+
+        /// @brief Get the object vs broad phase layer filter
+        /// @return Reference to the object vs broad phase layer filter
+        /// @since v0.0.1
+        /// @internal
+        const ObjectLayerPairFilterImpl& _GetObjectLayerPairFilter() const {
             return mObjectLayerPairFilter;
         }
-        const ObjectVsBroadPhaseLayerFilterImpl& GetObjectVsBroadPhaseLayerFilter() const {
+
+        /// @brief Get the object vs broad phase layer filter
+        /// @return Reference to the object vs broad phase layer filter
+        /// @since v0.0.1
+        /// @internal
+        const ObjectVsBroadPhaseLayerFilterImpl& _GetObjectVsBroadPhaseLayerFilter() const {
             return mObjectVsBroadPhaseLayerFilter;
         }
 
-        BodyID CreateSphere(RVec3Arg    position,
-                            float       radius,
-                            EMotionType motionType,
-                            ObjectLayer layer,
-                            float       mass = 0.0f);
-        BodyID CreateBox(RVec3Arg    position,
-                         QuatArg     rotation,
-                         Vec3Arg     halfExtent,
-                         EMotionType motionType,
-                         ObjectLayer layer,
-                         float       mass = 0.0f);
-        BodyID CreateMeshBody(RVec3Arg         position,
-                              QuatArg          rotation,
-                              const MeshData&  meshData,
-                              EMotionType      motionType,
-                              ObjectLayer      layer,
-                              const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f));
-        
-        BodyID CreateCapsule(RVec3Arg    position,
+        /// @brief Create a sphere body
+        /// @param position Position of the sphere
+        /// @param radius Radius of the sphere
+        /// @param motionType Motion type of the sphere
+        /// @param layer Layer of the sphere
+        /// @param mass Mass of the
+        /// @return Body ID of the created sphere
+        /// @since v0.0.1
+        /// @internal
+        BodyID _CreateSphere(RVec3Arg    position,
                              float       radius,
-                             float       halfHeight,
                              EMotionType motionType,
                              ObjectLayer layer,
                              float       mass = 0.0f);
-        BodyID CreateCylinder(RVec3Arg    position,
-                              QuatArg     rotation,
+
+        /// @brief Create a box body
+        /// @param position Position of the box
+        /// @param rotation Rotation of the box
+        /// @param halfExtent Half extent of the box
+        /// @param motionType Motion type of the box
+        /// @param layer Layer of the box
+        /// @param mass Mass of the box
+        /// @return Body ID of the created box
+        /// @since v0.0.1
+        /// @internal
+        BodyID _CreateBox(RVec3Arg    position,
+                          QuatArg     rotation,
+                          Vec3Arg     halfExtent,
+                          EMotionType motionType,
+                          ObjectLayer layer,
+                          float       mass = 0.0f);
+
+        /// @brief Create a mesh body
+        /// @param position Position of the mesh
+        /// @param rotation Rotation of the mesh
+        /// @param meshData Mesh data to create the body from
+        /// @param motionType Motion type of the mesh
+        /// @param layer Layer of the mesh
+        /// @param scale Scale of the mesh
+        /// @return Body ID of the created mesh
+        /// @note The mesh data should be in the Syngine::MeshData format
+        /// @since v0.0.1
+        /// @internal
+        BodyID
+        _CreateMeshBody(RVec3Arg         position,
+                        QuatArg          rotation,
+                        const MeshData&  meshData,
+                        EMotionType      motionType,
+                        ObjectLayer      layer,
+                        const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f));
+
+        /// @brief Create a capsule body
+        /// @param position Position of the capsule
+        /// @param radius Radius of the capsule
+        /// @param halfHeight Half height of the capsule
+        /// @param motionType Motion type of the capsule
+        /// @param layer Layer of the capsule
+        /// @param mass Mass of the capsule
+        /// @return Body ID of the created capsule
+        /// @since v0.0.1
+        /// @internal
+        BodyID _CreateCapsule(RVec3Arg    position,
                               float       radius,
                               float       halfHeight,
                               EMotionType motionType,
                               ObjectLayer layer,
                               float       mass = 0.0f);
+
+        /// @brief Create a cylinder body
+        /// @param position Position of the cylinder
+        /// @param rotation Rotation of the cylinder
+        /// @param radius Radius of the cylinder
+        /// @param halfHeight Half height of the cylinder
+        /// @param motionType Motion type of the cylinder
+        /// @param layer Layer of the cylinder
+        /// @param mass Mass of the cylinder
+        /// @return Body ID of the created cylinder
+        /// @since v0.0.1
+        /// @internal
+        BodyID _CreateCylinder(RVec3Arg    position,
+                               QuatArg     rotation,
+                               float       radius,
+                               float       halfHeight,
+                               EMotionType motionType,
+                               ObjectLayer layer,
+                               float       mass = 0.0f);
 
         private:
         //Jolt specific variables
@@ -239,6 +350,7 @@ namespace Syngine {
         static void TraceImpl(const char* inFMT, ...);
         static bool AssertFailedImpl(const char* inExpression, const char* inMessage, const char* inFile, uint32_t inLine);
     };
+
 } // namespace Syngine
 
 #ifdef _MSC_VER

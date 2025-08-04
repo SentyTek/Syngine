@@ -1,3 +1,11 @@
+// ╒═════════════ TransformComponent.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-20                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "TransformComponent.h"
 #include "SyngineGameobject.h"
 #include "bx/math.h"
@@ -28,7 +36,7 @@ void TransformComponent::Init(std::vector<float> position,
     this->scale[2] = scale[2];
 }
 
-Syngine::Components TransformComponent::getComponentType() {
+Syngine::Components TransformComponent::GetComponentType() {
     return SYN_COMPONENT_TRANSFORM;
 }
 

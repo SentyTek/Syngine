@@ -1,8 +1,15 @@
+// ╒═════════════ SyngineModelLoader.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-05                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SynModelLoader.h"
 #include "SyngineLogger.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
-#include "defines.h"
 #include "helpers.h"
 #include <cstdint>
 
@@ -17,11 +24,11 @@ namespace Syngine {
 std::vector<MeshData> SynModelLoader::loadedMeshes;
 
 // Returns a vector of all loaded meshes
-std::vector<MeshData>& SynModelLoader::getMeshes() { return loadedMeshes; }
+std::vector<MeshData>& SynModelLoader::_GetMeshes() { return loadedMeshes; }
 
 // Returns a pointer to a mesh by its ID, or nullptr if not found.
 // ID param is the index in the meshes vector, returned from the LoadModel function.
-MeshData* SynModelLoader::getMeshById(int id) {
+MeshData* SynModelLoader::_GetMeshById(int id) {
     for (auto& mesh : loadedMeshes) {
         if (mesh.id == id) {
             return &mesh;
@@ -31,7 +38,7 @@ MeshData* SynModelLoader::getMeshById(int id) {
 }
 
 
-void SynModelLoader::UnloadAll() {
+void SynModelLoader::_UnloadAllMeshes() {
     for (auto& mesh : loadedMeshes) {
         for (auto& mat : mesh.materials) {
             if (bgfx::isValid(mat.albedo)) {
@@ -54,7 +61,7 @@ void SynModelLoader::UnloadAll() {
 /* Assimp importer */
 
 //Returns true if the model was loaded successfully, false otherwise
-bool AssimpLoader::LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
+bool AssimpLoader::_LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
     const uint16_t flags    = aiProcess_JoinIdenticalVertices
@@ -359,8 +366,8 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
 }
 
 // Reloads a model by its ID, returns true if successful
-bool AssimpLoader::ReloadModel(MeshData& out, int id) {
-    MeshData* mesh = getMeshById(id);
+bool AssimpLoader::_ReloadModel(MeshData& out, int id) {
+    MeshData* mesh = _GetMeshById(id);
     if (!mesh) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Mesh with ID %d not found", id);
         return false;

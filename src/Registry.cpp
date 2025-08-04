@@ -1,3 +1,11 @@
+// ╒═══════════════════════ Registry.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-07-24                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "Registry.h"
 #include "Components.h"
 #include "SyngineGameobject.h"

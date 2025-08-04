@@ -1,3 +1,11 @@
+// ╒════════════════ CameraComponent.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-06-10                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "CameraComponent.h"
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
@@ -56,7 +64,7 @@ void CameraComponent::Update(int viewId, int width, int height) {
     bgfx::setViewTransform(viewId, cam.view, cam.proj);
 }
 
-Components CameraComponent::getComponentType() {
+Components CameraComponent::GetComponentType() {
     return SYN_COMPONENT_CAMERA;
 }
 

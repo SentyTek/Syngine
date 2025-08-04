@@ -1,3 +1,11 @@
+// ╒════════════════════════ helpers.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-10                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "helpers.h"
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
@@ -11,7 +19,8 @@
 #endif
 #include "stb_image.h"
 
-static void boxDownsample2x2(const uint8_t* src, int srcW, int srcH, std::vector<uint8_t>& dst) {
+// This is a private function exclusively used in this file
+static void _BoxDownsample2x2(const uint8_t* src, int srcW, int srcH, std::vector<uint8_t>& dst) {
     int dstW = std::max(1, srcW / 2);
     int dstH = std::max(1, srcH / 2);
     dst.resize(dstW * dstH * 4);
@@ -75,7 +84,7 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
         //generate next mip in our src buffer
         if(level+1 < mipCount) {
             std::vector<uint8_t> next;
-            boxDownsample2x2(src.data(), levelW, levelH, next);
+            _BoxDownsample2x2(src.data(), levelW, levelH, next);
             src.swap(next);
             levelW = std::max(1, levelW / 2);
             levelH = std::max(1, levelH / 2);
