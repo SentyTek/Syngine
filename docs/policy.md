@@ -8,6 +8,18 @@ In addition, the repository comes with `.clang-format` and `.editor-format` file
 
 All functions designed for internal engine use only should be marked with `_functionname`. We use PascalCase for function names and camelCase for variable names, generally using CAPITAL_SNAKE_CASE for macros and enum cases.
 
+We use top-of-file comments on all header and source files which look like this:
+```cpp
+// ╒═════════════════════════════ File.h ═╕
+// │ Syngine                              │
+// │ Created YYYY-MM-DD                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+```
+You can copy-and-paste that comment into any new header and source files you create. Our SyngineTests package will also ensure this top-of-file comment is added.
+
 ## Code documentation format
 SynDoc Format v1
 
