@@ -1,3 +1,11 @@
+// ╒═════════════════════ SyngineDebug.h ═╕
+// │ Syngine                              │
+// │ Created 2025-06-19                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #ifndef JPH_DEBUG_RENDERER
 #define JPH_DEBUG_RENDERER

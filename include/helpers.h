@@ -1,3 +1,11 @@
+// ╒══════════════════════════ helpers.h ═╕
+// │ Syngine                              │
+// │ Created 2025-05-07                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include "bgfx/bgfx.h"
 #include <string>

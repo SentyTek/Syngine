@@ -1,3 +1,11 @@
+// ╒════════════════════ SyngineLogger.h ═╕
+// │ Syngine                              │
+// │ Created 2025-07-14                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include <filesystem>
 #include <fstream>

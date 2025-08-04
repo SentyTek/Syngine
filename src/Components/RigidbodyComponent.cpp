@@ -1,3 +1,11 @@
+// ╒═════════════ RigidbodyComponent.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-22                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "RigidbodyComponent.h"
 #include "Components.h"
 #include "SyngineCore.h"

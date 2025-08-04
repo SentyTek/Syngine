@@ -1,3 +1,11 @@
+// ╒════════════════ SyngineGraphics.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-04-20                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SyngineGraphics.h"
 #include "ShaderUtils.h"
 #include "SyngineLogger.h"

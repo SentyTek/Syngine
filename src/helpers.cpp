@@ -1,3 +1,11 @@
+// ╒════════════════════════ helpers.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-10                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "helpers.h"
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>

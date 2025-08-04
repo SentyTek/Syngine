@@ -1,3 +1,11 @@
+// ╒═══════════════════ SynModelLoader.h ═╕
+// │ Syngine                              │
+// │ Created 2025-05-05                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include <vector>
 #include <string>

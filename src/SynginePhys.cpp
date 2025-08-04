@@ -1,3 +1,11 @@
+// ╒════════════════════ SynginePhys.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-21                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SynginePhys.h"
 #include "SyngineLogger.h"
 #include <thread> //for hardware_concurrency

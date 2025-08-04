@@ -1,3 +1,11 @@
+// ╒════════════════════════ FsUtils.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-07-18                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SDL3/SDL_log.h"
 #ifdef _WIN32
 #define NOMINMAX

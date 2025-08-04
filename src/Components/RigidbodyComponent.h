@@ -1,3 +1,11 @@
+// ╒═══════════ ═══ RigidbodyComponent.h ═╕
+// │ Syngine                              │
+// │ Created 2025-05-22                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include "Components.h"
 #include "SynginePhys.h"

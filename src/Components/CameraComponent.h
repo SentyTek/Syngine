@@ -1,3 +1,11 @@
+// ╒══════════════════ CameraComponent.h ═╕
+// │ Syngine                              │
+// │ Created 2025-06-10                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include "Components.h"
 

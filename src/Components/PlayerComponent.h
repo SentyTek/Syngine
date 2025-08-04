@@ -1,3 +1,11 @@
+// ╒══════════════════ PlayerComponent.h ═╕
+// │ Syngine                              │
+// │ Created 2025-05-29                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include "Components.h"
 #include "SDL3/SDL_video.h"

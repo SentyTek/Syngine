@@ -1,3 +1,11 @@
+// ╒═════════════ SyngineModelLoader.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-05                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SynModelLoader.h"
 #include "SyngineLogger.h"
 #include "bgfx/bgfx.h"

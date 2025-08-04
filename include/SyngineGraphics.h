@@ -1,3 +1,11 @@
+// ╒══════════════════ SyngineGraphics.h ═╕
+// │ Syngine                              │
+// │ Created 2025-05-06                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include <string>
 #include <vector>

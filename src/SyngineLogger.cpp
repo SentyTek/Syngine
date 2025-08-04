@@ -1,3 +1,11 @@
+// ╒══════════════════ SyngineLogger.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-07-14                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SDL3/SDL_messagebox.h"
 #include "SyngineLogger.h"
 #include "SDL3/SDL.h"

@@ -1,3 +1,11 @@
+// ╒════════════════ PlayerComponent.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-29                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "PlayerComponent.h"
 #include "CameraComponent.h"
 #include "TransformComponent.h"

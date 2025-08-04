@@ -1,3 +1,11 @@
+// ╒═══════════════════ SyngineDebug.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-06-19                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SyngineDebug.h"
 #include "Components/CameraComponent.h"
 #include "Jolt/Physics/Collision/Shape/Shape.h"

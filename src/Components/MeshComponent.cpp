@@ -1,3 +1,11 @@
+// ╒══════════════════ MeshComponent.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-20                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "Components/MeshComponent.h"
 #include "SyngineLogger.h"
 #include "SynModelLoader.h"

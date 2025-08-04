@@ -1,3 +1,11 @@
+// ╒════════════════════ SyngineCore.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-04-22                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>

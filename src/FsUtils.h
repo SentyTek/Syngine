@@ -1,3 +1,11 @@
+// ╒═════════════════════════════ FsUtils.h ═╕
+// │ Syngine                              │
+// │ Created 2025-07-18                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include <filesystem>
 #include "SyngineCore.h"
 namespace Syngine {

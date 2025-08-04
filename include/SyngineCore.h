@@ -1,3 +1,11 @@
+// ╒══════════════════════ SyngineCore.h ═╕
+// │ Syngine                              │
+// │ Created 2025-04-22                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include "SyngineGraphics.h"
 #include "SynModelLoader.h"

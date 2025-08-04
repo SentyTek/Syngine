@@ -1,3 +1,11 @@
+// ╒═══════════════ SynOSXMetalBridge.mm ═╕
+// │ Syngine                              │
+// │ Created 2025-04-22                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #ifdef __OBJC__
 #import <Cocoa/Cocoa.h>
 #endif
