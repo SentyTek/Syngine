@@ -27,14 +27,32 @@ public:
 		A, B, C // etc
 	};
 	
-	/// @brief A single non-directional modifier key
-	/// @section Input
+	/// @brief A single unsided modifier key
+	/// @section Input`@param` and `@return`
 	/// @see ModifierKeys
+	/// @see SidedModifierKey
 	enum class ModifierKey: uint8_t {
-		command = 1 << 0, gui = 1 << 0, windows = 1 << 0,
-		shift   = 1 << 1,
-		option  = 1 << 2, alt = 1 << 2,
-		control = 1 << 3
+		COMMAND = 1 << 0, GUI = 1 << 0, WINDOWS = 1 << 0,
+		SHIFT   = 1 << 1,
+		OPTION  = 1 << 2, ALT = 1 << 2,
+		CONTROL = 1 << 3
+	};
+	
+	/// @brief A single sided modifier key
+	/// @section Input
+	/// @see ModifierKey
+	enum class SidedModifierKey: uint8_t {
+		 LEFT_COMMAND = 1,  LEFT_GUI = 1,  LEFT_WINDOWS = 1,
+		RIGHT_COMMAND = 2, RIGHT_GUI = 2, RIGHT_WINDOWS = 2,
+		
+		 LEFT_SHIFT = 3,
+		RIGHT_SHIFT = 4,
+		
+		 LEFT_OPTION = 5,  LEFT_ALT = 5,
+		RIGHT_OPTION = 6, RIGHT_ALT = 6,
+		
+		 LEFT_CONTROL = 7,
+		RIGHT_CONTROL = 8
 	};
 	
 	/// @brief A set of ``ModifierKey``s, mainly used in keyboard shortcuts
@@ -100,7 +118,7 @@ public:
 	InputBinding(InputChord chord);
 	
 private:
-	std::variant<KeyboardKey, ModifierKeys, KeyboardShortcut, InputChord> binding;
+	std::variant<KeyboardKey, ModifierKey, SidedModifierKey, KeyboardShortcut, InputChord> binding;
 };
 
 /// @brief Returns the ModifierKeys instance equivilant to the combination of both ModifierKey instances
