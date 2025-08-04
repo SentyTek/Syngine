@@ -10,54 +10,102 @@
 using namespace std;
 
 /*
-    Syngine Gameobjects are the base class for all game objects used within a
-   game. They are used to represent objects in the game world, such as players,
-   enemies, and items. They are also used to represent objects that are not
-   directly related to the game world, such as UI elements and menus.
+    Syngine GameObjects are the base class for all game objects used within a
+    game. They are used to represent objects in the game world, such as players,
+    enemies, and items. They are also used to represent objects that are not
+    directly related to the game world, such as UI elements and menus.
 
-    Gameobjects can then have various components attached to them, such as a
-   mesh, transform, physics, AI, PlayerController, etc.
+    GameObjects can then have various components attached to them, such as a
+    mesh, transform, physics, AI, PlayerController, etc.
 */
 namespace Syngine {
 
+/// @brief GameObject class representing an entity in the game world, such as a
+/// player, enemy, or item. They can have various components attached to them,
+/// such as a mesh, physics, AI, etc.
+/// @section GameObject
+/// @since v0.0.1
 class GameObject {
-  private:
-    // Unique ID for the GameObject
-    long id;
-    // Map of components attached to the GameObject
-    map<Syngine::Components, unique_ptr<Syngine::Component>> components;
-    // Whether the GameObject is active or not
-    bool isActive = true;
   public:
-     // Name of the GameObject, used for identification and debugging
-    string name;
-    // Type of the GameObject, used for categorization and filtering.
-    // Type can be used to categorize gameobjects, e.g., "player", "enemy", "item"
-    string type;
-    // Gizmo type for rendering in the editor, e.g., "camera_render", "mesh_render"
-    string gizmo;
+    string name; //* Name of the GameObject, used for identification and
+                 //* debugging.
 
+    string type; //* Type of the GameObject, used for categorization and
+                 //* filtering. e.g., "player", "enemy", "item", etc.
+
+    string gizmo; //* Gizmo type for rendering in the editor, e.g.,
+                  //* "camera_render", "mesh_render"
+
+    /// @brief Constructor for the GameObject class
+    /// @param name Name of the GameObject
+    /// @param type Type of the GameObject, defaults to "default"
+    /// @since v0.0.1
     GameObject(string name, string type = "default");
+
     ~GameObject();
 
-    // Get the ID of the GameObject
+    /// @brief Get the ID of the GameObject
+    /// @return ID of the GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
     inline long GetID() noexcept { return this->id; };
-    // Set the ID of the GameObject
+
+    /// @brief Set the ID of the GameObject
+    /// @param id ID of the GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
+    /// @internal
     inline void _SetID(long id) noexcept { this->id = id; }
-    // Check if the GameObject is active
+
+    /// @brief Check if the GameObject is active
+    /// @return true if the GameObject is active, false otherwise
+    /// @threadsafety safe
+    /// @since v0.0.1
     inline bool IsActive() const noexcept { return this->isActive; }
-    // Set the active state of the GameObject
+
+    /// @brief Set the active state of the GameObject
+    /// @param active true to set the GameObject as active, false to set it as
+    /// inactive
+    /// @threadsafety safe
+    /// @since v0.0.1
     void SetActive(bool active) noexcept;
-    // Remove a component from the GameObject
+
+    /// @brief Remove a component from the GameObject
+    /// @param type Type of the component to remove
+    /// @return 0 on success, -1 if the component was not found
+    /// @threadsafety not-safe
+    /// @since v0.0.1
     int RemoveComponent(Syngine::Components type);
-    // Check if the GameObject has a component of the specified type
+
+    /// @brief Check if the GameObject has a component of the specified type
+    /// @param type Type of the component to check
+    /// @return true if the component exists, false otherwise
+    /// @threadsafety safe
+    /// @since v0.0.1
     bool HasComponent(Syngine::Components type);
 
-    // Get a component of the specified type
+    /// @brief Get a component of the specified type
+    /// @param T Type of the component to get
+    /// @return Pointer to the component if it exists, nullptr otherwise
+    /// @threadsafety not-safe
+    /// @since v0.0.1
     template <typename T> T* GetComponent();
-    
-    // Add a component to the GameObject
+
+    /// @brief Add a component to the GameObject
+    /// @param T Type of the component to add
+    /// @param args Arguments to pass to the component constructor
+    /// @return Pointer to the added component if successful, nullptr otherwise
+    /// @threadsafety not-safe
+    /// @since v0.0.1
     template <typename T, typename... Args> T* AddComponent(Args&&... args);
+
+  private:
+    long id; // Unique ID for the GameObject
+
+    std::map<Syngine::Components, unique_ptr<Syngine::Component>>
+        components; // Map of components attached to the GameObject
+
+    bool isActive = true; // Whether the GameObject is active or not
 };
 
 template<typename T>

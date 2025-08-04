@@ -56,7 +56,7 @@ void CameraComponent::Update(int viewId, int width, int height) {
     bgfx::setViewTransform(viewId, cam.view, cam.proj);
 }
 
-Components CameraComponent::getComponentType() {
+Components CameraComponent::GetComponentType() {
     return SYN_COMPONENT_CAMERA;
 }
 

@@ -52,14 +52,14 @@ Core::Core(const std::string& appName) {
 
     // Check if required folders exist (shaders, meshes)
     // CheckRequiredFolders will abort if any folder is missing
-    if (Syngine::CheckRequiredFolders()) {
+    if (Syngine::_CheckRequiredFolders()) {
         this->app = new App();
         this->app->appName = appName;
         this->app->graphics = nullptr; // No graphics attached initially
         this->app->synModels = new AssimpLoader(); // Initialize the model loader
 
         this->app->physicsManager = new Phys(); // Initialize the physics manager
-        this->app->physicsManager->Init(
+        this->app->physicsManager->_Init(
             this->app->debug); // Initialize the physics system
     }
 }
@@ -72,12 +72,12 @@ Core::~Core() {
             this->app->graphics = nullptr;
         }
         if (this->app->synModels) {
-            this->app->synModels->UnloadAll();
+            this->app->synModels->_UnloadAllMeshes();
             //delete this->app->synModels; //It was getting mad.
             this->app->synModels = nullptr;
         }
         if (this->app->physicsManager) {
-            this->app->physicsManager->Shutdown();
+            this->app->physicsManager->_Shutdown();
             delete this->app->physicsManager;
             this->app->physicsManager = nullptr;
         }
@@ -154,7 +154,7 @@ int Core::SyngineEventLoop() {
     
     const float physicsTimestep = 1.0f / 60.0f;
     const int   physicsSteps    = 1;
-    float accumlator = 0.0f;
+    float accumulator = 0.0f;
     
     float oneSec       = 0.0f;
     int   frame        = 0;
@@ -197,7 +197,7 @@ int Core::SyngineEventLoop() {
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
                 if (event.key.key == SDLK_F) {
                     //load model
-                    std::string modelPath = Syngine::ResolveOSPath("meshes/ground.glb");
+                    std::string modelPath = Syngine::_ResolveOSPath("meshes/ground.glb");
                     GameObject* model = new GameObject("ground", "terrain");
                     Syngine::RigidbodyParameters params = {
                         .shape           = PhysicsShapes::MESH,
@@ -220,7 +220,7 @@ int Core::SyngineEventLoop() {
                         simulate = !simulate;
                     }
                 } else if (event.key.key == SDLK_1) {
-                    string modelPath = Syngine::ResolveOSPath("meshes/cube.glb");
+                    string modelPath = Syngine::_ResolveOSPath("meshes/cube.glb");
                     GameObject* cube = new GameObject("cube", "default");
 
                     std::vector<float> boxExtents = { 2.0f,
@@ -245,7 +245,7 @@ int Core::SyngineEventLoop() {
                     cube->AddComponent<Syngine::MeshComponent>(modelPath, false);
                     cube->AddComponent<Syngine::RigidbodyComponent>(params);
                 } else if (event.key.key == SDLK_2) {
-                    string modelPath = Syngine::ResolveOSPath("meshes/sphere.glb");
+                    string modelPath = Syngine::_ResolveOSPath("meshes/sphere.glb");
                     GameObject* sphere = new GameObject("sphere", "default");
 
                     std::vector<float> sphereExtents = { // Full extents for sphere shape (diameter)
@@ -335,7 +335,7 @@ int Core::SyngineEventLoop() {
                     PlayerComponent* playerComp =
                         player->GetComponent<PlayerComponent>();
                     if (playerComp)
-                        playerComp->HandleInput(event);
+                        playerComp->_HandleInput(event);
                 }
             }
         }
@@ -460,12 +460,12 @@ int Core::SyngineEventLoop() {
         // simulation stuff
         if (simulate) {
             if (this->app->physicsManager) {
-                accumlator += deltaTime;
+                accumulator += deltaTime;
 
-                while(accumlator >= physicsTimestep) {
-                    this->app->physicsManager->Update(physicsTimestep, physicsSteps);
+                while(accumulator >= physicsTimestep) {
+                    this->app->physicsManager->_Update(physicsTimestep, physicsSteps);
                     physCounter++;
-                    accumlator -= physicsTimestep;
+                    accumulator -= physicsTimestep;
                 }
             }
         }
@@ -510,7 +510,7 @@ int Core::SyngineEventLoop() {
         // (I do not like the two if playermode here but eh)
         if (playerMode) {
             if (player->GetComponent<PlayerComponent>()) {
-                player->GetComponent<PlayerComponent>()->PostPhysicsUpdate();
+                player->GetComponent<PlayerComponent>()->_PostPhysicsUpdate();
             }
         }
 
@@ -554,7 +554,7 @@ int Core::SyngineEventLoop() {
         }
     }
     
-    this->app->synModels->UnloadAll();
+    this->app->synModels->_UnloadAllMeshes();
     Syngine::Logger::Info("Exiting event loop");
     return 0;
 }

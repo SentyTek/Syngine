@@ -299,8 +299,8 @@ int Graphics::DestroyRenderer() {
 }
 
 int Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* name, Syngine::ViewID viewId) {
-    bgfx::ShaderHandle vs = LoadShader(vsPath);
-    bgfx::ShaderHandle fs = LoadShader(fsPath);
+    bgfx::ShaderHandle vs = _LoadShader(vsPath);
+    bgfx::ShaderHandle fs = _LoadShader(fsPath);
     bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
     if (bgfx::isValid(vs) && bgfx::isValid(fs)) {
         programHandle = bgfx::createProgram(vs, fs, true);
@@ -327,9 +327,9 @@ int Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* nam
 
 int Graphics::AddProgram(const char* path, const char* name, Syngine::ViewID viewId) {
     // Load the shader from the given path
-    bgfx::ShaderHandle vs = LoadShader((std::string(path) + ".vert.sc.bin").c_str());
-    bgfx::ShaderHandle fs = LoadShader((std::string(path) + ".frag.sc.bin").c_str());
-    
+    bgfx::ShaderHandle vs = _LoadShader((std::string(path) + ".vert.sc.bin").c_str());
+    bgfx::ShaderHandle fs = _LoadShader((std::string(path) + ".frag.sc.bin").c_str());
+
     if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load shaders for program %s", name);
         return -1;
@@ -397,8 +397,8 @@ bool Graphics::RemoveAllPrograms() {
 bool Graphics::ReloadProgram(const char* name) {
     for (auto& prog : this->handles.programs) {
         if (prog.name == name) {
-            bgfx::ShaderHandle vs = LoadShader(prog.vsPath.c_str());
-            bgfx::ShaderHandle fs = LoadShader(prog.fsPath.c_str());
+            bgfx::ShaderHandle vs = _LoadShader(prog.vsPath.c_str());
+            bgfx::ShaderHandle fs = _LoadShader(prog.fsPath.c_str());
             bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
 
             if (!bgfx::isValid(newProgram)) {
@@ -451,8 +451,8 @@ void Graphics::DestroyWindow() { //dw this is effectively the destructor
 void Graphics::_RegisterGizmo(const std::string& tag, float size) {
     if (this->gizmoRegistry.find(tag) != this->gizmoRegistry.end())
         return; // Gizmo already registered
-    
-    std::string resolvedPath = Syngine::ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
+
+    std::string resolvedPath = Syngine::_ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
     const char* path = resolvedPath.c_str();
     bgfx::TextureHandle texture = Syngine::LoadTextureFromFile(path);
     

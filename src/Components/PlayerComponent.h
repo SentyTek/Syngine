@@ -15,6 +15,9 @@ namespace Syngine {
 // Forward declaration of TransformComponent
 class TransformComponent;
 
+/// @brief Enum representing the different states a player can be in. Each state
+/// corresponds to a specific action or condition of the player
+/// @section PlayerComponent
 enum class PlayerState {
     IDLE      = 0,
     WALKING   = 1,
@@ -30,60 +33,108 @@ enum class PlayerState {
     INVALID   = 11,
 };
 
+/// @brief PlayerComponent is responsible for handling player input, movement,
+/// and state. It manages the player's position, rotation, and interactions with
+/// the game world.
+/// @section PlayerComponent
 class PlayerComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER;
+    static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER; //* Player component type
 
+    /// @brief Constructor for PlayerComponent
+    /// @param owner The GameObject that owns this component.
+    /// @param camera The camera component to use for the player.
+    /// @param win The SDL window for the player.
+    /// @note This should only be called by GameObject::AddComponent<T>()
+    /// @since v0.0.1
+    /// @internal
     PlayerComponent(GameObject*               owner,
                     Syngine::CameraComponent* camera,
                     SDL_Window*               win);
+    
     ~PlayerComponent();
 
-    // Gets the component type
-    Syngine::Components getComponentType() override;
+    /// @brief Gets the component type
+    /// @return The component type of this component.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    Syngine::Components GetComponentType() override;
 
-    // Initializes the player component with camera, window, and physics
-    // manager.
-    // @param camera The camera component to use for the player.
-    // @param win The SDL window for the player.
-    // @param physicsManager The physics manager to use for the player.
+    /// @brief Initializes the player component with camera, window, and physics
+    /// manager.
+    /// @param camera The camera component to use for the player.
+    /// @param win The SDL window for the player.
+    /// @param physicsManager The physics manager to use for the player.
+    /// @note This should only be called when the component is added to a GameObject
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
     void Init(Syngine::CameraComponent* camera,
               SDL_Window*               win);
 
-    // Handles input events for the player component.
-    // @param event The SDL Events.
-    void HandleInput(const SDL_Event& event);
+    /// @brief Handles input events for the player component.
+    /// @param event The SDL Events.
+    /// @note This is called every time an input event occurs, such as key presses or mouse movements.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
+    void _HandleInput(const SDL_Event& event);
 
-    // Updates the player. Mostly handles movement, physics, and updating the
-    // state.
-    // @param keystate The current state of the keyboard.
-    // @param simulate Whether to simulate physics or not.
-    // @param deltaTime The time since the last update.
+    /// @brief Updates the player. Mostly handles movement, physics, and
+    /// updating the state.
+    /// @param keystate The current state of the keyboard.
+    /// @param simulate Whether to simulate physics or not.
+    /// @param deltaTime The time since the last update.
+    /// @note This is called every frame to update the player's position,
+    /// rotation, and state.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
     void Update(const bool* keystate, bool simulate, float deltaTime);
-    // Updates position and camera after physics simulation.
-    void PostPhysicsUpdate();
-    // Gets the current player state.
-    // @return The current player state.
+
+    /// @brief Updates position and camera after physics simulation.
+    /// @note This is called after the physics simulation to update the player's
+    /// position and camera based on the physics simulation results.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
+    void _PostPhysicsUpdate();
+
+    /// @brief Gets the current player state.
+    /// @return The current player state.
+    /// @threadsafety read-only
+    /// @since v0.0.1
     PlayerState GetPlayerState() const;
 
+    /// @brief Gets the player's world space rotation.
+    /// @return pointer to an array of two floats, representing yaw and pitch
+    /// respectively.
+    /// @threadsafety read-only
+    /// @since v0.0.1
     float* GetRotation() const;
+
+    /// @brief Sets the player's world space rotation.
+    /// @param yaw The yaw rotation in radians.
+    /// @param pitch The pitch rotation in radians.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
     void SetRotation(float yaw, float pitch);
    
-    float maxPitchAngle = 89.0f; // Max vertical angle for the camera pitch (in degrees).
+    float maxPitchAngle = 89.0f; //* Max vertical angle for the camera pitch (in degrees).
     
-    float sprintMult    = 2.0f; // Multiplier for sprinting speed.
-    float crouchSpeed   = 0.5f; // Speed when crouching.
-    float moveSpeed     = 1.5f; // Default movement speed of the player.
-    float mouseSens     = 0.002f; // Mouse sensitivity for camera movement.
-    float standHeight   = 0.5f;   // Height of the player when standing.
-    float crouchHeight  = 0.2f;   // Height of the player when crouching.
-    float playerRadius  = 0.35f;  // Radius of the player collider.
+    float sprintMult    = 2.0f; //* Multiplier for sprinting speed.
+    float crouchSpeed   = 0.5f; //* Speed when crouching.
+    float moveSpeed     = 1.5f; //* Default movement speed of the player.
+    float mouseSens     = 0.002f; //* Mouse sensitivity for camera movement.
+    float standHeight   = 0.5f;   //* Height of the player when standing.
+    float crouchHeight  = 0.2f;   //* Height of the player when crouching.
+    float playerRadius  = 0.35f;  //* Radius of the player collider.
 
-    bool enableMovement  = true; // Whether player movement is enabled (on by default).
-    bool enableSliding   = true; // Whether player sliding is enabled (on by default).
-    bool enableJumping   = true; // Whether player jumping is enabled (on by default).
-    bool enableSprinting = true; // Whether player sprinting is enabled (on by default).
-    bool enableCrouching = true; // Whether player crouching is enabled (on by default).
+    bool enableMovement  = true; //* Whether player movement is enabled (on by default).
+    bool enableSliding   = true; //* Whether player sliding is enabled (on by default).
+    bool enableJumping   = true; //* Whether player jumping is enabled (on by default).
+    bool enableSprinting = true; //* Whether player sprinting is enabled (on by default).
+    bool enableCrouching = true; //* Whether player crouching is enabled (on by default).
 
   private:
     GameObject*               m_owner     = nullptr;

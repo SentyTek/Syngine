@@ -1,17 +1,27 @@
 # Syngine
 
-**Syngine** is a proprietary, cross-platform, modular, and modern C++ game engine built from the ground up for open-world and simulation-heavy physics based games.
+**Syngine** is a high-performance, cross-platform, modular, and modern C++ game engine built from the ground up for open-world and simulation-heavy physics based games. It focuses on flexibility, extensibility, developer control, and an incredibly powerful Lua modding API, with support for real-time detailed physics, procedural terrain generation, and more.
+
+**Read the full Syngine documentation with examples and instructions [here](docs/index.md).**
 
 ---
 
 ## Features
 - **Modular Architecture** - Hot-swappable systems and a lightweight easy to use core
-- **Input & Windowing** - SDL3-based windowing with a custom input manager with keyboard & mouse and gamepad support.
-- **Rendering** - Powered by bgfx for cross-platform games. Supports **Vulkan, Direct3D 11, Metal, and OpenGL**
+- **Input & Windowing** - SDL3-based windowing with a custom input manager with keyboard & mouse and gamepad support
+- **Rendering** - Powered by bgfx for cross-platform games. Supports **Vulkan, Direct3D 12 and Metal** with user-moddable shaders and easy and powerful renderer management
 - **Physics** - Jolt Physics for a fast and accurate collision system with high quality dynamics and constraints.
 - **Scripting & Modding** - Integrated Lua & XML scripting for moddable gameplay logic and assets
 - **Asset Pipeline** - Assimp + SPK, our custom binary bundle format with multithreaded LZ4 compression for speedy load times
-- **Entity-Component-System** - Completely modular entities allows for easy modding, creation, and management of all game objects
+- **Entity-Component-System** - Custom entities allows for easy creation, modularity and management of all game objects
+- **Advanced tooling** - XML based asset pipeline, in-engine level editor, hot-reloading support, and more.
+
+## Roadmap
+Phase one: Core systems with Rendering, Physics, and Input subsystems - In progress. Complete by Q4 25
+Phase two: Engine infrastructure and editing tools (Multithreading, job system, level editor, packages). Start by Winter 2025
+Phase three: Simulation & Advanced rendering (Compute support, deferred rendering, audio subsystem, volumetrics, post processing)
+Phase four: Modding, Multiplayer, UI systems
+Phase five: More advanced asset management, animations, water, advanced tech
 
 ---
 

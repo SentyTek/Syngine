@@ -28,7 +28,7 @@ void TransformComponent::Init(std::vector<float> position,
     this->scale[2] = scale[2];
 }
 
-Syngine::Components TransformComponent::getComponentType() {
+Syngine::Components TransformComponent::GetComponentType() {
     return SYN_COMPONENT_TRANSFORM;
 }
 

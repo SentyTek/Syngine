@@ -63,7 +63,7 @@ void PlayerComponent::Init(Syngine::CameraComponent* camera,
                                      initialPosition,
                                      JPH::Quat::sIdentity(),
                                      0,
-                                     &m_physicsManager->GetPhysicsSystem());
+                                     &m_physicsManager->_GetPhysicsSystem());
     m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
 
     m_camera->SetPosition(m_transform->position[0],
@@ -79,11 +79,11 @@ PlayerComponent::~PlayerComponent() {
     }
 }
 
-Syngine::Components PlayerComponent::getComponentType() {
+Syngine::Components PlayerComponent::GetComponentType() {
     return SYN_COMPONENT_PLAYER;
 }
 
-void PlayerComponent::HandleInput(const SDL_Event& event) {
+void PlayerComponent::_HandleInput(const SDL_Event& event) {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
@@ -163,7 +163,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate, float deltaTim
         
         // Low friction when sliding
         if (m_playerState == PlayerState::SLIDING) {
-            BodyInterface& bodyInterface = m_physicsManager->GetBodyInterface();
+            BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
             bodyInterface.SetFriction(m_character->GetBodyID(), 0.25f);
             m_targetFov = 100.0f;
             //m_targetEyeHeight = 0.7f; // Lower eye height when sliding
@@ -172,7 +172,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate, float deltaTim
                 m_targetMoveSpeed = 0.0f;
             }
         } else {
-            BodyInterface& bodyInterface = m_physicsManager->GetBodyInterface();
+            BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
             bodyInterface.SetFriction(m_character->GetBodyID(), 0.45f);
             // Reset move direction
             m_moveDirection = { 0.0f, 0.0f, 0.0f };
@@ -267,7 +267,7 @@ void PlayerComponent::Update(const bool* keystate, bool simulate, float deltaTim
     m_realMoveSpeed = bx::lerp(m_realMoveSpeed, m_targetMoveSpeed, 1.0f - bx::exp(-moveSpeedLerpSpeed * m_deltaTime));
 }
 
-void PlayerComponent::PostPhysicsUpdate() {
+void PlayerComponent::_PostPhysicsUpdate() {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
