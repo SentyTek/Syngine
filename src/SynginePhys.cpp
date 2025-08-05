@@ -1,3 +1,11 @@
+// ╒════════════════════ SynginePhys.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-21                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SynginePhys.h"
 #include "SyngineLogger.h"
 #include <thread> //for hardware_concurrency
@@ -46,9 +54,9 @@ bool Phys::AssertFailedImpl(const char* inExpression, const char* inMessage, con
 }
 
 Phys::Phys() {}
-Phys::~Phys() { Shutdown(); }
+Phys::~Phys() { _Shutdown(); }
 
-void Phys::Init(bool debug) {
+void Phys::_Init(bool debug) {
 
     RegisterDefaultAllocator();
     Trace = TraceImpl;
@@ -88,7 +96,7 @@ void Phys::Init(bool debug) {
     Syngine::Logger::Info("Jolt initialized successfully");
 }
 
-void Phys::Shutdown() {
+void Phys::_Shutdown() {
     if (!Factory::sInstance) //Already shutdown
         return;
 
@@ -114,7 +122,7 @@ void Phys::Shutdown() {
     }
 }
 
-void Phys::Update(float deltaTime, int collisionSteps) {
+void Phys::_Update(float deltaTime, int collisionSteps) {
     if (!Factory::sInstance) return;
 
     mPhysicsSystem.Update(deltaTime, collisionSteps, mTempAllocator, mJobSystem);
@@ -138,7 +146,7 @@ void Phys::_DrawDebug(int                 width,
     }
 }
 
-BodyID Phys::CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
+BodyID Phys::_CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
     BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
     SphereShapeSettings sphereShapeSettings(radius);
     ShapeSettings::ShapeResult sphereShapeResult = sphereShapeSettings.Create();
@@ -165,7 +173,7 @@ BodyID Phys::CreateSphere(RVec3Arg position, float radius, EMotionType motionTyp
     return sphere->GetID();
 }
 
-BodyID Phys::CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, EMotionType motionType, ObjectLayer layer, float mass)
+BodyID Phys::_CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, EMotionType motionType, ObjectLayer layer, float mass)
 {
     BodyInterface &body_interface = mPhysicsSystem.GetBodyInterface();
     BoxShapeSettings box_shape_settings(halfExtent);
@@ -194,7 +202,7 @@ BodyID Phys::CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, 
     return box->GetID();
 }
 
-BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale) {
+BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale) {
     BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
     if (meshData.numVertices == 0) {
         Syngine::Logger::Error("SynginePhys::CreateMeshBody: Mesh data is empty.");
@@ -265,7 +273,7 @@ BodyID Phys::CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData&
     return body->GetID();
 }
 
-BodyID Phys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer, float mass) {
+BodyID Phys::_CreateCapsule(RVec3Arg position, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer, float mass) {
     BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
     CapsuleShapeSettings capsuleShapeSettings(halfHeight, radius);
     ShapeSettings::ShapeResult capsuleShapeResult = capsuleShapeSettings.Create();
@@ -295,7 +303,7 @@ BodyID Phys::CreateCapsule(RVec3Arg position, float radius, float halfHeight, EM
     return capsule->GetID();
 }
 
-BodyID Phys::CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeight, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
+BodyID Phys::_CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeight, float radius, EMotionType motionType, ObjectLayer layer, float mass) {
     BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
     CylinderShapeSettings cylinderShapeSettings(halfHeight, radius);
     ShapeSettings::ShapeResult cylinderShapeResult = cylinderShapeSettings.Create();

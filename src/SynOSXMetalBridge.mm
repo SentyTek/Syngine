@@ -1,3 +1,11 @@
+// ╒═══════════════ SynOSXMetalBridge.mm ═╕
+// │ Syngine                              │
+// │ Created 2025-04-22                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #ifdef __OBJC__
 #import <Cocoa/Cocoa.h>
 #endif
@@ -17,7 +25,7 @@ static NSView* FindTaggedView(NSView* root, NSInteger tag) {
 
 /// This function is called from C code to get the Metal view associated with a given SDL window.
 /// MacOS Exclusive (Thanks Tim Apple!)
-extern "C" void* GetSYNMetalView(SDL_Window* win) {
+extern "C" void* _GetSYNMetalView(SDL_Window* win) {
     SDL_PropertiesID props = SDL_GetWindowProperties(win);
     if (!props) return nullptr;
 

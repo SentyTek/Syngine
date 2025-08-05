@@ -1,3 +1,11 @@
+// ╒════════════════════════ FsUtils.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-07-18                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SDL3/SDL_log.h"
 #ifdef _WIN32
 #define NOMINMAX
@@ -19,7 +27,7 @@
 
 namespace Syngine {
 
-std::filesystem::path GetAppdataPath(const std::string& appName) {
+std::filesystem::path _GetAppdataPath(const std::string& appName) {
     std::filesystem::path appDataFolder;
 #ifdef _WIN32
     // On Windows, use the user's Roaming AppData folder.

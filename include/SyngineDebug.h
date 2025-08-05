@@ -1,3 +1,11 @@
+// ╒═════════════════════ SyngineDebug.h ═╕
+// │ Syngine                              │
+// │ Created 2025-06-19                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #ifndef JPH_DEBUG_RENDERER
 #define JPH_DEBUG_RENDERER
@@ -25,8 +33,13 @@ struct Camera;
 
 namespace Syngine {
 
+/// @brief Debug renderer class for Syngine
+/// @section DebugRenderer
 class DebugRender : public JPH::DebugRenderer {
   private:
+    /// @brief Internal class to manage batches of debug triangles. Not all
+    /// functions are implemented or documented.
+    /// @section DebugRenderer
     class BatchImpl : public JPH::RefTargetVirtual {
       public:
         JPH_OVERRIDE_NEW_DELETE
@@ -49,10 +62,27 @@ class DebugRender : public JPH::DebugRenderer {
     DebugRender();
     ~DebugRender();
 
+    /// @brief Draw a line with a color
+    /// @param from Starting point of the line
+    /// @param to Ending point of the line
+    /// @param color Color of the line
+    /// @since v0.0.1
+    /// @internal
     virtual void DrawLine(JPH::RVec3Arg from,
                           JPH::RVec3Arg to,
                           JPH::ColorArg color) override;
 
+    /// @brief Draw geometry
+    /// @param modelMatrix Transformation matrix for the geometry
+    /// @param worldSpaceBounds Bounding box in world space
+    /// @param LODScaleSq Level of detail scale squared
+    /// @param modelColor Color of the model
+    /// @param geometry Geometry reference to draw
+    /// @param cullMode Culling mode for the geometry
+    /// @param castShadow Whether to cast shadows
+    /// @param drawMode Draw mode for the geometry
+    /// @since v0.0.1
+    /// @internal
     virtual void DrawGeometry(JPH::RMat44Arg     modelMatrix,
                               const JPH::AABox&  worldSpaceBounds,
                               float              LODScaleSq,
@@ -62,11 +92,24 @@ class DebugRender : public JPH::DebugRenderer {
                               ECastShadow castShadow = ECastShadow::Off,
                               EDrawMode drawMode = EDrawMode::Wireframe) override;
 
+    /// @brief Draw a text string in 3D space (Not implemented)
+    /// @param position Position in 3D space
+    /// @param inString Text string to draw
+    /// @param color Color of the text
+    /// @param height Height of the text
     virtual void DrawText3D(JPH::RVec3Arg           position,
                             const std::string_view& inString,
                             JPH::ColorArg           color  = JPH::Color::sWhite,
                             float                   height = 0.5f) override;
 
+    /// @brief Draw a triangle
+    /// @param v1 First vertex of the triangle
+    /// @param v2 Second vertex of the triangle
+    /// @param v3 Third vertex of the triangle
+    /// @param color Color of the triangle
+    /// @param castShadow Whether to cast shadows
+    /// @since v0.0.1
+    /// @internal
     virtual void
     DrawTriangle(JPH::RVec3Arg v1,
                  JPH::RVec3Arg v2,
@@ -74,22 +117,51 @@ class DebugRender : public JPH::DebugRenderer {
                  JPH::ColorArg color,
                  ECastShadow   castShadow = ECastShadow::Off) override;
 
+    /// @brief Create a batch of triangles
+    /// @param inTriangles Array of triangles to create the batch from
+    /// @param inTriangleCount Number of triangles in the array
+    /// @return Batch of triangles
+    /// @since v0.0.1
+    /// @internal
     virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const Triangle* inTriangles, int inTriangleCount) override;
 
+    /// @brief Create a batch of triangles from vertices and indices
+    /// @param inVertices Array of vertices
+    /// @param inVertexCount Number of vertices in the array
+    /// @param inIndices Array of indices
+    /// @param inIndexCount Number of indices in the array
     virtual JPH::DebugRenderer::Batch
     CreateTriangleBatch(const Vertex*      inVertices,
                         int                inVertexCount,
                         const JPH::uint32* inIndices,
                         int                inIndexCount) override;
 
+    /// @brief Draw a frustum
+    /// @param camera Camera to draw the frustum for
+    /// @pre Camera must be initialized
+    /// @since v0.0.1
+    /// @internal
     void DrawFrustum(Syngine::Camera camera);
 
+    /// @brief Render debug lines
+    /// @param view View matrix
+    /// @param proj Projection matrix
+    /// @param width Width of the viewport
+    /// @param height Height of the viewport
+    /// @param program Shader program to use for rendering
+    /// @pre Rendering system must be initialized
+    /// @since v0.0.1
+    /// @internal
     void RenderLines(const float*        view,
                      const float*        proj,
                      int                 width,
                      int                 height,
                      bgfx::ProgramHandle program);
 
+    /// @brief Clear all debug lines
+    /// @since v0.0.1
+    /// @post All debug lines are cleared
+    /// @internal
     void ClearLines();
     
   private:

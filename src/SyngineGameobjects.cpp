@@ -1,3 +1,11 @@
+// ╒═════════════ SyngineGameobjects.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-20                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "Components.h"
 #include "SyngineGameobject.h"
 #include "Registry.h"
