@@ -1,5 +1,12 @@
+// ╒══════════════════════ SyngineCore.h ═╕
+// │ Syngine                              │
+// │ Created 2025-04-22                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
-#include <vector>
 #include "SyngineGraphics.h"
 #include "SynModelLoader.h"
 #include "SyngineGameobject.h"
@@ -7,71 +14,96 @@
 
 namespace Syngine {
 
-// Structure to hold hardware specifications
+/// @brief Struct to hold hardware specifications
+/// @section Core
+/// @note This should only be called after window creation, as it relies on SDL for some information.
+/// @since v0.0.1
 struct HardwareSpecs {
-    std::string osName;
-    std::string cpuModel;
-    std::string cpuArch;
-    int         cpuCores;
-    int         ramMB;
-    int         screenWidth;
-    int         screenHeight;
-    int         winWidth;
-    int         winHeight;
-    int         gpuVendorID;
-    int         gpuDeviceID;
-    int         maxTextureSize;
-    bool        supportsCompute;
-    bool        supports3DTextures;
+    std::string osName; //* Operating system name
+    std::string cpuModel; //* CPU model name
+    std::string cpuArch; //* CPU architecture (e.g., x86_64, ARM)
+    int         cpuCores; //* Number of CPU cores
+    int         ramMB; //* Amount of RAM in MB
+    int         screenWidth; //* Width of the screen in pixels
+    int         screenHeight; //* Height of the screen in pixels
+    int         winWidth; //* Width of the game window in pixels
+    int         winHeight; //* Height of the game window in pixels
+    int         gpuVendorID; //* GPU vendor ID
+    int         gpuDeviceID; //* GPU device ID
+    int         maxTextureSize; //* Maximum texture size supported by the GPU
+    bool        supportsCompute; //* Whether the GPU supports compute shaders
+    bool        supports3DTextures; //* Whether the GPU supports 3D textures
 };
 
-// Struct to hold application state
+/// @brief Struct to hold application state
+/// @section Core
+/// @since v0.0.1
 struct App {
-    Graphics* graphics;
-    SynModelLoader* synModels;
-    std::vector<GameObject*> gameObjects;
-    Phys*                    physicsManager;
-    bool                     debug = true;
-    std::string              appName;
+    Graphics* graphics; //* Pointer to the graphics system
+    SynModelLoader* synModels; //* Pointer to the model loader
+    Phys*           physicsManager; //* Pointer to the physics manager
+    bool            debug = true;   //* Debug mode flag
+    std::string     appName;      //* Name of the application
 };
 
-// Core class to manage the application
+/// @brief Core class to manage the application
+/// @section Core
+/// @since v0.0.1
 class Core {
   public:
-    // Pointer to the application state
-    App* app;
+    /// @brief Constructor for the Core class
+    /// @param appName Name of the application
+    /// @since v0.0.1
+    Core(const std::string& appName = "SyngineGame");
 
-    Core(std::string appName = "SyngineGame");
+    /// Destructor for the Core class
     ~Core();
 
-    // Attach the graphics system to the core.
-    // Returns 0 on success, non-zero on failure.
+    /// @brief Get the global Core instance
+    /// @return Pointer to the global Core instance
+    /// @since v0.0.1
+    /// @internal
+    static Core* _Get();
+
+    /// @brief Get the global App instance
+    /// @return Pointer to the global App instance
+    /// @since v0.0.1
+    static App* _GetApp();
+
+    /// @brief Attach the graphics system to the core.
+    /// @param graphics Pointer to the graphics system
+    /// @return 0 on success, non-zero on failure
     int AttachGraphics(Graphics* graphics);
-    
-    // Detach the graphics system from the core.
-    // Returns 0 on success, non-zero on failure.
+
+    /// @brief Detach the graphics system from the core.
+    /// @return 0 on success, non-zero on failure.
     int DetachGraphics();
 
-    // Main event loop, blocks until the application is closed.
-    // Returns 0 on clean exit, non-zero on error.
+    /// @brief Main event loop, blocks until the application is closed.
+    /// @return 0 on clean exit, non-zero on error.
     int SyngineEventLoop();
 
-    // Find a gameobject by its unique ID
-    GameObject* FindGameobjectByID(long id);
-
-    // Find a gameobject by its name (not guaranteed to be unique, returns first match)
-    GameObject* FindGameobjectByName(std::string name);
-
-    // Add a new gameobject to the scene
-    // Returns 0 on success, non-zero on failure
+    /// @brief Add a new GameObject to the scene
+    /// @param gameobject Pointer to the GameObject to add
+    /// @return 0 on success, non-zero on failure
     int CreateGameobject(GameObject* gameobject);
 
-    // Delete a gameobject from the scene and free its resources
-    // Returns 0 on success, non-zero on failure
+    /// @brief Delete a GameObject from the scene and free its resources
+    /// @param gameobject Pointer to the GameObject to delete
+    /// @return 0 on success, non-zero on failure
     int DeleteGameobject(GameObject* gameobject);
 
-    // Get system specifications
+    /// @brief Get the physics manager.
+    /// @return Pointer to the physics manager, or nullptr if not initialized
+    Syngine::Phys * GetPhysicsManager();
+
+    /// @brief Get system specifications
+    /// @return Hardware specifications of the system
     Syngine::HardwareSpecs GetSystemSpecifications();
+
+  private:
+    static Core* s_instance;
+    App* app;
 };
 
 } // namespace Syngine

@@ -1,39 +1,123 @@
+// ╒══════════════════ CameraComponent.h ═╕
+// │ Syngine                              │
+// │ Created 2025-06-10                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include "Components.h"
 
 namespace Syngine {
-struct Camera {
-    float eye[3] = {0.0f, 0.0f, -5.0f};
-    float target[3] = {0.0f, 0.0f, 0.0f};
-    float up[3] = {0.0f, 1.0f, 0.0f};
-    float fov = 70.0f; //deg
-    float nearPlane = 0.1f;
-    float farPlane = 100.0f;
-    float view[16];
-    float proj[16];
 
-    float yaw = 0.0f;
-    float pitch = 0.0f;
+/// @brief Struct to hold camera data
+/// @section CameraComponent
+/// @since v0.0.1
+struct Camera {
+    float eye[3] = {0.0f, 0.0f, -5.0f}; //* Camera position in world space
+    float target[3] = {0.0f, 0.0f, 0.0f}; //* Camera target position
+    float up[3] = {0.0f, 1.0f, 0.0f}; //* Camera up vector
+    float fov = 70.0f; //* Field of view in degrees
+    float nearPlane = 0.1f; //* Near clipping plane
+    float farPlane = 100.0f; //* Far clipping plane
+    float view[16]; //* View matrix
+    float proj[16]; //* Projection matrix
+
+    float yaw = 0.0f; //* Yaw angle in radians
+    float pitch = 0.0f; //* Pitch angle in radians
+    float roll = 0.0f; //* Roll angle in radians
 };
 
+/// @brief CameraComponent class for managing camera functionality in a game
+/// object
+/// @section CameraComponent
+/// @since v0.0.1
 class CameraComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::Components componentType = Syngine::SYN_COMPONENT_CAMERA;
+    static constexpr Syngine::Components componentType = Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
 
+    /// @brief Constructor for the CameraComponent class
+    /// @param owner Pointer to the GameObject that owns this component
+    /// @note This should only be called by GameObject::AddComponent<T>()
+    /// @since v0.0.1
+    /// @internal
     CameraComponent(GameObject* owner);
+    
     ~CameraComponent();
-    Syngine::Components getComponentType() override;
 
+    /// @brief Get the type of this component
+    /// @return The component type as an enum value
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    Syngine::Components GetComponentType() override;
+
+    /// @brief Initialize the camera component
+    /// @note This should only be called when the component is added to a GameObject
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void Init() {}; // No specific initialization needed
+
+    /// @brief Update the camera component
+    /// @param viewId ID of the view to update
+    /// @param width Width of the viewport
+    /// @param height Height of the viewport
+    /// @note This is called every frame to update the camera's view and
+    /// projection matrices
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
     void Update(int viewId, int width, int height);
 
+    /// @brief Set the camera position
+    /// @param x X coordinate of the camera position
+    /// @param y Y coordinate of the camera position
+    /// @param z Z coordinate of the camera position
+    /// @threadsafety not-safe
+    /// @since v0.0.1
     void SetPosition(float x, float y, float z);
-    const float* GetPosition() const;
-    void   SetFOV(float fov);
-    float  GetFOV() const;
-    void   SetFarPlane(float farPlane);
-    float  GetFarPlane() const;
 
+    /// @brief Get the camera position
+    /// @return Array of 3 floats representing the camera position (x, y, z)
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    const float* GetPosition() const;
+
+    /// @brief Set the camera FOV
+    /// @param fov Field of view in degrees
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetFOV(float fov);
+
+    /// @brief Get the camera FOV
+    /// @return Field of view in degrees
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    float GetFOV() const;
+
+    /// @brief Set the camera far clipping plane
+    /// @param farPlane Far clipping plane distance
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetFarPlane(float farPlane);
+
+    /// @brief Get the camera far clipping plane
+    /// @return Far clipping plane distance
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    float GetFarPlane() const;
+
+    /// @brief Set the camera near clipping plane
+    /// @param nearPlane Near clipping plane distance
+    /// @threadsafety not-safe
+    /// @since v0.0.1
     void SetAngles(float yaw, float pitch);
+
+    /// @brief Get the camera angles
+    /// @param yaw Reference to store the yaw angle in radians
+    /// @param pitch Reference to store the pitch angle in radians
+    /// @threadsafety read-only
+    /// @since v0.0.1
     void GetAngles(float& yaw, float& pitch) const;
 
     Syngine::Camera GetCamera() const;

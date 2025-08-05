@@ -1,6 +1,15 @@
+// ╒════════════════ CameraComponent.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-06-10                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "CameraComponent.h"
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
+#include "SyngineGameobject.h"
 
 #include <cmath>
 
@@ -14,9 +23,13 @@ CameraComponent::CameraComponent(GameObject* owner) {
     this->camera.target[0] = 0.0f;
     this->camera.target[1] = 0.0f;
     this->camera.target[2] = 0.0f;
-    this->camera.up[0] = 0.0f;
-    this->camera.up[1] = 1.0f;
-    this->camera.up[2] = 0.0f;
+    this->camera.up[0]     = 0.0f;
+    this->camera.up[1]     = 1.0f;
+    this->camera.up[2]     = 0.0f;
+
+    if (this->m_owner) {
+        this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+    }
 }
 
 CameraComponent::~CameraComponent() {
@@ -51,7 +64,7 @@ void CameraComponent::Update(int viewId, int width, int height) {
     bgfx::setViewTransform(viewId, cam.view, cam.proj);
 }
 
-Components CameraComponent::getComponentType() {
+Components CameraComponent::GetComponentType() {
     return SYN_COMPONENT_CAMERA;
 }
 

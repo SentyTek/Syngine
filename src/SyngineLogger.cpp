@@ -1,3 +1,11 @@
+// ╒══════════════════ SyngineLogger.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-07-14                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "SDL3/SDL_messagebox.h"
 #include "SyngineLogger.h"
 #include "SDL3/SDL.h"
@@ -36,7 +44,7 @@ std::string Logger::LogLevelToString(LogLevel level) noexcept {
 void Logger::Init(const std::string& appname,
                   const std::filesystem::path& logPath) {
     appName = appname;
-    std::filesystem::path logFolder = Syngine::GetAppdataPath(appName) / "logs";
+    std::filesystem::path logFolder = Syngine::_GetAppdataPath(appName) / "logs";
     if (logFolder.empty()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log folder path is empty, cannot initialize logger.");
         return;
@@ -153,14 +161,14 @@ void Logger::Log(const std::string_view message, LogLevel level, bool toConsole)
     }
 }
 
-void Logger::LogHardwareInfo(Syngine::Core& core) {
+void Logger::LogHardwareInfo() {
     if (!logFile || !logFile->is_open()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log file is not open.");
         return;
     }
 
     // This is a bit messy but it avoids duplicating code in multiple places
-    Syngine::HardwareSpecs specs = core.GetSystemSpecifications();
+    Syngine::HardwareSpecs specs = Syngine::Core::_Get()->GetSystemSpecifications();
     std::string            specsStr = "\nSystem Specifications:\n";
     specsStr += "\tOperating System: " + specs.osName + "\n";
     specsStr += "\tCPU: " + specs.cpuModel + "\n";

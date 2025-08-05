@@ -1,3 +1,11 @@
+// ╒══════════════════════ ShaderUtils.h ═╕
+// │ Syngine                              │
+// │ Created 2025-05-06                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #pragma once
 #include <bgfx/bgfx.h>
 #include <SDL3/SDL.h>
@@ -8,11 +16,20 @@
 #include "helpers.h"
 #include "SyngineLogger.h"
 
-inline bgfx::ShaderHandle LoadShader(const char* shaderPath)
+namespace Syngine {
+
+/// @brief Load a shader from a file.
+/// @param shaderPath The path to the shader file.
+/// @return bgfx::ShaderHandle The handle to the loaded shader, or
+/// BGFX_INVALID_HANDLE on failure.
+/// @threadsafety not-safe
+/// @since v0.0.1
+/// @internal
+inline bgfx::ShaderHandle _LoadShader(const char* shaderPath)
 {
     namespace fs = std::filesystem;
 
-    std::string path = Syngine::ResolveOSPath(shaderPath);
+    std::string path = Syngine::_ResolveOSPath(shaderPath);
     if (!fs::exists(path))
     {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -52,3 +69,5 @@ inline bgfx::ShaderHandle LoadShader(const char* shaderPath)
     const bgfx::Memory* mem = bgfx::copy(buffer.data(), (uint32_t)buffer.size());
     return bgfx::createShader(mem);
 }
+
+} // namespace Syngine

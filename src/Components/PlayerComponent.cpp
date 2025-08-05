@@ -1,52 +1,53 @@
+// ╒════════════════ PlayerComponent.cpp ═╕
+// │ Syngine                              │
+// │ Created 2025-05-29                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 #include "PlayerComponent.h"
 #include "CameraComponent.h"
+#include "TransformComponent.h"
 #include "Components.h"
 #include "SyngineLogger.h"
-#include "Jolt/Physics/Body/BodyInterface.h"
-#include "SDL3/SDL_events.h"
-#include "SDL3/SDL_keycode.h"
 #include "SyngineGraphics.h"
-#include "TransformComponent.h"
 #include "SyngineGameobject.h"
 #include "SynginePhys.h"
+#include "SyngineCore.h"
 
 #include "SDL3/SDL_mouse.h"
 #include "SDL3/SDL_scancode.h"
 #include "SDL3/SDL_video.h"
+#include "SDL3/SDL_events.h"
+#include "SDL3/SDL_keycode.h"
 
 #include "Jolt/Math/Vec3.h"
 #include "Jolt/Math/Real.h"
 #include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
 #include "Jolt/Physics/Character/Character.h"
 #include "Jolt/Physics/EActivation.h"
-#include "Jolt/Core/TempAllocator.h"
+#include "Jolt/Physics/Body/BodyInterface.h"
 
 #include "bx/math.h"
 
 #include <cmath>
 
 namespace Syngine {
-PlayerComponent::PlayerComponent(GameObject* owner) {
+PlayerComponent::PlayerComponent(GameObject*               owner,
+                                 Syngine::CameraComponent* camera,
+                                 SDL_Window*               win) {
     this->m_owner = owner;
-    m_transform = owner->GetComponent<TransformComponent>();
+    this->Init(camera, win);
 }
 
-PlayerComponent::~PlayerComponent() {
-    if (m_character) {
-        m_character->RemoveFromPhysicsSystem();
-        m_character = nullptr;
-    }
-}
+void PlayerComponent::Init(Syngine::CameraComponent* camera,
+                           SDL_Window*               win) {
+    m_transform   = m_owner->GetComponent<TransformComponent>();
 
-Syngine::Components PlayerComponent::getComponentType() {
-    return SYN_COMPONENT_PLAYER;
-}
-
-void PlayerComponent::Init(Syngine::CameraComponent*    camera,
-                           SDL_Window*                  win,
-                           Syngine::Phys* physicsManager) {
     m_camera = camera;
     m_window = win;
+    m_physicsManager = Syngine::Core::_GetApp()->physicsManager;
 
     if (!m_owner || !m_transform || !m_camera) {
         Syngine::Logger::Error(
@@ -58,7 +59,7 @@ void PlayerComponent::Init(Syngine::CameraComponent*    camera,
     settings->mMaxSlopeAngle                  = bx::kPi / 4.0f; // 45 degrees
     settings->mLayer = Syngine::Layers::MOVING; // Set to the moving layer
     settings->mShape =
-        new JPH::CapsuleShape(0.45f, 0.5f); // Half (quarter?) height and radius
+        new JPH::CapsuleShape(standHeight, playerRadius); // Half (quarter?) height and radius
     settings->mFriction = 0.45f;
     settings->mMass     = 80.0f;
 
@@ -70,17 +71,27 @@ void PlayerComponent::Init(Syngine::CameraComponent*    camera,
                                      initialPosition,
                                      JPH::Quat::sIdentity(),
                                      0,
-                                     &physicsManager->GetPhysicsSystem());
+                                     &m_physicsManager->_GetPhysicsSystem());
     m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
 
     m_camera->SetPosition(m_transform->position[0],
                           m_transform->position[1],
                           m_transform->position[2]);
 
-    m_physicsManager = physicsManager;
 }
 
-void PlayerComponent::HandleInput(const SDL_Event& event) {
+PlayerComponent::~PlayerComponent() {
+    if (m_character) {
+        m_character->RemoveFromPhysicsSystem();
+        m_character = nullptr;
+    }
+}
+
+Syngine::Components PlayerComponent::GetComponentType() {
+    return SYN_COMPONENT_PLAYER;
+}
+
+void PlayerComponent::_HandleInput(const SDL_Event& event) {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
@@ -110,14 +121,16 @@ void PlayerComponent::HandleInput(const SDL_Event& event) {
     }
 }
 
-void PlayerComponent::Update(const bool* keystate, bool simulate) {
+void PlayerComponent::Update(const bool* keystate, bool simulate, float deltaTime) {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
     }
     m_prevPlayerState = m_playerState;
+    m_deltaTime = deltaTime;
 
     m_simulate = simulate;
+    // Sliding persists between frames, so we don't reset it here
     if (m_playerState != PlayerState::SLIDING) {
         m_playerState = PlayerState::IDLE;
     }
@@ -158,16 +171,16 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
         
         // Low friction when sliding
         if (m_playerState == PlayerState::SLIDING) {
-            BodyInterface& bodyInterface = m_physicsManager->GetBodyInterface();
+            BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
             bodyInterface.SetFriction(m_character->GetBodyID(), 0.25f);
             m_targetFov = 100.0f;
             //m_targetEyeHeight = 0.7f; // Lower eye height when sliding
-            m_targetMoveSpeed -= 0.025f;
+            m_targetMoveSpeed -= 4.5f * m_deltaTime;
             if (m_targetMoveSpeed < 0.01f) {
                 m_targetMoveSpeed = 0.0f;
             }
         } else {
-            BodyInterface& bodyInterface = m_physicsManager->GetBodyInterface();
+            BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
             bodyInterface.SetFriction(m_character->GetBodyID(), 0.45f);
             // Reset move direction
             m_moveDirection = { 0.0f, 0.0f, 0.0f };
@@ -176,19 +189,20 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
         // Shrink collider when crouching or sliding
         if (m_playerState == PlayerState::CROUCHING || m_playerState == PlayerState::SLIDING) {
             if (m_prevPlayerState != PlayerState::CROUCHING && m_prevPlayerState != PlayerState::SLIDING) {
-                m_character->SetShape(new JPH::CapsuleShape(0.25f, 0.5f), 0.1f); // Half height and radius
+                m_character->SetShape(new JPH::CapsuleShape(crouchHeight, playerRadius), 0.1f); // Half height and radius
             }
             m_targetEyeHeight = 0.2f; // Lower eye height when crouching or sliding
-        } else { // Reset sizes only when state changes
+            
+        } else { // Reset sizes only when state changes 
             if (m_prevPlayerState == PlayerState::CROUCHING || m_prevPlayerState == PlayerState::SLIDING) {
-                // Adjust position to avoid sinking into the ground
-                m_transform->position[1] += 0.5f;
+                // Adjust position so collider actually changes size
+                m_transform->position[1] += (standHeight - crouchHeight);
                 m_character->SetPosition(JPH::RVec3(m_transform->position[0],
                                                     m_transform->position[1],
                                                     m_transform->position[2]));
 
                 // Reset to normal size
-                m_character->SetShape(new JPH::CapsuleShape(0.45f, 0.5f),
+                m_character->SetShape(new JPH::CapsuleShape(standHeight, playerRadius),
                                       0.1f); // Reset to normal size
             }
             m_targetEyeHeight = 0.5f; // Normal eye height
@@ -245,21 +259,23 @@ void PlayerComponent::Update(const bool* keystate, bool simulate) {
             } else {
                 Syngine::Logger::Error("PlayerComponent has no character object!");
             }
-        }
+    }
         
-        // Update the character
-        m_character->SetRotation(
-            JPH::Quat::sRotation(JPH::Vec3::sAxisY(), m_currentYaw));
+    // Update the character
+    m_character->SetLinearVelocity(m_newVelocity);
 
-        m_character->SetLinearVelocity(m_newVelocity);
-            
-            // Update some lerps
-    m_camera->SetFOV(bx::lerp(m_camera->GetFOV(), m_targetFov, 0.1f));
-    m_eyeHeight = bx::lerp(m_eyeHeight, m_targetEyeHeight, 0.1f);
-    m_realMoveSpeed = bx::lerp(m_realMoveSpeed, m_targetMoveSpeed, 0.1f);
+    // Update some lerps
+    // Higher is faster
+    const float fovLerpSpeed = 15.0f;
+    const float eyeHeightLerpSpeed = 8.0f;
+    const float moveSpeedLerpSpeed = 10.0f;
+
+    m_camera->SetFOV(bx::lerp(m_camera->GetFOV(), m_targetFov, 1.0f - bx::exp(-fovLerpSpeed * m_deltaTime)));
+    m_eyeHeight = bx::lerp(m_eyeHeight, m_targetEyeHeight, 1.0f - bx::exp(-eyeHeightLerpSpeed * m_deltaTime));
+    m_realMoveSpeed = bx::lerp(m_realMoveSpeed, m_targetMoveSpeed, 1.0f - bx::exp(-moveSpeedLerpSpeed * m_deltaTime));
 }
 
-void PlayerComponent::PostPhysicsUpdate() {
+void PlayerComponent::_PostPhysicsUpdate() {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
@@ -276,7 +292,9 @@ void PlayerComponent::PostPhysicsUpdate() {
     bx::Vec3   currentPos = { m_transform->position[0],
                               m_transform->position[1],
                               m_transform->position[2] };
-    bx::Vec3   newPos     = bx::lerp(currentPos, targetPos, 0.2f);
+
+    const float positionLerpSpeed = 12.0f;
+    bx::Vec3   newPos     = bx::lerp(currentPos, targetPos, 1.0f - bx::exp(-positionLerpSpeed * m_deltaTime));
     m_transform->position[0] = newPos.x;
     m_transform->position[1] = newPos.y;
     m_transform->position[2] = newPos.z;
