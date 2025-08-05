@@ -39,11 +39,9 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE_TEMP}" CACHE STRING "CXX Release flags" FORCE)
 
     # Also set CMAKE_MSVC_RUNTIME_LIBRARY. Sub-projects might still query this variable.
+    # This is a really ugly fix
     set(CMAKE_MSVC_RUNTIME_LIBRARY
-        "$<$<CONFIG:Debug>:MultiThreadedDebug>"
-        "$<$<CONFIG:Release>:MultiThreaded>"
-        "$<$<CONFIG:RelWithDebInfo>:MultiThreaded>"
-        "$<$<CONFIG:MinSizeRel>:MultiThreaded>"
+        "$<$<CONFIG:Debug>:MultiThreadedDebug>$<$<CONFIG:Release>:MultiThreaded>$<$<CONFIG:RelWithDebInfo>:MultiThreaded>$<$<CONFIG:MinSizeRel>:MultiThreaded>"
         CACHE STRING "MSVC Runtime Library selection for Syngine project" FORCE
     )
 endif()
@@ -227,4 +225,9 @@ target_link_libraries(Syngine PRIVATE
 )
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
-clangdConfigure(Syngine)
+clangd(Syngine
+    EXCLUDE_PATHS "third_party/*"
+    OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    INLAY_HINTS 
+    INLAY_DEDUCED_TYPES 
+    INLAY_PARAMETER_NAMES)
