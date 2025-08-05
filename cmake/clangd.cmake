@@ -28,6 +28,7 @@ message(STATUS "${CLANGD_LANG} standard: ${CLANGD_LANG_STANDARD}")
 # clangd(target
 #   [OUTPUT_DIRECTORY <dir>]
 #   [EXCLUDE_PATHS [arg1, ...]
+#   [WARNINGS [arg1, ...]]
 #   [INLAY_HINTS]
 #   [INLAY_BLOCK_END]
 #   [INLAY_DESIGNATORS]
@@ -38,6 +39,7 @@ message(STATUS "${CLANGD_LANG} standard: ${CLANGD_LANG_STANDARD}")
 # Requires any target to be passed as <target>
 # OUTPUT_DIRECTORY: Path to a directory where .clangd will be written to. Defaults to CMAKE_CURRENT_LISTS_DIR
 # EXCLUDE_PATHS: optional, adds paths that clangd excludes from processing
+# WARNINGS: optional, clang warning names (Ex: all, no-unused-includes) to use
 # INLAY_HINTS: enables inlay-hints for block end comments
 # INLAY_BLOCK_END: enables block end inlay-hint comments
 # INLAY_DESIGNATORS: enables inlay-hints for designators in aggregate initialization
@@ -48,7 +50,7 @@ message(STATUS "${CLANGD_LANG} standard: ${CLANGD_LANG_STANDARD}")
 function(clangd target)
   set(options INLAY_HINTS INLAY_BLOCK_END INLAY_DESIGNATORS INLAY_PARAMETER_NAMES INLAY_DEDUCED_TYPES)
   set(oneValueArgs OUTPUT_DIRECTORY INLAY_TYPENAME_LIMIT)
-  set(multiValueArgs EXCLUDE_PATHS)
+  set(multiValueArgs EXCLUDE_PATHS WARNINGS)
   cmake_parse_arguments(PARSE_ARGV 0 arg
     "${options}" "${oneValueArgs}" "${multiValueArgs}"
   )
@@ -73,9 +75,17 @@ function(clangd target)
     string(APPEND CLANGD_CONFIG_EXCLUDE "]")
   endif()
 
+  set(CLANGD_CONFIG_WARNINGS "")
+  if(DEFINED arg_WARNINGS)
+    foreach(warning ${arg_WARNINGS})
+      string(APPEND CLANGD_CONFIG_WARNINGS ", -W${warning}")
+    endforeach()
+  endif()
+
   set(CLANGD_CONFIG_COMPILE_STUFF
 "CompileFlags:
-  Add: [-xc${CLANG_LANG_POSTFIX}, -std=c${CLANG_LANG_POSTFIX}${CLANGD_LANG_STANDARD}, -Wno-deprecated-declarations, -Wno-unused-includes${CLANGD_INCLUDE_DIRS}]
+  Add: [-xc${CLANG_LANG_POSTFIX}, -std=c${CLANG_LANG_POSTFIX}${CLANGD_LANG_STANDARD}${CLANGD_CONFIG_WARNINGS}${CLANGD_INCLUDE_DIRS}]
+  Remove: [-std:*]
   Compiler: clang${CLANG_LANG_POSTFIX}")
 
   set(CLANGD_CONFIG_INLAY_HINTS 
