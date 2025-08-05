@@ -227,6 +227,7 @@ target_link_libraries(Syngine PRIVATE
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
 clangd(Syngine
     EXCLUDE_PATHS "third_party/*"
+    OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     INLAY_HINTS 
     INLAY_DEDUCED_TYPES 
     INLAY_PARAMETER_NAMES)
