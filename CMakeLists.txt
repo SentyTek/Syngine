@@ -54,34 +54,35 @@ endif()
 
 # Add all required source files
 add_library(Syngine STATIC
-    src/SyngineCore.cpp
-    src/Registry.cpp
-    src/SyngineGraphics.cpp
-    src/SynModelLoader.cpp
-    src/helpers.cpp
-    src/FsUtils.cpp
-    src/SyngineGameobjects.cpp
-    src/SynginePhys.cpp
-    src/SyngineDebug.cpp
-    src/SyngineLogger.cpp
-    src/Components/MeshComponent.cpp
-    src/Components/TransformComponent.cpp
-    src/Components/RigidbodyComponent.cpp
-    src/Components/PlayerComponent.cpp
-    src/Components/CameraComponent.cpp
+    src/Syngine/Core/Core.cpp
+    src/Syngine/Core/Registry.cpp
+    src/Syngine/Graphics/Renderer.cpp
+    src/Syngine/Graphics/Windowing.cpp
+    src/Syngine/Graphics/DebugRenderer.cpp
+    src/Syngine/Graphics/TextureHelpers.cpp
+    src/Syngine/Utils/ModelLoader.cpp
+    src/Syngine/Utils/FsUtils.cpp
+    src/Syngine/ECS/GameObject.cpp
+    src/Syngine/Physics/Physics.cpp
+    src/Syngine/Core/Logger.cpp
+    src/Syngine/ECS/Components/MeshComponent.cpp
+    src/Syngine/ECS/Components/TransformComponent.cpp
+    src/Syngine/ECS/Components/RigidbodyComponent.cpp
+    src/Syngine/ECS/Components/PlayerComponent.cpp
+    src/Syngine/ECS/Components/CameraComponent.cpp
 )
 
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
     target_sources(Syngine PRIVATE
-        src/SynOSXMetalBridge.mm
+        src/Syngine/Graphics/MetalBridge.mm
         
         # get the headers to show up in Xcode
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/CameraComponent.h
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/MeshComponent.h
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/PlayerComponent.h
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/RigidbodyComponent.h
-		${CMAKE_CURRENT_SOURCE_DIR}/src/Components/TransformComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Syngine/ECS/Components/CameraComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Syngine/ECS/Components/MeshComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Syngine/ECS/Components/PlayerComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Syngine/ECS/Components/RigidbodyComponent.h
+		${CMAKE_CURRENT_SOURCE_DIR}/src/Syngine/ECS/Components/TransformComponent.h
     )
 endif()
 
@@ -197,9 +198,7 @@ target_include_directories(Syngine
     PUBLIC
         # Engine public headers directory
         ${CMAKE_CURRENT_LIST_DIR}/include
-        ${CMAKE_CURRENT_LIST_DIR}/include/Components
-        ${CMAKE_CURRENT_LIST_DIR}/lib
-
+        
         # Third-party headers needed by engine's public headers
         ${CMAKE_CURRENT_LIST_DIR}/third_party/SDL/include
         ${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bgfx/include
@@ -210,7 +209,8 @@ target_include_directories(Syngine
     PRIVATE
         # Engine private headers/sources directory
         ${CMAKE_CURRENT_LIST_DIR}/src
-        ${CMAKE_CURRENT_LIST_DIR}/src/Components
+
+        ${CMAKE_CURRENT_LIST_DIR}/lib
 )
 
 # --- Link Libraries ---
