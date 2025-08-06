@@ -10,7 +10,7 @@
 #import <Cocoa/Cocoa.h>
 #endif
 
-#include "SyngineLogger.h"
+#include "Syngine/Core/Logger.h"
 #include <stdint.h>
 #include <SDL3/SDL.h>
 

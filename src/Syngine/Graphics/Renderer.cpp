@@ -31,7 +31,7 @@
 #include <vector>
 
 #if BX_PLATFORM_OSX
-#include "SynOSXMetalBridge.h"
+#include "MetalBridge.h"
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
@@ -120,7 +120,7 @@ int Graphics::CreateRenderer() {
 #elif BX_PLATFORM_OSX
     bgInit.type = bgfx::RendererType::Metal; // set renderer type to Metal
     bgInit.platformData.ndt = NULL; //only needed on x11
-    bgInit.platformData.nwh = GetSYNMetalView(this->win); //custom obj-c function to get the metal view
+    bgInit.platformData.nwh = _GetSYNMetalView(this->win); //custom obj-c function to get the metal view
     if (bgInit.platformData.nwh == NULL) {
         Syngine::Logger::Error("Failed to get window properties for macOS");
         SDL_DestroyWindow(this->win);
