@@ -1,3 +1,10 @@
+# ╒═══════════════════ GameConfig.cmake ═╕
+# │ Syngine                              │
+# │ Created YYYY-MM-DD                   │
+# ├──────────────────────────────────────┤
+# │ Copyright (c) SentyTek 2025-2025     │
+# │ Placeholder License                  │
+# ╰──────────────────────────────────────╯
 # Adds several functions to compile shaders, add assets, and configure the game target (root/engine/cmake/GameConfig.cmake)
 
 include(${SYNGINE_SOURCE_DIR}/cmake/CompileShaders.cmake)

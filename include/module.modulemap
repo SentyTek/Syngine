@@ -1,3 +1,11 @@
+// ╒═══════════════════ module.modulemap ═╕
+// │ Syngine                              │
+// │ Created YYYY-MM-DD                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2025     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
 module Syngine {
 	// List of every header in the `include` directory
 	header "Syngine/Core/Core.h"

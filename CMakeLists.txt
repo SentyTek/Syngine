@@ -1,3 +1,10 @@
+# ╒═════════════════════ CMakeLists.txt ═╕
+# │ Syngine                              │
+# │ Created YYYY-MM-DD                   │
+# ├──────────────────────────────────────┤
+# │ Copyright (c) SentyTek 2025-2025     │
+# │ Placeholder License                  │
+# ╰──────────────────────────────────────╯
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
 
 cmake_minimum_required(VERSION 3.16)

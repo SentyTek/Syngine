@@ -1,4 +1,10 @@
-
+# ╒═══════════════════════ Clangd.cmake ═╕
+# │ Syngine                              │
+# │ Created YYYY-MM-DD                   │
+# ├──────────────────────────────────────┤
+# │ Copyright (c) SentyTek 2025-2025     │
+# │ Placeholder License                  │
+# ╰──────────────────────────────────────╯
 # Configure for active languages, prioritizing CXX
 get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
 if("CXX" IN_LIST languages)

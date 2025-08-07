@@ -1,3 +1,10 @@
+# ╒═══════════════ CompileShaders.cmake ═╕
+# │ Syngine                              │
+# │ Created YYYY-MM-DD                   │
+# ├──────────────────────────────────────┤
+# │ Copyright (c) SentyTek 2025-2025     │
+# │ Placeholder License                  │
+# ╰──────────────────────────────────────╯
 # root/engine/cmake/CompileShaders.cmake
 #
 # Function to automatically find and compile BGFX shaders from a directory.
