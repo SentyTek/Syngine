@@ -6,7 +6,7 @@
 # │ Placeholder License                  │
 # ╰──────────────────────────────────────╯
 # root/engine/cmake/CompileShaders.cmake
-#
+
 # Function to automatically find and compile BGFX shaders from a directory.
 #
 # Example Usage in your main CMakeLists.txt:

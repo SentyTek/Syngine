@@ -116,29 +116,34 @@ function(_add_assets_mac target)
     endif()
 
     # --- Loop through the root/assets directory and copy all asset folders that aren't shaders ---
-    if(EXISTS "${SYNGINE_SOURCE_DIR}/assets")
-        file(GLOB ASSET_SUBDIRS RELATIVE "${SYNGINE_SOURCE_DIR}/assets" "${SYNGINE_SOURCE_DIR}/assets/*")
+    if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
+        file(GLOB ASSET_SUBDIRS RELATIVE "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_SOURCE_DIR}/assets/*")
         foreach(ASSET_SUBDIR ${ASSET_SUBDIRS})
-            if(IS_DIRECTORY "${SYNGINE_SOURCE_DIR}/assets/${ASSET_SUBDIR}" AND NOT "${ASSET_SUBDIR}" STREQUAL "shaders")
-                add_custom_command(TARGET ${target} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                        "${SYNGINE_SOURCE_DIR}/assets/${ASSET_SUBDIR}"
-                        "$<TARGET_FILE_DIR:${target}>/assets/${ASSET_SUBDIR}"
-                    COMMENT "Copying asset subdirectory '${ASSET_SUBDIR}' to executable directory"
-                )
-                message(STATUS "Adding asset subdirectory: ${SYNGINE_SOURCE_DIR}/assets/${ASSET_SUBDIR} -> $<TARGET_FILE_DIR:${target}>/assets/${ASSET_SUBDIR}")
+            if(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/assets/${ASSET_SUBDIR}" AND NOT "${ASSET_SUBDIR}" STREQUAL "shaders")
+                file(GLOB_RECURSE ASSET_SUBDIR_FILES RELATIVE "${CMAKE_SOURCE_DIR}/assets/${ASSET_SUBDIR}" "${CMAKE_SOURCE_DIR}/assets/${ASSET_SUBDIR}/*")
+                foreach(asset_file_relative ${ASSET_SUBDIR_FILES})
+                    set(abs_asset_file "${CMAKE_SOURCE_DIR}/assets/${ASSET_SUBDIR}/${asset_file_relative}")
+                    if(IS_DIRECTORY "${abs_asset_file}")
+                        continue()
+                    endif()
+                    target_sources(${target} PRIVATE "${abs_asset_file}")
+                    set_property(SOURCE "${abs_asset_file}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources/${ASSET_SUBDIR}")
+                    message(STATUS "Bundling asset file for macOS: ${abs_asset_file} -> Resources/${ASSET_SUBDIR}/${asset_file_relative}")
+                endforeach()
             endif()
         endforeach()
+    else()
+        message(WARNING "Asset directory not found at ${CMAKE_SOURCE_DIR}/assets")
     endif()
 
     # --- Copy engine/default subfolders except 'shaders' into bundle Resources ---
     if(EXISTS "${SYNGINE_SOURCE_DIR}")
-        file(GLOB ENGINE_DEFAULT_SUBDIRS RELATIVE "${SYNGINE_SOURCE_DIR}" "${SYNGINE_SOURCE_DIR}/*")
+        file(GLOB ENGINE_DEFAULT_SUBDIRS RELATIVE "${SYNGINE_SOURCE_DIR}/default" "${SYNGINE_SOURCE_DIR}/default/*")
         foreach(subdir ${ENGINE_DEFAULT_SUBDIRS})
-            if(IS_DIRECTORY "${SYNGINE_SOURCE_DIR}/${subdir}" AND NOT "${subdir}" STREQUAL "shaders")
-                file(GLOB_RECURSE DEFAULT_SUBDIR_FILES RELATIVE "${SYNGINE_SOURCE_DIR}/${subdir}" "${SYNGINE_SOURCE_DIR}/${subdir}/*")
+            if(IS_DIRECTORY "${SYNGINE_SOURCE_DIR}/default/${subdir}" AND NOT "${subdir}" STREQUAL "shaders")
+                file(GLOB_RECURSE DEFAULT_SUBDIR_FILES RELATIVE "${SYNGINE_SOURCE_DIR}/default/${subdir}" "${SYNGINE_SOURCE_DIR}/default/${subdir}/*")
                 foreach(default_file_relative ${DEFAULT_SUBDIR_FILES})
-                    set(abs_default_file "${SYNGINE_SOURCE_DIR}/${subdir}/${default_file_relative}")
+                    set(abs_default_file "${SYNGINE_SOURCE_DIR}/default/${subdir}/${default_file_relative}")
                     if(IS_DIRECTORY "${abs_default_file}")
                         continue()
                     endif()
@@ -149,7 +154,7 @@ function(_add_assets_mac target)
             endif()
         endforeach()
     else()
-        message(WARNING "Engine default directory not found: ${SYNGINE_SOURCE_DIR}")
+        message(WARNING "Engine default directory not found at ${SYNGINE_SOURCE_DIR}/default")
     endif()
 endfunction()
 
@@ -168,32 +173,47 @@ function(add_assets target)
         # on Windows, we can use a resource file to set the icon
         target_sources(${target} PRIVATE "src/res/app.rc")
     elseif(APPLE)
+        # find the source icon name and path
         set(ICON_NAME ${target}.icon)
-        set(ICON_PATH ${CMAKE_SOURCE_DIR}/src/res/${ICON_NAME})
+        set(ICON_PATH ${CMAKE_SOURCE_DIR}/game/src/res/${ICON_NAME})
+        # ensure the build cache directory for the icon exists
         file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/build/build/.${target}icon)
+        # find the icon build cache we just made, as well as the compiled icon
         set(ICON_PACKAGE_PATH ${CMAKE_SOURCE_DIR}/build/build/.${target}icon)
         set(ICON_PACKAGE ${ICON_PACKAGE_PATH}/Assets.car)
-        set(PLIST_PATH ${CMAKE_SOURCE_DIR}/build/CMakeFiles/${target}.dir/Info.plist)
+        # find the Info.plist file in the build cache
+        set(PLIST_PATH ${CMAKE_SOURCE_DIR}/build/game/CMakeFiles/${target}.dir/Info.plist)
 
+        # make a command to run the asset compiler
         add_custom_command(
+            # tell CMake what it outputs
             OUTPUT "${ICON_PACKAGE}"
             COMMAND xcrun actool
+                # tell the compiler where to spit the output
                 --compile ${ICON_PACKAGE_PATH}
+                # tell the compiler where the source is
                 --app-icon ${ICON_PATH}
                 --platform macosx
+                # this is defined in the root CmakeLists.txt
                 --minimum-deployment-target ${MINIMUM_MACOS_VERSION}
                 # add the new plist keys to CMake's existing generated plist
                 --output-partial-info-plist ${PLIST_PATH}
+                # for some reason the asset compiler wants the raw icon twice
                 ${ICON_PATH}
+            # tell CMake we need the icon and plist to exist before calling the command
             DEPENDS "${ICON_PATH}"
+            DEPENDS "${PLIST_PATH}"
             COMMENT "Compiling app icon for macOS"
         )
 
+        # make a build target for the app icon that depends on the icon being built
         add_custom_target(${target}-icon ALL
             DEPENDS "${ICON_PACKAGE}"
         )
 
+        # add the icon target as a dependency of the main target
         add_dependencies(${target} ${target}-icon)
+        # set the built icon as a target for the app and copy it into Resources
         target_sources(${target} PRIVATE ${ICON_PACKAGE})
         set_property(SOURCE ${ICON_PACKAGE} PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
 
@@ -284,12 +304,12 @@ endif()
 if(APPLE)
     set_target_properties(${name} PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/src/Info.plist.in
+        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/game/src/Info.plist.in
         XCODE_GENERATE_SCHEME TRUE
         XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
         XCODE_ATTRIBUTE_SDKROOT "macosx"
-        # tells Xcode to recognize the app icon
+        # tells Xcode to recognize the app icon. this might not be needed idk
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "${name}"
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS TRUE
     )

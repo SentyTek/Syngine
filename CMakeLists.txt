@@ -53,12 +53,6 @@ if(MSVC)
     )
 endif()
 
-if(APPLE)
-    # set the minimum deployment version for the asset compiler
-    # there's nothing stopping us from going earlier than 26.0 Tahoe as far as I know
-    set(MINIMUM_MACOS_VERSION 26.0)
-endif()
-
 # Add all required source files
 add_library(Syngine STATIC
     src/Syngine/Core/Core.cpp
