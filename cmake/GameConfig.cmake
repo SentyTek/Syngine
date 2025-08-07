@@ -177,12 +177,18 @@ function(add_assets target)
         set(ICON_NAME ${target}.icon)
         set(ICON_PATH ${CMAKE_SOURCE_DIR}/game/src/res/${ICON_NAME})
         # ensure the build cache directory for the icon exists
-        file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/build/build/.${target}icon)
+        file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/build/build/.${target}-icon)
         # find the icon build cache we just made, as well as the compiled icon
-        set(ICON_PACKAGE_PATH ${CMAKE_SOURCE_DIR}/build/build/.${target}icon)
+        set(ICON_PACKAGE_PATH ${CMAKE_SOURCE_DIR}/build/build/.${target}-icon)
         set(ICON_PACKAGE ${ICON_PACKAGE_PATH}/Assets.car)
         # find the Info.plist file in the build cache
-        set(PLIST_PATH ${CMAKE_SOURCE_DIR}/build/game/CMakeFiles/${target}.dir/Info.plist)
+        set(PLIST_PATH ${CMAKE_SOURCE_DIR}/build/build/.${target}-icon/Info.plist)
+
+        # configure the Info.plist file
+
+        configure_file("${CMAKE_SOURCE_DIR}/game/src/Info.plist.in"
+                       "${PLIST_PATH}"
+        )
 
         # make a command to run the asset compiler
         add_custom_command(
@@ -216,6 +222,13 @@ function(add_assets target)
         # set the built icon as a target for the app and copy it into Resources
         target_sources(${target} PRIVATE ${ICON_PACKAGE})
         set_property(SOURCE ${ICON_PACKAGE} PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
+
+        # add the Info.plist to the target and have it depend on the icon
+        set_property(SOURCE "${PLIST_PATH}" PROPERTY MACOSX_PACKAGE_LOCATION "Contents/" DEPENDS ${target}-icon)
+        # tell Xcode this is the bundle Info.plist
+        set_target_properties(${name} PROPERTIES
+            MACOSX_BUNDLE_INFO_PLIST ${PLIST_PATH}
+        )
 
         message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/Assets.car")
         message(STATUS "Added macOS icon property list")
@@ -304,7 +317,6 @@ endif()
 if(APPLE)
     set_target_properties(${name} PROPERTIES
         MACOSX_BUNDLE TRUE
-        MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/game/src/Info.plist.in
         XCODE_GENERATE_SCHEME TRUE
         XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
