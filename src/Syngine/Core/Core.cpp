@@ -28,7 +28,7 @@
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/Component.h"
-#include "Syngine/Utils/FSUtils.h"
+#include "Syngine/Utils/FsUtils.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"

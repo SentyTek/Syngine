@@ -235,12 +235,12 @@ function(add_assets target)
     else()
         set(DESKTOP_FILE "${CMAKE_BINARY_DIR}/${target}.desktop")
         set(ICON_NAME "$ENV{HOME}/.local/share/pixmaps/${target}.png")
-        set(ICON_SOURCE "${CMAKE_SOURCE_DIR}/src/res/icon.png")
+        set(ICON_SOURCE "${GAME_DIR}/src/res/icon.png")
         set(ICON_TARGET "${CMAKE_BINARY_DIR}/${ICON_NAME}.png")
         set(EXEC_PATH "$ENV{HOME}/.local/bin/${target}")
 
         # Configure .desktop file from template
-        configure_file("${CMAKE_SOURCE_DIR}/src/res/${target}.desktop.in"
+        configure_file("${GAME_DIR}/src/res/${target}.desktop.in"
                     "${DESKTOP_FILE}"
                     @ONLY)
         configure_file("${ICON_SOURCE}" "${ICON_TARGET}" COPYONLY)
