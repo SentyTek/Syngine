@@ -8,10 +8,13 @@
 
 #pragma once
 #include "Syngine/Utils/ModelLoader.h"
+#include "Syngine/Graphics/Renderer.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Physics/Physics.h"
 
 namespace Syngine {
+// Forward declare Window
+class Window;
 
 /// @brief Struct to hold hardware specifications
 /// @section Core
@@ -34,15 +37,26 @@ struct HardwareSpecs {
     bool        supports3DTextures; //* Whether the GPU supports 3D textures
 };
 
+/// @brief Struct to hold engine config
+/// @section Core
+/// @since v0.0.1
+struct EngineConfig {
+    std::string windowTitle; //* Title of the game window
+    int         windowWidth; //* Width of the game window in pixels
+    int         windowHeight; //* Height of the game window in pixels
+    bool        vsync; //* Whether vertical sync is enabled
+};
+
 /// @brief Struct to hold application state
 /// @section Core
 /// @since v0.0.1
 struct App {
-    Graphics* graphics; //* Pointer to the graphics system
+    EngineConfig config; //* Engine configuration
+    Window* window; //* Pointer to the window
+    Renderer* renderer; //* Pointer to the render system
     SynModelLoader* synModels; //* Pointer to the model loader
     Phys*           physicsManager; //* Pointer to the physics manager
     bool            debug = true;   //* Debug mode flag
-    std::string     appName;      //* Name of the application
 };
 
 /// @brief Core class to manage the application
@@ -50,13 +64,13 @@ struct App {
 /// @since v0.0.1
 class Core {
   public:
-    /// @brief Constructor for the Core class
-    /// @param appName Name of the application
-    /// @since v0.0.1
-    Core(const std::string& appName = "SyngineGame");
-
-    /// Destructor for the Core class
+    Core(const EngineConfig config);
     ~Core();
+
+    /// @brief Initialize the core system
+    /// @return True on success, false on failure
+    /// @since v0.0.1
+    static bool Initialize();
 
     /// @brief Get the global Core instance
     /// @return Pointer to the global Core instance
@@ -69,14 +83,10 @@ class Core {
     /// @since v0.0.1
     static App* _GetApp();
 
-    /// @brief Attach the graphics system to the core.
-    /// @param graphics Pointer to the graphics system
-    /// @return 0 on success, non-zero on failure
-    int AttachGraphics(Graphics* graphics);
-
-    /// @brief Detach the graphics system from the core.
-    /// @return 0 on success, non-zero on failure.
-    int DetachGraphics();
+    /// @brief Get the global game config
+    /// @return Pointer to the global game config
+    /// @since v0.0.1
+    static EngineConfig* _GetConfig();
 
     /// @brief Main event loop, blocks until the application is closed.
     /// @return 0 on clean exit, non-zero on error.
@@ -98,11 +108,14 @@ class Core {
 
     /// @brief Get system specifications
     /// @return Hardware specifications of the system
+    /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
     Syngine::HardwareSpecs GetSystemSpecifications();
 
+    /// @brief Get the 
+
   private:
-    static Core* s_instance;
-    App* app;
+    static Core* m_instance;
+    static App* m_app;
 };
 
 } // namespace Syngine

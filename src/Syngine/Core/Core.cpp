@@ -6,6 +6,7 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/Graphics/Renderer.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -24,6 +25,7 @@
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
+#include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Physics/Physics.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/ECS/AllComponents.h"
@@ -47,86 +49,69 @@
 
 using namespace Syngine;
 
-Syngine::Core* Syngine::Core::s_instance = nullptr;
+Syngine::Core* Syngine::Core::m_instance = nullptr;
+Syngine::App* Syngine::Core::m_app = nullptr;
 
-Core::Core(const std::string& appName) {
-    if (s_instance) {
+Core::Core(const EngineConfig config) {
+    if (m_instance) {
         Syngine::Logger::Fatal("Only one instance of Core is allowed.");
     }
 
-    s_instance = this;
+    m_instance = this;
 
-    // initialize app
+    // initialize m_app
 
     // Check if required folders exist (shaders, meshes)
     // CheckRequiredFolders will abort if any folder is missing
     if (Syngine::_CheckRequiredFolders()) {
-        this->app = new App();
-        this->app->appName = appName;
-        this->app->graphics = nullptr; // No graphics attached initially
-        this->app->synModels = new AssimpLoader(); // Initialize the model loader
-
-        this->app->physicsManager = new Phys(); // Initialize the physics manager
-        this->app->physicsManager->_Init(
-            this->app->debug); // Initialize the physics system
+        this->m_app = new App();
+        this->m_app->config = config;
     }
 }
 
 Core::~Core() {
     //cleanup
-    if (this->app) {
-        if (this->app->graphics) {
-            delete this->app->graphics;
-            this->app->graphics = nullptr;
+    if (this->m_app) {
+        if (this->m_app->renderer) {
+            delete this->m_app->renderer;
+            this->m_app->renderer = nullptr;
         }
-        if (this->app->synModels) {
-            this->app->synModels->_UnloadAllMeshes();
-            //delete this->app->synModels; //It was getting mad.
-            this->app->synModels = nullptr;
+        if (this->m_app->synModels) {
+            this->m_app->synModels->_UnloadAllMeshes();
+            //delete this->m_app->synModels; //It was getting mad.
+            this->m_app->synModels = nullptr;
         }
-        if (this->app->physicsManager) {
-            this->app->physicsManager->_Shutdown();
-            delete this->app->physicsManager;
-            this->app->physicsManager = nullptr;
+        if (this->m_app->physicsManager) {
+            this->m_app->physicsManager->_Shutdown();
+            delete this->m_app->physicsManager;
+            this->m_app->physicsManager = nullptr;
         }
-        delete this->app;
-        this->app = nullptr;
-        s_instance = nullptr; // Reset the singleton instance
+        delete this->m_app;
+        this->m_app = nullptr;
+        m_instance = nullptr; // Reset the singleton instance
     }
 }
 
-Syngine::Core* Syngine::Core::_Get() { return s_instance; }
+bool Core::Initialize() {
+    m_app->window = new Window(m_app->config);
+    m_app->renderer = new Renderer(m_app->config.windowWidth, m_app->config.windowHeight);
+    m_app->synModels = new AssimpLoader();
+    m_app->physicsManager = new Phys();
+
+    m_app->physicsManager->_Init(m_app->debug);
+    return true;
+}
+
+Syngine::Core* Syngine::Core::_Get() { return m_instance; }
 Syngine::App* Syngine::Core::_GetApp() {
-    return s_instance ? s_instance->app : nullptr;
-}
-
-int Core::AttachGraphics(Graphics* graphics) {
-    //attach graphics to app
-    if (!graphics) {
-        Syngine::Logger::Error("No graphics object provided to attach");
-        return 1;
-    }
-    
-    this->app->graphics = graphics;
-    return 0;
-}
-
-int Core::DetachGraphics() {
-    //detach graphics from app
-    if (!this->app->graphics) {
-        Syngine::Logger::Error("No graphics object to detach");
-        return 1;
-    }
-    
-    this->app->graphics = nullptr;
-    return 0;
+    return m_instance ? m_instance->m_app : nullptr;
 }
 
 int Core::SyngineEventLoop() {
     //main loop. this will obviously be replaced with a more complex and modular/multi-threaded loop in the Future
     Syngine::Logger::Info("Entering event loop");
 
-    if (!this->app->graphics || !this->app->graphics->win) {
+    if (!Renderer::IsReady()) {
         Syngine::Logger::Error("Graphics not initialized or window not created");
         return 1;
     }
@@ -136,7 +121,7 @@ int Core::SyngineEventLoop() {
     player->AddComponent<Syngine::TransformComponent>()->SetPosition(
         0.0f, 20.0f, 0.0f);
     auto* playerCamera = player->AddComponent<Syngine::CameraComponent>();
-    player->AddComponent<Syngine::PlayerComponent>(playerCamera, this->app->graphics->win);
+    player->AddComponent<Syngine::PlayerComponent>(playerCamera, m_app->window->_GetSDLWindow());
 
     bool running = true;
     bool playerMode = false; // False is editor mode, True is player mode
@@ -198,8 +183,8 @@ int Core::SyngineEventLoop() {
                 SDL_Window* resizedWindow = SDL_GetWindowFromID(event.window.windowID);
                 SDL_GetWindowSize(resizedWindow, &w, &h);
 
-                this->app->graphics->width = w;
-                this->app->graphics->height = h;
+                m_app->renderer->width = w;
+                m_app->renderer->height = h;
                 bgfx::reset(w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
                 bgfx::setViewRect(0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
             } else if (event.type == SDL_EVENT_KEY_DOWN) {
@@ -275,8 +260,8 @@ int Core::SyngineEventLoop() {
                     sphere->AddComponent<Syngine::RigidbodyComponent>(sphereParams);
                 } else if (event.key.key == SDLK_F1) {
                     // Toggle debug mode
-                    this->app->debug = !this->app->debug;
-                    if (this->app->debug) {
+                    this->m_app->debug = !this->m_app->debug;
+                    if (this->m_app->debug) {
                         Syngine::Logger::Info("Debug mode enabled");
                     } else {
                         Syngine::Logger::Info("Debug mode disabled");
@@ -296,7 +281,7 @@ int Core::SyngineEventLoop() {
                     }
                 } else if (event.key.key == SDLK_F6) {
                     // Reload all shaders
-                    this->app->graphics->ReloadAllPrograms();
+                    m_app->renderer->ReloadAllPrograms();
                 }
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
                 if (event.button.button == SDL_BUTTON_RIGHT && !playerMode) {
@@ -307,7 +292,7 @@ int Core::SyngineEventLoop() {
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_UP && !playerMode) {
                 if (event.button.button == SDL_BUTTON_RIGHT) {
                     rmb = false;
-                    SDL_WarpMouseInWindow(this->app->graphics->win, mouseX, mouseY);
+                    SDL_WarpMouseInWindow(m_app->window->_GetSDLWindow(), mouseX, mouseY);
                 }
             } else if (event.type == SDL_EVENT_MOUSE_MOTION && rmb && !playerMode) {
                 //mouse motion
@@ -349,10 +334,10 @@ int Core::SyngineEventLoop() {
         }
 
         //mouse move
-        if (this->app->graphics->win) {
+        if (Renderer::IsReady()) {
             bool desiredMouseState = rmb || playerMode;
             if (desiredMouseState != mouseState) {
-                SDL_SetWindowRelativeMouseMode(this->app->graphics->win, desiredMouseState);
+                SDL_SetWindowRelativeMouseMode(m_app->window->_GetSDLWindow(), desiredMouseState);
                 mouseState = desiredMouseState;
             }
         }
@@ -467,11 +452,11 @@ int Core::SyngineEventLoop() {
 
         // simulation stuff
         if (simulate) {
-            if (this->app->physicsManager) {
+            if (this->m_app->physicsManager) {
                 accumulator += deltaTime;
 
                 while(accumulator >= physicsTimestep) {
-                    this->app->physicsManager->_Update(physicsTimestep, physicsSteps);
+                    this->m_app->physicsManager->_Update(physicsTimestep, physicsSteps);
                     physCounter++;
                     accumulator -= physicsTimestep;
                 }
@@ -522,17 +507,17 @@ int Core::SyngineEventLoop() {
             }
         }
 
-        if (this->app && this->app->graphics) {
-            this->app->graphics->_RenderFrame(lightDir,
+        if (Renderer::IsReady()) {
+            this->m_app->renderer->_RenderFrame(lightDir,
                                              finalCam,
-                                             this->app->debug);
+                                             this->m_app->debug);
 
-            if (this->app->debug) {
+            if (this->m_app->debug) {
                 // christ on a stick this call is ridiculous
-                this->app->physicsManager->_DrawDebug(
-                    this->app->graphics->width,
-                    this->app->graphics->height,
-                    this->app->graphics->GetProgram("debugger").program,
+                this->m_app->physicsManager->_DrawDebug(
+                    this->m_app->renderer->width,
+                    this->m_app->renderer->height,
+                    this->m_app->renderer->GetProgram("debugger").program,
                     Registry::GetGameObjectByName("player") // Player object has the camera
                         ->GetComponent<Syngine::CameraComponent>()
                         ->GetCamera(), finalCam->GetCamera());
@@ -562,7 +547,7 @@ int Core::SyngineEventLoop() {
         }
     }
     
-    this->app->synModels->_UnloadAllMeshes();
+    this->m_app->synModels->_UnloadAllMeshes();
     Syngine::Logger::Info("Exiting event loop");
     return 0;
 }
@@ -581,6 +566,11 @@ int Core::DeleteGameobject(GameObject* gameobject) {
 }
 
 Syngine::HardwareSpecs Core::GetSystemSpecifications() {
+    if (!Renderer::IsReady()) {
+        Syngine::Logger::Warn("Attempt to get hardware specs before renderer "
+                              "is ready. This is not allowed.");
+        return Syngine::HardwareSpecs();
+    }
     Syngine::HardwareSpecs specs;
 #ifdef _WIN32
     // On Windows, gather system information using Windows API
@@ -689,14 +679,14 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 #endif
 
     // Get display size
-    SDL_DisplayID dId = SDL_GetDisplayForWindow(app->graphics->win);
+    SDL_DisplayID dId = SDL_GetDisplayForWindow(m_app->window->_GetSDLWindow());
     SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
     specs.screenWidth = disMode.w;
     specs.screenHeight = disMode.h;
 
     // Get window resolution
     int w, h;
-    SDL_GetWindowSize(app->graphics->win, &w, &h);
+    SDL_GetWindowSize(m_app->window->_GetSDLWindow(), &w, &h);
     specs.winWidth = w;
     specs.winHeight = h;
 

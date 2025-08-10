@@ -170,7 +170,7 @@ void Registry::_NotifyComponentAdded(GameObject*         gameobject,
         case Syngine::SYN_COMPONENT_CAMERA:
             if (std::find(m_Gizmos.begin(), m_Gizmos.end(), gameobject) == m_Gizmos.end()) {
                 m_Gizmos.push_back(gameobject);
-                Syngine::Core::_GetApp()->graphics->_RegisterGizmo("camera_render");
+                Syngine::Core::_GetApp()->renderer->_RegisterGizmo("camera_render");
             }
         default:
             break; // No action for other component types
