@@ -197,8 +197,9 @@ bool Renderer::_CreateRenderer() {
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
     SDL_ShowWindow(win); // show the window
-
-    //create default shaders
+    
+    // Create default shaders
+    m_isReady = true; // set true for now just to create default shaders
     size_t defaultProg = AddProgram("shaders/default.vert.sc.bin",
                                     "shaders/default.frag.sc.bin",
                                     "default");
@@ -228,6 +229,7 @@ bool Renderer::_CreateRenderer() {
         SDL_Quit();
         return false;
     }
+    m_isReady = false;
 
     // create billboard buffers
     static const float billboardVertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
@@ -275,6 +277,7 @@ bool Renderer::_CreateRenderer() {
 #endif
 
     m_isReady = true;
+    Window::_SetContextCreated(true);
     Syngine::Logger::Info("Renderer created successfully");
     return true;
 }

@@ -105,43 +105,51 @@ void Window::SetVSync(bool enabled) {
 
 void Window::SetWindowMode(int mode) {
     if (m_window && m_contextCreated && mode >= 0 && mode <= 2) {
-        SDL_DisplayID displayID;
-        SDL_DisplayMode** dm;
-        SDL_DisplayMode* displayMode;
-
         switch (mode) {
             case 0: // Bordered
-                SDL_SetWindowFullscreen(m_window, false);
+                if (!SDL_SetWindowFullscreen(m_window, false)) {
+                    Syngine::Logger::LogF(Syngine::LogLevel::ERR, 
+                                         "Failed to set windowed mode: %s", SDL_GetError());
+                }
                 break;
             case 1: // Fullscreen Borderless
-                SDL_SetWindowFullscreen(m_window, true);
+                if (!SDL_SetWindowFullscreen(m_window, true)) {
+                    Syngine::Logger::LogF(Syngine::LogLevel::ERR, 
+                                         "Failed to set borderless fullscreen: %s", SDL_GetError());
+                }
                 break;
             case 2: // Exclusive Fullscreen
-                // Get display information
-                int count;
-                displayID = SDL_GetDisplayForWindow(m_window);
+                {
+                    SDL_DisplayID displayID = SDL_GetDisplayForWindow(m_window);
+                    if (!displayID) {
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, 
+                                             "Failed to get display for window: %s", SDL_GetError());
+                        break;
+                    }
 
-                // Available display modes
-                dm = SDL_GetFullscreenDisplayModes(displayID, &count);
+                    int count = 0;
+                    SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(displayID, &count);
+                    
+                    if (count <= 0 || !modes) {
+                        Syngine::Logger::Error("No fullscreen display modes available");
+                        break;
+                    }
 
-                if (count <= 0 || !dm) {
-                    Syngine::Logger::Error("No displays found or failed to get fullscreen display modes");
-                    break;
+                    // Set exclusive fullscreen with the first available mode
+                    if (!SDL_SetWindowFullscreen(m_window, true)) {
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, 
+                                             "Failed to enable fullscreen: %s", SDL_GetError());
+                        SDL_free(modes);
+                        break;
+                    }
+
+                    if (!SDL_SetWindowFullscreenMode(m_window, modes[0])) {
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, 
+                                             "Failed to set exclusive fullscreen mode: %s", SDL_GetError());
+                    }
+
+                    SDL_free(modes);
                 }
-
-                // Get the preferred display mode
-                displayMode = nullptr;
-                if (count > 0) {
-                    displayMode = dm[0];
-                }
-
-                // Set the window to fullscreen
-                SDL_SetWindowFullscreen(m_window, true);
-                SDL_SetWindowFullscreenMode(m_window, displayMode);
-
-                SDL_free(&displayID);
-                SDL_free(dm);
-                SDL_free(displayMode);
                 break;
             default:
                 break;
