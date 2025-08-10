@@ -107,6 +107,12 @@ class Logger {
     /// @since v0.0.1
     static void Info(const std::string_view message);
 
+    /// @brief Show a popup and log an informational message
+    /// @param message Informational message to log
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void InfoPopup(const std::string_view message);
+
     /// @brief Log a warning
     /// @param message Warning message to log
     /// @threadsafety not-safe
@@ -115,6 +121,7 @@ class Logger {
 
     /// @brief Log a fatal error and shutdown the logger
     /// @param message Fatal error message to log
+    /// @note This will terminate the application. If core debug is on, will also pause the app.
     /// @threadsafety not-safe
     /// @since v0.0.1
     static void Fatal(const std::string_view message);

@@ -22,6 +22,16 @@
 #include <vector>
 #include <cstdlib>
 
+#ifdef _WIN32
+#include <intrin.h>
+#define DEBUG_BREAK() __debugbreak()
+#elif __APPLE__
+#include <csignal>
+#define DEBUG_BREAK() raise(SIGTRAP)
+#else
+#define DEBUG_BREAK() __builtin_trap()
+#endif
+
 namespace Syngine {
 
 std::string Logger::GetTimestamp() {
@@ -158,7 +168,22 @@ void Logger::Log(const std::string_view message, LogLevel level, bool toConsole)
         SDL_LogError(
             SDL_LOG_CATEGORY_APPLICATION, "Fatal error: %s", message.data());
         std::string finalMessage = appName + " has encountered a fatal error and needs to close:\n\n" + message.data();
-        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Fatal Error", finalMessage.c_str(), nullptr);
+        SDL_ShowSimpleMessageBox(
+            SDL_MESSAGEBOX_ERROR, "Fatal Error", finalMessage.c_str(), nullptr);
+
+        // Break if debug is on
+        /*
+            !!!
+            DEVELOPER:
+            LOOK AT STACK TRACE
+            The program is already safed by this point, so you can inspect the state.
+            When done, resume execution. This will terminate the program.
+            !!!
+        */
+        if (Syngine::Core::_GetApp()->debug) {
+            DEBUG_BREAK();
+        }
+        
         exit(EXIT_FAILURE);
     }
 }
@@ -221,6 +246,11 @@ void Logger::LogF(LogLevel level, const char* fmt, ...) {
     va_end(args);
 
     Log(std::string(buffer.data()), level);
+}
+
+void Logger::InfoPopup(const std::string_view message) {
+    Log(message, LogLevel::INFO);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", message.data(), nullptr);
 }
 
 void Logger::Error(const std::string_view message) { Log(message, LogLevel::ERR); }
