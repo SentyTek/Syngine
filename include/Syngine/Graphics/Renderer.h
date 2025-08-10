@@ -20,7 +20,7 @@ class CameraComponent; // Forward declaration
 
 /// @brief Collection of view IDs for rendering. Rendered in the order they are
 /// defined here.
-/// @section Graphics
+/// @section Renderer
 /// @since v0.0.1
 enum ViewID : bgfx::ViewId {
     VIEW_SHADOW   = 0, //* Shadow map rendering
@@ -35,7 +35,7 @@ enum ViewID : bgfx::ViewId {
 };
 
 /// @brief Program structure to hold shader program information
-/// @section Graphics
+/// @section Renderer
 struct Program {
     bgfx::ProgramHandle program = BGFX_INVALID_HANDLE; //* Shader program handle
     unsigned short      viewId  = -1; //* View ID for rendering
@@ -46,7 +46,7 @@ struct Program {
 };
 
 /// @brief Handles structure to manage shader programs and uniforms
-/// @section Graphics
+/// @section Renderer
 /// @since v0.0.1
 struct Handles {
     std::vector<Program> programs; //* List of shader programs
@@ -55,56 +55,23 @@ struct Handles {
 };
 
 /// @brief Gizmo structure to hold information about gizmos
-/// @section Graphics
+/// @section Renderer
 /// @since v0.0.1
 struct Gizmo {
     bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; //* Texture handle for the gizmo
     float size = 1.0f; //* Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
 };
 
-/// @brief Graphics class to manage rendering and shader programs
-/// @section Graphics
+/// @brief Renderer class to manage rendering and shader programs
+/// @section Renderer
 /// @since v0.0.1
-class Graphics {
+class Renderer {
   public:
-    int width; //* Width of the game window in pixels
-    int height; //* Height of the game window in pixels
-    SDL_Window* win; //* SDL window handle
-    Handles handles; //* Shader program and uniform handles
+    static int width; //* Width of the game window in pixels
+    static int height; //* Height of the game window in pixels
 
-    /// @brief Constructor for the Graphics class
-    /// @param title Title of the game window
-    /// @param width Width of the game window in pixels
-    /// @param height Height of the game window in pixels
-    /// @since v0.0.1
-    Graphics(const char* title, int width, int height);
-
-    /// @brief Create the game's main window
-    /// @return 0 on success, non-zero on failure
-    /// @note This should be called exactly once after the Core is initialized.
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    int CreateGameWindow();
-
-    /// @brief Initialize the graphics system
-    /// @return 0 on success, non-zero on failure
-    /// @note This should be called after the game window is created.
-    /// @throws std::runtime_error if initialization fails (e.g., bgfx::init() fails or missing files)
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    int CreateRenderer();
-
-    /// @brief Shutdown the graphics system
-    /// @return 0 on success, non-zero on failure
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    int DestroyRenderer();
-
-    /// @brief Destroy the game window
-    /// @note This should be called when the game is shutting down.
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    void DestroyWindow();
+    Renderer(int width, int height);
+    ~Renderer();
 
     /// @brief Load a shader from vertex and fragment shader file paths and
     /// create a shader program
@@ -114,11 +81,12 @@ class Graphics {
     /// @param viewId View ID for the shader program, defaults to VIEW_FORWARD
     /// @return The index of the newly created program on success, -1 on failure
     /// @threadsafety not-safe
+    /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
     /// @since v0.0.1
-    int AddProgram(const char*     vsPath,
-                   const char*     fsPath,
-                   const char*     name,
-                   Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
+    static size_t AddProgram(const std::string& vsPath,
+                          const std::string& fsPath,
+                          const std::string& name,
+                          Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
 
     /// @brief Load a shader from a single file path and create a shader program
     /// @param path Path to the shader file
@@ -127,11 +95,12 @@ class Graphics {
     /// @return The index of the newly created program on success, -1 on failure
     /// @note Assumes the vertex shader is named "{name}.vert.bin" and fragment
     /// shader is named "{name}.frag.bin"
+    /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int AddProgram(const char*     path,
-                   const char*     name,
-                   Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
+    static size_t AddProgram(const std::string& path,
+                          const std::string& name,
+                          Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
 
     /// @brief Get a shader program by name. Returns first matching program
     /// @param name Name of the shader program
@@ -139,7 +108,7 @@ class Graphics {
     /// not found
     /// @threadsafety read-only
     /// @since v0.0.1
-    Program GetProgram(const char* name) const;
+    static Program GetProgram(const std::string_view& name);
 
     /// @brief Get a shader program by index
     /// @param index Index of the shader program in the list
@@ -147,40 +116,46 @@ class Graphics {
     /// index is out of bounds
     /// @threadsafety read-only
     /// @since v0.0.1
-    Program GetProgram(int index) const;
+    static Program GetProgram(int index);
 
     /// @brief Remove all shader programs
     /// @return True if all programs were removed successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool RemoveAllPrograms();
+    static bool RemoveAllPrograms();
 
     /// @brief Remove a shader program by index
     /// @param index Index of the shader program to remove
     /// @return True if the program was removed successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool RemoveProgram(int index);
+    static bool RemoveProgram(int index);
 
     /// @brief Remove a shader program by name
     /// @param name Name of the shader program to remove
     /// @return True if the program was removed successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool RemoveProgram(const char* name);
+    static bool RemoveProgram(const std::string_view& name);
 
     /// @brief Reload a shader program by name
     /// @param name Name of the shader program to reload
     /// @return True if the program was reloaded successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool ReloadProgram(const char* name);
+    static bool ReloadProgram(const std::string_view& name);
 
     /// @brief Reload all shader programs
     /// @return True if all programs were reloaded successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool ReloadAllPrograms();
+    static bool ReloadAllPrograms();
+
+    /// @brief Check if the renderer is ready
+    /// @return True if the renderer is ready, false otherwise
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    static bool IsReady();
 
     /// @brief Get a uniform handle by name
     /// @param name Name of the uniform
@@ -189,7 +164,7 @@ class Graphics {
     /// @threadsafety read-only
     /// @since v0.0.1
     /// @internal
-    bgfx::UniformHandle _GetUniform(const char* name) const;
+    bgfx::UniformHandle _GetUniform(const std::string_view& name) const;
 
     /// @brief Render a frame
     /// @param lightDir Direction of the light for lighting calculations
@@ -222,11 +197,25 @@ class Graphics {
     void _RenderGizmos(CameraComponent* camera);
 
   private:
-    std::string title;
+    static std::string m_title;
+    static bool        m_isReady;
 
-    std::map<std::string, Gizmo> gizmoRegistry;
-    bgfx::VertexBufferHandle     billboardVbh = BGFX_INVALID_HANDLE;
-    bgfx::IndexBufferHandle      billboardIbh = BGFX_INVALID_HANDLE;
+    static std::map<std::string, Gizmo> m_gizmoRegistry;
+    static bgfx::VertexBufferHandle     m_billboardVbh;
+    static bgfx::IndexBufferHandle      m_billboardIbh;
+
+    static SDL_Window* win; //* SDL window handle
+    static Handles handles; //* Shader program and uniform handles
+
+    /// @brief Initialize the graphics system
+    /// @return true on success, false on failure
+    /// @note This should be called after the game window is created.
+    /// @throws std::runtime_error if initialization fails (e.g., bgfx::init()
+    /// fails or missing files)
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
+    static bool _CreateRenderer();
 };
 
 } // namespace Syngine

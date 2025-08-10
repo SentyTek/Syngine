@@ -16,6 +16,7 @@
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/Utils/ModelLoader.h"
+#include "Syngine/Graphics/Windowing.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
@@ -28,6 +29,7 @@
 #include "bx/math.h"
 
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 #if BX_PLATFORM_OSX
@@ -35,150 +37,166 @@
 #include <CoreFoundation/CoreFoundation.h>
 #endif
 
-using namespace Syngine;
+namespace Syngine {
 
-Graphics::Graphics(const char* title, int width, int height) {
-    //initialize app
-    this->title = title;
-    this->width = width;
-    this->height = height;
-    this->win = nullptr;
+std::string Renderer::m_title;
+bool        Renderer::m_isReady = false;
+
+SDL_Window* Renderer::win = nullptr;
+Syngine::Handles Renderer::handles;
+
+std::map<std::string, Gizmo> Renderer::m_gizmoRegistry;
+bgfx::VertexBufferHandle     Renderer::m_billboardVbh = BGFX_INVALID_HANDLE;
+bgfx::IndexBufferHandle      Renderer::m_billboardIbh = BGFX_INVALID_HANDLE;
+
+int                          Renderer::width        = 0;
+int                          Renderer::height       = 0;
+
+Renderer::Renderer(int width, int height) {
+    Renderer::width = width;
+    Renderer::height = height;
+    Renderer::win = Window::_GetSDLWindow();
+
+    if (!_CreateRenderer()) {
+        Syngine::Logger::Fatal("Failed to create renderer");
+    }
 };
 
-int Graphics::CreateGameWindow() {
-    //bgInit
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
-                              "Failed to initialize SDL: %s",
-                              SDL_GetError());
-        return 1;
+Renderer::~Renderer() {
+    if (win) {
+        Syngine::Logger::Error("No app to destroy renderer for");
+        return;
     }
 
-    //check if app is initialized
-    if (this->title == "") {
-        Syngine::Logger::Error("No app to create window for");
-        return 1;
+    // Default cleanup
+    if(bgfx::isValid(m_billboardVbh)) {
+        bgfx::destroy(m_billboardVbh);
+        m_billboardVbh = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(m_billboardIbh)) {
+        bgfx::destroy(m_billboardIbh);
+        m_billboardIbh = BGFX_INVALID_HANDLE;
+    }
+    if(bgfx::isValid(handles.dummy)) {
+        bgfx::destroy(handles.dummy);
+        handles.dummy = BGFX_INVALID_HANDLE;
     }
 
-    //create window
-    this->win =
-        SDL_CreateWindow(this->title.c_str(),
-                         this->width,
-                         this->height,
-                         SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY |
-                             SDL_WINDOW_HIDDEN
-    );
-    if (!this->win) {
-        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
-                              "Window could not be created! SDL_Error: %s",
-                              SDL_GetError());
-        SDL_Quit();
-        return 1;
+    // Destroy all programs and uniforms
+    for (auto& program : handles.programs) {
+        bgfx::destroy(program.program);
+        program.program = BGFX_INVALID_HANDLE;
     }
+    handles.programs.clear();
 
-        
-    //macos requires some kind of renderer to be created before metal is initialized
-    #if BX_PLATFORM_OSX
-    SDL_Renderer* renderer = SDL_CreateRenderer(this->win, NULL);
-    SDL_DestroyRenderer(renderer);
-    #endif
-    
-    //SDL_ShowWindow(win);
+    for (auto& uniform : handles.uniforms) {
+        if(bgfx::isValid(uniform.second) && uniform.second.idx != 0) {
+            bgfx::destroy(uniform.second);
+        }
+    }
+    handles.uniforms.clear();
 
-    //return window
-    return 0;
+    // Clear gizmos
+    for (auto& gizmo : m_gizmoRegistry) {
+        if (bgfx::isValid(gizmo.second.texture)) {
+            bgfx::destroy(gizmo.second.texture);
+        }
+    }
+    m_gizmoRegistry.clear();
+
+    bgfx::shutdown(); // Shut down bgfx BEFORE destroying the window
+    Syngine::Logger::Info("Renderer destroyed successfully");
 }
 
-int Graphics::CreateRenderer() {
-    //create renderer
-    if (!this->win) {
+bool Renderer::_CreateRenderer() {
+    if (!win) {
         Syngine::Logger::Fatal("No app to create renderer for");
-        return 1;
+        return false;
     }
     
-    //initialize bgfx
+    // Initialize bgfx
     bgfx::Init bgInit;
-    SDL_PropertiesID sdlProps = SDL_GetWindowProperties(this->win);
-    if(sdlProps == 0) { //return 0 on failure
+    SDL_PropertiesID sdlProps = SDL_GetWindowProperties(win);
+    if(sdlProps == 0) {
         Syngine::Logger::Error("Failed to get window properties");
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
     
-    //set platform data
-    #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-    //this assumes X11
+    // Set platform data
+#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
+    // This assumes X11
     bgInit.platformData.ndt = SDL_GetPointerProperty(sdlProps, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
     bgInit.platformData.nwh = (void*)SDL_GetNumberProperty(sdlProps, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0);
     if (bgInit.platformData.nwh == NULL || bgInit.platformData.ndt == NULL) {
         Syngine::Logger::Error("Failed to get window properties for Linux X11");
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
 #elif BX_PLATFORM_OSX
-    bgInit.type = bgfx::RendererType::Metal; // set renderer type to Metal
-    bgInit.platformData.ndt = NULL; //only needed on x11
-    bgInit.platformData.nwh = _GetSYNMetalView(this->win); //custom obj-c function to get the metal view
+    bgInit.type = bgfx::RendererType::Metal; // Set renderer type to Metal
+    bgInit.platformData.ndt = NULL; // Only needed on x11
+    bgInit.platformData.nwh = _GetSYNMetalView(win); // Custom obj-c function to get the metal view
     if (bgInit.platformData.nwh == NULL) {
         Syngine::Logger::Error("Failed to get window properties for macOS");
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
-    #elif BX_PLATFORM_WINDOWS
+#elif BX_PLATFORM_WINDOWS
     bgInit.type = bgfx::RendererType::Direct3D12;
-    bgInit.platformData.ndt = nullptr; //only needed on x11
+    bgInit.platformData.ndt = nullptr; // Only needed on x11
     bgInit.platformData.nwh = SDL_GetPointerProperty(sdlProps, SDL_PROP_WINDOW_WIN32_HWND_POINTER, nullptr);
     if (bgInit.platformData.nwh == NULL) {
         Syngine::Logger::Error("Failed to get window properties for Windows");
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
-    #else
-    #warning "Platform not supported
+#else
+#warning "Platform not supported
     bgInit.platformData.ndt = NULL;
     bgInit.platformData.nwh = NULL;
-    #endif
+#endif
     
-    bgInit.resolution.width = this->width;
-    bgInit.resolution.height = this->height;
-    bgInit.resolution.reset |= BGFX_RESET_VSYNC; // enable vsync
+    bgInit.resolution.width = width;
+    bgInit.resolution.height = height;
+    bgInit.resolution.reset |= BGFX_RESET_VSYNC; // Enable vsync
     bgInit.debug = true;
 
     if(!bgfx::init(bgInit)) {
         Syngine::Logger::Error("Failed to initialize bgfx");
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
     
-    //reset view 0 to the dimentions of the window and clear it
+    // Reset view 0 to the dimensions of the window and clear it
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1, 0);
-    bgfx::setViewRect(0, 0, 0, uint16_t(this->width), uint16_t(this->height));
-    
+    bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
+
     // Create uniforms and store them in a map by name
-    this->handles.uniforms["s_albedo"]        = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
-    this->handles.uniforms["s_normalMap"]     = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
-    this->handles.uniforms["s_heightMap"]     = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
+    handles.uniforms["s_albedo"]        = bgfx::createUniform("s_albedo", bgfx::UniformType::Sampler);
+    handles.uniforms["s_normalMap"]     = bgfx::createUniform("s_normalMap", bgfx::UniformType::Sampler);
+    handles.uniforms["s_heightMap"]     = bgfx::createUniform("s_heightMap", bgfx::UniformType::Sampler);
 
-    this->handles.uniforms["u_normalMatrix"]  = bgfx::createUniform("u_normalMatrix", bgfx::UniformType::Mat3);
-    this->handles.uniforms["u_lightDir"]      = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
-    this->handles.uniforms["u_floats"]        = bgfx::createUniform("u_floats", bgfx::UniformType::Vec4);
-    this->handles.uniforms["u_baseColor"]     = bgfx::createUniform("u_baseColor", bgfx::UniformType::Vec4);
+    handles.uniforms["u_normalMatrix"]  = bgfx::createUniform("u_normalMatrix", bgfx::UniformType::Mat3);
+    handles.uniforms["u_lightDir"]      = bgfx::createUniform("u_lightDir", bgfx::UniformType::Vec4);
+    handles.uniforms["u_floats"]        = bgfx::createUniform("u_floats", bgfx::UniformType::Vec4);
+    handles.uniforms["u_baseColor"]     = bgfx::createUniform("u_baseColor", bgfx::UniformType::Vec4);
 
-    this->handles.uniforms["u_skyColorDay"]   = bgfx::createUniform("u_skyColorDay", bgfx::UniformType::Vec4);
-    this->handles.uniforms["u_skyColorNight"] = bgfx::createUniform("u_skyColorNight", bgfx::UniformType::Vec4);
-    this->handles.uniforms["u_sunColorDay"]   = bgfx::createUniform("u_sunColorDay", bgfx::UniformType::Vec4);
-    this->handles.uniforms["u_sunColorRise"]  = bgfx::createUniform("u_sunColorRise", bgfx::UniformType::Vec4);
+    handles.uniforms["u_skyColorDay"]   = bgfx::createUniform("u_skyColorDay", bgfx::UniformType::Vec4);
+    handles.uniforms["u_skyColorNight"] = bgfx::createUniform("u_skyColorNight", bgfx::UniformType::Vec4);
+    handles.uniforms["u_sunColorDay"]   = bgfx::createUniform("u_sunColorDay", bgfx::UniformType::Vec4);
+    handles.uniforms["u_sunColorRise"]  = bgfx::createUniform("u_sunColorRise", bgfx::UniformType::Vec4);
 
-    this->handles.uniforms["u_billboard"] = bgfx::createUniform("u_billboard", bgfx::UniformType::Vec4);
+    handles.uniforms["u_billboard"] = bgfx::createUniform("u_billboard", bgfx::UniformType::Vec4);
     
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
-    SDL_ShowWindow(this->win); // show the window
+    SDL_ShowWindow(win); // show the window
 
     //create default shaders
     size_t defaultProg = AddProgram("shaders/default.vert.sc.bin",
@@ -186,9 +204,9 @@ int Graphics::CreateRenderer() {
                                     "default");
     if (defaultProg == (size_t)-1) {
         bgfx::shutdown();
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
 
     size_t debugProg = AddProgram("shaders/debug.vert.sc.bin",
@@ -196,9 +214,9 @@ int Graphics::CreateRenderer() {
                                   "debugger");
     if (debugProg == (size_t)-1) {
         bgfx::shutdown();
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
 
     size_t billboardProg = AddProgram("shaders/billboard.vert.sc.bin",
@@ -206,9 +224,9 @@ int Graphics::CreateRenderer() {
                                       "billboard");
     if (billboardProg == (size_t)-1) {
         bgfx::shutdown();
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
 
     // create billboard buffers
@@ -223,18 +241,18 @@ int Graphics::CreateRenderer() {
         .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float)
         .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
         .end();
-    this->billboardVbh = bgfx::createVertexBuffer(
+    m_billboardVbh = bgfx::createVertexBuffer(
         bgfx::copy(billboardVertices, sizeof(billboardVertices)),
         billboardLayout);
-    this->billboardIbh = bgfx::createIndexBuffer(
+    m_billboardIbh = bgfx::createIndexBuffer(
         bgfx::copy(billboardIndices, sizeof(billboardIndices)));
-    
-    if (!bgfx::isValid(this->billboardVbh) || !bgfx::isValid(this->billboardIbh)) {
+
+    if (!bgfx::isValid(m_billboardVbh) || !bgfx::isValid(m_billboardIbh)) {
         Syngine::Logger::Error("Failed to create billboard buffers");
         bgfx::shutdown();
-        SDL_DestroyWindow(this->win);
+        SDL_DestroyWindow(win);
         SDL_Quit();
-        return 1;
+        return false;
     }
 
     // Dummy buffer to make metal happy
@@ -256,67 +274,26 @@ int Graphics::CreateRenderer() {
     }
 #endif
 
+    m_isReady = true;
     Syngine::Logger::Info("Renderer created successfully");
-    return 0;
+    return true;
 }
 
-int Graphics::DestroyRenderer() {
-    if (!this->win) {
-        Syngine::Logger::Error("No app to destroy renderer for");
-        return 1;
-    }
+size_t Renderer::AddProgram(const std::string& vsPath,
+                            const std::string& fsPath,
+                            const std::string& name,
+                            Syngine::ViewID    viewId) {
+    if (!Renderer::IsReady()) Syngine::Logger::Fatal("Cannot add program before renderer is ready");
 
-    // Default cleanup
-    if(bgfx::isValid(this->billboardVbh)) {
-        bgfx::destroy(this->billboardVbh);
-        this->billboardVbh = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->billboardIbh)) {
-        bgfx::destroy(this->billboardIbh);
-        this->billboardIbh = BGFX_INVALID_HANDLE;
-    }
-    if(bgfx::isValid(this->handles.dummy)) {
-        bgfx::destroy(this->handles.dummy);
-        this->handles.dummy = BGFX_INVALID_HANDLE;
-    }
-
-    // Destroy all programs and uniforms
-    for (auto& program : this->handles.programs) {
-        bgfx::destroy(program.program);
-        program.program = BGFX_INVALID_HANDLE;
-    }
-    this->handles.programs.clear();
-
-    for (auto& uniform : this->handles.uniforms) {
-        if(bgfx::isValid(uniform.second) && uniform.second.idx != 0) {
-            bgfx::destroy(uniform.second);
-        }
-    }
-    this->handles.uniforms.clear();
-
-    // Clear gizmos
-    for (auto& gizmo : this->gizmoRegistry) {
-        if (bgfx::isValid(gizmo.second.texture)) {
-            bgfx::destroy(gizmo.second.texture);
-        }
-    }
-    this->gizmoRegistry.clear();
-
-    bgfx::shutdown(); //shut down bgfx BEFORE destroying the window
-    Syngine::Logger::Info("Renderer destroyed successfully");
-    return 0;
-}
-
-int Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* name, Syngine::ViewID viewId) {
-    bgfx::ShaderHandle vs = _LoadShader(vsPath);
-    bgfx::ShaderHandle fs = _LoadShader(fsPath);
+    bgfx::ShaderHandle vs = _LoadShader(vsPath.c_str());
+    bgfx::ShaderHandle fs = _LoadShader(fsPath.c_str());
     bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
     if (bgfx::isValid(vs) && bgfx::isValid(fs)) {
         programHandle = bgfx::createProgram(vs, fs, true);
     }
 
     if (!bgfx::isValid(programHandle)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create program %s", name);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create program %s", name.c_str());
         bgfx::destroy(vs);
         bgfx::destroy(fs);
         return -1;
@@ -329,24 +306,28 @@ int Graphics::AddProgram(const char* vsPath, const char* fsPath, const char* nam
     prog.vsPath  = vsPath;
     prog.fsPath  = fsPath;
 
-    this->handles.programs.push_back(prog);
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully", name);
-    return (int)this->handles.programs.size() - 1; // return the index of the new program
+    handles.programs.push_back(prog);
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully", name.c_str());
+    return handles.programs.size() - 1; // return the index of the new program
 }
 
-int Graphics::AddProgram(const char* path, const char* name, Syngine::ViewID viewId) {
+size_t Renderer::AddProgram(const std::string& path,
+                            const std::string& name,
+                            Syngine::ViewID    viewId) {
+    if (!Renderer::IsReady()) Syngine::Logger::Fatal("Cannot add program before renderer is ready");
+
     // Load the shader from the given path
-    bgfx::ShaderHandle vs = _LoadShader((std::string(path) + ".vert.sc.bin").c_str());
-    bgfx::ShaderHandle fs = _LoadShader((std::string(path) + ".frag.sc.bin").c_str());
+    bgfx::ShaderHandle vs = _LoadShader((path + ".vert.sc.bin").c_str());
+    bgfx::ShaderHandle fs = _LoadShader((path + ".frag.sc.bin").c_str());
 
     if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load shaders for program %s", name);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to load shaders for program %s", name.c_str());
         return -1;
     }
 
     bgfx::ProgramHandle programHandle = bgfx::createProgram(vs, fs, true);
     if (!bgfx::isValid(programHandle)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create program %s", name);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create program %s", name.c_str());
         bgfx::destroy(vs);
         bgfx::destroy(fs);
         return -1;
@@ -359,59 +340,59 @@ int Graphics::AddProgram(const char* path, const char* name, Syngine::ViewID vie
     prog.vsPath  = std::string(path) + ".vert.sc.bin";
     prog.fsPath  = std::string(path) + ".frag.sc.bin";
 
-    this->handles.programs.push_back(prog);
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully", name);
-    return (int)this->handles.programs.size() - 1; // return the index of the new program
+    handles.programs.push_back(prog);
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully", name.c_str());
+    return handles.programs.size() - 1; // return the index of the new program
 }
 
-Program Graphics::GetProgram(const char* name) const {
-    for (const auto& program : this->handles.programs) {
+Program Renderer::GetProgram(const std::string_view& name) {
+    for (const auto& program : handles.programs) {
         if (program.name == name && bgfx::isValid(program.program)) {
             return program;
         }
     }
-    Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Program %s not found", name);
+    Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Program %s not found", name.data());
     return Program();
 }
 
-bool Graphics::RemoveProgram(int index) {
-    if (index < 0 || index >= this->handles.programs.size()) {
+bool Renderer::RemoveProgram(int index) {
+    if (index < 0 || index >= handles.programs.size()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Invalid program index: %zu when attempting to remove shader program", index);
         return false;
     }
-    bgfx::destroy(this->handles.programs[index].program);
-    this->handles.programs.erase(this->handles.programs.begin() + index);
+    bgfx::destroy(handles.programs[index].program);
+    handles.programs.erase(handles.programs.begin() + index);
     return true;
 }
-bool Graphics::RemoveProgram(const char* name) {
-    for (int i = 0; i < this->handles.programs.size(); ++i) {
-        if (this->handles.programs[i].name == name) {
+bool Renderer::RemoveProgram(const std::string_view& name) {
+    for (int i = 0; i < handles.programs.size(); ++i) {
+        if (handles.programs[i].name == name) {
             return RemoveProgram(i);
         }
     }
     Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Program %s not found when attempting to remove shader program", name);
     return false;
 }
-bool Graphics::RemoveAllPrograms() {
-    for (auto& program : this->handles.programs) {
+bool Renderer::RemoveAllPrograms() {
+    for (auto& program : handles.programs) {
         if (!bgfx::isValid(program.program)) {
             continue; // Skip invalid programs
         }
         bgfx::destroy(program.program);
     }
-    this->handles.programs.clear();
+    handles.programs.clear();
     return true;
 }
 
-bool Graphics::ReloadProgram(const char* name) {
-    for (auto& prog : this->handles.programs) {
+bool Renderer::ReloadProgram(const std::string_view& name) {
+    for (auto& prog : handles.programs) {
         if (prog.name == name) {
             bgfx::ShaderHandle vs = _LoadShader(prog.vsPath.c_str());
             bgfx::ShaderHandle fs = _LoadShader(prog.fsPath.c_str());
             bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
 
             if (!bgfx::isValid(newProgram)) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to reload program %s", name);
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to reload program %s", name.data());
                 bgfx::destroy(vs);
                 bgfx::destroy(fs);
                 return false;
@@ -419,17 +400,17 @@ bool Graphics::ReloadProgram(const char* name) {
 
             bgfx::destroy(prog.program); // Destroy old program
             prog.program = newProgram;   // Update to new program
-            Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s reloaded successfully", name);
+            Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s reloaded successfully", name.data());
             return true;
         }
     }
     return false;
 }
 
-bool Graphics::ReloadAllPrograms() {
+bool Renderer::ReloadAllPrograms() {
     Syngine::Logger::Info("Reloading all shader programs...");
-    for (const auto& prog : this->handles.programs) { // Are we sure looping through every program several times is okay?
-        if (!ReloadProgram(prog.name.c_str())) {
+    for (const auto& prog : handles.programs) { // Are we sure looping through every program several times is okay?
+        if (!ReloadProgram(prog.name.data())) {
             Syngine::Logger::Error("Failed to reload all programs, see previous errors for details");
             return false;
         }
@@ -437,28 +418,20 @@ bool Graphics::ReloadAllPrograms() {
     return true;
 }
 
-bgfx::UniformHandle Graphics::_GetUniform(const char* name) const {
-    auto it = this->handles.uniforms.find(name);
+bool Renderer::IsReady() {
+    return m_isReady;
+}
+
+bgfx::UniformHandle Renderer::_GetUniform(const std::string_view& name) const {
+    auto it = this->handles.uniforms.find(name.data());
     if (it != this->handles.uniforms.end()) {
         return it->second;
     }
     return BGFX_INVALID_HANDLE;
 }
 
-void Graphics::DestroyWindow() { //dw this is effectively the destructor
-    if (!this->win) {
-        Syngine::Logger::Error("No app to destroy");
-        return;
-    }
-    //cleanup
-    Syngine::Logger::Info("Shutting down renderer");
-    SDL_DestroyWindow(this->win);
-    this->win = nullptr;
-    Syngine::Logger::Info("Window destroyed successfully");
-}
-
-void Graphics::_RegisterGizmo(const std::string& tag, float size) {
-    if (this->gizmoRegistry.find(tag) != this->gizmoRegistry.end())
+void Renderer::_RegisterGizmo(const std::string& tag, float size) {
+    if (this->m_gizmoRegistry.find(tag) != this->m_gizmoRegistry.end())
         return; // Gizmo already registered
 
     std::string resolvedPath = Syngine::_ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
@@ -466,11 +439,11 @@ void Graphics::_RegisterGizmo(const std::string& tag, float size) {
     bgfx::TextureHandle texture = Syngine::LoadTextureFromFile(path);
     
     if (bgfx::isValid(texture)) {
-        gizmoRegistry[tag] = { texture, size };
+        m_gizmoRegistry[tag] = { texture, size };
     }
 }
 
-void Graphics::_RenderGizmos(CameraComponent* camera) {
+void Renderer::_RenderGizmos(CameraComponent* camera) {
     unsigned short viewId = 26; // View ID for gizmos
     bgfx::setViewRect(viewId, 0, 0, bgfx::BackbufferRatio::Equal);
     bgfx::setViewTransform(
@@ -496,8 +469,8 @@ void Graphics::_RenderGizmos(CameraComponent* camera) {
     std::vector<GameObject*> gizmos = Registry::GetGizmos();
 
     for (auto go : gizmos) {
-        auto it = gizmoRegistry.find(go->gizmo);
-        if (it != gizmoRegistry.end()) {
+        auto it = m_gizmoRegistry.find(go->gizmo);
+        if (it != m_gizmoRegistry.end()) {
             auto* comp =
                 go->GetComponent<Syngine::CameraComponent>();
             if (comp) {
@@ -514,8 +487,8 @@ void Graphics::_RenderGizmos(CameraComponent* camera) {
 
                 // And finally render
                 bgfx::setTransform(modelMtx);
-                bgfx::setVertexBuffer(0, this->billboardVbh);
-                bgfx::setIndexBuffer(this->billboardIbh);
+                bgfx::setVertexBuffer(0, this->m_billboardVbh);
+                bgfx::setIndexBuffer(this->m_billboardIbh);
                 bgfx::setTexture(0, _GetUniform("s_albedo"), gizmo.texture);
                 bgfx::submit(viewId, billboardProgram.program);
             }
@@ -523,7 +496,7 @@ void Graphics::_RenderGizmos(CameraComponent* camera) {
     }
 }
 
-int Graphics::_RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
+int Renderer::_RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool debug) {
     const Program& terrainProgram = GetProgram("terrain");
     const Program& skyProgram = GetProgram("sky");
     const Program& defaultProgram = GetProgram("default");
@@ -685,3 +658,5 @@ int Graphics::_RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool deb
     bgfx::frame(); // submit the frame
     return 0;
 }
+
+} // namespace Syngine
