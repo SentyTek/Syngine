@@ -9,7 +9,6 @@
 #include "Syngine/ECS/GameObject.h"
 
 #include "Syngine/Graphics/Renderer.h"
-#include "Syngine/Graphics/Shaders.h"
 #include "Syngine/Graphics/Windowing.h"
 
 #include "Syngine/Physics/Physics.h"

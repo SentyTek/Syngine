@@ -128,7 +128,7 @@ class Core {
         // Mouse sensitivity
         static constexpr float DEFAULT_SENSITIVITY = 0.002f;
         // Highest camera can go up
-        static constexpr float DEFAULT_MAX_PITCH = 3.14 / 2 - 0.01;
+        static constexpr float DEFAULT_MAX_PITCH = 3.14f / 2 - 0.01f;
         // Sprint speed multiplier
         static constexpr float DEFAULT_SPRINT_MULT = 2.0f;
         // Crouch speed multiplier
@@ -136,7 +136,7 @@ class Core {
         // Physics update timestep
         static constexpr float DEFAULT_PHYSICS_TIMESTEP = 1.0f / 60.0f;
         // Iterations per physics update
-        static constexpr float DEFAULT_PHYSICS_STEPS = 1.0f;
+        static constexpr int DEFAULT_PHYSICS_STEPS = 1;
         static constexpr float DEFAULT_MAX_EDITOR_SPEED = 100.0f;
         static constexpr float DEFAULT_EDITOR_SPEED_INCREMENT = 0.5f;
 
@@ -163,7 +163,7 @@ class Core {
         int         lastFPS          = 0;
         int         lastTPS          = 0;
 
-        void Update(float deltaTime, bool simulate, int gameObjectCount) {
+        void Update(float deltaTime, bool simulate, size_t gameObjectCount) {
             oneSecond += deltaTime;
 
             if (oneSecond >= 1.0f) {
@@ -173,7 +173,7 @@ class Core {
                 oneSecond    = 0.0f;
                 physCounter  = 0;
 
-                SDL_Log("Frame: %d, GameObjects: %d, Sim: %s, FPS/TPS: %d/%d",
+                SDL_Log("Frame: %d, GameObjects: %zu, Sim: %s, FPS/TPS: %d/%d",
                         frameCount,
                         gameObjectCount,
                         simulate ? "ON" : "OFF",

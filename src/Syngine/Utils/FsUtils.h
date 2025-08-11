@@ -5,6 +5,7 @@
 // │ Copyright (c) SentyTek 2025-2025     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
+#pragma once
 
 #include <filesystem>
 #include "Syngine/Core/Logger.h"
