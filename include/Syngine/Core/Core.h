@@ -125,12 +125,20 @@ class Core {
 
   private:
     struct _internal {
-        static constexpr float sensitivity = 0.002f; // Mouse sensitivity
-        static constexpr float maxPitch    = 3.14 / 2 - 0.01;
-        static constexpr float sprintMultiplier = 2.0f; // Sprint speed multiplier
-        static constexpr float crouchSpeed      = 1.0f; // Crouch speed multiplier
-        static constexpr float physicsTimestep  = 1.0f / 60.0f; // Physics update timestep
-        static constexpr float physicsSteps     = 1.0f;
+        // Mouse sensitivity
+        static constexpr float DEFAULT_SENSITIVITY = 0.002f;
+        // Highest camera can go up
+        static constexpr float DEFAULT_MAX_PITCH = 3.14 / 2 - 0.01;
+        // Sprint speed multiplier
+        static constexpr float DEFAULT_SPRINT_MULT = 2.0f;
+        // Crouch speed multiplier
+        static constexpr float DEFAULT_CROUCH_MULT = 1.0f;
+        // Physics update timestep
+        static constexpr float DEFAULT_PHYSICS_TIMESTEP = 1.0f / 60.0f;
+        // Iterations per physics update
+        static constexpr float DEFAULT_PHYSICS_STEPS = 1.0f;
+        static constexpr float DEFAULT_MAX_EDITOR_SPEED = 100.0f;
+        static constexpr float DEFAULT_EDITOR_SPEED_INCREMENT = 0.5f;
 
         float editorMoveSpeed = 3.0f; // Speed of camera movement
         float accumulator = 0.0f; // Accumulator for physics updates
@@ -163,7 +171,6 @@ class Core {
                 lastTPS = physCounter;
                 frameDisplay = 0;
                 oneSecond    = 0.0f;
-                frameCount   = 0;
                 physCounter  = 0;
 
                 SDL_Log("Frame: %d, GameObjects: %d, Sim: %s, FPS/TPS: %d/%d",
@@ -184,7 +191,11 @@ class Core {
 
     static void _MakePlayer();
     static void _MakeEditorCamera();
-    void _HandleEditorCamera(const bool* keyState, float deltaTime);
+    void        _HandleEditorCamera(const bool* keyState, float deltaTime);
+    void        _MoveCameraInDirection(const bx::Vec3& direction, float speed, float deltaTime);
+
+    void _HandleKeyEvent(const SDL_Event& event);
+    void _HandleMouseEvent(const SDL_Event& event);
 };
 
 } // namespace Syngine

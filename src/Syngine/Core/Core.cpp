@@ -45,7 +45,6 @@
 #include "bx/math.h"
 #include "bgfx/defines.h"
 
-
 #include <filesystem>
 #include <memory>
 
@@ -163,85 +162,17 @@ bool Core::HandleEvents() {
             bgfx::setViewRect(
                 0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
             break;
-            }
-        case SDL_EVENT_KEY_DOWN: {
-            if (event.key.key == SDLK_ESCAPE) {
-                m_internal.simulate = !m_internal.simulate;
-                this->m_app->debug = !m_internal.simulate; // Disable debug mode when simulating
-            } else if (event.key.key == SDLK_F1) {
-                // Toggle debug mode
-                this->m_app->debug = !this->m_app->debug;
-                if (this->m_app->debug) {
-                    Syngine::Logger::Info("Debug mode enabled");
-                } else {
-                    Syngine::Logger::Info("Debug mode disabled");
-                }
-            } else if (event.key.key == SDLK_F5) {
-                // Reload changed assets
-                for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
-                    MeshComponent* mc = go->GetComponent<MeshComponent>();
-                    if (!mc) continue;
-                    MeshData& mesh = mc->meshData;
-                    if (!mesh.valid) continue;
-                    if (mesh.lastWriteTime !=
-                        std::filesystem::last_write_time(mesh.path)) {
-                        mc->ReloadMesh();
-                    }
-                }
-            } else if (event.key.key == SDLK_F6) {
-                // Reload all shaders
-                m_app->renderer->ReloadAllPrograms();
-            }
         }
-        case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-            if (event.button.button == SDL_BUTTON_RIGHT && !m_internal.simulate) {
-                m_internal.rmb = true;
-                m_internal.mouseX = event.button.x;
-                m_internal.mouseY = event.button.y;
-            }
+        case SDL_EVENT_KEY_DOWN:
+        case SDL_EVENT_KEY_UP:
+            _HandleKeyEvent(event);
             break;
-        }
-        case SDL_EVENT_MOUSE_BUTTON_UP: {
-            if (event.button.button == SDL_BUTTON_RIGHT && !m_internal.simulate) {
-                m_internal.rmb = false;
-                SDL_WarpMouseInWindow(m_app->window->_GetSDLWindow(), m_internal.mouseX, m_internal.mouseY);
-            }
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
+        case SDL_EVENT_MOUSE_BUTTON_UP: 
+        case SDL_EVENT_MOUSE_MOTION:
+        case SDL_EVENT_MOUSE_WHEEL:
+            _HandleMouseEvent(event);
             break;
-        }
-        case SDL_EVENT_MOUSE_MOTION: {
-            if (m_internal.rmb && !m_internal.simulate) {
-                // Mouse motion
-                float dx = event.motion.xrel * m_internal.sensitivity;
-                float dy = event.motion.yrel * m_internal.sensitivity;
-
-                float cx, cy = 0.0f;
-                m_internal.cam->GetAngles(cx, cy);
-                cx += dx;
-                cy -= dy;
-                cy = bx::clamp(cy, -m_internal.maxPitch, m_internal.maxPitch);
-                // Update camera angles
-                m_internal.cam->SetAngles(cx, cy);
-            }
-            break;
-        }
-        case SDL_EVENT_MOUSE_WHEEL: {
-            // Mouse wheel scroll
-            if (!m_internal.simulate) {
-                if (event.wheel.y > 0) {
-                    // Scroll up
-                    m_internal.editorMoveSpeed += 0.5f; // Increase speed
-                    if (m_internal.editorMoveSpeed > 100.0f) {
-                        m_internal.editorMoveSpeed = 100.0f; // Cap speed
-                    }
-                } else if (event.wheel.y < 0) {
-                    // Scroll down
-                    m_internal.editorMoveSpeed -= 0.5f; // Decrease speed
-                    if (m_internal.editorMoveSpeed < 0.0f) {
-                        m_internal.editorMoveSpeed = 0.0f; // Cap speed
-                    }
-                }
-            }
-        }
         }
 
         // Handle other events as needed
@@ -270,9 +201,9 @@ bool Core::Update() {
     if (m_app->physicsManager && m_internal.simulate) {
         m_internal.accumulator += deltaTime;
 
-        while(m_internal.accumulator >= m_internal.physicsTimestep) {
-            m_app->physicsManager->_Update(m_internal.physicsTimestep, m_internal.physicsSteps);
-            m_internal.accumulator -= m_internal.physicsTimestep;
+        while(m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
+            m_app->physicsManager->_Update(m_internal.DEFAULT_PHYSICS_TIMESTEP, m_internal.DEFAULT_PHYSICS_STEPS);
+            m_internal.accumulator -= m_internal.DEFAULT_PHYSICS_TIMESTEP;
             m_frameCounter.physCounter++;
         }
     }
@@ -293,7 +224,7 @@ bool Core::Update() {
             if (!go) continue;
             RigidbodyComponent* rb = go->GetComponent<RigidbodyComponent>();
             if (!rb) continue;
-            rb->Update(m_internal.physicsTimestep);
+            rb->Update(m_internal.DEFAULT_PHYSICS_TIMESTEP);
         }
 
         // Player mode: update player camera
@@ -498,6 +429,104 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     return specs;
 }
 
+void Core::_HandleKeyEvent(const SDL_Event& event) {
+    if (event.type == SDL_EVENT_KEY_DOWN) {
+        switch (event.key.key) {
+            case SDLK_ESCAPE: {
+                m_internal.simulate = !m_internal.simulate;
+                this->m_app->debug =
+                    !m_internal.simulate; // Disable debug mode when simulating
+                break;
+            }
+            case SDLK_F1: {
+                // Toggle debug mode
+                this->m_app->debug = !this->m_app->debug;
+                if (this->m_app->debug) {
+                    Syngine::Logger::Info("Debug mode enabled");
+                } else {
+                    Syngine::Logger::Info("Debug mode disabled");
+                }
+                break;
+            }
+            case SDLK_F5: {
+                // Reload changed assets
+                for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
+                    MeshComponent* mc = go->GetComponent<MeshComponent>();
+                    if (!mc) continue;
+                    MeshData& mesh = mc->meshData;
+                    if (!mesh.valid) continue;
+                    if (mesh.lastWriteTime !=
+                        std::filesystem::last_write_time(mesh.path)) {
+                        mc->ReloadMesh();
+                    }
+                }
+                break;
+            }
+            case SDLK_F6: {
+                // Reload all shaders
+                m_app->renderer->ReloadAllPrograms();
+            }
+        }
+    }
+}
+
+void Core::_HandleMouseEvent(const SDL_Event& event) {
+    switch (event.type) {
+    case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+        if (event.button.button == SDL_BUTTON_RIGHT && !m_internal.simulate) {
+            m_internal.rmb = true;
+            m_internal.mouseX = event.button.x;
+            m_internal.mouseY = event.button.y;
+        }
+        break;
+    }
+    case SDL_EVENT_MOUSE_BUTTON_UP: {
+        if (event.button.button == SDL_BUTTON_RIGHT && !m_internal.simulate) {
+            m_internal.rmb = false;
+            SDL_WarpMouseInWindow(m_app->window->_GetSDLWindow(),
+                                  m_internal.mouseX,
+                                  m_internal.mouseY);
+        }
+        break;
+    }
+    case SDL_EVENT_MOUSE_MOTION: {
+        // Move editor cam
+        if (m_internal.rmb && !m_internal.simulate) {
+            float dx = event.motion.xrel * m_internal.DEFAULT_SENSITIVITY;
+            float dy = event.motion.yrel * m_internal.DEFAULT_SENSITIVITY;
+
+            float cx, cy = 0.0f;
+            m_internal.cam->GetAngles(cx, cy);
+            cx += dx;
+            cy -= dy;
+            cy = bx::clamp(cy, -m_internal.DEFAULT_MAX_PITCH, m_internal.DEFAULT_MAX_PITCH);
+            // Update camera angles
+            m_internal.cam->SetAngles(cx, cy);
+        }
+        break;
+    }
+    case SDL_EVENT_MOUSE_WHEEL: {
+        // Mouse scroll
+        if (!m_internal.simulate) {
+            if (event.wheel.y > 0) {
+                // Scroll up
+                m_internal.editorMoveSpeed += m_internal.DEFAULT_EDITOR_SPEED_INCREMENT; // Increase speed
+                if (m_internal.editorMoveSpeed > m_internal.DEFAULT_MAX_EDITOR_SPEED) {
+                    m_internal.editorMoveSpeed = m_internal.DEFAULT_MAX_EDITOR_SPEED; // Cap speed
+                }
+            } else if (event.wheel.y < 0) {
+                // Scroll down
+                m_internal.editorMoveSpeed -= m_internal.DEFAULT_EDITOR_SPEED_INCREMENT; // Decrease speed
+                if (m_internal.editorMoveSpeed < 0.0f) {
+                    m_internal.editorMoveSpeed = 0.0f; // Cap speed
+                }
+            }
+        }
+        break;
+    }
+    }
+}
+
 void Core::_MakePlayer() {
     // Create player GameObject
     GameObject* player = new GameObject("player");
@@ -511,103 +540,59 @@ void Core::_MakeEditorCamera() {
     m_internal.cam->SetFarPlane(2000);
 }
 
+void Core::_MoveCameraInDirection(const bx::Vec3& direction,
+                                  float           speed,
+                                  float           deltaTime) {
+    const float* posPtr = m_internal.cam->GetPosition();
+    bx::Vec3     currentPos = { posPtr[0], posPtr[1], posPtr[2] };
+    bx::Vec3     moveVector = bx::mul(direction, speed * deltaTime);
+    bx::Vec3     newPos     = bx::add(currentPos, moveVector);
+    m_internal.cam->SetPosition(newPos.x, newPos.y, newPos.z);
+}
+
 void Core::_HandleEditorCamera(const bool* keyState, float deltaTime) {
     if (!m_internal.simulate) {
         // Handle editor camera movement
-        bx::Vec3 moveVector = { 0, 0, 0 };
-        float realSpeed = m_internal.editorMoveSpeed; // Default speed
-        if (keyState[SDL_SCANCODE_LSHIFT]) realSpeed = m_internal.editorMoveSpeed * m_internal.sprintMultiplier;
-        if (keyState[SDL_SCANCODE_LCTRL]) realSpeed = m_internal.editorMoveSpeed * m_internal.crouchSpeed;
+        float    realSpeed  = m_internal.editorMoveSpeed; // Default speed
+        
+        if (keyState[SDL_SCANCODE_LSHIFT]) realSpeed = m_internal.editorMoveSpeed * m_internal.DEFAULT_SPRINT_MULT;
+        if (keyState[SDL_SCANCODE_LCTRL]) realSpeed = m_internal.editorMoveSpeed * m_internal.DEFAULT_CROUCH_MULT;
+
+
+        float yaw, pitch;
+        m_internal.cam->GetAngles(yaw, pitch);
 
         if (keyState[SDL_SCANCODE_W]) {
-            float yaw, pitch;
-            m_internal.cam->GetAngles(yaw, pitch);
-            const float* posPtr = m_internal.cam->GetPosition();
-            float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
-
-            moveVector = {
-                cosf(pitch) * sinf(yaw),
-                sinf(pitch),
-                cosf(pitch) * cosf(yaw)
-            };
-            moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
-            m_internal.cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
+            bx::Vec3 forward = { cosf(pitch) * sinf(yaw),
+                                 sinf(pitch),
+                                 cosf(pitch) * cosf(yaw) };
+            _MoveCameraInDirection(forward, realSpeed, deltaTime);
         }
         if (keyState[SDL_SCANCODE_S]) {
-            float yaw, pitch;
-            m_internal.cam->GetAngles(yaw, pitch);
-            const float* posPtr = m_internal.cam->GetPosition();
-            float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
-
-            moveVector = {
-                -cosf(pitch) * sinf(yaw),
-                -sinf(pitch),
-                -cosf(pitch) * cosf(yaw)
-            };
-            moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
-            m_internal.cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
+            bx::Vec3 backward = { -cosf(pitch) * sinf(yaw),
+                                  -sinf(pitch),
+                                  -cosf(pitch) * cosf(yaw) };
+            _MoveCameraInDirection(backward, realSpeed, deltaTime);
         }
         if (keyState[SDL_SCANCODE_A]) {
-            float yaw, pitch;
-            m_internal.cam->GetAngles(yaw, pitch);
-            const float* posPtr = m_internal.cam->GetPosition();
-            float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
-
-            moveVector = {
-                sinf(yaw - bx::kPiHalf),
-                0.0f,
-                cosf(yaw - bx::kPiHalf)
-            };
-            moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
-            m_internal.cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
+            bx::Vec3 left = { sinf(yaw - bx::kPiHalf),
+                              0.0f,
+                              cosf(yaw - bx::kPiHalf) };
+            _MoveCameraInDirection(left, realSpeed, deltaTime);
         }
         if (keyState[SDL_SCANCODE_D]) {
-            float yaw, pitch;
-            m_internal.cam->GetAngles(yaw, pitch);
-            const float* posPtr = m_internal.cam->GetPosition();
-            float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
-
-            moveVector = {
-                sinf(yaw + bx::kPiHalf),
-                0.0f,
-                cosf(yaw + bx::kPiHalf)
-            };
-            moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
-            m_internal.cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
+            bx::Vec3 right = { -sinf(yaw - bx::kPiHalf),
+                               0.0f,
+                               -cosf(yaw - bx::kPiHalf) };
+            _MoveCameraInDirection(right, realSpeed, deltaTime);
         }
         if (keyState[SDL_SCANCODE_Q]) {
-            float yaw, pitch;
-            m_internal.cam->GetAngles(yaw, pitch);
-            const float* posPtr = m_internal.cam->GetPosition();
-            float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
-
-            moveVector = {
-                0.0f,
-                -1.0f,
-                0.0f
-            };
-            moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
-            m_internal.cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
+            bx::Vec3 down = { 0.0f, -1.0f, 0.0f };
+            _MoveCameraInDirection(down, realSpeed, deltaTime);
         }
         if (keyState[SDL_SCANCODE_E]) {
-            float yaw, pitch;
-            m_internal.cam->GetAngles(yaw, pitch);
-            const float* posPtr = m_internal.cam->GetPosition();
-            float pos[3] = { posPtr[0], posPtr[1], posPtr[2] };
-
-            moveVector = {
-                0.0f,
-                1.0f,
-                0.0f
-            };
-            moveVector = bx::mul(moveVector, realSpeed * deltaTime);
-            moveVector = bx::add(bx::Vec3(pos[0], pos[1], pos[2]), moveVector);
-            m_internal.cam->SetPosition(moveVector.x, moveVector.y, moveVector.z);
+            bx::Vec3 up = { 0.0f, 1.0f, 0.0f };
+            _MoveCameraInDirection(up, realSpeed, deltaTime);
         }
     }
 }
