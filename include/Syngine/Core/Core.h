@@ -7,6 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include "Jolt/Core/Core.h"
+#include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/ECS/GameObject.h"
@@ -67,7 +69,8 @@ class Core {
     Core(const EngineConfig config);
     ~Core();
 
-    /// @brief Initialize the core system
+    /// @brief Initialize the core system. Creates a window, renderer, and other
+    /// subsystems.
     /// @return True on success, false on failure
     /// @since v0.0.1
     static bool Initialize();
@@ -81,41 +84,85 @@ class Core {
     /// @brief Get the global App instance
     /// @return Pointer to the global App instance
     /// @since v0.0.1
+    /// @internal
     static App* _GetApp();
 
     /// @brief Get the global game config
     /// @return Pointer to the global game config
     /// @since v0.0.1
+    /// @internal
     static EngineConfig* _GetConfig();
 
-    /// @brief Main event loop, blocks until the application is closed.
-    /// @return 0 on clean exit, non-zero on error.
-    int SyngineEventLoop();
+    /// @brief Check if the application is running
+    /// @return True if the application is running, false otherwise
+    /// @note Used to determine if the main loop should continue
+    /// @since v0.0.1
+    bool IsRunning();
 
-    /// @brief Add a new GameObject to the scene
-    /// @param gameobject Pointer to the GameObject to add
-    /// @return 0 on success, non-zero on failure
-    int CreateGameobject(GameObject* gameobject);
+    /// @brief Handle events for the application
+    /// @return True if events were handled, false otherwise
+    /// @since v0.0.1
+    bool HandleEvents();
 
-    /// @brief Delete a GameObject from the scene and free its resources
-    /// @param gameobject Pointer to the GameObject to delete
-    /// @return 0 on success, non-zero on failure
-    int DeleteGameobject(GameObject* gameobject);
+    /// @brief Update the application state
+    /// @return True if the update was successful, false otherwise
+    /// @since v0.0.1
+    bool Update();
+
+    /// @brief Render the application
+    /// @return True if the render was successful, false otherwise
+    /// @since v0.0.1
+    bool Render();
 
     /// @brief Get the physics manager.
     /// @return Pointer to the physics manager, or nullptr if not initialized
-    Syngine::Phys * GetPhysicsManager();
+    Syngine::Phys* GetPhysicsManager();
+
+    int SyngineEventLoop();
 
     /// @brief Get system specifications
     /// @return Hardware specifications of the system
     /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
     Syngine::HardwareSpecs GetSystemSpecifications();
 
-    /// @brief Get the 
-
   private:
+    struct _internal {
+        const float sensitivity = 0.002f; // Mouse sensitivity
+        const float maxPitch    = 3.14 / 2 - 0.01;
+        const float sprintMultiplier = 2.0f; // Sprint speed multiplier
+        const float crouchSpeed      = 1.0f; // Crouch speed multiplier
+        const float physicsTimestep  = 1.0f / 60.0f; // Physics update timestep
+        const float physicsSteps     = 1.0f;
+
+        float editorMoveSpeed = 3.0f; // Speed of camera movement
+        float accumulator = 0.0f; // Accumulator for physics updates
+        float mouseX = 0.0f;
+        float mouseY = 0.0f;
+
+        float       oneSecond        = 0.0f;
+        int         frameCount       = 0;
+        int         frameDisplay     = 0;
+        int         physCounter      = 0;
+        int         lastFPS          = 0;
+        int         lastTPS          = 0;
+        uint64_t    now              = 0;
+        uint64_t    last             = 0;
+
+        bool simulate = false; // Toggles the physics simulation
+        bool rmb = false; // Right mouse button state
+        bool mouseState = false;
+
+        CameraComponent* cam = nullptr;
+    };
+    
     static Core* m_instance;
-    static App* m_app;
+    static App*  m_app;
+    static bool  m_shouldClose;
+    static _internal m_internal;
+
+    static void _MakePlayer();
+    static void _MakeEditorCamera();
+    void _HandleEditorCamera(const bool* keyState, float deltaTime);
 };
 
 } // namespace Syngine
