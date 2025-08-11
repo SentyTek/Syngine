@@ -57,15 +57,16 @@ endif()
 add_library(Syngine STATIC
     src/Syngine/Core/Core.cpp
     src/Syngine/Core/Registry.cpp
+    src/Syngine/Core/Logger.cpp
+    src/Syngine/Core/TempInput.cpp
     src/Syngine/Graphics/Renderer.cpp
     src/Syngine/Graphics/Windowing.cpp
     src/Syngine/Graphics/DebugRenderer.cpp
     src/Syngine/Graphics/TextureHelpers.cpp
     src/Syngine/Utils/ModelLoader.cpp
     src/Syngine/Utils/FsUtils.cpp
-    src/Syngine/ECS/GameObject.cpp
     src/Syngine/Physics/Physics.cpp
-    src/Syngine/Core/Logger.cpp
+    src/Syngine/ECS/GameObject.cpp
     src/Syngine/ECS/Components/MeshComponent.cpp
     src/Syngine/ECS/Components/TransformComponent.cpp
     src/Syngine/ECS/Components/RigidbodyComponent.cpp
