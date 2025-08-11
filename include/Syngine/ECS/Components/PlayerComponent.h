@@ -98,7 +98,7 @@ class PlayerComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    void Update(const bool* keystate, bool simulate, float deltaTime);
+    void Update(const bool* keystate, float deltaTime);
 
     /// @brief Updates position and camera after physics simulation.
     /// @note This is called after the physics simulation to update the player's
@@ -161,7 +161,7 @@ class PlayerComponent : public Syngine::Component {
 
     PlayerState m_playerState = PlayerState::IDLE;
     PlayerState m_prevPlayerState = PlayerState::IDLE;
-    bool        m_simulate        = false;
+    bool        m_simulate        = true;
     float       m_deltaTime       = 0.0f;
 
     bx::Vec3 m_moveDirection = { 0.0f,

@@ -121,7 +121,7 @@ void PlayerComponent::_HandleInput(const SDL_Event& event) {
     }
 }
 
-void PlayerComponent::Update(const bool* keystate, bool simulate, float deltaTime) {
+void PlayerComponent::Update(const bool* keystate, float deltaTime) {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
@@ -129,7 +129,6 @@ void PlayerComponent::Update(const bool* keystate, bool simulate, float deltaTim
     m_prevPlayerState = m_playerState;
     m_deltaTime = deltaTime;
 
-    m_simulate = simulate;
     // Sliding persists between frames, so we don't reset it here
     if (m_playerState != PlayerState::SLIDING) {
         m_playerState = PlayerState::IDLE;
