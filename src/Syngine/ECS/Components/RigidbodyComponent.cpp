@@ -50,7 +50,7 @@ float RigidbodyComponent::GetRestitution() const { return restitution; }
 
 // Initialize the RigidbodyComponent with the given parameters.
 void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
-    this->physicsManager = Syngine::Core::_GetApp()->physicsManager;
+    this->physicsManager = Syngine::Core::_GetApp()->physicsManager.get();
     this->transform      = this->m_owner->GetComponent<TransformComponent>();
     this->mass           = params.mass;
     this->friction       = params.friction;

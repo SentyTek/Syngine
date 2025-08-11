@@ -54,11 +54,11 @@ struct EngineConfig {
 /// @since v0.0.1
 struct App {
     EngineConfig config; //* Engine configuration
-    Window* window; //* Pointer to the window
-    Renderer* renderer; //* Pointer to the render system
-    SynModelLoader* synModels; //* Pointer to the model loader
-    Phys*           physicsManager; //* Pointer to the physics manager
-    bool            debug = true;   //* Debug mode flag
+    std::unique_ptr<Window> window; //* Pointer to the window
+    std::unique_ptr<Renderer> renderer; //* Pointer to the render system
+    std::unique_ptr<SynModelLoader> synModels; //* Pointer to the model loader
+    std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
+    bool debug = true;   //* Debug mode flag
 };
 
 /// @brief Core class to manage the application
@@ -118,8 +118,6 @@ class Core {
     /// @return Pointer to the physics manager, or nullptr if not initialized
     Syngine::Phys* GetPhysicsManager();
 
-    int SyngineEventLoop();
-
     /// @brief Get system specifications
     /// @return Hardware specifications of the system
     /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
@@ -127,24 +125,18 @@ class Core {
 
   private:
     struct _internal {
-        const float sensitivity = 0.002f; // Mouse sensitivity
-        const float maxPitch    = 3.14 / 2 - 0.01;
-        const float sprintMultiplier = 2.0f; // Sprint speed multiplier
-        const float crouchSpeed      = 1.0f; // Crouch speed multiplier
-        const float physicsTimestep  = 1.0f / 60.0f; // Physics update timestep
-        const float physicsSteps     = 1.0f;
+        static constexpr float sensitivity = 0.002f; // Mouse sensitivity
+        static constexpr float maxPitch    = 3.14 / 2 - 0.01;
+        static constexpr float sprintMultiplier = 2.0f; // Sprint speed multiplier
+        static constexpr float crouchSpeed      = 1.0f; // Crouch speed multiplier
+        static constexpr float physicsTimestep  = 1.0f / 60.0f; // Physics update timestep
+        static constexpr float physicsSteps     = 1.0f;
 
         float editorMoveSpeed = 3.0f; // Speed of camera movement
         float accumulator = 0.0f; // Accumulator for physics updates
         float mouseX = 0.0f;
         float mouseY = 0.0f;
 
-        float       oneSecond        = 0.0f;
-        int         frameCount       = 0;
-        int         frameDisplay     = 0;
-        int         physCounter      = 0;
-        int         lastFPS          = 0;
-        int         lastTPS          = 0;
         uint64_t    now              = 0;
         uint64_t    last             = 0;
 
@@ -154,11 +146,41 @@ class Core {
 
         CameraComponent* cam = nullptr;
     };
-    
+
+    struct _FrameCounter {
+        float       oneSecond        = 0.0f;
+        int         frameCount       = 0;
+        int         frameDisplay     = 0;
+        int         physCounter      = 0;
+        int         lastFPS          = 0;
+        int         lastTPS          = 0;
+
+        void Update(float deltaTime, bool simulate, int gameObjectCount) {
+            oneSecond += deltaTime;
+
+            if (oneSecond >= 1.0f) {
+                lastFPS = frameCount;
+                lastTPS = physCounter;
+                frameDisplay = 0;
+                oneSecond    = 0.0f;
+                frameCount   = 0;
+                physCounter  = 0;
+
+                SDL_Log("Frame: %d, GameObjects: %d, Sim: %s, FPS/TPS: %d/%d",
+                        frameCount,
+                        gameObjectCount,
+                        simulate ? "ON" : "OFF",
+                        lastFPS,
+                        lastTPS);
+            }
+        }
+    };
+
     static Core* m_instance;
     static App*  m_app;
     static bool  m_shouldClose;
     static _internal m_internal;
+    static _FrameCounter m_frameCounter;
 
     static void _MakePlayer();
     static void _MakeEditorCamera();

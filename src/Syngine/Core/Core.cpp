@@ -47,6 +47,7 @@
 
 
 #include <filesystem>
+#include <memory>
 
 using namespace Syngine;
 
@@ -54,6 +55,7 @@ Syngine::Core* Syngine::Core::m_instance = nullptr;
 Syngine::App*  Syngine::Core::m_app      = nullptr;
 bool           Syngine::Core::m_shouldClose = false;
 Core::_internal Syngine::Core::m_internal;
+Core::_FrameCounter Syngine::Core::m_frameCounter;
 
 Core::Core(const EngineConfig config) {
     if (m_instance) {
@@ -72,33 +74,56 @@ Core::Core(const EngineConfig config) {
 Core::~Core() {
     // Cleanup
     if (m_app) {
+        if (m_app->window) {
+           m_app->window.reset();
+        }
         if (m_app->renderer) {
-            delete m_app->renderer;
-            m_app->renderer = nullptr;
+            m_app->renderer.reset();
         }
         if (m_app->synModels) {
             m_app->synModels->_UnloadAllMeshes();
-            //delete m_app->synModels; //It was getting mad.
-            m_app->synModels = nullptr;
+            m_app->synModels.reset();
         }
         if (m_app->physicsManager) {
             m_app->physicsManager->_Shutdown();
-            delete m_app->physicsManager;
-            m_app->physicsManager = nullptr;
+            m_app->physicsManager.reset();
         }
-        delete m_app;
-        m_app = nullptr;
         m_instance = nullptr; // Reset the singleton instance
     }
 }
 
 bool Core::Initialize() {
-    m_app->window = new Window(m_app->config);
-    m_app->renderer = new Renderer(m_app->config.windowWidth, m_app->config.windowHeight);
-    m_app->synModels = new AssimpLoader();
-    m_app->physicsManager = new Phys();
+    if (!m_app) {
+        Syngine::Logger::Fatal("Core not initialized properly. App is null.");
+        return false;
+    }
 
-    m_app->physicsManager->_Init(m_app->debug);
+    try {
+        m_app->window = std::make_unique<Window>(m_app->config);
+        if (!m_app->window) {
+            Logger::Error("Failed to create window.");
+        }
+
+        m_app->renderer = std::make_unique<Renderer>(m_app->config.windowWidth, m_app->config.windowHeight);
+        if (!m_app->renderer) {
+            Logger::Error("Failed to create renderer.");
+        }
+
+        m_app->synModels = std::make_unique<AssimpLoader>();
+        if (!m_app->synModels) {
+            Logger::Error("Failed to create AssimpLoader.");
+        }
+
+        m_app->physicsManager = std::make_unique<Phys>();
+        if (!m_app->physicsManager) {
+            Logger::Error("Failed to create PhysicsManager.");
+        }
+
+        m_app->physicsManager->_Init(m_app->debug);
+    } catch(const std::exception& e) {
+        Syngine::Logger::LogF(LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
+        return false;
+    }
 
     // Create base components
     _MakePlayer();
@@ -110,6 +135,10 @@ bool Core::Initialize() {
 Syngine::Core* Syngine::Core::_Get() { return m_instance; }
 Syngine::App* Syngine::Core::_GetApp() {
     return m_instance ? m_instance->m_app : nullptr;
+}
+
+Syngine::Phys* Core::GetPhysicsManager() {
+    return m_app->physicsManager.get();
 }
 
 bool Core::IsRunning() {
@@ -236,7 +265,6 @@ bool Core::Update() {
     m_internal.last = m_internal.now;
     m_internal.now  = SDL_GetPerformanceCounter();
     float deltaTime = (m_internal.now - m_internal.last) / (float)SDL_GetPerformanceFrequency();
-    m_internal.oneSecond += deltaTime;
     
     // Simulate physics
     if (m_app->physicsManager && m_internal.simulate) {
@@ -245,7 +273,7 @@ bool Core::Update() {
         while(m_internal.accumulator >= m_internal.physicsTimestep) {
             m_app->physicsManager->_Update(m_internal.physicsTimestep, m_internal.physicsSteps);
             m_internal.accumulator -= m_internal.physicsTimestep;
-            m_internal.physCounter++;
+            m_frameCounter.physCounter++;
         }
     }
 
@@ -284,26 +312,13 @@ bool Core::Update() {
     if (Renderer::IsReady()) {
         bool desiredMouseState = m_internal.rmb || m_internal.simulate;
         if (desiredMouseState != m_internal.mouseState) {
-            SDL_Log("Mouse mode changed: %s", desiredMouseState ? "ON" : "OFF");
             SDL_SetWindowRelativeMouseMode(m_app->window->_GetSDLWindow(), desiredMouseState);
             m_internal.mouseState = desiredMouseState;
         }
     }
 
-    if (m_internal.oneSecond >= 1.0f) {
-        m_internal.lastFPS = m_internal.frameDisplay;
-        m_internal.lastTPS = m_internal.physCounter;
-        m_internal.frameDisplay = 0;
-        m_internal.physCounter = 0;
-        m_internal.oneSecond    = 0.0f;
-
-        SDL_Log("Frame: %d, Gameobjects: %d, Sim: %s, FPS/TPS: %d/%d",
-                m_internal.frameCount,
-                (int)Registry::GetGameObjectCount(),
-                m_internal.simulate ? "ON" : "OFF",
-                m_internal.lastFPS,
-                m_internal.lastTPS);
-    }
+    m_frameCounter.Update(
+        deltaTime, m_internal.simulate, Registry::GetGameObjectCount());
 
     return true;
 }
@@ -320,7 +335,7 @@ bool Core::Render() {
     // TODO: fucking fix this this is not okay
     bx::Vec3 lightDir = { 0.0f, -1.0f, 0.0f };
     if (Renderer::IsReady()) {
-        m_internal.frameCount++;
+        m_frameCounter.frameCount++;
 
         m_app->renderer->_RenderFrame(lightDir,
                                              activeCam,

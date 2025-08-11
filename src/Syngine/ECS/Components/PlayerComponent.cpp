@@ -47,7 +47,7 @@ void PlayerComponent::Init(Syngine::CameraComponent* camera,
 
     m_camera = camera;
     m_window = win;
-    m_physicsManager = Syngine::Core::_GetApp()->physicsManager;
+    m_physicsManager = Syngine::Core::_GetApp()->physicsManager.get();
 
     if (!m_owner || !m_transform || !m_camera) {
         Syngine::Logger::Error(
