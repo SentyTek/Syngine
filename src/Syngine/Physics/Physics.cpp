@@ -102,8 +102,6 @@ void Phys::_Shutdown() {
     if (!Factory::sInstance) //Already shutdown
         return;
 
-    Syngine::Logger::Info("Shutting down Jolt");
-
     UnregisterTypes();
     delete Factory::sInstance;
     Factory::sInstance = nullptr;

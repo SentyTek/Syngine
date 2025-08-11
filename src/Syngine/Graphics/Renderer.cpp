@@ -63,7 +63,7 @@ Renderer::Renderer(int width, int height) {
 };
 
 Renderer::~Renderer() {
-    if (win) {
+    if (!win) {
         Syngine::Logger::Error("No app to destroy renderer for");
         return;
     }
@@ -105,7 +105,6 @@ Renderer::~Renderer() {
     m_gizmoRegistry.clear();
 
     bgfx::shutdown(); // Shut down bgfx BEFORE destroying the window
-    Syngine::Logger::Info("Renderer destroyed successfully");
 }
 
 bool Renderer::_CreateRenderer() {
