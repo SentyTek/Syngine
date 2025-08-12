@@ -195,7 +195,7 @@ void Logger::LogHardwareInfo() {
     }
 
     // This is a bit messy but it avoids duplicating code in multiple places
-    Syngine::HardwareSpecs specs = Syngine::Core::_Get()->GetSystemSpecifications();
+    Syngine::HardwareSpecs specs = Syngine::Core::Get()->GetSystemSpecifications();
     std::string            specsStr = "\nSystem Specifications:\n";
     specsStr += "\tOperating System: " + specs.osName + "\n";
     specsStr += "\tCPU: " + specs.cpuModel + "\n";

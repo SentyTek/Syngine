@@ -69,6 +69,8 @@ class Core {
     Core(const EngineConfig config);
     ~Core();
 
+    static float deltaTime;
+
     /// @brief Initialize the core system. Creates a window, renderer, and other
     /// subsystems.
     /// @return True on success, false on failure
@@ -78,8 +80,7 @@ class Core {
     /// @brief Get the global Core instance
     /// @return Pointer to the global Core instance
     /// @since v0.0.1
-    /// @internal
-    static Core* _Get();
+    static Core* Get();
 
     /// @brief Get the global App instance
     /// @return Pointer to the global App instance
@@ -112,7 +113,7 @@ class Core {
     /// @brief Render the application
     /// @return True if the render was successful, false otherwise
     /// @since v0.0.1
-    bool Render();
+    bool Render(CameraComponent* camera);
 
     /// @brief Get the physics manager.
     /// @return Pointer to the physics manager, or nullptr if not initialized
@@ -122,6 +123,14 @@ class Core {
     /// @return Hardware specifications of the system
     /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
     Syngine::HardwareSpecs GetSystemSpecifications();
+
+    /// @brief Set the simulation state
+    /// @param simulate True to enable simulation, false to disable
+    void SetSimulationState(bool simulate);
+
+    /// @brief Get the simulation state
+    /// @return True if simulation is enabled, false otherwise
+    bool GetSimulationState();
 
   private:
     struct _internal {
@@ -137,22 +146,14 @@ class Core {
         static constexpr float DEFAULT_PHYSICS_TIMESTEP = 1.0f / 60.0f;
         // Iterations per physics update
         static constexpr int DEFAULT_PHYSICS_STEPS = 1;
-        static constexpr float DEFAULT_MAX_EDITOR_SPEED = 100.0f;
-        static constexpr float DEFAULT_EDITOR_SPEED_INCREMENT = 0.5f;
 
-        float editorMoveSpeed = 3.0f; // Speed of camera movement
         float accumulator = 0.0f; // Accumulator for physics updates
-        float mouseX = 0.0f;
-        float mouseY = 0.0f;
 
         uint64_t    now              = 0;
         uint64_t    last             = 0;
 
         bool simulate = false; // Toggles the physics simulation
-        bool rmb = false; // Right mouse button state
         bool mouseState = false;
-
-        CameraComponent* cam = nullptr;
     };
 
     struct _FrameCounter {
@@ -189,13 +190,7 @@ class Core {
     static _internal m_internal;
     static _FrameCounter m_frameCounter;
 
-    static void _MakePlayer();
-    static void _MakeEditorCamera();
-    void        _HandleEditorCamera(const bool* keyState, float deltaTime);
-    void        _MoveCameraInDirection(const bx::Vec3& direction, float speed, float deltaTime);
-
     void _HandleKeyEvent(const SDL_Event& event);
-    void _HandleMouseEvent(const SDL_Event& event);
 };
 
 } // namespace Syngine
