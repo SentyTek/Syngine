@@ -57,8 +57,7 @@ class PlayerComponent : public Syngine::Component {
     /// @since v0.0.1
     /// @internal
     PlayerComponent(GameObject*               owner,
-                    Syngine::CameraComponent* camera,
-                    SDL_Window*               win);
+                    Syngine::CameraComponent* camera);
     
     ~PlayerComponent();
 
@@ -77,8 +76,7 @@ class PlayerComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    void Init(Syngine::CameraComponent* camera,
-              SDL_Window*               win);
+    void Init(Syngine::CameraComponent* camera);
 
     /// @brief Handles input events for the player component.
     /// @param event The SDL Events.

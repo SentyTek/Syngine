@@ -8,6 +8,7 @@
 
 #include "Syngine/Graphics/Windowing.h"
 #include "SDL3/SDL_init.h"
+#include "SDL3/SDL_mouse.h"
 #include "SDL3/SDL_video.h"
 #include "Syngine/Core/Logger.h"
 
@@ -154,6 +155,22 @@ void Window::SetWindowMode(int mode) {
             default:
                 break;
         }
+    }
+}
+
+void Window::SetMouseCursorVisible(bool visible) {
+    SDL_SetWindowRelativeMouseMode(m_window, !visible);
+}
+
+void Window::GetMousePosition(float& x, float& y) {
+    if (m_window) {
+        SDL_GetMouseState(&x, &y);
+    }
+}
+
+void Window::SetMousePosition(float& x, float& y) {
+    if (m_window) {
+        SDL_WarpMouseInWindow(m_window, x, y);
     }
 }
 
