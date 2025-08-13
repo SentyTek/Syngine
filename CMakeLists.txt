@@ -130,6 +130,7 @@ if(APPLE)
     set_default_option(BGFX_CONFIG_RENDERER_METAL ON "Enable Metal Renderer")
 
     add_compile_options(-frtti) # Jolt needs RTTI on Apple platforms
+    target_compile_definitions(Syngine PRIVATE JPH_DEBUG_RENDERER)
 elseif(MSVC)
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 ON "Enable Direct3D 12 Renderer")
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")
