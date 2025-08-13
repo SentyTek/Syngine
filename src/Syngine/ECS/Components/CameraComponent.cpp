@@ -20,7 +20,7 @@ CameraComponent::CameraComponent(GameObject* owner) {
     this->camera = {};
     this->camera.eye[0] = 0.0f;
     this->camera.eye[1] = 0.0f;
-    this->camera.eye[2] = -5.0f;
+    this->camera.eye[2] = 0.0f;
     this->camera.target[0] = 0.0f;
     this->camera.target[1] = 0.0f;
     this->camera.target[2] = 0.0f;

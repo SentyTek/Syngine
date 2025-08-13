@@ -8,6 +8,7 @@
 
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
+#include "Syngine/Graphics/Windowing.h"
 #include "Syngine/ECS/Components/PlayerComponent.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
@@ -35,18 +36,16 @@
 
 namespace Syngine {
 PlayerComponent::PlayerComponent(GameObject*               owner,
-                                 Syngine::CameraComponent* camera,
-                                 SDL_Window*               win) {
+                                 Syngine::CameraComponent* camera) {
     this->m_owner = owner;
-    this->Init(camera, win);
+    this->Init(camera);
 }
 
-void PlayerComponent::Init(Syngine::CameraComponent* camera,
-                           SDL_Window*               win) {
+void PlayerComponent::Init(Syngine::CameraComponent* camera) {
     m_transform   = m_owner->GetComponent<TransformComponent>();
 
     m_camera = camera;
-    m_window = win;
+    m_window = Window::_GetSDLWindow();
     m_physicsManager = Syngine::Core::_GetApp()->physicsManager.get();
 
     if (!m_owner || !m_transform || !m_camera) {

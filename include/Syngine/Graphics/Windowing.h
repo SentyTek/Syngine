@@ -65,6 +65,26 @@ class Window {
     /// @since v0.0.1
     static void SetWindowMode(int mode);
 
+    /// @brief Sets the visibility of the mouse cursor.
+    /// @param visible True to show the cursor, false to hide it.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void SetMouseCursorVisible(bool visible);
+
+    /// @brief Gets the current position of the mouse cursor.
+    /// @param x A float reference to be filled in with the X position of the mouse cursor.
+    /// @param y A float reference to be filled in with the Y position of the mouse cursor.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void GetMousePosition(float& x, float& y);
+
+    /// @brief Sets the current position of the mouse cursor.
+    /// @param x A float reference to be filled in with the X position of the mouse cursor.
+    /// @param y A float reference to be filled in with the Y position of the mouse cursor.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void SetMousePosition(float& x, float& y);
+
     /// @brief Sets the window's close state.
     /// @param enabled True to close the window, false to keep it open.
     /// @threadsafety not-safe

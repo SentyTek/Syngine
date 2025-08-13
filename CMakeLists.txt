@@ -58,7 +58,7 @@ add_library(Syngine STATIC
     src/Syngine/Core/Core.cpp
     src/Syngine/Core/Registry.cpp
     src/Syngine/Core/Logger.cpp
-    src/Syngine/Core/TempInput.cpp
+    src/Syngine/Core/BasicInput.cpp
     src/Syngine/Graphics/Renderer.cpp
     src/Syngine/Graphics/Windowing.cpp
     src/Syngine/Graphics/DebugRenderer.cpp
@@ -130,6 +130,8 @@ if(APPLE)
     set_default_option(BGFX_CONFIG_RENDERER_METAL ON "Enable Metal Renderer")
 
     add_compile_options(-frtti) # Jolt needs RTTI on Apple platforms
+    target_compile_definitions(Syngine PRIVATE JPH_DEBUG_RENDERER)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJPH_DEBUG_RENDERER")
 elseif(MSVC)
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 ON "Enable Direct3D 12 Renderer")
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")

@@ -2,7 +2,7 @@
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
-#include "Syngine/Core/TempInput.h"
+#include "Syngine/Core/BasicInput.h"
 
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/Component.h"
