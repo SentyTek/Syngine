@@ -6,7 +6,6 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
-#include "Jolt/Core/Core.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -221,7 +220,7 @@ bool Renderer::_CreateRenderer() {
 
     size_t debugProg = AddProgram("shaders/debug.vert.sc.bin",
                                   "shaders/debug.frag.sc.bin",
-                                  "debugger");
+                                  "debugger", VIEW_DEBUG);
     if (debugProg == (size_t)-1) {
         bgfx::shutdown();
         SDL_DestroyWindow(win);
@@ -229,10 +228,10 @@ bool Renderer::_CreateRenderer() {
         return false;
     }
 
-    size_t billboardProg = AddProgram("shaders/billboard.vert.sc.bin",
+    size_t debugBillboardProg = AddProgram("shaders/billboard.vert.sc.bin",
                                       "shaders/billboard.frag.sc.bin",
-                                      "billboard");
-    if (billboardProg == (size_t)-1) {
+                                      "billboard", VIEW_BILL_DBG);
+    if (debugBillboardProg == (size_t)-1) {
         bgfx::shutdown();
         SDL_DestroyWindow(win);
         SDL_Quit();
@@ -242,13 +241,13 @@ bool Renderer::_CreateRenderer() {
 
     // Create default uniforms
     m_defaultUniformIds.insert({ "u_billboard",
-                                 RegisterUniform(billboardProg,
+                                 RegisterUniform(debugBillboardProg,
                                                  "u_default_billboard",
                                                  UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert(
         { "s_bill_albedo",
           RegisterUniform(
-              billboardProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
+              debugBillboardProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
 
     // Vertex program uniforms
     m_defaultUniformIds.insert({ "u_baseColor",
@@ -944,6 +943,7 @@ void Renderer::_DrawForward(const Program& program) {
 }
 
 void Renderer::_DrawDebug(const Program& program, CameraComponent* camera) {
+    SDL_Log("Made up");
     Core::_GetApp()->physicsManager->_DrawDebug(
         width,
         height,
@@ -1006,15 +1006,15 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
             bgfx::setViewTransform(view, cam.view, cam.proj);
         }
     }
-
+    
     // Main render loop
     for (auto view : _allViews) {
         auto progListIt = viewPrograms.find(view);
         if (progListIt == viewPrograms.end()) continue;
-
+        
         for (auto& program : progListIt->second) {
             if (!bgfx::isValid(program.program)) continue;
-
+            
             // Draw logic based on view type
             switch (view) {
             case VIEW_SKY:
@@ -1026,8 +1026,8 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
             case VIEW_DEBUG:
                 if (debug) _DrawDebug(program, camera);
                 break;
-            case VIEW_BILLBOARD:
-                _DrawBillboard(program);
+            case VIEW_BILL_DBG:
+                if (debug) _DrawBillboard(program);
                 break;
             default:
                 break;

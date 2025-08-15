@@ -249,7 +249,7 @@ bool Core::Render(CameraComponent* camera) {
     if (Renderer::IsReady()) {
         m_frameCounter.frameCount++;
 
-        m_app->renderer->_RenderFrame(camera, this->m_app->debug);
+        m_app->renderer->_RenderFrame(camera, m_app->debug);
     }
     return true;
 }

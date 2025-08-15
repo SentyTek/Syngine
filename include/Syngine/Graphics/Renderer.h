@@ -33,10 +33,11 @@ enum ViewID : bgfx::ViewId {
     VIEW_GBUFFER   = 2, //* G-Buffer rendering for deferred shading
     VIEW_LIGHTING  = 3, //* Lighting pass for deferred shading
     VIEW_FORWARD   = 4, //* Forward rendering pass for translucent objects
-    VIEW_DEBUG     = 5, //* Debug rendering pass for debug rendering
-    VIEW_BILLBOARD = 6, //* Billboard rendering
-    VIEW_UI        = 7, //* UI rendering
-    VIEW_UI_DEBUG  = 8, //* UI debug rendering
+    VIEW_BILLBOARD = 5, //* Billboard rendering
+    VIEW_DEBUG     = 6, //* Debug rendering pass for debug rendering
+    VIEW_BILL_DBG  = 7, //* Billboard debug rendering
+    VIEW_UI        = 8, //* UI rendering
+    VIEW_UI_DEBUG  = 9, //* UI debug rendering
 };
 
 /// @brief Different types of shader uniforms
@@ -266,10 +267,17 @@ class Renderer {
 
     static Uniform* _GetUniform(uint16_t id);
 
-    static constexpr std::array<Syngine::ViewID, 9> _allViews = {
-        Syngine::VIEW_SHADOW,    Syngine::VIEW_SKY,     Syngine::VIEW_GBUFFER,
-        Syngine::VIEW_LIGHTING,  Syngine::VIEW_FORWARD, Syngine::VIEW_DEBUG,
-        Syngine::VIEW_BILLBOARD, Syngine::VIEW_UI,      Syngine::VIEW_UI_DEBUG
+    static constexpr std::array<Syngine::ViewID, 10> _allViews = {
+        Syngine::VIEW_SHADOW,
+        Syngine::VIEW_SKY,
+        Syngine::VIEW_GBUFFER,
+        Syngine::VIEW_LIGHTING,
+        Syngine::VIEW_FORWARD,
+        Syngine::VIEW_DEBUG,
+        Syngine::VIEW_BILL_DBG,
+        Syngine::VIEW_BILLBOARD,
+        Syngine::VIEW_UI,
+        Syngine::VIEW_UI_DEBUG
     };
 
     static void _DrawSky(const Program& program);
