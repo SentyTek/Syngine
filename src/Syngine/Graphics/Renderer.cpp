@@ -342,7 +342,7 @@ bool Renderer::_CreateRenderer() {
         fullscreenDummyVBH = bgfx::createVertexBuffer(
             bgfx::copy(dummyData, sizeof(dummyData)), dummyLayout);
 
-        handles.dummy = fullscreenDummyVBH;
+        Renderer::dummy = fullscreenDummyVBH;
     }
 #endif
 
@@ -852,24 +852,24 @@ void Renderer::_DrawSky(const Program& program) {
 
 void Renderer::_DrawForward(const Program& program) {
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
-                           BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
+                                 BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
 
-                           std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
-                           
-                           // Find every object with the current program to prevent running the same
-                           // GameObject multiple times
-                           std::vector<GameObject*> objectsWithProgram;
-                           
-                           for (auto& gameObject : gameObjects) {
-                               if (!gameObject) continue;
-                               
-                               if (gameObject->type == program.name) {
-                                   objectsWithProgram.push_back(gameObject);
-                                }
-                            }
-                            
-                            for (auto& gameObject : objectsWithProgram) {
-                                MeshData meshData = gameObject->GetComponent<MeshComponent>()->meshData;
+    std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
+    
+    // Find every object with the current program to prevent running the same
+    // GameObject multiple times
+    std::vector<GameObject*> objectsWithProgram;
+    
+    for (auto& gameObject : gameObjects) {
+        if (!gameObject) continue;
+        
+        if (gameObject->type == program.name) {
+            objectsWithProgram.push_back(gameObject);
+        }
+    }
+    
+    for (auto& gameObject : objectsWithProgram) {
+        MeshData meshData = gameObject->GetComponent<MeshComponent>()->meshData;
         if (!meshData.valid || !gameObject->GetComponent<MeshComponent>()->isEnabled) continue;
         
         bgfx::setState(renderState);
@@ -943,7 +943,6 @@ void Renderer::_DrawForward(const Program& program) {
 }
 
 void Renderer::_DrawDebug(const Program& program, CameraComponent* camera) {
-    SDL_Log("Made up");
     Core::_GetApp()->physicsManager->_DrawDebug(
         width,
         height,
