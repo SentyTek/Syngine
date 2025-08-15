@@ -246,25 +246,10 @@ bool Core::Update() {
 
 bool Core::Render(CameraComponent* camera) {
     // Render the application
-    // TODO: fucking fix this this is not okay
-    bx::Vec3 lightDir = { 0.0f, -1.0f, 0.0f };
     if (Renderer::IsReady()) {
         m_frameCounter.frameCount++;
 
-        m_app->renderer->_RenderFrame(lightDir,
-                                             camera,
-                                             this->m_app->debug);
-
-        if (this->m_app->debug) {
-            // christ on a stick this call is ridiculous
-            this->m_app->physicsManager->_DrawDebug(
-                this->m_app->renderer->width,
-                this->m_app->renderer->height,
-                this->m_app->renderer->GetProgram("debugger").program,
-                Registry::GetGameObjectByName("player") // Player object has the camera
-                    ->GetComponent<Syngine::CameraComponent>()
-                    ->GetCamera(), camera->GetCamera());
-        }
+        m_app->renderer->_RenderFrame(camera, this->m_app->debug);
     }
     return true;
 }

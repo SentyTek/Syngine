@@ -7,12 +7,17 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include <cstdint>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <map>
+#include <array>
 
 #include <SDL3/SDL.h>
 #include <bgfx/bgfx.h>
+#include "SDL3/SDL_stdinc.h"
+#include "Syngine/Graphics/Renderer.h"
 #include "bx/math.h"
 
 namespace Syngine {
@@ -23,43 +28,48 @@ class CameraComponent; // Forward declaration
 /// @section Renderer
 /// @since v0.0.1
 enum ViewID : bgfx::ViewId {
-    VIEW_SHADOW   = 0, //* Shadow map rendering
-    VIEW_SKY      = 1, //* Skybox rendering
-    VIEW_GBUFFER  = 2, //* G-Buffer rendering for deferred shading
-    VIEW_LIGHTING = 3, //* Lighting pass for deferred shading
-    VIEW_FORWARD  = 4, //* Forward rendering pass for translucent objects
-    VIEW_DEBUG    = 5, //* Debug rendering pass for debug rendering
+    VIEW_SHADOW    = 0, //* Shadow map rendering
+    VIEW_SKY       = 1, //* Skybox rendering
+    VIEW_GBUFFER   = 2, //* G-Buffer rendering for deferred shading
+    VIEW_LIGHTING  = 3, //* Lighting pass for deferred shading
+    VIEW_FORWARD   = 4, //* Forward rendering pass for translucent objects
+    VIEW_DEBUG     = 5, //* Debug rendering pass for debug rendering
     VIEW_BILLBOARD = 6, //* Billboard rendering
     VIEW_UI        = 7, //* UI rendering
     VIEW_UI_DEBUG  = 8, //* UI debug rendering
+};
+
+/// @brief Different types of shader uniforms
+/// @section Renderer
+/// @since v0.0.1
+enum UniformType {
+    UNIFORM_SAMPLER = bgfx::UniformType::Sampler, //* Texture sampler uniform
+    UNIFORM_VEC4    = bgfx::UniformType::Vec4,    //* Vec4 uniform
+    UNIFORM_MAT4    = bgfx::UniformType::Mat4,    //* Mat4 uniform
+    UNIFORM_MAT3    = bgfx::UniformType::Mat3,    //* Mat3 uniform
+    UNIFORM_UNKNOWN = bgfx::UniformType::Count,   //* Unknown uniform type
+};
+
+/// @brief Struct to hold shader uniform information
+/// @section Renderer
+/// @since v0.0.1
+struct Uniform {
+    bgfx::UniformHandle handle = BGFX_INVALID_HANDLE; //* Handle for the uniform
+    UniformType type = UniformType::UNIFORM_UNKNOWN;  //* Type of the uniform
+    void*       data = nullptr; //* Pointer to the uniform data
+    std::string name; //* Name of the uniform
 };
 
 /// @brief Program structure to hold shader program information
 /// @section Renderer
 struct Program {
     bgfx::ProgramHandle program = BGFX_INVALID_HANDLE; //* Shader program handle
-    unsigned short      viewId  = -1; //* View ID for rendering
+    unsigned short      viewId  = UINT16_MAX; //* View ID for rendering
     std::string         name    = "empty"; //* Name of the shader program
     std::string         vsPath  = ""; //* Vertex shader path
     std::string         fsPath  = ""; //* Fragment shader path
-    int                 id      = 0; //* Unique ID of the shader program
-};
-
-/// @brief Handles structure to manage shader programs and uniforms
-/// @section Renderer
-/// @since v0.0.1
-struct Handles {
-    std::vector<Program> programs; //* List of shader programs
-    std::map<std::string, bgfx::UniformHandle> uniforms; //* Map of uniform names to handles
-    bgfx::VertexBufferHandle dummy = BGFX_INVALID_HANDLE; //* Dummy vertex buffer handle (needed on some platforms)
-};
-
-/// @brief Gizmo structure to hold information about gizmos
-/// @section Renderer
-/// @since v0.0.1
-struct Gizmo {
-    bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; //* Texture handle for the gizmo
-    float size = 1.0f; //* Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
+    int                 id      = 0;  //* Unique ID of the shader program
+    std::vector<Uniform> uniforms;     //* List of shader uniforms
 };
 
 /// @brief Renderer class to manage rendering and shader programs
@@ -79,7 +89,7 @@ class Renderer {
     /// @param fsPath Path to the fragment shader file
     /// @param name Name of the shader program
     /// @param viewId View ID for the shader program, defaults to VIEW_FORWARD
-    /// @return The index of the newly created program on success, -1 on failure
+    /// @return The ID of the newly created program on success, -1 on failure
     /// @threadsafety not-safe
     /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
     /// @since v0.0.1
@@ -94,7 +104,7 @@ class Renderer {
     /// @param viewId View ID for the shader program, defaults to VIEW_FORWARD
     /// @return The index of the newly created program on success, -1 on failure
     /// @note Assumes the vertex shader is named "{name}.vert.bin" and fragment
-    /// shader is named "{name}.frag.bin"
+    /// shader "{name}.frag.bin"
     /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
     /// @threadsafety not-safe
     /// @since v0.0.1
@@ -110,13 +120,13 @@ class Renderer {
     /// @since v0.0.1
     static Program GetProgram(const std::string_view& name);
 
-    /// @brief Get a shader program by index
-    /// @param index Index of the shader program in the list
+    /// @brief Get a shader program by ID.
+    /// @param id ID of the shader program
     /// @return Program with the shader program handle, or an invalid handle if
-    /// index is out of bounds
+    /// not found
     /// @threadsafety read-only
     /// @since v0.0.1
-    static Program GetProgram(int index);
+    static Program GetProgram(size_t id);
 
     /// @brief Remove all shader programs
     /// @return True if all programs were removed successfully, false otherwise
@@ -124,26 +134,30 @@ class Renderer {
     /// @since v0.0.1
     static bool RemoveAllPrograms();
 
-    /// @brief Remove a shader program by index
-    /// @param index Index of the shader program to remove
-    /// @return True if the program was removed successfully, false otherwise
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    static bool RemoveProgram(int index);
-
     /// @brief Remove a shader program by name
+    /// @param viewId The view to remove the program from
     /// @param name Name of the shader program to remove
     /// @return True if the program was removed successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static bool RemoveProgram(const std::string_view& name);
+    static bool RemoveProgram(Syngine::ViewID         viewId,
+                              const std::string_view& name);
+
+    /// @brief Remove a shader program by id
+    /// @param viewId The view to remove the program from
+    /// @param id ID of the shader program to remove
+    /// @return True if the program was removed successfully, false otherwise
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static bool RemoveProgram(Syngine::ViewID viewId, size_t id);
 
     /// @brief Reload a shader program by name
     /// @param name Name of the shader program to reload
     /// @return True if the program was reloaded successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static bool ReloadProgram(const std::string_view& name);
+    static bool ReloadProgram(Syngine::ViewID         viewId,
+                              const std::string_view& name);
 
     /// @brief Reload all shader programs
     /// @return True if all programs were reloaded successfully, false otherwise
@@ -157,26 +171,49 @@ class Renderer {
     /// @since v0.0.1
     static bool IsReady();
 
-    /// @brief Get a uniform handle by name
-    /// @param name Name of the uniform
-    /// @return bgfx::UniformHandle The handle to the uniform, or
-    /// BGFX_INVALID_HANDLE if not found
-    /// @threadsafety read-only
+    /// @brief Register a uniform variable
+    /// @param program The ID of the shader program to register the uniform with
+    /// @param name The name of the uniform variable
+    /// @param type The type of the uniform variable
+    /// @pre The shader program must exist
+    /// @return The ID of the registered uniform variable to use when
+    /// setting, 0 if failure
+    /// @threadsafety not-safe
     /// @since v0.0.1
-    /// @internal
-    bgfx::UniformHandle _GetUniform(const std::string_view& name) const;
+    static size_t
+    RegisterUniform(int program, const std::string& name, UniformType type);
+
+    /// @brief Set a uniform variable
+    /// @param id The ID of the uniform variable to set, returned from
+    /// RegisterUniform
+    /// @param data Pointer to the data to set the uniform to
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void SetUniform(uint16_t id, const void* data);
+
+    /// @brief Get the global sun light direction
+    /// @param outLightDir A 3 float array to store the light direction.
+    ///        The direction is a normalized vector in world space. X is
+    ///        east-west, Y is pitch, Z is north-south.
+    /// @threadsafety not-safe
+    static void GetSunDirection(float* outLightDir);
+
+    /// @brief Set the global sun light direction
+    /// @param lightDir A 3 float array representing the light direction.
+    ///        Normalized direction vector in world space is expected.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void SetSunDirection(const float* lightDir);
 
     /// @brief Render a frame
     /// @param lightDir Direction of the light for lighting calculations
     /// @param camera Pointer to the camera component for rendering
     /// @param debug Whether to render debug information
-    /// @return 0 on success, non-zero on failure
+    /// @return If it rendered successfully
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    int _RenderFrame(bx::Vec3&                lightDir,
-                    CameraComponent*         camera,
-                    bool                     debug = false);
+    bool _RenderFrame(CameraComponent* camera, bool debug = false);
 
     /// @brief Register a gizmo with a tag and optional size
     /// @param tag Name of the gizmo
@@ -186,17 +223,12 @@ class Renderer {
     /// @since v0.0.1
     /// @internal
     void _RegisterGizmo(const std::string& tag, float size = 1.0f);
-
-    /// @brief Render all nearby gizmos
-    /// @param camera Pointer to the camera component for rendering
-    /// @note This will render all registered gizmos that are within 1000 units
-    /// of the camera's position.
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    /// @internal
-    void _RenderGizmos(CameraComponent* camera);
-
   private:
+    struct Gizmo {
+        bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; //* Texture handle for the gizmo
+        float size = 1.0f; //* Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
+    };
+
     static std::string m_title;
     static bool        m_isReady;
 
@@ -205,7 +237,13 @@ class Renderer {
     static bgfx::IndexBufferHandle      m_billboardIbh;
 
     static SDL_Window* win; //* SDL window handle
-    static Handles handles; //* Shader program and uniform handles
+
+    static bgfx::VertexBufferHandle dummy;
+    static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms;
+
+    static std::unordered_map<uint16_t, Uniform> m_uniformRegistry;
+
+    static std::unordered_map<std::string, uint16_t> m_defaultUniformIds;
 
     /// @brief Initialize the graphics system
     /// @return true on success, false on failure
@@ -216,6 +254,28 @@ class Renderer {
     /// @since v0.0.1
     /// @internal
     static bool _CreateRenderer();
+
+    /// @brief Render all nearby gizmos
+    /// @param camera Pointer to the camera component for rendering
+    /// @note This will render all registered gizmos that are within 1000 units
+    /// of the camera's position.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
+    void _RenderGizmos(CameraComponent* camera);
+
+    static Uniform* _GetUniform(uint16_t id);
+
+    static constexpr std::array<Syngine::ViewID, 9> _allViews = {
+        Syngine::VIEW_SHADOW,    Syngine::VIEW_SKY,     Syngine::VIEW_GBUFFER,
+        Syngine::VIEW_LIGHTING,  Syngine::VIEW_FORWARD, Syngine::VIEW_DEBUG,
+        Syngine::VIEW_BILLBOARD, Syngine::VIEW_UI,      Syngine::VIEW_UI_DEBUG
+    };
+
+    static void _DrawSky(const Program& program);
+    static void _DrawForward(const Program& program);
+    static void _DrawDebug(const Program& program, CameraComponent* camera);
+    static void _DrawBillboard(const Program& program);
 };
 
 } // namespace Syngine
