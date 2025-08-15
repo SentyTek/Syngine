@@ -1,6 +1,6 @@
 # ╒═══════════════════ GameConfig.cmake ═╕
 # │ Syngine                              │
-# │ Created YYYY-MM-DD                   │
+# │ Created 2025-08-05                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2025     │
 # │ Placeholder License                  │
@@ -356,5 +356,9 @@ endif()
 
 # Post build asset copying for win/linux
 add_assets(${name})
+
+# Add version
+include(${SYNGINE_SOURCE_DIR}/cmake/versioning.cmake)
+define_version()
 
 endfunction()

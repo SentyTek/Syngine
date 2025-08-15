@@ -33,6 +33,7 @@
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/Utils/FsUtils.h"
+#include "Syngine/Utils/Version.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
@@ -68,6 +69,7 @@ Core::Core(const EngineConfig config) {
     // Check if required folders exist (shaders, meshes)
     // CheckRequiredFolders will abort if any folder is missing
     if (Syngine::_CheckRequiredFolders()) {
+        Syngine::Logger::LogF(LogLevel::INFO, "Using Syngine v%s", SYN_VERSION_STRING);
         m_app = new App();
         m_app->config = config;
     }
@@ -156,6 +158,7 @@ bool Core::HandleEvents() {
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
         case SDL_EVENT_QUIT:
+            Logger::Info("Quit event received, will exit on next frame");
             m_shouldClose = true;
             break;
         case SDL_EVENT_WINDOW_RESIZED: {
