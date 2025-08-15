@@ -90,9 +90,9 @@ Renderer::~Renderer() {
         Renderer::dummy = BGFX_INVALID_HANDLE;
     }
 
-    // Destroy all programs and uniforms
-    for (auto& program : Renderer::viewPrograms) {
-        for (auto& prog : program.second) {
+    // Destroy all programs and uniforms (if not already destroyed)
+    for (auto& view : Renderer::viewPrograms) {
+        for (auto& prog : view.second) {
             for (auto& uniform : prog.uniforms) {
                 if (bgfx::isValid(uniform.handle)) {
                     bgfx::destroy(uniform.handle);
@@ -380,10 +380,9 @@ size_t Renderer::AddProgram(const std::string& vsPath,
     prog.fsPath  = fsPath;
     prog.id = programHandle.idx;
 
-    size_t id = viewPrograms[viewId].size();
     viewPrograms[viewId].push_back(prog); // Store program by viewId
     Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully", name.c_str());
-    return id;
+    return prog.id;
 }
 
 size_t Renderer::AddProgram(const std::string& path,
@@ -403,17 +402,34 @@ Program Renderer::GetProgram(const std::string_view& name) {
     return Program();
 }
 Program Renderer::GetProgram(size_t id) {
-    for (const auto& programs : viewPrograms) {
-        if (id < programs.second.size()) {
-            return programs.second[id]; // Return program by index
-        }
+    Program* prog = _GetProgram(id);
+    if (prog) {
+        return *prog;
     }
     return Program();
 }
+Program* Renderer::_GetProgram(size_t id) {
+    for (auto& pair : viewPrograms) {
+        for (auto& prog : pair.second) {
+            if (prog.id == id) {
+                return &prog;
+            }
+        }
+    }
+    return nullptr;
+}
 
+// FUTURE ME: MAKE THESE REMOVE UNIFORMS
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& name) {
     for (int i = 0; i < viewPrograms[viewId].size(); ++i) {
         if (viewPrograms[viewId][i].name == name) {
+            // Destroy all uniforms associated with this program
+            for (auto& uniform : viewPrograms[viewId][i].uniforms) {
+                bgfx::destroy(uniform.handle);
+                if (uniform.data) {
+                    free(uniform.data);
+                }
+            }
             bgfx::destroy(viewPrograms[viewId][i].program);
             viewPrograms[viewId].erase(viewPrograms[viewId].begin() + i);
             return true;
@@ -423,6 +439,13 @@ bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& nam
 }
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, size_t id) {
     if (id < viewPrograms[viewId].size()) {
+        // Destroy all uniforms associated with this program
+        for (auto& uniform : viewPrograms[viewId][id].uniforms) {
+            bgfx::destroy(uniform.handle);
+            if (uniform.data) {
+                free(uniform.data);
+            }
+        }
         bgfx::destroy(viewPrograms[viewId][id].program);
         viewPrograms[viewId].erase(viewPrograms[viewId].begin() + id);
         return true;
@@ -433,6 +456,13 @@ bool Renderer::RemoveProgram(Syngine::ViewID viewId, size_t id) {
 bool Renderer::RemoveAllPrograms() {
     for (auto& programs : viewPrograms) {
         for (auto& program : programs.second) {
+            // Destroy all uniforms associated with this program
+            for (auto& uniform : program.uniforms) {
+                bgfx::destroy(uniform.handle);
+                if (uniform.data) {
+                    free(uniform.data);
+                }
+            }
             bgfx::destroy(program.program);
         }
         programs.second.clear();
@@ -490,8 +520,8 @@ bool Renderer::IsReady() {
 size_t Renderer::RegisterUniform(int                program,
                                  const std::string& name,
                                  UniformType        type) {
-    Program prog = GetProgram(program);
-    if (prog.id > 0) {
+    Program* prog = _GetProgram(program);
+    if (prog) {
         Uniform u = { .handle = bgfx::createUniform(
                           name.c_str(),
                           static_cast<bgfx::UniformType::Enum>(type)),
@@ -519,8 +549,8 @@ size_t Renderer::RegisterUniform(int                program,
             u.data = nullptr;
             break;
         }
-        
-        prog.uniforms.push_back(u);
+
+        prog->uniforms.push_back(u);
         // Store in uniform registry for fast lookup
         m_uniformRegistry[u.handle.idx] = u;
         return u.handle.idx;
@@ -580,230 +610,6 @@ void Renderer::_RegisterGizmo(const std::string& tag, float size) {
         m_gizmoRegistry[tag] = { texture, size };
     }
 }
-
-/*void Renderer::_RenderGizmos(CameraComponent* camera) {
-    unsigned short viewId = 26; // View ID for gizmos
-    bgfx::setViewRect(viewId, 0, 0, bgfx::BackbufferRatio::Equal);
-    bgfx::setViewTransform(
-        viewId, camera->GetCamera().view, camera->GetCamera().proj);
-    bgfx::touch(viewId);
-
-    Program billboardProgram = GetProgram("billboard");
-    if(!bgfx::isValid(billboardProgram.program)) {
-        Syngine::Logger::Error("Billboard program not found");
-        return;
-    }
-
-    uint16_t billboardUniformId = m_defaultUniformIds["u_default_billboard"];
-    bgfx::UniformHandle billboardUniform =
-_GetUniform(billboardUniformId).handle; if (!bgfx::isValid(billboardUniform)) {
-        Syngine::Logger::Error("Billboard uniform not found");
-        return;
-    }
-
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                   BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_LEQUAL);
-
-    // Get all gizmos from the registry
-    std::vector<GameObject*> gizmos = Registry::GetGizmos();
-
-    for (auto go : gizmos) {
-        auto it = m_gizmoRegistry.find(go->gizmo);
-        if (it != m_gizmoRegistry.end()) {
-            auto* comp =
-                go->GetComponent<Syngine::CameraComponent>();
-            if (comp) {
-                const Gizmo& gizmo = it->second;
-                const float* pos   = comp->GetPosition();
-
-                // Pack center position and size into a vec4
-                float billboardData[4] = { pos[0], pos[1], pos[2], gizmo.size };
-                bgfx::setUniform(billboardUniform, billboardData);
-
-                // Dummy model matrix for billboard
-                float modelMtx[16];
-                bx::mtxIdentity(modelMtx);
-
-                // And finally render
-                bgfx::setTransform(modelMtx);
-                bgfx::setVertexBuffer(0, this->m_billboardVbh);
-                bgfx::setIndexBuffer(this->m_billboardIbh);
-                bgfx::setTexture(0, _GetUniform(billboardUniformId).handle,
-gizmo.texture); bgfx::submit(viewId, billboardProgram.program);
-            }
-        }
-    }
-}
-
-int Renderer::_RenderFrame(bx::Vec3& lightDir, CameraComponent* camera, bool
-debug) { const Program& terrainProgram = GetProgram("terrain"); const Program&
-skyProgram = GetProgram("sky"); const Program& defaultProgram =
-GetProgram("default"); if (!bgfx::isValid(terrainProgram.program) ||
-!bgfx::isValid(skyProgram.program) || !bgfx::isValid(defaultProgram.program)) {
-        Syngine::Logger::Error("Invalid program");
-        return -1;
-    }
-
-    const bgfx::ViewId SKY_VIEW = skyProgram.viewId;
-    const bgfx::ViewId MAIN_VIEW = terrainProgram.viewId;
-    camera->Update(SKY_VIEW,
-                   this->width,
-                   this->height); // update camera view and projection matrices
-
-    Camera camObj = camera->GetCamera();
-
-    //sky pass
-    bgfx::setViewRect(SKY_VIEW, 0, 0, uint16_t(this->width),
-uint16_t(this->height)); bgfx::setViewClear(SKY_VIEW, BGFX_CLEAR_COLOR |
-BGFX_CLEAR_DEPTH, 1.0f, 0, 1, 0); bgfx::touch(SKY_VIEW);
-    bgfx::setViewTransform(MAIN_VIEW, camObj.view, camObj.proj);
-    bgfx::touch(MAIN_VIEW);
-
-    float skyView[16];
-    bx::memCopy(skyView, camObj.view, sizeof(skyView));
-    skyView[12] = 0.0f; //remove translation for skybox
-    skyView[13] = 0.0f;
-    skyView[14] = 0.0f;
-
-    bgfx::setViewTransform(SKY_VIEW, skyView, camObj.proj);
-
-    float skyColorDay[4] = { 0.5f, 0.7f, 1.0f, 1.0f };
-    float skyColorNight[4] = { 0.0f, 0.0f, 0.1f, 1.0f };
-    float sunColorDay[4] = { 1.0f, 1.0f, 0.9f, 1.0f };
-    float sunColorRise[4] = { 0.77f, 0.39f, 0.14f, 1.0f };
-    bgfx::setUniform(handles.uniforms["u_skyColorDay"], skyColorDay);
-    bgfx::setUniform(handles.uniforms["u_skyColorNight"], skyColorNight);
-    bgfx::setUniform(handles.uniforms["u_sunColorDay"], sunColorDay);
-    bgfx::setUniform(handles.uniforms["u_sunColorRise"], sunColorRise);
-
-    bgfx::setState(BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LEQUAL |
-BGFX_STATE_MSAA);
-
-#if BX_PLATFORM_OSX
-    bgfx::setVertexBuffer(0, handles.dummy);
-#else
-    bgfx::setVertexCount(3);
-#endif
-    bgfx::submit(SKY_VIEW, skyProgram.program);
-
-    //main scene pass
-    //bgfx::setViewClear(MAIN_VIEW, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
-0, 1.0f, 0); bgfx::setViewRect(MAIN_VIEW, 0, 0, uint16_t(this->width),
-uint16_t(this->height));
-    //prepare render
-    uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
-BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
-
-
-    const uint32_t samplerFlags =
-        BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
-
-    std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
-
-    for (auto& gameObject : gameObjects) {
-        if (!gameObject) {
-            Syngine::Logger::Error("GameObject is null");
-            continue;
-        }
-        if (!gameObject->HasComponent(Syngine::SYN_COMPONENT_TRANSFORM) ||
-(!gameObject->HasComponent(Syngine::SYN_COMPONENT_MESH)) ||
-!(gameObject->GetComponent<TransformComponent>())->isEnabled) { continue;
-        }
-        MeshData mesh = gameObject->GetComponent<MeshComponent>()->meshData;
-        if (!mesh.valid) continue; // Skip invalid meshes
-
-        bool isDefault = false;
-        Program currentProg;
-        if (gameObject->type != "default") {
-            currentProg = GetProgram(gameObject->type.c_str());
-            if (!bgfx::isValid(currentProg.program)) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Program %s not
-found", gameObject->type.c_str()); continue;
-            }
-        } else {
-            isDefault = true;
-            currentProg = defaultProgram;
-        }
-
-        bgfx::setState(renderState);
-
-        if(gameObject->HasComponent(Syngine::SYN_COMPONENT_MESH) &&
-gameObject->GetComponent<MeshComponent>()->isEnabled) {
-            //TODO: add support for multiple materials
-            if(!bgfx::isValid(mesh.ibh) || !bgfx::isValid(mesh.vbh)) {
-                Syngine::Logger::Error("Invalid mesh");
-                continue;
-            }
-
-            if(mesh.materials.empty()) {
-                Syngine::Logger::LogF(Syngine::LogLevel::WARN, "GameObject %s
-has no materials, using default material", gameObject->name.c_str()); if
-(gameObject->type == "default") { float color[4] = { 1.0f, 0.0f, 1.0f, 1.0f };
-                    bgfx::setUniform(handles.uniforms["u_baseColor"], color);
-                } else {
-                    continue; // Other types absolutely require materials
-                }
-            } else {
-                Material& currentMat = mesh.materials[0]; // TODO: support
-multiple materials if (!isDefault) {
-                    //Set textures
-                    if (bgfx::isValid(currentMat.albedo))
-                        bgfx::setTexture(0, handles.uniforms["s_albedo"],
-currentMat.albedo, samplerFlags); if (bgfx::isValid(currentMat.normalMap))
-                        bgfx::setTexture(1, handles.uniforms["s_normalMap"],
-currentMat.normalMap, samplerFlags); if (bgfx::isValid(currentMat.heightMap))
-                        bgfx::setTexture(2, handles.uniforms["s_heightMap"],
-currentMat.heightMap, samplerFlags);
-
-                    //Set floats
-                    float u_floats[4] = {
-                        currentMat.heightScale,
-                        currentMat.mixFactor,
-                        currentMat.ambient,
-                        currentMat.tileDetail
-                    };
-                    bgfx::setUniform(handles.uniforms["u_floats"], u_floats);
-                } else {
-                    // Set base color for default shader
-                    bgfx::setUniform(handles.uniforms["u_baseColor"],
-currentMat.baseColor);
-                }
-            }
-
-            bgfx::setVertexBuffer(0, mesh.vbh);
-            bgfx::setIndexBuffer(mesh.ibh);
-        }
-
-        // Set common uniforms
-        float modelMtx[16];
-        gameObject->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
-        bgfx::setTransform(modelMtx);
-
-        float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));
-        float sy = bx::length(bx::Vec3(modelMtx[4], modelMtx[5], modelMtx[6]));
-        float sz = bx::length(bx::Vec3(modelMtx[8], modelMtx[9], modelMtx[10]));
-
-        float normal3x3[9];
-        for(int i = 0; i < 3; ++i) {
-            normal3x3[i * 3 + 0] = modelMtx[i * 4 + 0] / sx;
-            normal3x3[i * 3 + 1] = modelMtx[i * 4 + 1] / sy;
-            normal3x3[i * 3 + 2] = modelMtx[i * 4 + 2] / sz;
-        }
-
-        bgfx::setUniform(handles.uniforms["u_normalMatrix"], normal3x3);
-        bgfx::setUniform(handles.uniforms["u_lightDir"], &lightDir);
-
-        bgfx::submit(MAIN_VIEW, currentProg.program);
-    }
-
-    // Render gizmos
-    if (debug) {
-        _RenderGizmos(camera);
-    }
-
-    bgfx::frame(); // submit the frame
-    return 0;
-}*/
 
 void Renderer::GetSunDirection(float* outDir) {
     Uniform* u = _GetUniform(m_defaultUniformIds["u_default_lightDir"]);
@@ -934,7 +740,7 @@ void Renderer::_DrawForward(const Program& program) {
             normal3x3[i * 3 + 2] = modelMtx[i * 4 + 2] / sz;
         }
 
-        std::string type = "u_" + gameObject->type; // Since it's a map, gotta have unique keys
+        std::string type = "u_" + program.name; // Since it's a map, gotta have unique keys
         SetUniform(m_defaultUniformIds[type + "_normalMatrix"], normal3x3);
 
         bgfx::submit(program.viewId, program.program);

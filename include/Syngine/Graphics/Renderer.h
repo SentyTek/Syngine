@@ -266,6 +266,7 @@ class Renderer {
     void _RenderGizmos(CameraComponent* camera);
 
     static Uniform* _GetUniform(uint16_t id);
+    static Program* _GetProgram(size_t id);
 
     static constexpr std::array<Syngine::ViewID, 10> _allViews = {
         Syngine::VIEW_SHADOW,
