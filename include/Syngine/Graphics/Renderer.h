@@ -285,6 +285,7 @@ class Renderer {
     static void _DrawForward(const Program& program);
     static void _DrawDebug(const Program& program, CameraComponent* camera);
     static void _DrawBillboard(const Program& program);
+    static void _DrawUIDebug(CameraComponent* camera);
 };
 
 } // namespace Syngine

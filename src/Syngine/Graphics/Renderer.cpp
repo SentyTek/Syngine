@@ -25,6 +25,7 @@
 #include <SDL3/SDL_properties.h>
 
 #include <bgfx/platform.h>
+#include "Syngine/Utils/Version.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "bx/math.h"
@@ -793,6 +794,21 @@ void Renderer::_DrawBillboard(const Program& program) {
     }
 }
 
+void Renderer::_DrawUIDebug(CameraComponent* camera) {
+    bgfx::setDebug(BGFX_DEBUG_TEXT);
+    bgfx::dbgTextClear();
+
+    int width = Renderer::width;
+    int height = Renderer::height;
+    int maxCols = width / 8; // Assuming each character is 8 pixels wide
+    int maxRows = height / 16; // Assuming each character is 16 pixels tall
+
+    bgfx::dbgTextPrintf(
+        1, maxRows - 2, 0x0C, "Syngine v%s", SYN_VERSION_STRING);
+    bgfx::dbgTextPrintf(
+        1, maxRows - 1, 0x0C, "FOR INTERNAL USE ONLY - NOT FOR PUBLIC RELEASE");
+}
+
 bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
     // Update main camera matrices
     for (Syngine::ViewID view : _allViews) {
@@ -839,6 +855,9 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
             }
         }
     }
+
+    if (debug) _DrawUIDebug(camera);
+
 
     bgfx::frame();
     return true;
