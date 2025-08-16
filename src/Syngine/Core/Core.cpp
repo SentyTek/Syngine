@@ -26,12 +26,16 @@
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/BasicInput.h"
+
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
+
 #include "Syngine/Physics/Physics.h"
+
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/Component.h"
+
 #include "Syngine/Utils/FsUtils.h"
 
 #include "SDL3/SDL_events.h"

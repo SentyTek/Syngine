@@ -9,11 +9,13 @@
 #ifndef SynInput_h
 #define SynInput_h
 
+#include "Syngine/Core/Core.h"
 #include <cstdint>
 #include <variant>
 #include <string>
 #include <unordered_set>
 #include <vector>
+#include <functional>
 
 namespace Syngine {
 
@@ -22,7 +24,7 @@ namespace Syngine {
 class InputBinding {
   public:
     /// @brief A type representing the lack of a binding
-    struct Unbound {};
+    class Unbound {};
 
     /// @brief A bindable non-modifier keyboard key
     enum class KeyboardKey {
@@ -102,6 +104,12 @@ class InputBinding {
         RIGHT_BRACKET,
         BACKSLASH,
 
+        // Arrow keys
+        LEFT,
+        RIGHT,
+        UP,
+        DOWN,
+
         // Control keys
         INSERT,
         HOME,
@@ -109,6 +117,7 @@ class InputBinding {
         PAGE_DOWN,
         END,
         PRINT_SCREEN,
+        ESCAPE,
     };
 
     /// @brief A single unsided modifier key
@@ -203,8 +212,11 @@ class InputBinding {
     };
 
     /// @brief A type that can represent any keyboard input binding
-    using KeyboardBindable = std::
-        variant<KeyboardKey, KeyboardShortcut, ModifierKey, SidedModifierKey, Unbound>;
+    using KeyboardBindable = std::variant<Unbound,
+                                          KeyboardKey,
+                                          KeyboardShortcut,
+                                          ModifierKey,
+                                          SidedModifierKey>;
 
     /// @brief A chord of multiple keybinds
     class InputChord {
@@ -225,6 +237,14 @@ class InputBinding {
         InputChord(const std::vector<KeyboardBindable>& keys);
     };
 
+    enum class MouseKey {
+        LEFT,
+        RIGHT,
+        MIDDLE,
+        BUTTON_4,
+        BUTTON_5,
+    };
+
     constexpr InputBinding operator==(const InputBinding& rhs);
 
     /// @brief Constructs an empty InputBinding
@@ -233,11 +253,20 @@ class InputBinding {
     /// @brief Constructs an InputBinding from a KeyboardKey
     InputBinding(KeyboardKey key);
 
+    /// @brief Constructs an InputBinding from a ModifierKey
+    InputBinding(ModifierKey modifier);
+
+    /// @brief Constructs an InputBinding from a SidedModifierKey
+    InputBinding(SidedModifierKey modifier);
+
     /// @brief Constructs an InputBinding from a KeyboardShortcut
     InputBinding(KeyboardShortcut shortcut);
 
     /// @brief Constructs an InputBinding from an InputChord
     InputBinding(InputChord chord);
+
+    /// @brief Constructs an InputBinding from a MouseKey
+    InputBinding(MouseKey mouseKey);
 
     /// @brief Returns true if the binding is currently being pressed
     bool isPressed();
@@ -250,18 +279,22 @@ class InputBinding {
 
     /// @brief Returns true if the binding's state has changed since the last
     /// frame
-    bool changedState();
+    bool stateChanged();
+
+    /// @brief Whether this action is enabled or not
+    bool enabled = true;
 
   private:
     // Intentionally not using KeyboardBindable so we don't have nested
     // `std::variant`s
     /// @brief This object's binding
-    std::variant<KeyboardKey,
+    std::variant<Unbound,
+                 KeyboardKey,
                  ModifierKey,
                  SidedModifierKey,
                  KeyboardShortcut,
                  InputChord,
-                 Unbound>
+                 MouseKey>
         binding;
 
     /// @brief An array of all input bindings, for updating state and handling
@@ -290,8 +323,15 @@ operator+(const InputBinding::ModifierKey& lhs,
 /// @section Input
 class InputAction {
   public:
-    /// @brief The binding for this input action
-    InputBinding binding;
+    /// @brief A container for callbacks
+    struct Callbacks {
+        std::function<void()> onPressed;
+        std::function<void()> onReleased;
+        std::function<void()> onStateChanged;
+    };
+
+    /// @brief The identifier for this input action
+    const std::string identifier;
 
     /// @brief The display name for this input action
     std::string name;
@@ -299,15 +339,15 @@ class InputAction {
     /// @brief The display category for this input action
     std::string category;
 
-    /// @brief The identifier for this input action
-    const std::string identifier;
+    /// @brief The binding for this input action
+    InputBinding binding;
 
     /// @brief Make an empty InputAction
     /// @param identifier The identifier for the input action. This is required
     /// and *must* be unique
     /// @param name The name for the input action. This is the display name that
     /// is shown in the bindings menu
-    /// @note Returns `false` if the identifier isn't unique
+    /// @throws std::invalid_argument if the identifier is not unique
     InputAction(const std::string& identifier, const std::string& name);
 
     /// @brief Make an empty InputAction
@@ -317,7 +357,7 @@ class InputAction {
     /// is shown in the bindings menu
     /// @param category The category for the input action. This is used for
     /// organizing actions in the bindings menu
-    /// @note Returns `false` if the identifier isn't unique
+    /// @throws std::invalid_argument if the identifier is not unique
     InputAction(const std::string& identifier,
                 const std::string& name,
                 const std::string& category);
@@ -328,7 +368,7 @@ class InputAction {
     /// @param name The name for the input action. This is the display name that
     /// is shown in the bindings menu
     /// @param binding The binding for the input action
-    /// @note Returns `false` if the identifier isn't unique
+    /// @throws std::invalid_argument if the identifier is not unqiue
     InputAction(const std::string& identifier,
                 const std::string& name,
                 InputBinding       binding);
@@ -341,11 +381,14 @@ class InputAction {
     /// @param category The category for the input action. This is used for
     /// organizing actions in the bindings menu
     /// @param binding The binding for the input action
-    /// @note Returns `false` if the identifier isn't unique
+    /// @throws std::invalid_argument if the identifier is not unique
     InputAction(const std::string& identifier,
                 const std::string& name,
                 const std::string& category,
                 InputBinding       binding);
+
+    /// @brief Deconstructs and cleans up the InputAction
+    ~InputAction();
 
     /// @brief Returns true if the binding is currently being pressed
     bool isPressed() { return binding.isPressed(); };
@@ -358,30 +401,70 @@ class InputAction {
 
     /// @brief Returns true if the binding's state has changed since the last
     /// frame
-    bool changedState() { return binding.changedState(); };
+    bool stateChanged() { return binding.stateChanged(); };
+
+    void onPressed(std::function<void()> callback) {
+        callbacks.onPressed = callback;
+    }
+
+    void onReleased(std::function<void()> callback) {
+        callbacks.onReleased = callback;
+    }
+
+    void onStateChanged(std::function<void()> callback) {
+        callbacks.onStateChanged = callback;
+    }
+
+    /// @brief Registers an action which calls the provided callback(s) when the
+    /// input state changes
+    /// @param identifier The identifier for the input action. This is required
+    /// and *must* be unique
+    /// @param name The name for the input action. This is the display name that
+    /// is shown in the bindings menu
+    /// @param binding The binding for the input action
+    /// @param callbacks The callbacks to call when the action state updates
+    static void RegisterAction(const std::string& identifier,
+                               const std::string& name,
+                               InputBinding       binding,
+                               Callbacks          callbacks);
+
+    /// @brief Registers an action which calls the provided callback when the
+    /// action is pressed
+    /// @param identifier The identifier for the input action. This is required
+    /// and *must* be unique
+    /// @param name The name for the input action. This is the display name that
+    /// is shown in the bindings menu
+    /// @param category The category for the input action. This is used for
+    /// organizing actions in the bindings menu
+    /// @param binding The binding for the input action
+    /// @param callbacks The callbacks to call when the action state updates
+    /// @returns False if the identifier was not unique, true otherwise
+    static bool RegisterAction(const std::string& identifier,
+                               const std::string& name,
+                               const std::string& category,
+                               InputBinding       binding,
+                               Callbacks          callbacks);
 
     /// @brief Equality operator for InputAction
-    constexpr InputAction operator==(const InputAction& rhs);
+    constexpr bool operator==(const InputAction& other);
 
   private:
-    /// @brief The set of all input actions, for tracking and displaying
-    static std::unordered_set<InputAction> bindings;
+    /// @brief This object's callbacks, if any
+    Callbacks callbacks;
+
+    /// @brief An array of pointers to every active input action. Each pointer
+    /// is guaranteed to point to an existing object and be unique
+    static std::vector<InputAction*> bindings;
+
+    /// @brief This is where input actions go if they're not handled as objects
+    /// directly
+    static std::vector<InputAction> anonymousActions;
+
+    /// @brief Logs a fatal error and halts the program if the provided
+    /// identifier is not unique
+    static void EnsureUniqueIdentifier(const std::string& identifier);
 };
 
 }; // namespace Syngine
-
-namespace std {
-
-template <> struct hash<Syngine::InputAction> {
-    /// @brief Hash function for InputAction
-    size_t operator()(const Syngine::InputAction& obj) const;
-};
-
-template <> struct hash<Syngine::InputBinding> {
-    /// @brief Hash function for InputBinding
-    size_t operator()(const Syngine::InputBinding& obj) const;
-};
-
-}; // namespace std
 
 #endif /* SynInput_h */
