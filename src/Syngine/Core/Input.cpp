@@ -8,7 +8,7 @@
 
 #include "Syngine/Core/Input.h"
 #include "SDL3/SDL_events.h"
-#include "Syngine/Core/InputHelpers.h"
+#include "InputHelpers.h"
 #include "Syngine/Core/Logger.h"
 
 // KeyBinding constructors
