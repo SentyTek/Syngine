@@ -45,6 +45,7 @@ class DebugRender;
 
 using namespace JPH;
 namespace Syngine {
+    struct DebugModes; // Forward declaration
 
     // Layer definitions for Jolt
     namespace Layers {
@@ -184,7 +185,7 @@ namespace Syngine {
         /// @return 0 on success, non-zero on failure
         /// @since v0.0.1
         /// @internal
-        void _Init(bool debug);
+        void _Init();
 
         /// @brief Shutdown the physics system
         /// @since v0.0.1
@@ -202,7 +203,12 @@ namespace Syngine {
         /// @param width Width of the viewport
         /// @param height Height of the viewport
         /// @param program Shader program to use for rendering
-        void _DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam);
+        void _DrawDebug(int                 width,
+                        int                 height,
+                        bgfx::ProgramHandle program,
+                        Syngine::Camera     camera,
+                        Syngine::Camera     finalCam,
+                        DebugModes          debug);
 
         /// @brief Get the body interface for manipulating bodies
         /// @return Reference to the body interface
@@ -328,6 +334,10 @@ namespace Syngine {
                                EMotionType motionType,
                                ObjectLayer layer,
                                float       mass = 0.0f);
+
+        void _DrawOtherFrustum(const float* view, const float* proj);
+
+        void _DrawLine(const float* from, const float* to, JPH::ColorArg color);
 
         private:
         //Jolt specific variables

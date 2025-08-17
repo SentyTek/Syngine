@@ -22,6 +22,7 @@
 
 namespace Syngine {
 class CameraComponent; // Forward declaration
+struct DebugModes; // Forward declaration
 
 /// @brief Collection of view IDs for rendering. Rendered in the order they are
 /// defined here.
@@ -223,7 +224,7 @@ class Renderer {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    bool _RenderFrame(CameraComponent* camera, bool debug = false);
+    bool _RenderFrame(CameraComponent* camera, DebugModes debug);
 
     /// @brief Register a gizmo with a tag and optional size
     /// @param tag Name of the gizmo
@@ -300,7 +301,7 @@ class Renderer {
     static void _DrawShadows(const Program& program, CameraComponent* camera, uint8_t cascade);
     static void _DrawSky(const Program& program);
     static void _DrawForward(const Program& program, CameraComponent* camera);
-    static void _DrawDebug(const Program& program, CameraComponent* camera);
+    static void _DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug);
     static void _DrawBillboard(const Program& program);
     static void _DrawUIDebug(CameraComponent* camera);
 };

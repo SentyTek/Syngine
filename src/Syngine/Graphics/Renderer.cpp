@@ -756,7 +756,7 @@ void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
 
     float lastSplitDist = nearClip;
     for (uint32_t i = 0; i < NUM_CASCADES; i++) {
-        float splitDist = cascadeSplitDepths[i];
+        float splitDist = -cascadeSplitDepths[i];
 
         bx::Vec3 frustumCorners[8] = {
             bx::Vec3(-1.0f, 1.0f, -1.0f), bx::Vec3(1.0f, 1.0f, -1.0f),
@@ -880,9 +880,26 @@ void Renderer::_GetLightViewProj(CameraComponent* camera,
 */
 
 void Renderer::_DrawShadows(const Program& program, CameraComponent* camera, uint8_t cascade) {
-    const uint64_t renderState = BGFX_STATE_WRITE_Z |
-                                 BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA |
-                                 BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
+    const uint64_t renderState =
+        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
+
+    if (Core::_GetApp()->debug.CSMBounds) {
+        float view[16 * NUM_CASCADES], proj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
+        _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
+        for (int i = 0; i < NUM_CASCADES; ++i) {
+            Core::_GetApp()->physicsManager->_DrawOtherFrustum(view + i * 16, proj + i * 16);
+        }
+        // Draw line from camera pos to light pos
+        float lightDir[3];
+        GetSunDirection(lightDir);
+        const float* camPos = camera->GetPosition();
+        bx::Vec3 camPosVec(camPos[0], camPos[1], camPos[2]);
+        bx::Vec3     lightPos = bx::add(
+            camPosVec,
+            bx::mul(bx::Vec3(lightDir[0], lightDir[1], lightDir[2]), 100.0f));
+        float final[3] = { lightPos.x, lightPos.y, lightPos.z };
+        Core::_GetApp()->physicsManager->_DrawLine(camera->GetPosition(), final, JPH::Color::sYellow);
+    }
 
     std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
 
@@ -1026,7 +1043,7 @@ void Renderer::_DrawForward(const Program& program, CameraComponent* camera) {
     }
 }
 
-void Renderer::_DrawDebug(const Program& program, CameraComponent* camera) {
+void Renderer::_DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug) {
     Core::_GetApp()->physicsManager->_DrawDebug(
         width,
         height,
@@ -1034,7 +1051,7 @@ void Renderer::_DrawDebug(const Program& program, CameraComponent* camera) {
         Registry::GetGameObjectByName("player")
             ->GetComponent<CameraComponent>()
             ->GetCamera(),
-        camera->GetCamera());
+        camera->GetCamera(), debug);
 }
 
 void Renderer::_DrawBillboard(const Program& program) {
@@ -1086,12 +1103,14 @@ void Renderer::_DrawUIDebug(CameraComponent* camera) {
         1, maxRows - 1, 0x0C, "FOR INTERNAL USE ONLY - NOT FOR PUBLIC RELEASE");
 }
 
-bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
+bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     float lightView[NUM_CASCADES * 16];
     float lightProj[NUM_CASCADES * 16];
     float cascadeSplits[NUM_CASCADES];
 
-    const float* camPos = camera->GetPosition();
+    CameraComponent* ecam = Registry::GetGameObjectByName("EditorCamera")->GetComponent<CameraComponent>();
+    CameraComponent* pcam = Registry::GetGameObjectByName("player")->GetComponent<CameraComponent>();
+    const float* camPos = pcam->GetPosition();
     float        viewPos[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
     SetUniform(m_defaultUniformIds["u_default_viewPos"], viewPos);
     SetUniform(m_defaultUniformIds["u_texture_viewPos"], viewPos);
@@ -1103,11 +1122,11 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
     SetUniform(m_defaultUniformIds["u_texture_lightDir"], lightDirUniform);
 
     if (m_config.useShadows) {
-        _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
+        _CalculateCascadeMatrices(pcam, lightView, lightProj, cascadeSplits);
 
         float lightViewProj[NUM_CASCADES * 16];
         for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
-            bx::mtxMul(&lightViewProj[i * 16], &lightView[i * 16], &lightProj[i * 16]);
+            bx::mtxMul(&lightViewProj[i * 16], &lightProj[i * 16], &lightView[i * 16]);
         }
 
         SetUniform(m_defaultUniformIds["u_default_csmLightViewProj"],
@@ -1150,7 +1169,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
             // Remove translation for skybox
             bgfx::setViewRect(view, 0, 0, bgfx::BackbufferRatio::Equal);
             camera->Update(view, width, height);
-            Camera cam = camera->GetCamera();
+            Camera cam = ecam->GetCamera();
             float  skyView[16];
             bx::memCopy(skyView, cam.view, sizeof(skyView));
             skyView[12] = skyView[13] = skyView[14] = 0.0f;
@@ -1159,7 +1178,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
         }
         default: {
             bgfx::setViewRect(view, 0, 0, uint16_t(width), uint16_t(height));
-            Camera cam = camera->GetCamera();
+            Camera cam = ecam->GetCamera();
             bgfx::setViewTransform(view, cam.view, cam.proj);
             break;
         }
@@ -1179,7 +1198,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
             case VIEW_SHADOW:
                 if (m_config.useShadows) {
                     for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
-                        _DrawShadows(program, camera, i);
+                        _DrawShadows(program, pcam, i);
                     }
                 }
                 break;
@@ -1187,13 +1206,13 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
                 _DrawSky(program);
                 break;
             case VIEW_FORWARD:
-                _DrawForward(program, camera);
+                _DrawForward(program, ecam);
                 break;
             case VIEW_DEBUG:
-                if (debug) _DrawDebug(program, camera);
+                if (debug.Enabled) _DrawDebug(program, ecam, debug);
                 break;
             case VIEW_BILL_DBG:
-                if (debug) _DrawBillboard(program);
+                if (debug.Enabled &&debug.Gizmos) _DrawBillboard(program);
                 break;
             default:
                 break;
@@ -1201,7 +1220,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
         }
     }
 
-    if (debug) _DrawUIDebug(camera);
+    _DrawUIDebug(camera);
 
     bgfx::frame();
     return true;

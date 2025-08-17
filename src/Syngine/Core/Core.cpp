@@ -123,7 +123,7 @@ bool Core::Initialize() {
             Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
         }
 
-        m_app->physicsManager->_Init(m_app->debug);
+        m_app->physicsManager->_Init();
     } catch(const std::exception& e) {
         Syngine::Logger::LogF(LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
         return false;
@@ -403,13 +403,34 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 void Core::_HandleKeyEvent(const SDL_Event& event) {
     if (event.type == SDL_EVENT_KEY_DOWN) {
         switch (event.key.key) {
+            // Toggle debug modes
             case SDLK_F1: {
-                // Toggle debug mode
-                this->m_app->debug = !this->m_app->debug;
-                if (this->m_app->debug) {
-                    Syngine::Logger::Info("Debug mode enabled");
+                // Toggle physics wireframes
+                this->m_app->debug.PhysWireframes = !this->m_app->debug.PhysWireframes;
+                if (this->m_app->debug.PhysWireframes) {
+                    Syngine::Logger::Info("Physics wireframes enabled");
                 } else {
-                    Syngine::Logger::Info("Debug mode disabled");
+                    Syngine::Logger::Info("Physics wireframes disabled");
+                }
+                break;
+            }
+            case SDLK_F2: {
+                // Toggle gizmos
+                this->m_app->debug.Gizmos = !this->m_app->debug.Gizmos;
+                if (this->m_app->debug.Gizmos) {
+                    Syngine::Logger::Info("Gizmos enabled");
+                } else {
+                    Syngine::Logger::Info("Gizmos disabled");
+                }
+                break;
+            }
+            case SDLK_F3: {
+                // Toggle CSM bounds
+                this->m_app->debug.CSMBounds = !this->m_app->debug.CSMBounds;
+                if (this->m_app->debug.CSMBounds) {
+                    Syngine::Logger::Info("CSM Bounds enabled");
+                } else {
+                    Syngine::Logger::Info("CSM Bounds disabled");
                 }
                 break;
             }

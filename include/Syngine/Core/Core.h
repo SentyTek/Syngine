@@ -49,6 +49,16 @@ struct EngineConfig {
     bool        vsync; //* Whether vertical sync is enabled
 };
 
+/// @brief the various debug modes possible
+/// @section Core
+/// @since v0.0.1
+struct DebugModes {
+    bool Enabled = true;
+    bool PhysWireframes = true; //* Whether to draw physics wireframes
+    bool Gizmos = true; //* Gizmos such as cameras, lights, and audio sources
+    bool CSMBounds = true; //* Cascading Shadow Map zone bounds.
+};
+
 /// @brief Struct to hold application state
 /// @section Core
 /// @since v0.0.1
@@ -58,7 +68,7 @@ struct App {
     std::unique_ptr<Renderer> renderer; //* Pointer to the render system
     std::unique_ptr<SynModelLoader> synModels; //* Pointer to the model loader
     std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
-    bool debug = true;   //* Debug mode flag
+    DebugModes debug;   //* Debug modes flags
 };
 
 /// @brief Core class to manage the application

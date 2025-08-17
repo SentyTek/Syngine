@@ -7,6 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Physics/Physics.h"
+#include "Jolt/Math/MathTypes.h"
+#include "Syngine/Core/Core.h"
 #include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
@@ -58,7 +60,7 @@ bool Phys::AssertFailedImpl(const char* inExpression, const char* inMessage, con
 Phys::Phys() {}
 Phys::~Phys() { _Shutdown(); }
 
-void Phys::_Init(bool debug) {
+void Phys::_Init() {
 
     RegisterDefaultAllocator();
     Trace = TraceImpl;
@@ -66,10 +68,8 @@ void Phys::_Init(bool debug) {
     Factory::sInstance = new Factory();
 
     // Set Jolt's debug renderer to our custom debug renderer if debugging is enabled
-    if (debug) {
-        mDebugRenderer = new Syngine::DebugRender();
-        JPH::DebugRenderer::sInstance = mDebugRenderer;
-    }
+    mDebugRenderer = new Syngine::DebugRender();
+    JPH::DebugRenderer::sInstance = mDebugRenderer;
 
     RegisterTypes();
 
@@ -129,20 +129,39 @@ void Phys::_Update(float deltaTime, int collisionSteps) {
 }
 
 void Phys::_DrawDebug(int                 width,
-                     int                 height,
-                     bgfx::ProgramHandle program,
-                     Syngine::Camera     camera,
-                     Syngine::Camera     finalCam) {
-    if (mDebugRenderer) {
+                      int                 height,
+                      bgfx::ProgramHandle program,
+                      Syngine::Camera     camera,
+                      Syngine::Camera     finalCam,
+                      DebugModes          debug) {
+    if (mDebugRenderer && debug.Enabled) {
         JPH::BodyManager::DrawSettings drawSettings;
         drawSettings.mDrawShapeWireframe = true;
         //drawSettings.mDrawShape = false;
-        
-        mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
-        mDebugRenderer->DrawFrustum(camera);
+
+        if (debug.PhysWireframes) {
+            mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
+        }
+        if (debug.Gizmos) {
+            mDebugRenderer->DrawFrustum(camera);
+        }
         mDebugRenderer->RenderLines(finalCam.view, finalCam.proj, width, height, program);
 
         mDebugRenderer->ClearLines();
+    }
+}
+
+void Phys::_DrawOtherFrustum(const float* view, const float* proj) {
+    if (mDebugRenderer) {
+        mDebugRenderer->DrawOtherFrustum(view, proj);
+    }
+}
+
+void Phys::_DrawLine(const float* from, const float* to, JPH::ColorArg color) {
+    if (mDebugRenderer) {
+        JPH::Vec3Arg fromArg(from[0], from[1], from[2]);
+        JPH::Vec3Arg toArg(to[0], to[1], to[2]);
+        mDebugRenderer->DrawLine(fromArg, toArg, color);
     }
 }
 

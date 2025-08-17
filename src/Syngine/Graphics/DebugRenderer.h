@@ -143,6 +143,8 @@ class DebugRender : public JPH::DebugRenderer {
     /// @internal
     void DrawFrustum(Syngine::Camera camera);
 
+    void DrawOtherFrustum(const float* view, const float* proj);
+
     /// @brief Render debug lines
     /// @param view View matrix
     /// @param proj Projection matrix
