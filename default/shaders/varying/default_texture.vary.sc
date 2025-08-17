@@ -8,3 +8,5 @@ vec2 v_uvMacro : TEXCOORD2;
 vec2 v_uvDetail : TEXCOORD3;
 vec3 v_normal : TEXCOORD4;
 vec4 v_tangent : TEXCOORD5;
+vec3 v_worldPos : TEXCOORD6;
+float v_viewDepth : TEXCOORD7;

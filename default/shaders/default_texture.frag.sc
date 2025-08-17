@@ -1,5 +1,6 @@
-$input v_uvMacro v_uvDetail v_normal v_tangent
+$input v_uvMacro v_uvDetail v_normal v_tangent v_worldPos v_viewDepth
 #include <bgfx_shader.sh>
+#include "shadow.sh"
 
 //texture slots
 SAMPLER2D(s_albedo, 0);
@@ -14,7 +15,7 @@ void main() {
     float SUN_ELEV_TWILIGHT_START = -0.1;
     float SUN_ELEV_DEEP_TWILIGHT_END = -0.3;
 
-    vec3 lightDirToSun = normalize(-u_lightDir.xyz);
+    vec3 lightDirToSun = normalize(u_lightDir.xyz);
     float sunElevation = lightDirToSun.y;
 
     //macro normal from heightmap
@@ -46,8 +47,10 @@ void main() {
     float minNightAmbient   = 0.1;
     float currentAmbient    = mix(minNightAmbient, u_floats.z, smoothstep(SUN_ELEV_DEEP_TWILIGHT_END, SUN_ELEV_TWILIGHT_START, sunElevation));
 
-    float finalLight = currentAmbient + NdotL * sunLightStrength;
+    // Shadow factor
+    float shadow = getShadowFactor(v_worldPos, N, u_lightDir, v_viewDepth);
 
+    float finalLight = currentAmbient + NdotL * sunLightStrength * shadow;
     //finalize and mix
     vec4 base       = texture2D(s_albedo, v_uvDetail);
     gl_FragColor    = vec4(base.rgb * finalLight, base.a);

@@ -1,13 +1,14 @@
 $input a_position a_normal a_tangent a_texcoord0 a_texcoord1
-$output v_uvMacro v_uvDetail v_normal v_tangent
+$output v_uvMacro v_uvDetail v_normal v_tangent v_worldPos v_viewDepth
 #include <bgfx_shader.sh>
 
 uniform mat3 u_normalMatrix;
 
 void main() {
     //position
-    vec4 worldPos   = mul(u_modelViewProj, vec4(a_position, 1.0));
-    gl_Position     = worldPos;
+    v_worldPos   = mul(u_model[0], vec4(a_position, 1.0)).xyz;
+    v_viewDepth   = mul(u_view, vec4(v_worldPos, 1.0)).z;
+    gl_Position     = mul(u_viewProj, vec4(v_worldPos, 1.0));
 
     //two UV sets
     v_uvMacro   = a_texcoord0; //0->1 for heightmap diffs

@@ -105,22 +105,22 @@ bool Core::Initialize() {
     try {
         m_app->window = std::make_unique<Window>(m_app->config);
         if (!m_app->window) {
-            Logger::Error("Failed to create window.");
+            Logger::Error("Failed to create window. Check the log for more details.");
         }
 
         m_app->renderer = std::make_unique<Renderer>(m_app->config.windowWidth, m_app->config.windowHeight);
         if (!m_app->renderer) {
-            Logger::Error("Failed to create renderer.");
+            Logger::Error("Failed to create renderer. Check the log for more details.");
         }
 
         m_app->synModels = std::make_unique<AssimpLoader>();
         if (!m_app->synModels) {
-            Logger::Error("Failed to create AssimpLoader.");
+            Logger::Error("Failed to create AssimpLoader. Check the log for more details.");
         }
 
         m_app->physicsManager = std::make_unique<Phys>();
         if (!m_app->physicsManager) {
-            Logger::Error("Failed to create PhysicsManager.");
+            Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
         }
 
         m_app->physicsManager->_Init(m_app->debug);
