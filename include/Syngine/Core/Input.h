@@ -9,25 +9,30 @@
 #ifndef SynInput_h
 #define SynInput_h
 
-#include "Syngine/Core/Core.h"
 #include <cstdint>
 #include <variant>
 #include <string>
-#include <unordered_set>
 #include <vector>
 #include <functional>
 
+#include "SDL3/SDL_events.h"
+
 namespace Syngine {
 
-/// @brief An actively processed keybind grouped with a label
+/// @brief Any key binding
 /// @section Input
-class InputBinding {
+struct KeyBinding {
   public:
     /// @brief A type representing the lack of a binding
-    class Unbound {};
+    struct Unbound {
+        /// @brief Always returns true, since every instance of Unbound is the
+        /// same
+        constexpr bool operator==(const Unbound& other) const { return true; }
+    };
 
     /// @brief A bindable non-modifier keyboard key
     enum class KeyboardKey {
+        UNKNOWN,
         // Letters
         A,
         B,
@@ -86,22 +91,22 @@ class InputBinding {
         COMMA,
         PERIOD,
         SEMICOLON,
-        QUOTE,
-        EXCLAMATION,
-        QUESTION_MARK,
+        APOSTROPHE,
 
         // Whitespace and editing keys
         SPACE,
         TAB,
         ENTER,
         BACKSPACE,
+        DELETE,
 
-        // Miscellaneous symbol keys
+        // Symbol keys
         MINUS,
         EQUALS,
         TILDE,
         LEFT_BRACKET,
         RIGHT_BRACKET,
+        FORWARD_SLASH,
         BACKSLASH,
 
         // Arrow keys
@@ -125,19 +130,26 @@ class InputBinding {
     /// @see ModifierKeys
     /// @see SidedModifierKey
     enum class ModifierKey : uint8_t {
-        COMMAND = 1 << 0,
-        GUI     = 1 << 0,
-        WINDOWS = 1 << 0,
-        SHIFT   = 1 << 1,
-        OPTION  = 1 << 2,
-        ALT     = 1 << 2,
-        CONTROL = 1 << 3
+        UNKNOWN = 0,
+
+        COMMAND = 1 << 1,
+        GUI     = 1 << 1,
+        WINDOWS = 1 << 1,
+
+        SHIFT = 1 << 2,
+
+        OPTION = 1 << 3,
+        ALT    = 1 << 3,
+
+        CONTROL = 1 << 4
     };
 
     /// @brief A single sided modifier key
     /// @section Input
     /// @see ModifierKey
     enum class SidedModifierKey : uint8_t {
+        UNKNOWN = 0,
+
         LEFT_COMMAND  = 1,
         LEFT_GUI      = 1,
         LEFT_WINDOWS  = 1,
@@ -160,40 +172,52 @@ class InputBinding {
     /// @brief A set of ``ModifierKey``s, mainly used in keyboard shortcuts
     /// @section Input
     /// @see ModifierKey
-    class ModifierKeys {
+    struct ModifierKeys {
       private:
         const uint8_t rawValue;
 
       public:
-        ModifierKeys(uint8_t rawValue);
-        ModifierKeys(const ModifierKey key);
+        constexpr ModifierKeys(uint8_t rawValue) : rawValue(rawValue) {};
+        constexpr ModifierKeys(const ModifierKey key)
+            : rawValue(static_cast<uint8_t>(key)) {};
 
         /// @brief Returns true if the two ModifierKeys operators are equal
         /// @param rhs The ModifierKeys instance to compare against
         /// @return True when both instances are equal, false otherwise
-        constexpr bool operator==(const ModifierKey& rhs);
+        constexpr bool operator==(const ModifierKeys& other) const {
+            return rawValue == other.rawValue;
+        };
+
+        constexpr bool operator==(const ModifierKey& other) const {
+            return (rawValue & static_cast<uint8_t>(other)) != 0;
+        }
 
         /// @brief Returns the ModifierKeys instance equivilant to the right
         /// ModifierKey instance added to the left ModifierKeys instance
         /// @param rhs The ModifierKey instance to combine
         /// @return A ModifierKeys instance containing the logical OR of all the
         /// contained modifiers of both sides
-        constexpr InputBinding::ModifierKeys
-        operator+(const InputBinding::ModifierKey& rhs);
+        constexpr KeyBinding::ModifierKeys
+        operator+(const KeyBinding::ModifierKey& other) const {
+            return KeyBinding::ModifierKeys(rawValue |
+                                            static_cast<uint8_t>(other));
+        }
 
         /// @brief Returns the ModifierKeys instance equivilant to the
         /// combination of both ModifierKeys instances
         /// @param rhs The ModifierKeys instance to combine
         /// @return A ModifierKeys instance containing the logical OR of all the
         /// contained modifiers of both sides
-        constexpr InputBinding::ModifierKeys
-        operator+(const InputBinding::ModifierKeys& rhs);
+        constexpr KeyBinding::ModifierKeys
+        operator+(const KeyBinding::ModifierKeys& other) const {
+            return KeyBinding::ModifierKeys(rawValue | other.rawValue);
+        }
     };
 
     /// @brief A keyboard shortcut containing of a ``KeyboardKey`` and a set of
     /// ``ModifierKeys``
     /// @section Input
-    class KeyboardShortcut {
+    struct KeyboardShortcut {
       private:
         /// @brief The bound key
         const KeyboardKey key;
@@ -209,6 +233,11 @@ class InputBinding {
         /// @brief Initialize a KeyboardShortcut from a key, with no modifiers
         /// set
         KeyboardShortcut(KeyboardKey key);
+
+        /// @brief Returns true if the shortcut is unbound
+        constexpr bool operator==(const KeyboardShortcut& other) const {
+            return (key == other.key) && (modifiers == other.modifiers);
+        }
     };
 
     /// @brief A type that can represent any keyboard input binding
@@ -219,7 +248,7 @@ class InputBinding {
                                           SidedModifierKey>;
 
     /// @brief A chord of multiple keybinds
-    class InputChord {
+    struct InputChord {
       private:
         /// @brief The bound keybinds
         std::vector<KeyboardBindable> keys;
@@ -235,9 +264,15 @@ class InputBinding {
         /// @brief Initialize an InputChord from an array of KeyboardBindable
         /// @param keys The keys to add
         InputChord(const std::vector<KeyboardBindable>& keys);
+
+        /// @brief Returns true if the chord is unbound
+        constexpr bool operator==(const InputChord& other) const {
+            return keys == other.keys;
+        }
     };
 
     enum class MouseKey {
+        UNKNOWN,
         LEFT,
         RIGHT,
         MIDDLE,
@@ -245,44 +280,30 @@ class InputBinding {
         BUTTON_5,
     };
 
-    constexpr InputBinding operator==(const InputBinding& rhs);
+    constexpr bool operator==(const KeyBinding& other) const {
+        return binding == other.binding;
+    };
 
-    /// @brief Constructs an empty InputBinding
-    InputBinding();
+    /// @brief Constructs an empty KeyBinding
+    KeyBinding();
 
-    /// @brief Constructs an InputBinding from a KeyboardKey
-    InputBinding(KeyboardKey key);
+    /// @brief Constructs a KeyBinding from a KeyboardKey
+    KeyBinding(KeyboardKey key);
 
-    /// @brief Constructs an InputBinding from a ModifierKey
-    InputBinding(ModifierKey modifier);
+    /// @brief Constructs a KeyBinding from a ModifierKey
+    KeyBinding(ModifierKey modifier);
 
-    /// @brief Constructs an InputBinding from a SidedModifierKey
-    InputBinding(SidedModifierKey modifier);
+    /// @brief Constructs a KeyBinding from a SidedModifierKey
+    KeyBinding(SidedModifierKey modifier);
 
-    /// @brief Constructs an InputBinding from a KeyboardShortcut
-    InputBinding(KeyboardShortcut shortcut);
+    /// @brief Constructs a KeyBinding from a KeyboardShortcut
+    KeyBinding(KeyboardShortcut shortcut);
 
-    /// @brief Constructs an InputBinding from an InputChord
-    InputBinding(InputChord chord);
+    /// @brief Constructs a KeyBinding from an InputChord
+    KeyBinding(InputChord chord);
 
-    /// @brief Constructs an InputBinding from a MouseKey
-    InputBinding(MouseKey mouseKey);
-
-    /// @brief Returns true if the binding is currently being pressed
-    bool isPressed();
-
-    /// @brief Returns true if the binding was pressed since the previous frame
-    bool wasPressed();
-
-    /// @brief Returns true if the binding was released since the last frame
-    bool wasReleased();
-
-    /// @brief Returns true if the binding's state has changed since the last
-    /// frame
-    bool stateChanged();
-
-    /// @brief Whether this action is enabled or not
-    bool enabled = true;
+    /// @brief Constructs a KeyBinding from a MouseKey
+    KeyBinding(MouseKey mouseKey);
 
   private:
     // Intentionally not using KeyboardBindable so we don't have nested
@@ -296,26 +317,7 @@ class InputBinding {
                  InputChord,
                  MouseKey>
         binding;
-
-    /// @brief An array of all input bindings, for updating state and handling
-    /// events
-    static std::vector<InputBinding*> allBindings;
-
-  public:
-    /// @brief Handle input events
-    static void HandleEvent();
 };
-
-/// @brief Returns the ModifierKeys instance equivilant to the combination of
-/// both ModifierKey instances
-/// @param lhs A ModifierKey instance to combine
-/// @param rhs A ModifierKey instance to combine
-/// @return A ModifierKeys instance containing the logical OR of all contained
-/// modifiers in both sides
-/// @section Input
-constexpr InputBinding::ModifierKeys
-operator+(const InputBinding::ModifierKey& lhs,
-          const InputBinding::ModifierKey& rhs);
 
 /// @brief A bound input action
 /// @note InputActions are *not* anonymous and *must* have a unique identifier,
@@ -340,14 +342,15 @@ class InputAction {
     std::string category;
 
     /// @brief The binding for this input action
-    InputBinding binding;
+    Syngine::KeyBinding binding;
 
     /// @brief Make an empty InputAction
     /// @param identifier The identifier for the input action. This is required
     /// and *must* be unique
     /// @param name The name for the input action. This is the display name that
     /// is shown in the bindings menu
-    /// @throws std::invalid_argument if the identifier is not unique
+    /// @note Logs a fatal error and crashes the program if the identifier is
+    /// not unique
     InputAction(const std::string& identifier, const std::string& name);
 
     /// @brief Make an empty InputAction
@@ -357,7 +360,8 @@ class InputAction {
     /// is shown in the bindings menu
     /// @param category The category for the input action. This is used for
     /// organizing actions in the bindings menu
-    /// @throws std::invalid_argument if the identifier is not unique
+    /// @note Logs a fatal error and crashes the program if the identifier is
+    /// not unique
     InputAction(const std::string& identifier,
                 const std::string& name,
                 const std::string& category);
@@ -368,10 +372,11 @@ class InputAction {
     /// @param name The name for the input action. This is the display name that
     /// is shown in the bindings menu
     /// @param binding The binding for the input action
-    /// @throws std::invalid_argument if the identifier is not unqiue
+    /// @note Logs a fatal error and crashes the program if the identifier is
+    /// not unique
     InputAction(const std::string& identifier,
                 const std::string& name,
-                InputBinding       binding);
+                KeyBinding         binding);
 
     /// @brief Make an InputAction with a binding
     /// @param identifier The identifier for the input action. This is required
@@ -381,37 +386,38 @@ class InputAction {
     /// @param category The category for the input action. This is used for
     /// organizing actions in the bindings menu
     /// @param binding The binding for the input action
-    /// @throws std::invalid_argument if the identifier is not unique
+    /// @note Logs a fatal error and crashes the program if the identifier is
+    /// not unique
     InputAction(const std::string& identifier,
                 const std::string& name,
                 const std::string& category,
-                InputBinding       binding);
+                KeyBinding         binding);
 
     /// @brief Deconstructs and cleans up the InputAction
     ~InputAction();
 
     /// @brief Returns true if the binding is currently being pressed
-    bool isPressed() { return binding.isPressed(); };
+    bool isPressed();
 
     /// @brief Returns true if the binding was pressed since the previous frame
-    bool wasPressed() { return binding.wasPressed(); };
+    bool wasPressed();
 
     /// @brief Returns true if the binding was released since the last frame
-    bool wasReleased() { return binding.wasReleased(); };
+    bool wasReleased();
 
     /// @brief Returns true if the binding's state has changed since the last
     /// frame
-    bool stateChanged() { return binding.stateChanged(); };
+    bool stateChanged();
 
-    void onPressed(std::function<void()> callback) {
+    void setOnPressedCallback(std::function<void()> callback) {
         callbacks.onPressed = callback;
     }
 
-    void onReleased(std::function<void()> callback) {
+    void setOnReleasedCallback(std::function<void()> callback) {
         callbacks.onReleased = callback;
     }
 
-    void onStateChanged(std::function<void()> callback) {
+    void setOnStateChangedCallback(std::function<void()> callback) {
         callbacks.onStateChanged = callback;
     }
 
@@ -423,9 +429,11 @@ class InputAction {
     /// is shown in the bindings menu
     /// @param binding The binding for the input action
     /// @param callbacks The callbacks to call when the action state updates
+    /// @note Logs a fatal error and crashes the program if the identifier is
+    /// not unique
     static void RegisterAction(const std::string& identifier,
                                const std::string& name,
-                               InputBinding       binding,
+                               KeyBinding         binding,
                                Callbacks          callbacks);
 
     /// @brief Registers an action which calls the provided callback when the
@@ -438,22 +446,39 @@ class InputAction {
     /// organizing actions in the bindings menu
     /// @param binding The binding for the input action
     /// @param callbacks The callbacks to call when the action state updates
-    /// @returns False if the identifier was not unique, true otherwise
-    static bool RegisterAction(const std::string& identifier,
+    /// @note Logs a fatal error and crashes the program if the identifier is
+    /// not unique
+    static void RegisterAction(const std::string& identifier,
                                const std::string& name,
                                const std::string& category,
-                               InputBinding       binding,
+                               KeyBinding         binding,
                                Callbacks          callbacks);
 
     /// @brief Equality operator for InputAction
-    constexpr bool operator==(const InputAction& other);
+    /// @note Does not check for full equality, only for equal bindings
+    constexpr bool operator==(const InputAction& other) const {
+        return binding == other.binding;
+    };
+
+    /// @brief Handle input events. This should *not* be called outside of
+    /// Core::HandleEvents()
+    /// @param event The SDL event to handle
+    /// @internal
+    /// @see Core::HandleEvents()
+    static void _HandleEvent(SDL_Event event);
 
   private:
     /// @brief This object's callbacks, if any
     Callbacks callbacks;
 
-    /// @brief An array of pointers to every active input action. Each pointer
-    /// is guaranteed to point to an existing object and be unique
+    /// @brief The state of this action in this frame
+    bool currentState;
+    /// @brief The state of this action in the last frame
+    bool previousState;
+
+    /// @brief An array of pointers to every active input action for tracking
+    /// and updating. Each pointer is guaranteed to point to an existing object
+    /// and be unique
     static std::vector<InputAction*> bindings;
 
     /// @brief This is where input actions go if they're not handled as objects
