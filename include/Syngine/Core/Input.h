@@ -32,7 +32,6 @@ struct KeyBinding {
 
     /// @brief A bindable non-modifier keyboard key
     enum class KeyboardKey {
-        UNKNOWN,
         // Letters
         A,
         B,
@@ -130,26 +129,22 @@ struct KeyBinding {
     /// @see ModifierKeys
     /// @see SidedModifierKey
     enum class ModifierKey : uint8_t {
-        UNKNOWN = 0,
+        COMMAND = 1 << 0,
+        GUI     = 1 << 0,
+        WINDOWS = 1 << 0,
 
-        COMMAND = 1 << 1,
-        GUI     = 1 << 1,
-        WINDOWS = 1 << 1,
+        SHIFT = 1 << 1,
 
-        SHIFT = 1 << 2,
+        OPTION = 1 << 2,
+        ALT    = 1 << 2,
 
-        OPTION = 1 << 3,
-        ALT    = 1 << 3,
-
-        CONTROL = 1 << 4
+        CONTROL = 1 << 3
     };
 
     /// @brief A single sided modifier key
     /// @section Input
     /// @see ModifierKey
     enum class SidedModifierKey : uint8_t {
-        UNKNOWN = 0,
-
         LEFT_COMMAND  = 1,
         LEFT_GUI      = 1,
         LEFT_WINDOWS  = 1,
@@ -177,6 +172,7 @@ struct KeyBinding {
         const uint8_t rawValue;
 
       public:
+        constexpr ModifierKeys() : rawValue(0) {};
         constexpr ModifierKeys(uint8_t rawValue) : rawValue(rawValue) {};
         constexpr ModifierKeys(const ModifierKey key)
             : rawValue(static_cast<uint8_t>(key)) {};
@@ -189,7 +185,7 @@ struct KeyBinding {
         };
 
         constexpr bool operator==(const ModifierKey& other) const {
-            return (rawValue & static_cast<uint8_t>(other)) != 0;
+            return (rawValue ^ static_cast<uint8_t>(other)) == 0;
         }
 
         /// @brief Returns the ModifierKeys instance equivilant to the right
@@ -203,6 +199,11 @@ struct KeyBinding {
                                             static_cast<uint8_t>(other));
         }
 
+        constexpr KeyBinding::ModifierKeys
+        operator+=(const KeyBinding::ModifierKey& other) {
+            return *this + other;
+        }
+
         /// @brief Returns the ModifierKeys instance equivilant to the
         /// combination of both ModifierKeys instances
         /// @param rhs The ModifierKeys instance to combine
@@ -211,6 +212,11 @@ struct KeyBinding {
         constexpr KeyBinding::ModifierKeys
         operator+(const KeyBinding::ModifierKeys& other) const {
             return KeyBinding::ModifierKeys(rawValue | other.rawValue);
+        }
+
+        constexpr KeyBinding::ModifierKeys
+        operator+=(const KeyBinding::ModifierKeys& other) {
+            return *this + other;
         }
     };
 
@@ -228,11 +234,13 @@ struct KeyBinding {
       public:
         /// @brief Initialize a KeyboardShortcut from a key and a set of
         /// modifiers
-        KeyboardShortcut(KeyboardKey key, ModifierKeys modifiers);
+        KeyboardShortcut(KeyboardKey key, ModifierKeys modifiers)
+            : key(key), modifiers(modifiers) {};
 
         /// @brief Initialize a KeyboardShortcut from a key, with no modifiers
         /// set
-        KeyboardShortcut(KeyboardKey key);
+        KeyboardShortcut(KeyboardKey key)
+            : key(key), modifiers(ModifierKeys()) {};
 
         /// @brief Returns true if the shortcut is unbound
         constexpr bool operator==(const KeyboardShortcut& other) const {
@@ -255,15 +263,15 @@ struct KeyBinding {
 
       public:
         /// @brief Initialize an empty InputChord
-        InputChord() = default;
+        InputChord() : keys() {};
 
         /// @brief Initialize an InputChord from a single KeyboardBindable
         /// @param key The key to add
-        InputChord(KeyboardBindable key);
+        InputChord(KeyboardBindable key) : keys{ key } {};
 
         /// @brief Initialize an InputChord from an array of KeyboardBindable
         /// @param keys The keys to add
-        InputChord(const std::vector<KeyboardBindable>& keys);
+        InputChord(const std::vector<KeyboardBindable>& keys) : keys(keys) {};
 
         /// @brief Returns true if the chord is unbound
         constexpr bool operator==(const InputChord& other) const {
@@ -272,7 +280,6 @@ struct KeyBinding {
     };
 
     enum class MouseKey {
-        UNKNOWN,
         LEFT,
         RIGHT,
         MIDDLE,
@@ -455,7 +462,8 @@ class InputAction {
                                Callbacks          callbacks);
 
     /// @brief Equality operator for InputAction
-    /// @note Does not check for full equality, only for equal bindings
+    /// @note Does not check for full equality, only for equal bindings, as
+    /// InputActions are guaranteed to be unique
     constexpr bool operator==(const InputAction& other) const {
         return binding == other.binding;
     };
@@ -479,11 +487,11 @@ class InputAction {
     /// @brief An array of pointers to every active input action for tracking
     /// and updating. Each pointer is guaranteed to point to an existing object
     /// and be unique
-    static std::vector<InputAction*> bindings;
+    static std::vector<InputAction*> _Bindings;
 
     /// @brief This is where input actions go if they're not handled as objects
     /// directly
-    static std::vector<InputAction> anonymousActions;
+    static std::vector<InputAction> _AnonymousActions;
 
     /// @brief Logs a fatal error and halts the program if the provided
     /// identifier is not unique

@@ -33,11 +33,16 @@ Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::InputChord chord)
 Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::MouseKey mouseKey)
     : binding(mouseKey) {}
 
+// Initialize InputAction's static members
+
+std::vector<Syngine::InputAction*> Syngine::InputAction::_Bindings;
+std::vector<Syngine::InputAction>  Syngine::InputAction::_AnonymousActions;
+
 // InputAction private helpers and operators
 
 void Syngine::InputAction::EnsureUniqueIdentifier(
     const std::string& identifier) {
-    for (Syngine::InputAction* binding : Syngine::InputAction::bindings) {
+    for (Syngine::InputAction* binding : Syngine::InputAction::_Bindings) {
         if (binding->identifier == identifier) {
             Syngine::Logger::Log("InputAction identifier '" + identifier +
                                      "' is not unique",
@@ -50,50 +55,46 @@ void Syngine::InputAction::EnsureUniqueIdentifier(
 
 Syngine::InputAction::InputAction(const std::string& identifier,
                                   const std::string& name)
-    : identifier(identifier), name(name), category(), binding() {
-    this->currentState  = false;
-    this->previousState = false;
+    : identifier(identifier), name(name), category(), binding(),
+      currentState(false), previousState(false) {
     Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::bindings.push_back(this);
+    Syngine::InputAction::_Bindings.push_back(this);
 }
 
 Syngine::InputAction::InputAction(const std::string& identifier,
                                   const std::string& name,
                                   const std::string& category)
-    : identifier(identifier), name(name), category(category), binding() {
-    this->currentState  = false;
-    this->previousState = false;
+    : identifier(identifier), name(name), category(category), binding(),
+      currentState(false), previousState(false) {
     Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::bindings.push_back(this);
+    Syngine::InputAction::_Bindings.push_back(this);
 }
 
 Syngine::InputAction::InputAction(const std::string&  identifier,
                                   const std::string&  name,
                                   Syngine::KeyBinding binding)
-    : identifier(identifier), name(name), category(), binding(binding) {
-    this->currentState  = false;
-    this->previousState = false;
+    : identifier(identifier), name(name), category(), binding(binding),
+      currentState(false), previousState(false) {
     Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::bindings.push_back(this);
+    Syngine::InputAction::_Bindings.push_back(this);
 }
 
 Syngine::InputAction::InputAction(const std::string&  identifier,
                                   const std::string&  name,
                                   const std::string&  category,
                                   Syngine::KeyBinding binding)
-    : identifier(identifier), name(name), category(category), binding(binding) {
-    this->currentState  = false;
-    this->previousState = false;
+    : identifier(identifier), name(name), category(category), binding(binding),
+      currentState(false), previousState(false) {
     Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::bindings.push_back(this);
+    Syngine::InputAction::_Bindings.push_back(this);
 }
 
 Syngine::InputAction::~InputAction() {
-    Syngine::InputAction::bindings.erase(
-        std::remove(Syngine::InputAction::bindings.begin(),
-                    Syngine::InputAction::bindings.end(),
+    Syngine::InputAction::_Bindings.erase(
+        std::remove(Syngine::InputAction::_Bindings.begin(),
+                    Syngine::InputAction::_Bindings.end(),
                     this),
-        Syngine::InputAction::bindings.end());
+        Syngine::InputAction::_Bindings.end());
 }
 
 void Syngine::InputAction::RegisterAction(const std::string&  identifier,
@@ -102,7 +103,7 @@ void Syngine::InputAction::RegisterAction(const std::string&  identifier,
                                           Callbacks           callbacks) {
     auto action      = InputAction(identifier, name, binding);
     action.callbacks = callbacks;
-    Syngine::InputAction::anonymousActions.push_back(action);
+    Syngine::InputAction::_AnonymousActions.push_back(action);
 }
 
 void Syngine::InputAction::RegisterAction(const std::string&  identifier,
@@ -112,7 +113,7 @@ void Syngine::InputAction::RegisterAction(const std::string&  identifier,
                                           Callbacks           callbacks) {
     auto action      = InputAction(identifier, name, category, binding);
     action.callbacks = callbacks;
-    Syngine::InputAction::anonymousActions.push_back(action);
+    Syngine::InputAction::_AnonymousActions.push_back(action);
 }
 
 bool Syngine::InputAction::isPressed() { return this->currentState; }
@@ -130,8 +131,12 @@ bool Syngine::InputAction::stateChanged() {
 }
 
 void Syngine::InputAction::_HandleEvent(SDL_Event event) {
-    Syngine::KeyBinding called = sdlToKeyBinding(event);
+    Syngine::KeyBinding called = _InputHelpers::_InputEventToKeyBinding(event);
     bool                down;
+
+    if (called == Syngine::KeyBinding()) {
+        return; // No binding, nothing to do
+    }
 
     switch (event.type) {
     case SDL_EVENT_KEY_DOWN:
@@ -144,7 +149,7 @@ void Syngine::InputAction::_HandleEvent(SDL_Event event) {
     }
 
     // TODO: Get this to handle chords properly
-    for (auto action : bindings) {
+    for (auto action : _Bindings) {
         if (action->binding == called) {
             action->previousState = action->currentState;
             action->currentState  = down;
