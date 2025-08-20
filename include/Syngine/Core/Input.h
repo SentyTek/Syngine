@@ -9,283 +9,20 @@
 #ifndef SynInput_h
 #define SynInput_h
 
-#include <cstdint>
+#include "Syngine/Core/InputHelpers.h"
+
+#include "SDL3/SDL_events.h"
+
 #include <variant>
 #include <string>
 #include <vector>
 #include <functional>
-
-#include "SDL3/SDL_events.h"
 
 namespace Syngine {
 
 /// @brief Any key binding
 /// @section Input
 struct KeyBinding {
-  public:
-    /// @brief A type representing the lack of a binding
-    struct Unbound {
-        /// @brief Always returns true, since every instance of Unbound is the
-        /// same
-        constexpr bool operator==(const Unbound& other) const { return true; }
-    };
-
-    /// @brief A bindable non-modifier keyboard key
-    enum class KeyboardKey {
-        // Letters
-        A,
-        B,
-        C,
-        D,
-        E,
-        F,
-        G,
-        H,
-        I,
-        J,
-        K,
-        L,
-        M,
-        N,
-        O,
-        P,
-        Q,
-        R,
-        S,
-        T,
-        U,
-        V,
-        W,
-        X,
-        Y,
-        Z,
-
-        // Numbers
-        _0,
-        _1,
-        _2,
-        _3,
-        _4,
-        _5,
-        _6,
-        _7,
-        _8,
-        _9,
-
-        // Function keys
-        F1,
-        F2,
-        F3,
-        F4,
-        F5,
-        F6,
-        F7,
-        F8,
-        F9,
-        F10,
-        F11,
-        F12,
-
-        // Punctuation keys
-        COMMA,
-        PERIOD,
-        SEMICOLON,
-        APOSTROPHE,
-
-        // Whitespace and editing keys
-        SPACE,
-        TAB,
-        ENTER,
-        BACKSPACE,
-        DELETE,
-
-        // Symbol keys
-        MINUS,
-        EQUALS,
-        TILDE,
-        LEFT_BRACKET,
-        RIGHT_BRACKET,
-        FORWARD_SLASH,
-        BACKSLASH,
-
-        // Arrow keys
-        LEFT,
-        RIGHT,
-        UP,
-        DOWN,
-
-        // Control keys
-        INSERT,
-        HOME,
-        PAGE_UP,
-        PAGE_DOWN,
-        END,
-        PRINT_SCREEN,
-        ESCAPE,
-    };
-
-    /// @brief A single unsided modifier key
-    /// @section Input
-    /// @see ModifierKeys
-    /// @see SidedModifierKey
-    enum class ModifierKey : uint8_t {
-        COMMAND = 1 << 0,
-        GUI     = 1 << 0,
-        WINDOWS = 1 << 0,
-
-        SHIFT = 1 << 1,
-
-        OPTION = 1 << 2,
-        ALT    = 1 << 2,
-
-        CONTROL = 1 << 3
-    };
-
-    /// @brief A single sided modifier key
-    /// @section Input
-    /// @see ModifierKey
-    enum class SidedModifierKey : uint8_t {
-        LEFT_COMMAND  = 1,
-        LEFT_GUI      = 1,
-        LEFT_WINDOWS  = 1,
-        RIGHT_COMMAND = 2,
-        RIGHT_GUI     = 2,
-        RIGHT_WINDOWS = 2,
-
-        LEFT_SHIFT  = 3,
-        RIGHT_SHIFT = 4,
-
-        LEFT_OPTION  = 5,
-        LEFT_ALT     = 5,
-        RIGHT_OPTION = 6,
-        RIGHT_ALT    = 6,
-
-        LEFT_CONTROL  = 7,
-        RIGHT_CONTROL = 8
-    };
-
-    /// @brief A set of ``ModifierKey``s, mainly used in keyboard shortcuts
-    /// @section Input
-    /// @see ModifierKey
-    struct ModifierKeys {
-      private:
-        const uint8_t rawValue;
-
-      public:
-        constexpr ModifierKeys() : rawValue(0) {};
-        constexpr ModifierKeys(uint8_t rawValue) : rawValue(rawValue) {};
-        constexpr ModifierKeys(const ModifierKey key)
-            : rawValue(static_cast<uint8_t>(key)) {};
-
-        /// @brief Returns true if the two ModifierKeys operators are equal
-        /// @param rhs The ModifierKeys instance to compare against
-        /// @return True when both instances are equal, false otherwise
-        constexpr bool operator==(const ModifierKeys& other) const {
-            return rawValue == other.rawValue;
-        };
-
-        constexpr bool operator==(const ModifierKey& other) const {
-            return (rawValue ^ static_cast<uint8_t>(other)) == 0;
-        }
-
-        /// @brief Returns the ModifierKeys instance equivilant to the right
-        /// ModifierKey instance added to the left ModifierKeys instance
-        /// @param rhs The ModifierKey instance to combine
-        /// @return A ModifierKeys instance containing the logical OR of all the
-        /// contained modifiers of both sides
-        constexpr KeyBinding::ModifierKeys
-        operator+(const KeyBinding::ModifierKey& other) const {
-            return KeyBinding::ModifierKeys(rawValue |
-                                            static_cast<uint8_t>(other));
-        }
-
-        constexpr KeyBinding::ModifierKeys
-        operator+=(const KeyBinding::ModifierKey& other) {
-            return *this + other;
-        }
-
-        /// @brief Returns the ModifierKeys instance equivilant to the
-        /// combination of both ModifierKeys instances
-        /// @param rhs The ModifierKeys instance to combine
-        /// @return A ModifierKeys instance containing the logical OR of all the
-        /// contained modifiers of both sides
-        constexpr KeyBinding::ModifierKeys
-        operator+(const KeyBinding::ModifierKeys& other) const {
-            return KeyBinding::ModifierKeys(rawValue | other.rawValue);
-        }
-
-        constexpr KeyBinding::ModifierKeys
-        operator+=(const KeyBinding::ModifierKeys& other) {
-            return *this + other;
-        }
-    };
-
-    /// @brief A keyboard shortcut containing of a ``KeyboardKey`` and a set of
-    /// ``ModifierKeys``
-    /// @section Input
-    struct KeyboardShortcut {
-      private:
-        /// @brief The bound key
-        const KeyboardKey key;
-
-        /// @brief The bound modifiers
-        const ModifierKeys modifiers;
-
-      public:
-        /// @brief Initialize a KeyboardShortcut from a key and a set of
-        /// modifiers
-        KeyboardShortcut(KeyboardKey key, ModifierKeys modifiers)
-            : key(key), modifiers(modifiers) {};
-
-        /// @brief Initialize a KeyboardShortcut from a key, with no modifiers
-        /// set
-        KeyboardShortcut(KeyboardKey key)
-            : key(key), modifiers(ModifierKeys()) {};
-
-        /// @brief Returns true if the shortcut is unbound
-        constexpr bool operator==(const KeyboardShortcut& other) const {
-            return (key == other.key) && (modifiers == other.modifiers);
-        }
-    };
-
-    /// @brief A type that can represent any keyboard input binding
-    using KeyboardBindable = std::variant<Unbound,
-                                          KeyboardKey,
-                                          KeyboardShortcut,
-                                          ModifierKey,
-                                          SidedModifierKey>;
-
-    /// @brief A chord of multiple keybinds
-    struct InputChord {
-      private:
-        /// @brief The bound keybinds
-        std::vector<KeyboardBindable> keys;
-
-      public:
-        /// @brief Initialize an empty InputChord
-        InputChord() : keys() {};
-
-        /// @brief Initialize an InputChord from a single KeyboardBindable
-        /// @param key The key to add
-        InputChord(KeyboardBindable key) : keys{ key } {};
-
-        /// @brief Initialize an InputChord from an array of KeyboardBindable
-        /// @param keys The keys to add
-        InputChord(const std::vector<KeyboardBindable>& keys) : keys(keys) {};
-
-        /// @brief Returns true if the chord is unbound
-        constexpr bool operator==(const InputChord& other) const {
-            return keys == other.keys;
-        }
-    };
-
-    enum class MouseKey {
-        LEFT,
-        RIGHT,
-        MIDDLE,
-        BUTTON_4,
-        BUTTON_5,
-    };
 
     constexpr bool operator==(const KeyBinding& other) const {
         return binding == other.binding;
@@ -294,8 +31,8 @@ struct KeyBinding {
     /// @brief Constructs an empty KeyBinding
     KeyBinding();
 
-    /// @brief Constructs a KeyBinding from a KeyboardKey
-    KeyBinding(KeyboardKey key);
+    /// @brief Constructs a KeyBinding from a SynKeycode
+    KeyBinding(SynKeycode key);
 
     /// @brief Constructs a KeyBinding from a ModifierKey
     KeyBinding(ModifierKey modifier);
@@ -309,20 +46,16 @@ struct KeyBinding {
     /// @brief Constructs a KeyBinding from an InputChord
     KeyBinding(InputChord chord);
 
-    /// @brief Constructs a KeyBinding from a MouseKey
-    KeyBinding(MouseKey mouseKey);
-
   private:
     // Intentionally not using KeyboardBindable so we don't have nested
     // `std::variant`s
     /// @brief This object's binding
     std::variant<Unbound,
-                 KeyboardKey,
+                 SynKeycode,
                  ModifierKey,
                  SidedModifierKey,
                  KeyboardShortcut,
-                 InputChord,
-                 MouseKey>
+                 InputChord>
         binding;
 };
 

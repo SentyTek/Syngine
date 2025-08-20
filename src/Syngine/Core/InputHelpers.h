@@ -5,331 +5,407 @@
 // │ Copyright (c) SentyTek 2025-2025     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
-// Helper functions for input handling. You probably shouldn't use this directly
+// Keycode and scancode definitions
 
 #ifndef SynInputHelpers_h
 #define SynInputHelpers_h
 
-#include "Syngine/Core/Input.h"
-#include "Syngine/Core/Logger.h"
-
+#include "SDL3/SDL_scancode.h"
 #include "SDL3/SDL_keycode.h"
-#include "SDL3/SDL_events.h"
-#include "SDL3/SDL_keyboard.h"
 
 #include <cstdint>
-#include <stdexcept>
-#include <string>
 
 namespace Syngine {
 
-/// @brief Contains private helper functions for input handling
-/// @internal
-/// @section Input
-struct _InputHelpers {
+/// @brief A type representing the lack of a binding
+struct Unbound {
+    /// @brief Always returns true, since every instance of Unbound is the
+    /// same
+    constexpr bool operator==(const Unbound& other) const { return true; }
+};
 
-    _InputHelpers() = delete;
+/// @brief A physical keyboard key. This is mapped to the physical position of
+/// the key, so SynScancode::W will correspond to the W key on an ANSI keyboard
+/// but Z on a French keyboard
+/// @note The names of scancodes are based on their position on an EN-US ANSI
+/// keyboard
+enum class SynScancode : uint32_t {
+    // This is a mirror of SDL_Scancode with keys ommitted as needed and
+    // convenience scancodes included
 
-    /// @brief Converts SDL_Keycode to KeyBinding::KeyboardKey
-    /// @internal
-    /// @param key The SDL_Keycode to convert
-    /// @return The corresponding KeyBinding::KeyboardKey
-    /// @throws std::invalid_argument if the keycode cannot be converted
-    static inline Syngine::KeyBinding::KeyboardKey
-    _KeycodeToKeyboardKey(const SDL_Keycode& keycode) {
-        switch (keycode) {
-        case SDLK_A: return Syngine::KeyBinding::KeyboardKey::A;
-        case SDLK_B: return Syngine::KeyBinding::KeyboardKey::B;
-        case SDLK_C: return Syngine::KeyBinding::KeyboardKey::C;
-        case SDLK_D: return Syngine::KeyBinding::KeyboardKey::D;
-        case SDLK_E: return Syngine::KeyBinding::KeyboardKey::E;
-        case SDLK_F: return Syngine::KeyBinding::KeyboardKey::F;
-        case SDLK_G: return Syngine::KeyBinding::KeyboardKey::G;
-        case SDLK_H: return Syngine::KeyBinding::KeyboardKey::H;
-        case SDLK_I: return Syngine::KeyBinding::KeyboardKey::I;
-        case SDLK_J: return Syngine::KeyBinding::KeyboardKey::J;
-        case SDLK_K: return Syngine::KeyBinding::KeyboardKey::K;
-        case SDLK_L: return Syngine::KeyBinding::KeyboardKey::L;
-        case SDLK_M: return Syngine::KeyBinding::KeyboardKey::M;
-        case SDLK_N: return Syngine::KeyBinding::KeyboardKey::N;
-        case SDLK_O: return Syngine::KeyBinding::KeyboardKey::O;
-        case SDLK_P: return Syngine::KeyBinding::KeyboardKey::P;
-        case SDLK_Q: return Syngine::KeyBinding::KeyboardKey::Q;
-        case SDLK_R: return Syngine::KeyBinding::KeyboardKey::R;
-        case SDLK_S: return Syngine::KeyBinding::KeyboardKey::S;
-        case SDLK_T: return Syngine::KeyBinding::KeyboardKey::T;
-        case SDLK_U: return Syngine::KeyBinding::KeyboardKey::U;
-        case SDLK_V: return Syngine::KeyBinding::KeyboardKey::V;
-        case SDLK_W: return Syngine::KeyBinding::KeyboardKey::W;
-        case SDLK_X: return Syngine::KeyBinding::KeyboardKey::X;
-        case SDLK_Y: return Syngine::KeyBinding::KeyboardKey::Y;
-        case SDLK_Z: return Syngine::KeyBinding::KeyboardKey::Z;
+    UNKNOWN = SDL_SCANCODE_UNKNOWN,
 
-        case SDLK_0: return Syngine::KeyBinding::KeyboardKey::_0;
-        case SDLK_1: return Syngine::KeyBinding::KeyboardKey::_1;
-        case SDLK_2: return Syngine::KeyBinding::KeyboardKey::_2;
-        case SDLK_3: return Syngine::KeyBinding::KeyboardKey::_3;
-        case SDLK_4: return Syngine::KeyBinding::KeyboardKey::_4;
-        case SDLK_5: return Syngine::KeyBinding::KeyboardKey::_5;
-        case SDLK_6: return Syngine::KeyBinding::KeyboardKey::_6;
-        case SDLK_7: return Syngine::KeyBinding::KeyboardKey::_7;
-        case SDLK_8: return Syngine::KeyBinding::KeyboardKey::_8;
-        case SDLK_9: return Syngine::KeyBinding::KeyboardKey::_9;
+    A = SDL_SCANCODE_A,
+    B = SDL_SCANCODE_B,
+    C = SDL_SCANCODE_C,
+    D = SDL_SCANCODE_D,
+    E = SDL_SCANCODE_E,
+    F = SDL_SCANCODE_F,
+    G = SDL_SCANCODE_G,
+    H = SDL_SCANCODE_H,
+    I = SDL_SCANCODE_I,
+    J = SDL_SCANCODE_J,
+    K = SDL_SCANCODE_K,
+    L = SDL_SCANCODE_L,
+    M = SDL_SCANCODE_M,
+    N = SDL_SCANCODE_N,
+    O = SDL_SCANCODE_O,
+    P = SDL_SCANCODE_P,
+    Q = SDL_SCANCODE_Q,
+    R = SDL_SCANCODE_R,
+    S = SDL_SCANCODE_S,
+    T = SDL_SCANCODE_T,
+    U = SDL_SCANCODE_U,
+    V = SDL_SCANCODE_V,
+    W = SDL_SCANCODE_W,
+    X = SDL_SCANCODE_X,
+    Y = SDL_SCANCODE_Y,
+    Z = SDL_SCANCODE_Z,
 
-        case SDLK_F1: return Syngine::KeyBinding::KeyboardKey::F1;
-        case SDLK_F2: return Syngine::KeyBinding::KeyboardKey::F2;
-        case SDLK_F3: return Syngine::KeyBinding::KeyboardKey::F3;
-        case SDLK_F4: return Syngine::KeyBinding::KeyboardKey::F4;
-        case SDLK_F5: return Syngine::KeyBinding::KeyboardKey::F5;
-        case SDLK_F6: return Syngine::KeyBinding::KeyboardKey::F6;
-        case SDLK_F7: return Syngine::KeyBinding::KeyboardKey::F7;
-        case SDLK_F8: return Syngine::KeyBinding::KeyboardKey::F8;
-        case SDLK_F9: return Syngine::KeyBinding::KeyboardKey::F9;
-        case SDLK_F10: return Syngine::KeyBinding::KeyboardKey::F10;
-        case SDLK_F11: return Syngine::KeyBinding::KeyboardKey::F11;
-        case SDLK_F12: return Syngine::KeyBinding::KeyboardKey::F12;
+    _1 = SDL_SCANCODE_1,
+    _2 = SDL_SCANCODE_2,
+    _3 = SDL_SCANCODE_3,
+    _4 = SDL_SCANCODE_4,
+    _5 = SDL_SCANCODE_5,
+    _6 = SDL_SCANCODE_6,
+    _7 = SDL_SCANCODE_7,
+    _8 = SDL_SCANCODE_8,
+    _9 = SDL_SCANCODE_9,
+    _0 = SDL_SCANCODE_0,
 
-        case SDLK_COMMA: return Syngine::KeyBinding::KeyboardKey::COMMA;
-        case SDLK_PERIOD: return Syngine::KeyBinding::KeyboardKey::PERIOD;
-        case SDLK_SEMICOLON: return Syngine::KeyBinding::KeyboardKey::SEMICOLON;
-        case SDLK_APOSTROPHE:
-            return Syngine::KeyBinding::KeyboardKey::APOSTROPHE;
+    ENTER     = SDL_SCANCODE_RETURN,
+    ESCAPE    = SDL_SCANCODE_ESCAPE,
+    BACKSPACE = SDL_SCANCODE_BACKSPACE,
+    TAB       = SDL_SCANCODE_TAB,
+    SPACE     = SDL_SCANCODE_SPACE,
 
-        case SDLK_SPACE: return Syngine::KeyBinding::KeyboardKey::SPACE;
-        case SDLK_TAB: return Syngine::KeyBinding::KeyboardKey::TAB;
-        case SDLK_RETURN: return Syngine::KeyBinding::KeyboardKey::ENTER;
-        case SDLK_BACKSPACE: return Syngine::KeyBinding::KeyboardKey::BACKSPACE;
-        case SDLK_DELETE: return Syngine::KeyBinding::KeyboardKey::DELETE;
+    // NON_US_HASH (between BACKSLASH and SEMICOLON) intentionally
+    // omitted
+    MINUS         = SDL_SCANCODE_MINUS,
+    EQUALS        = SDL_SCANCODE_EQUALS,
+    LEFT_BRACKET  = SDL_SCANCODE_LEFTBRACKET,
+    RIGHT_BRACKET = SDL_SCANCODE_RIGHTBRACKET,
+    BACKSLASH     = SDL_SCANCODE_BACKSLASH,
+    SEMICOLON     = SDL_SCANCODE_SEMICOLON,
+    APOSTROPHE    = SDL_SCANCODE_APOSTROPHE,
+    GRAVE         = SDL_SCANCODE_GRAVE,
+    COMMA         = SDL_SCANCODE_COMMA,
+    PERIOD        = SDL_SCANCODE_PERIOD,
+    SLASH         = SDL_SCANCODE_SLASH,
 
-        case SDLK_MINUS: return Syngine::KeyBinding::KeyboardKey::MINUS;
-        case SDLK_EQUALS: return Syngine::KeyBinding::KeyboardKey::EQUALS;
-        case SDLK_TILDE: return Syngine::KeyBinding::KeyboardKey::TILDE;
-        case SDLK_LEFTBRACKET:
-            return Syngine::KeyBinding::KeyboardKey::LEFT_BRACKET;
-        case SDLK_RIGHTBRACKET:
-            return Syngine::KeyBinding::KeyboardKey::RIGHT_BRACKET;
-        case SDLK_SLASH: return Syngine::KeyBinding::KeyboardKey::FORWARD_SLASH;
-        case SDLK_BACKSLASH: return Syngine::KeyBinding::KeyboardKey::BACKSLASH;
+    CAPSLOCK = SDL_SCANCODE_CAPSLOCK,
 
-        case SDLK_LEFT: return Syngine::KeyBinding::KeyboardKey::LEFT;
-        case SDLK_RIGHT: return Syngine::KeyBinding::KeyboardKey::RIGHT;
-        case SDLK_UP: return Syngine::KeyBinding::KeyboardKey::UP;
-        case SDLK_DOWN: return Syngine::KeyBinding::KeyboardKey::DOWN;
+    F1  = SDL_SCANCODE_F1,
+    F2  = SDL_SCANCODE_F2,
+    F3  = SDL_SCANCODE_F3,
+    F4  = SDL_SCANCODE_F4,
+    F5  = SDL_SCANCODE_F5,
+    F6  = SDL_SCANCODE_F6,
+    F7  = SDL_SCANCODE_F7,
+    F8  = SDL_SCANCODE_F8,
+    F9  = SDL_SCANCODE_F9,
+    F10 = SDL_SCANCODE_F10,
+    F11 = SDL_SCANCODE_F11,
+    F12 = SDL_SCANCODE_F12,
 
-        case SDLK_INSERT: return Syngine::KeyBinding::KeyboardKey::INSERT;
-        case SDLK_HOME: return Syngine::KeyBinding::KeyboardKey::HOME;
-        case SDLK_PAGEUP: return Syngine::KeyBinding::KeyboardKey::PAGE_UP;
-        case SDLK_PAGEDOWN: return Syngine::KeyBinding::KeyboardKey::PAGE_DOWN;
-        case SDLK_END: return Syngine::KeyBinding::KeyboardKey::END;
-        case SDLK_PRINTSCREEN:
-            return Syngine::KeyBinding::KeyboardKey::PRINT_SCREEN;
-        case SDLK_ESCAPE: return Syngine::KeyBinding::KeyboardKey::ESCAPE;
+    // INSERT can be generated when Help is pressed on some Mac keyboards
+    PRINT_SCREEN = SDL_SCANCODE_PRINTSCREEN,
+    SCROLL_LOCK  = SDL_SCANCODE_SCROLLLOCK,
+    PAUSE        = SDL_SCANCODE_PAUSE,
+    INSERT       = SDL_SCANCODE_INSERT,
 
-        default:
-            throw std::invalid_argument("Inconvertible SDL_Keycode '" + std::string(SDL_GetKeyName(keycode)) + "'");
-        }
+    HOME      = SDL_SCANCODE_HOME,
+    PAGE_UP   = SDL_SCANCODE_PAGEUP,
+    DELETE    = SDL_SCANCODE_DELETE,
+    END       = SDL_SCANCODE_END,
+    PAGE_DOWN = SDL_SCANCODE_PAGEDOWN,
+    RIGHT     = SDL_SCANCODE_RIGHT,
+    LEFT      = SDL_SCANCODE_LEFT,
+    DOWN      = SDL_SCANCODE_DOWN,
+    UP        = SDL_SCANCODE_UP,
+
+    NUM_LOCK = SDL_SCANCODE_NUMLOCKCLEAR,
+    CLEAR    = SDL_SCANCODE_NUMLOCKCLEAR, // Convenience scancode
+
+    KEYPAD_DIVIDE   = SDL_SCANCODE_KP_DIVIDE,
+    KEYPAD_MULTIPLY = SDL_SCANCODE_KP_MULTIPLY,
+    KEYPAD_MINUS    = SDL_SCANCODE_KP_MINUS,
+    KEYPAD_PLUS     = SDL_SCANCODE_KP_PLUS,
+    KEYPAD_ENTER    = SDL_SCANCODE_KP_ENTER,
+    KEYPAD_1        = SDL_SCANCODE_KP_1,
+    KEYPAD_2        = SDL_SCANCODE_KP_2,
+    KEYPAD_3        = SDL_SCANCODE_KP_3,
+    KEYPAD_4        = SDL_SCANCODE_KP_4,
+    KEYPAD_5        = SDL_SCANCODE_KP_5,
+    KEYPAD_6        = SDL_SCANCODE_KP_6,
+    KEYPAD_7        = SDL_SCANCODE_KP_7,
+    KEYPAD_8        = SDL_SCANCODE_KP_8,
+    KEYPAD_9        = SDL_SCANCODE_KP_9,
+    KEYPAD_PERIOD   = SDL_SCANCODE_KP_PERIOD,
+
+    // POWER (after compose) intentionally ommitted
+    NON_US_BACKSLASH = SDL_SCANCODE_NONUSBACKSLASH,
+    APPLICATION      = SDL_SCANCODE_APPLICATION,
+    COMPOSE          = SDL_SCANCODE_APPLICATION, // Convenience scancode
+
+    // F13 through VOLUME_DOWN and KEYPAD_EQUALS_AS_400 intentionally ommitted
+    KEYPAD_EQUALS = SDL_SCANCODE_KP_EQUALS,
+    KEYPAD_COMMA  = SDL_SCANCODE_KP_COMMA,
+
+    // INTERNATIONAL_1 through KEYPAD_HEXADECIMAL intentionally ommitted
+
+    LEFT_CONTROL = SDL_SCANCODE_LCTRL,
+    LEFT_SHIFT   = SDL_SCANCODE_LSHIFT,
+    LEFT_ALT     = SDL_SCANCODE_LALT,
+    LEFT_OPTION  = SDL_SCANCODE_LALT, // Convenience scancode
+    LEFT_GUI     = SDL_SCANCODE_LGUI,
+    LEFT_COMMAND = SDL_SCANCODE_LGUI, // Convenience scancode
+    LEFT_WINDOWS = SDL_SCANCODE_LGUI, // Convenience scancode
+
+    RIGHT_CONTROL = SDL_SCANCODE_RCTRL,
+    RIGHT_SHIFT   = SDL_SCANCODE_RSHIFT,
+    RIGHT_ALT     = SDL_SCANCODE_RALT,
+    RIGHT_OPTION  = SDL_SCANCODE_RALT, // Convenience scancode
+    RIGHT_GUI     = SDL_SCANCODE_RGUI,
+    RIGHT_COMMAND = SDL_SCANCODE_RGUI, // Convenience scancode
+    RIGHT_WINDOWS = SDL_SCANCODE_RGUI, // Convenience scancode
+
+    // MODE through END_CALL intentionally ommitted
+
+    // No need for an equivilant to SDL_SCANCODE_RESERVED or SDL_SCANCODE_COUNT
+};
+
+/// @brief A virtual keyboard key. This is mapped to the meaning of the key, so
+/// SynKeycode::I will correspond to I on any keyboard
+enum class SynKeycode : uint32_t {
+    // This is a mirror of SDL_Keycode, with keys ommitted as needed and
+    // convenience scancodes included
+
+    // No need for an equivalent to SDLK_EXTENDED_MASK, SDLK_SCANCODE_MASK, or
+    // SDLK_SCANCODE_TO_KEYCODE(X)
+
+    UNKNOWN = SDLK_UNKNOWN,
+
+    ENTER     = SDLK_RETURN,
+    ESCAPE    = SDLK_ESCAPE,
+    BACKSPACE = SDLK_BACKSPACE,
+    TAB       = SDLK_TAB,
+    SPACE     = SDLK_SPACE,
+
+    EXCLAMATION_MARK  = SDLK_EXCLAIM,
+    QUOTATION_MARK    = SDLK_DBLAPOSTROPHE,
+    POUND_SIGN        = SDLK_HASH,
+    DOLLAR_SIGN       = SDLK_DOLLAR,
+    AMPERSAND         = SDLK_AMPERSAND,
+    APOSTROPHE        = SDLK_APOSTROPHE,
+    LEFT_PARENTHASIS  = SDLK_LEFTPAREN,
+    RIGHT_PARENTHASIS = SDLK_RIGHTPAREN,
+    ASTERISK          = SDLK_ASTERISK,
+    PLUS              = SDLK_PLUS,
+    COMMA             = SDLK_COMMA,
+    MINUS             = SDLK_MINUS,
+    PERIOD            = SDLK_PERIOD,
+    SLASH             = SDLK_SLASH,
+
+    _0 = SDLK_0,
+    _1 = SDLK_1,
+    _2 = SDLK_2,
+    _3 = SDLK_3,
+    _4 = SDLK_4,
+    _5 = SDLK_5,
+    _6 = SDLK_6,
+    _7 = SDLK_7,
+    _8 = SDLK_8,
+    _9 = SDLK_9,
+
+    COLON         = SDLK_COLON,
+    SEMICOLON     = SDLK_SEMICOLON,
+    LESS_THAN     = SDLK_LESS,
+    EQUALS        = SDLK_EQUALS,
+    GREATER_THAN  = SDLK_GREATER,
+    QUESTION_MARK = SDLK_QUESTION,
+    AT_SIGN       = SDLK_AT,
+    LEFT_BRACKET  = SDLK_LEFTBRACKET,
+    BACKSLASH     = SDLK_BACKSLASH,
+    RIGHT_BRACKET = SDLK_RIGHTBRACKET,
+    CARET         = SDLK_CARET,
+    UNDERSCORE    = SDLK_UNDERSCORE,
+    GRAVE         = SDLK_GRAVE,
+
+    A = SDLK_A,
+    B = SDLK_B,
+    C = SDLK_C,
+    D = SDLK_D,
+    E = SDLK_E,
+    F = SDLK_F,
+    G = SDLK_G,
+    H = SDLK_H,
+    I = SDLK_I,
+    J = SDLK_J,
+    K = SDLK_K,
+    L = SDLK_L,
+    M = SDLK_M,
+    N = SDLK_N,
+    O = SDLK_O,
+    P = SDLK_P,
+    Q = SDLK_Q,
+    R = SDLK_R,
+    S = SDLK_S,
+    T = SDLK_T,
+    U = SDLK_U,
+    V = SDLK_V,
+    W = SDLK_W,
+    X = SDLK_X,
+    Y = SDLK_Y,
+    Z = SDLK_Z,
+
+    LEFT_CURLY_BRACKET  = SDLK_LEFTBRACE,
+    PIPE                = SDLK_PIPE,
+    RIGHT_CURLY_BRACKET = SDLK_RIGHTBRACE,
+    TILDE               = SDLK_TILDE,
+    DELETE              = SDLK_DELETE,
+    PLUS_MINUS          = SDLK_PLUSMINUS,
+    CAPS_LOCK           = SDLK_CAPSLOCK,
+
+    F1  = SDLK_F1,
+    F2  = SDLK_F2,
+    F3  = SDLK_F3,
+    F4  = SDLK_F4,
+    F5  = SDLK_F5,
+    F6  = SDLK_F6,
+    F7  = SDLK_F7,
+    F8  = SDLK_F8,
+    F9  = SDLK_F9,
+    F10 = SDLK_F10,
+    F11 = SDLK_F11,
+    F12 = SDLK_F12,
+
+    PRINT_SCREEN = SDLK_PRINTSCREEN,
+    SCROLL_LOCK  = SDLK_SCROLLLOCK,
+    PAUSE        = SDLK_PAUSE,
+    INSERT       = SDLK_INSERT,
+    HOME         = SDLK_HOME,
+    PAGE_UP      = SDLK_PAGEUP,
+    END          = SDLK_END,
+    PAGE_DOWN    = SDLK_PAGEDOWN,
+
+    RIGHT = SDLK_RIGHT,
+    LEFT  = SDLK_LEFT,
+    DOWN  = SDLK_DOWN,
+    UP    = SDLK_UP,
+
+    NUM_LOCK = SDLK_NUMLOCKCLEAR,
+    CLEAR    = SDLK_NUMLOCKCLEAR, // Convenience keycode
+
+    // POWER (between KEYPAD_PERIOD and KEYPAD_EQUALS) intentionally omitted
+    KEYPAD_DIVIDE   = SDLK_KP_DIVIDE,
+    KEYPAD_MULTIPLY = SDLK_KP_MULTIPLY,
+    KEYPAD_MINUS    = SDLK_KP_MINUS,
+    KEYPAD_PLUS     = SDLK_KP_PLUS,
+    KEYPAD_ENTER    = SDLK_KP_ENTER,
+    KEYPAD_0        = SDLK_KP_0,
+    KEYPAD_1        = SDLK_KP_1,
+    KEYPAD_2        = SDLK_KP_2,
+    KEYPAD_3        = SDLK_KP_3,
+    KEYPAD_4        = SDLK_KP_4,
+    KEYPAD_5        = SDLK_KP_5,
+    KEYPAD_6        = SDLK_KP_6,
+    KEYPAD_7        = SDLK_KP_7,
+    KEYPAD_8        = SDLK_KP_8,
+    KEYPAD_9        = SDLK_KP_9,
+    KEYPAD_PERIOD   = SDLK_KP_PERIOD,
+    KEYPAD_EQUALS   = SDLK_KP_EQUALS,
+
+    F13 = SDLK_F13,
+    F14 = SDLK_F14,
+    F15 = SDLK_F15,
+    F16 = SDLK_F16,
+    F17 = SDLK_F17,
+    F18 = SDLK_F18,
+    F19 = SDLK_F19,
+    F20 = SDLK_F20,
+    F21 = SDLK_F21,
+    F22 = SDLK_F22,
+    F23 = SDLK_F23,
+    F24 = SDLK_F24,
+
+    // EXECUTE through KP_HEXADECIMAL intentionally omitted
+
+    LEFT_CONTROL = SDLK_LCTRL,
+    LEFT_SHIFT   = SDLK_LSHIFT,
+    LEFT_ALT     = SDLK_LALT,
+    LEFT_OPTION  = SDLK_LALT, // Convenience keycode
+    LEFT_GUI     = SDLK_LGUI,
+    LEFT_COMMAND = SDLK_LGUI, // Convenience keycode
+    LEFT_WINDOWS = SDLK_LGUI, // Convenience keycode
+
+    RIGHT_CONTROL = SDLK_RCTRL,
+    RIGHT_SHIFT   = SDLK_RSHIFT,
+    RIGHT_ALT     = SDLK_RALT,
+    RIGHT_OPTION  = SDLK_RALT, // Convenience keycode
+    RIGHT_GUI     = SDLK_RGUI,
+    RIGHT_COMMAND = SDLK_RGUI, // Convenience keycode
+    RIGHT_WINDOWS = SDLK_RGUI, // Convenience keycode
+
+    // MODE through RIGHT_HYPER intentionally omitted
+};
+
+/// @brief A virtual modifier key
+struct SynKeymod {
+    // This is a mirror of SDL_Keymod, with modifiers ommitted as needed and
+    // convenience modifiers included
+
+  private:
+    uint16_t _rawValue;
+
+    SynKeymod(uint16_t rawValue) : _rawValue(rawValue) {}
+
+  public:
+    // LEVEL_5_SHIFT, NUM_LOCK, CAPS_LOCK, and SCROLL_LOCK intentionally omitted
+    static constexpr uint16_t NONE          = SDL_KMOD_NONE;
+    static constexpr uint16_t LEFT_SHIFT    = SDL_KMOD_LSHIFT;
+    static constexpr uint16_t RIGHT_SHIFT   = SDL_KMOD_RSHIFT;
+    static constexpr uint16_t LEFT_CONTROL  = SDL_KMOD_LCTRL; // Convenience
+    static constexpr uint16_t RIGHT_CONTROL = SDL_KMOD_RCTRL; // Convenience
+    static constexpr uint16_t LEFT_ALT      = SDL_KMOD_LALT;
+    static constexpr uint16_t LEFT_OPTION   = SDL_KMOD_LALT; // Convenience
+    static constexpr uint16_t RIGHT_ALT     = SDL_KMOD_RALT;
+    static constexpr uint16_t RIGHT_OPTION  = SDL_KMOD_RALT; // Convenience
+    static constexpr uint16_t LEFT_GUI      = SDL_KMOD_LGUI;
+    static constexpr uint16_t LEFT_COMMAND  = SDL_KMOD_LGUI; // Convenience
+    static constexpr uint16_t LEFT_WINDOWS  = SDL_KMOD_LGUI; // Convenience
+    static constexpr uint16_t RIGHT_GUI     = SDL_KMOD_RGUI;
+    static constexpr uint16_t RIGHT_COMMAND = SDL_KMOD_RGUI; // Convenience
+    static constexpr uint16_t RIGHT_WINDOWS = SDL_KMOD_RGUI; // Convenience
+    static constexpr uint16_t MODE          = SDL_KMOD_MODE;
+    static constexpr uint16_t CONTROL       = SDL_KMOD_CTRL;
+    static constexpr uint16_t SHIFT         = SDL_KMOD_SHIFT;
+    static constexpr uint16_t ALT           = SDL_KMOD_ALT;
+    static constexpr uint16_t OPTION        = SDL_KMOD_ALT; // Convenience
+    static constexpr uint16_t GUI           = SDL_KMOD_GUI;
+    static constexpr uint16_t COMMAND       = SDL_KMOD_GUI; // Convenience
+    static constexpr uint16_t WINDOWS       = SDL_KMOD_GUI; // Convenience
+
+    SynKeymod operator+(const SynKeymod& other) const {
+        return SynKeymod(this->_rawValue | other._rawValue);
     }
 
-    /// @brief Converts KeyBinding::KeyboardKey to SDL_Keycode
-    /// @internal
-    /// @param key The KeyBinding::KeyboardKey to convert
-    /// @return The corresponding SDL_Keycode
-    static inline SDL_Keycode
-    _KeyboardKeyToKeycode(const Syngine::KeyBinding::KeyboardKey& key) {
-        switch (key) {
-        case Syngine::KeyBinding::KeyboardKey::A: return SDLK_A;
-        case Syngine::KeyBinding::KeyboardKey::B: return SDLK_B;
-        case Syngine::KeyBinding::KeyboardKey::C: return SDLK_C;
-        case Syngine::KeyBinding::KeyboardKey::D: return SDLK_D;
-        case Syngine::KeyBinding::KeyboardKey::E: return SDLK_E;
-        case Syngine::KeyBinding::KeyboardKey::F: return SDLK_F;
-        case Syngine::KeyBinding::KeyboardKey::G: return SDLK_G;
-        case Syngine::KeyBinding::KeyboardKey::H: return SDLK_H;
-        case Syngine::KeyBinding::KeyboardKey::I: return SDLK_I;
-        case Syngine::KeyBinding::KeyboardKey::J: return SDLK_J;
-        case Syngine::KeyBinding::KeyboardKey::K: return SDLK_K;
-        case Syngine::KeyBinding::KeyboardKey::L: return SDLK_L;
-        case Syngine::KeyBinding::KeyboardKey::M: return SDLK_M;
-        case Syngine::KeyBinding::KeyboardKey::N: return SDLK_N;
-        case Syngine::KeyBinding::KeyboardKey::O: return SDLK_O;
-        case Syngine::KeyBinding::KeyboardKey::P: return SDLK_P;
-        case Syngine::KeyBinding::KeyboardKey::Q: return SDLK_Q;
-        case Syngine::KeyBinding::KeyboardKey::R: return SDLK_R;
-        case Syngine::KeyBinding::KeyboardKey::S: return SDLK_S;
-        case Syngine::KeyBinding::KeyboardKey::T: return SDLK_T;
-        case Syngine::KeyBinding::KeyboardKey::U: return SDLK_U;
-        case Syngine::KeyBinding::KeyboardKey::V: return SDLK_V;
-        case Syngine::KeyBinding::KeyboardKey::W: return SDLK_W;
-        case Syngine::KeyBinding::KeyboardKey::X: return SDLK_X;
-        case Syngine::KeyBinding::KeyboardKey::Y: return SDLK_Y;
-        case Syngine::KeyBinding::KeyboardKey::Z: return SDLK_Z;
-
-        case Syngine::KeyBinding::KeyboardKey::_0: return SDLK_0;
-        case Syngine::KeyBinding::KeyboardKey::_1: return SDLK_1;
-        case Syngine::KeyBinding::KeyboardKey::_2: return SDLK_2;
-        case Syngine::KeyBinding::KeyboardKey::_3: return SDLK_3;
-        case Syngine::KeyBinding::KeyboardKey::_4: return SDLK_4;
-        case Syngine::KeyBinding::KeyboardKey::_5: return SDLK_5;
-        case Syngine::KeyBinding::KeyboardKey::_6: return SDLK_6;
-        case Syngine::KeyBinding::KeyboardKey::_7: return SDLK_7;
-        case Syngine::KeyBinding::KeyboardKey::_8: return SDLK_8;
-        case Syngine::KeyBinding::KeyboardKey::_9: return SDLK_9;
-
-        case Syngine::KeyBinding::KeyboardKey::F1: return SDLK_F1;
-        case Syngine::KeyBinding::KeyboardKey::F2: return SDLK_F2;
-        case Syngine::KeyBinding::KeyboardKey::F3: return SDLK_F3;
-        case Syngine::KeyBinding::KeyboardKey::F4: return SDLK_F4;
-        case Syngine::KeyBinding::KeyboardKey::F5: return SDLK_F5;
-        case Syngine::KeyBinding::KeyboardKey::F6: return SDLK_F6;
-        case Syngine::KeyBinding::KeyboardKey::F7: return SDLK_F7;
-        case Syngine::KeyBinding::KeyboardKey::F8: return SDLK_F8;
-        case Syngine::KeyBinding::KeyboardKey::F9: return SDLK_F9;
-        case Syngine::KeyBinding::KeyboardKey::F10: return SDLK_F10;
-        case Syngine::KeyBinding::KeyboardKey::F11: return SDLK_F11;
-        case Syngine::KeyBinding::KeyboardKey::F12: return SDLK_F12;
-
-        case Syngine::KeyBinding::KeyboardKey::COMMA: return SDLK_COMMA;
-        case Syngine::KeyBinding::KeyboardKey::PERIOD: return SDLK_PERIOD;
-        case Syngine::KeyBinding::KeyboardKey::SEMICOLON: return SDLK_SEMICOLON;
-        case Syngine::KeyBinding::KeyboardKey::APOSTROPHE:
-            return SDLK_APOSTROPHE;
-
-        case Syngine::KeyBinding::KeyboardKey::SPACE: return SDLK_SPACE;
-        case Syngine::KeyBinding::KeyboardKey::TAB: return SDLK_TAB;
-        case Syngine::KeyBinding::KeyboardKey::ENTER: return SDLK_RETURN;
-        case Syngine::KeyBinding::KeyboardKey::BACKSPACE: return SDLK_BACKSPACE;
-        case Syngine::KeyBinding::KeyboardKey::DELETE: return SDLK_DELETE;
-
-        case Syngine::KeyBinding::KeyboardKey::MINUS: return SDLK_MINUS;
-        case Syngine::KeyBinding::KeyboardKey::EQUALS: return SDLK_EQUALS;
-        case Syngine::KeyBinding::KeyboardKey::TILDE: return SDLK_TILDE;
-        case Syngine::KeyBinding::KeyboardKey::LEFT_BRACKET:
-            return SDLK_LEFTBRACKET;
-        case Syngine::KeyBinding::KeyboardKey::RIGHT_BRACKET:
-            return SDLK_RIGHTBRACKET;
-        case Syngine::KeyBinding::KeyboardKey::FORWARD_SLASH: return SDLK_SLASH;
-        case Syngine::KeyBinding::KeyboardKey::BACKSLASH: return SDLK_BACKSLASH;
-
-        case Syngine::KeyBinding::KeyboardKey::LEFT: return SDLK_LEFT;
-        case Syngine::KeyBinding::KeyboardKey::RIGHT: return SDLK_RIGHT;
-        case Syngine::KeyBinding::KeyboardKey::UP: return SDLK_UP;
-        case Syngine::KeyBinding::KeyboardKey::DOWN: return SDLK_DOWN;
-
-        case Syngine::KeyBinding::KeyboardKey::INSERT: return SDLK_INSERT;
-        case Syngine::KeyBinding::KeyboardKey::HOME: return SDLK_HOME;
-        case Syngine::KeyBinding::KeyboardKey::PAGE_UP: return SDLK_PAGEUP;
-        case Syngine::KeyBinding::KeyboardKey::PAGE_DOWN: return SDLK_PAGEDOWN;
-        case Syngine::KeyBinding::KeyboardKey::END: return SDLK_END;
-        case Syngine::KeyBinding::KeyboardKey::PRINT_SCREEN:
-            return SDLK_PRINTSCREEN;
-        case Syngine::KeyBinding::KeyboardKey::ESCAPE: return SDLK_ESCAPE;
-        }
+    SynKeymod operator-(const SynKeymod& other) const {
+        return SynKeymod(this->_rawValue & ~other._rawValue);
     }
 
-    /// @brief Converts SDL_Keymod to KeyBinding::ModifierKeys
-    /// @internal
-    /// @param mod The SDL_Keymod to convert
-    /// @return The corresponding KeyBinding::ModifierKeys
-    static inline Syngine::KeyBinding::ModifierKeys
-    _KeymodToModifierKeys(const SDL_Keymod& mod) {
-        Syngine::KeyBinding::ModifierKeys keys;
-        if (mod & SDL_KMOD_GUI) {
-            keys += Syngine::KeyBinding::ModifierKey::COMMAND;
-        }
-        if (mod & SDL_KMOD_SHIFT) {
-            keys += Syngine::KeyBinding::ModifierKey::SHIFT;
-        }
-        if (mod & SDL_KMOD_ALT) {
-            keys += Syngine::KeyBinding::ModifierKey::OPTION;
-        }
-        if (mod & SDL_KMOD_CTRL) {
-            keys += Syngine::KeyBinding::ModifierKey::CONTROL;
-        }
-        return keys;
+    SynKeymod operator+=(const SynKeymod& other) {
+        this->_rawValue |= other._rawValue;
+        return *this;
     }
 
-    /// @brief Converts KeyBinding::ModifierKeys to SDL_Keymod
-    /// @internal
-    /// @param mod The KeyBinding::ModifierKeys to convert
-    /// @return The corresponding SDL_Keymod
-    static inline SDL_Keymod
-    _ModifierKeysToKeymod(const Syngine::KeyBinding::ModifierKeys& keys) {
-        SDL_Keymod mod = SDL_KMOD_NONE;
-        if (keys == Syngine::KeyBinding::ModifierKey::COMMAND) {
-            mod |= SDL_KMOD_GUI;
-        }
-        if (keys == Syngine::KeyBinding::ModifierKey::SHIFT) {
-            mod |= SDL_KMOD_SHIFT;
-        }
-        if (keys == Syngine::KeyBinding::ModifierKey::OPTION) {
-            mod |= SDL_KMOD_ALT;
-        }
-        if (keys == Syngine::KeyBinding::ModifierKey::CONTROL) {
-            mod |= SDL_KMOD_CTRL;
-        }
-        return mod;
+    SynKeymod operator-=(const SynKeymod& other) {
+        this->_rawValue &= ~other._rawValue;
+        return *this;
     }
 
-    /// @brief Converts a mouse button index to a MouseKey
-    /// @internal
-    /// @param index The mouse button index
-    /// @return The corresponding MouseKey
-    static inline Syngine::KeyBinding::MouseKey
-    _MouseButtonIndexToMouseKey(const uint8_t& index) {
-        switch (index) {
-        case 1: return Syngine::KeyBinding::MouseKey::LEFT;
-        case 2: return Syngine::KeyBinding::MouseKey::RIGHT;
-        case 3: return Syngine::KeyBinding::MouseKey::MIDDLE;
-        case 4: return Syngine::KeyBinding::MouseKey::BUTTON_4;
-        case 5: return Syngine::KeyBinding::MouseKey::BUTTON_5;
-        default:
-            throw std::invalid_argument("Cannot convert mouse button index");
-        }
-    }
-
-    /// @brief Converts a MouseKey to a mouse button index
-    /// @internal
-    /// @param key The MouseKey to convert
-    /// @return The corresponding mouse button index
-    static inline uint8_t
-    _MouseKeyToMouseButtonIndex(const Syngine::KeyBinding::MouseKey& key) {
-        switch (key) {
-        case Syngine::KeyBinding::MouseKey::LEFT: return 1;
-        case Syngine::KeyBinding::MouseKey::RIGHT: return 2;
-        case Syngine::KeyBinding::MouseKey::MIDDLE: return 3;
-        case Syngine::KeyBinding::MouseKey::BUTTON_4: return 4;
-        case Syngine::KeyBinding::MouseKey::BUTTON_5: return 5;
-        }
-    }
-
-    static inline Syngine::KeyBinding
-    _InputEventToKeyBinding(const SDL_Event& event) {
-        try {
-            switch (event.type) {
-            case SDL_EVENT_KEY_DOWN:
-            case SDL_EVENT_KEY_UP:
-                if (event.key.mod == SDL_KMOD_NONE) {
-                    return Syngine::KeyBinding(
-                        _InputHelpers::_KeycodeToKeyboardKey(event.key.key));
-                } else {
-                    return Syngine::KeyBinding(
-                        Syngine::KeyBinding::KeyboardShortcut(
-                            _InputHelpers::_KeycodeToKeyboardKey(event.key.key),
-                            _InputHelpers::_KeymodToModifierKeys(
-                                event.key.mod)));
-                }
-                break;
-            case SDL_EVENT_MOUSE_BUTTON_DOWN:
-            case SDL_EVENT_MOUSE_BUTTON_UP: {
-                return Syngine::KeyBinding::MouseKey(event.button.button);
-            }
-            default: return Syngine::KeyBinding();
-            }
-        } catch (std::invalid_argument& error) {
-            Logger::Log("Failed to convert SDL_Event to KeyBinding: " +
-                        std::string(error.what()));
-            return Syngine::KeyBinding();
-        }
+    bool operator==(const SynKeymod& other) const {
+        return this->_rawValue == other._rawValue;
     }
 };
 
