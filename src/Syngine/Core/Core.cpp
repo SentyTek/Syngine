@@ -6,6 +6,7 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/Core/Input.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 #ifdef _WIN32
 #define NOMINMAX
@@ -177,6 +178,7 @@ bool Core::HandleEvents() {
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
             _HandleKeyEvent(event);
+            InputAction::_HandleEvent(event);
             break;
         }
 

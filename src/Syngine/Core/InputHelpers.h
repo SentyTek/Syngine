@@ -11,12 +11,15 @@
 #define SynInputHelpers_h
 
 #include "Syngine/Core/Input.h"
+#include "Syngine/Core/Logger.h"
 
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_events.h"
+#include "SDL3/SDL_keyboard.h"
 
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 
 namespace Syngine {
 
@@ -25,7 +28,6 @@ namespace Syngine {
 /// @section Input
 struct _InputHelpers {
 
-    // you should not be able to make an instance of this
     _InputHelpers() = delete;
 
     /// @brief Converts SDL_Keycode to KeyBinding::KeyboardKey
@@ -123,7 +125,8 @@ struct _InputHelpers {
             return Syngine::KeyBinding::KeyboardKey::PRINT_SCREEN;
         case SDLK_ESCAPE: return Syngine::KeyBinding::KeyboardKey::ESCAPE;
 
-        default: throw std::invalid_argument("Inconvertable SDL_Keycode");
+        default:
+            throw std::invalid_argument("Inconvertible SDL_Keycode '" + std::string(SDL_GetKeyName(keycode)) + "'");
         }
     }
 
@@ -323,6 +326,8 @@ struct _InputHelpers {
             default: return Syngine::KeyBinding();
             }
         } catch (std::invalid_argument& error) {
+            Logger::Log("Failed to convert SDL_Event to KeyBinding: " +
+                        std::string(error.what()));
             return Syngine::KeyBinding();
         }
     }

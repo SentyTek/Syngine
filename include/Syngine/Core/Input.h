@@ -334,9 +334,10 @@ class InputAction {
   public:
     /// @brief A container for callbacks
     struct Callbacks {
-        std::function<void()> onPressed;
-        std::function<void()> onReleased;
-        std::function<void()> onStateChanged;
+        // are these lambda expressions valid C++ code on all compilers?
+        std::function<void()> onPressed      = [] {};
+        std::function<void()> onReleased     = [] {};
+        std::function<void()> onStateChanged = [] {};
     };
 
     /// @brief The identifier for this input action
@@ -399,6 +400,16 @@ class InputAction {
                 const std::string& name,
                 const std::string& category,
                 KeyBinding         binding);
+
+    InputAction(const std::string&  identifier,
+                const std::string&  name,
+                const std::string&  category,
+                Syngine::KeyBinding binding,
+                Callbacks           callbacks);
+
+    InputAction(const InputAction& other) = delete;
+
+    InputAction(InputAction&& other) = default;
 
     /// @brief Deconstructs and cleans up the InputAction
     ~InputAction();

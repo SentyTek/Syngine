@@ -53,28 +53,14 @@ void Syngine::InputAction::EnsureUniqueIdentifier(
 
 // InputAction constructors
 
-Syngine::InputAction::InputAction(const std::string& identifier,
-                                  const std::string& name)
-    : identifier(identifier), name(name), category(), binding(),
-      currentState(false), previousState(false) {
-    Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::_Bindings.push_back(this);
-}
-
-Syngine::InputAction::InputAction(const std::string& identifier,
-                                  const std::string& name,
-                                  const std::string& category)
-    : identifier(identifier), name(name), category(category), binding(),
-      currentState(false), previousState(false) {
-    Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::_Bindings.push_back(this);
-}
-
 Syngine::InputAction::InputAction(const std::string&  identifier,
                                   const std::string&  name,
-                                  Syngine::KeyBinding binding)
-    : identifier(identifier), name(name), category(), binding(binding),
-      currentState(false), previousState(false) {
+                                  const std::string&  category,
+                                  Syngine::KeyBinding binding,
+                                  Callbacks           callbacks)
+    : identifier(identifier), name(name), category(category), binding(binding),
+      currentState(false), previousState(false), callbacks(callbacks) {
+    Logger::Log("Creating InputAction '" + identifier + "'");
     Syngine::InputAction::EnsureUniqueIdentifier(identifier);
     Syngine::InputAction::_Bindings.push_back(this);
 }
@@ -83,13 +69,25 @@ Syngine::InputAction::InputAction(const std::string&  identifier,
                                   const std::string&  name,
                                   const std::string&  category,
                                   Syngine::KeyBinding binding)
-    : identifier(identifier), name(name), category(category), binding(binding),
-      currentState(false), previousState(false) {
-    Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::_Bindings.push_back(this);
-}
+    : InputAction(identifier, name, category, binding, Callbacks()) {}
+
+Syngine::InputAction::InputAction(const std::string& identifier,
+                                  const std::string& name)
+    : InputAction(identifier, name, "", Syngine::KeyBinding(), Callbacks()) {}
+
+Syngine::InputAction::InputAction(const std::string& identifier,
+                                  const std::string& name,
+                                  const std::string& category)
+    : InputAction(
+          identifier, name, category, Syngine::KeyBinding(), Callbacks()) {}
+
+Syngine::InputAction::InputAction(const std::string&  identifier,
+                                  const std::string&  name,
+                                  Syngine::KeyBinding binding)
+    : InputAction(identifier, name, "", binding, Callbacks()) {}
 
 Syngine::InputAction::~InputAction() {
+    Logger::Info("Removing InputAction '" + this->identifier + "'");
     Syngine::InputAction::_Bindings.erase(
         std::remove(Syngine::InputAction::_Bindings.begin(),
                     Syngine::InputAction::_Bindings.end(),
@@ -101,9 +99,8 @@ void Syngine::InputAction::RegisterAction(const std::string&  identifier,
                                           const std::string&  name,
                                           Syngine::KeyBinding binding,
                                           Callbacks           callbacks) {
-    auto action      = InputAction(identifier, name, binding);
-    action.callbacks = callbacks;
-    Syngine::InputAction::_AnonymousActions.push_back(action);
+    Syngine::InputAction::_AnonymousActions.emplace_back(
+        identifier, name, "", binding, callbacks);
 }
 
 void Syngine::InputAction::RegisterAction(const std::string&  identifier,
@@ -111,9 +108,8 @@ void Syngine::InputAction::RegisterAction(const std::string&  identifier,
                                           const std::string&  category,
                                           Syngine::KeyBinding binding,
                                           Callbacks           callbacks) {
-    auto action      = InputAction(identifier, name, category, binding);
-    action.callbacks = callbacks;
-    Syngine::InputAction::_AnonymousActions.push_back(action);
+    Syngine::InputAction::_AnonymousActions.emplace_back(
+        Syngine::InputAction(identifier, name, category, binding, callbacks));
 }
 
 bool Syngine::InputAction::isPressed() { return this->currentState; }
@@ -135,6 +131,7 @@ void Syngine::InputAction::_HandleEvent(SDL_Event event) {
     bool                down;
 
     if (called == Syngine::KeyBinding()) {
+        Logger::Log("Event contains no convertible binding");
         return; // No binding, nothing to do
     }
 
@@ -144,19 +141,26 @@ void Syngine::InputAction::_HandleEvent(SDL_Event event) {
 
     case SDL_EVENT_MOUSE_BUTTON_UP:
     case SDL_EVENT_KEY_UP: down = false; break;
-
-    default: return; // Not a relevant event
+    
+    default:
+        Logger::Warn("Input event handler called with unimplemented event");
+        return; // Not a relevant event
     }
 
     // TODO: Get this to handle chords properly
-    for (auto action : _Bindings) {
+    for (InputAction* action : InputAction::_Bindings) {
+
         if (action->binding == called) {
             action->previousState = action->currentState;
             action->currentState  = down;
 
+            Logger::Info(action->identifier + " has been called");
+
             if (down) {
+                Logger::Info(action->identifier + " has been pressed");
                 action->callbacks.onPressed();
             } else {
+                Logger::Info(action->identifier + " has been released");
                 action->callbacks.onReleased();
             }
             action->callbacks.onStateChanged();
