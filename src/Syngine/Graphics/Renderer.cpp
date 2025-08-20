@@ -424,7 +424,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
             SHADOW_MAP_SIZE * 2,
             false,
             1,
-            bgfx::TextureFormat::D32,
+            bgfx::TextureFormat::D16,
             BGFX_TEXTURE_RT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
                 BGFX_SAMPLER_U_CLAMP |
                 BGFX_SAMPLER_V_CLAMP); // I wish I knew what the flags meant.

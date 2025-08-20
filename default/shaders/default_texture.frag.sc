@@ -38,8 +38,12 @@ void main() {
     vec3 B      = cross(v_normalNormed, T) * v_tangent.w;
     vec3 Nmicro = normalize(T*nmap.x + B*nmap.y + v_normalNormed*nmap.z);
 
+
     //blend
     vec3 N      = normalize( mix(Nmacro, Nmicro, u_floats.y) );
+
+    // use less detailed normal for shadows to reduce acne
+    vec3 shadowNormal = normalize( mix(Nmacro, Nmicro, u_floats.y * 0.3) );
 
     //sun based lighting
     float NdotL             = max(dot(N, lightDirToSun), 0.0);
@@ -50,6 +54,8 @@ void main() {
     // Shadow factor
     float shadow = getShadowFactor(v_worldPos, N, u_lightDir, v_viewDepth);
 
+    float shadowMix = Nmicro.y / 3.0;
+    float shadowFactor = mix(1.0, shadow, shadowMix);
     float finalLight = currentAmbient + NdotL * sunLightStrength * shadow;
     //finalize and mix
     vec4 base       = texture2D(s_albedo, v_uvDetail);

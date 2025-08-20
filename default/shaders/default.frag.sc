@@ -12,6 +12,10 @@ void main() {
     vec3 lightDir = normalize(u_lightDir.xyz); // Direction from light source to fragment
 
     float diffuseIntensity = max(dot(normal, lightDir), 0.0);
+    if (lightDir.y < 0.0) {
+        // If the light is below the horizon, we consider it to be in shadow
+        diffuseIntensity = 0.0;
+    }
     float shadowFactor = getShadowFactor(v_worldPos, normal, u_lightDir, v_viewDepth);
     float ambientIntensity = 0.20;
 

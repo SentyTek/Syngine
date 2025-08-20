@@ -258,7 +258,7 @@ class Renderer {
 
     static bgfx::TextureHandle m_shadowDepth;
     static bgfx::FrameBufferHandle m_shadowFB;
-    static constexpr uint16_t      SHADOW_MAP_SIZE = 1024;
+    static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
     static constexpr uint8_t       NUM_CASCADES    = 4;
 
     /// @brief Initialize the graphics system
