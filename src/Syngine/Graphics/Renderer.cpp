@@ -356,7 +356,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
 
     // Initial sun direction in degrees (yaw, pitch, roll)
     // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive = up).
-    const float initialSunDir[3] = { 0.0f, 90.0f, 0.0f };
+    const float initialSunDir[3] = { 0.0f, 45.0f, 0.0f };
     float pitch = bx::toRad(initialSunDir[1]);
     float yaw   = bx::toRad(initialSunDir[0]);
     float cp    = cosf(pitch);
@@ -749,13 +749,10 @@ void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
 
     // Currently using fixed cascade sizes based on shadow distance
     float cascadeSizes[NUM_CASCADES] = {
-        15, 40, round(m_config.shadowDist / 2), round(m_config.shadowDist)
+        10, 25, round(m_config.shadowDist / 3), round(m_config.shadowDist)
     };
 
-    float cascadeDistances[NUM_CASCADES] = {
-        15, 40, round(m_config.shadowDist / 2), round(m_config.shadowDist)
-    };
-    
+    float cascadeDistances[NUM_CASCADES];
     float lightViewProj[NUM_CASCADES * 16];
     
     for (uint32_t i = 0; i < NUM_CASCADES; i++) {
@@ -783,7 +780,7 @@ void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
         bx::mtxLookAt(&outLightView[i * 16], lightPos, target, up);
 
         // Try and keep tight near/far planes for good precision
-        float lightNear = 10.0f;
+        float lightNear = 20.0f;
         float lightFar = m_config.shadowDist + 50.0f; // Some margin
         
         bx::mtxOrtho(&outLightProj[i * 16],
@@ -791,7 +788,8 @@ void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
                      -size, size,
                      lightNear, lightFar,
                      0.0f, bgfx::getCaps()->homogeneousDepth);
-        
+
+        cascadeDistances[i] = cascadeSizes[i] / 2.0f;
         outCascadeSplits[i] = cascadeDistances[i];
         bx::mtxMul(&lightViewProj[i * 16], &outLightView[i * 16], &outLightProj[i * 16]);
     }
@@ -806,7 +804,7 @@ void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
 
 void Renderer::_DrawShadows(const Program& program, CameraComponent* camera, uint8_t cascade) {
     const uint64_t renderState =
-        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
+        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
 
     if (Core::_GetApp()->debug.CSMBounds) {
         float view[16 * NUM_CASCADES], proj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
@@ -1057,7 +1055,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                                               : 0.0f, // Homogeneous depth
             1.0f / (float)(SHADOW_MAP_SIZE * 2),      // Inv shadow map size
             m_config.shadowDist, // Light far plane
-            0.0f // Debug value
+            0.0f // Debug value, not used
         };
         SetUniform(m_defaultUniformIds["u_default_shadowParams"], shadowParams);
         SetUniform(m_defaultUniformIds["u_texture_shadowParams"], shadowParams);

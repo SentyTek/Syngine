@@ -16,8 +16,5 @@ void main() {
     float ambientIntensity = 0.20;
 
     vec3 color = u_baseColor.rgb * (ambientIntensity + diffuseIntensity * shadowFactor);
-    if (u_shadowParams.w > 0.5) {
-        color = vec3_splat(shadowFactor);
-    }
     gl_FragColor = vec4(color, u_baseColor.a);
 }
