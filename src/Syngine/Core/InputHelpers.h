@@ -175,6 +175,142 @@ enum class SynScancode : uint32_t {
     // No need for an equivilant to SDL_SCANCODE_RESERVED or SDL_SCANCODE_COUNT
 };
 
+inline constexpr SynScancode _SdlToSyn(const SDL_Scancode& scancode) {
+    switch (scancode) {
+    case SDL_SCANCODE_NONUSHASH:
+
+    case SDL_SCANCODE_POWER:
+
+    case SDL_SCANCODE_F13:
+    case SDL_SCANCODE_F14:
+    case SDL_SCANCODE_F15:
+    case SDL_SCANCODE_F16:
+    case SDL_SCANCODE_F17:
+    case SDL_SCANCODE_F18:
+    case SDL_SCANCODE_F19:
+    case SDL_SCANCODE_F20:
+    case SDL_SCANCODE_F21:
+    case SDL_SCANCODE_F22:
+    case SDL_SCANCODE_F23:
+    case SDL_SCANCODE_F24:
+    case SDL_SCANCODE_EXECUTE:
+    case SDL_SCANCODE_HELP:
+    case SDL_SCANCODE_MENU:
+    case SDL_SCANCODE_SELECT:
+    case SDL_SCANCODE_STOP:
+    case SDL_SCANCODE_AGAIN:
+    case SDL_SCANCODE_UNDO:
+    case SDL_SCANCODE_CUT:
+    case SDL_SCANCODE_COPY:
+    case SDL_SCANCODE_PASTE:
+    case SDL_SCANCODE_FIND:
+    case SDL_SCANCODE_MUTE:
+    case SDL_SCANCODE_VOLUMEUP:
+    case SDL_SCANCODE_VOLUMEDOWN:
+
+    case SDL_SCANCODE_KP_EQUALSAS400:
+
+    case SDL_SCANCODE_INTERNATIONAL1:
+    case SDL_SCANCODE_INTERNATIONAL2:
+    case SDL_SCANCODE_INTERNATIONAL3:
+    case SDL_SCANCODE_INTERNATIONAL4:
+    case SDL_SCANCODE_INTERNATIONAL5:
+    case SDL_SCANCODE_INTERNATIONAL6:
+    case SDL_SCANCODE_INTERNATIONAL7:
+    case SDL_SCANCODE_INTERNATIONAL8:
+    case SDL_SCANCODE_INTERNATIONAL9:
+    case SDL_SCANCODE_LANG1:
+    case SDL_SCANCODE_LANG2:
+    case SDL_SCANCODE_LANG3:
+    case SDL_SCANCODE_LANG4:
+    case SDL_SCANCODE_LANG5:
+    case SDL_SCANCODE_LANG6:
+    case SDL_SCANCODE_LANG7:
+    case SDL_SCANCODE_LANG8:
+    case SDL_SCANCODE_LANG9:
+
+    case SDL_SCANCODE_ALTERASE:
+    case SDL_SCANCODE_SYSREQ:
+    case SDL_SCANCODE_CANCEL:
+    case SDL_SCANCODE_CLEAR:
+    case SDL_SCANCODE_PRIOR:
+    case SDL_SCANCODE_RETURN2:
+    case SDL_SCANCODE_SEPARATOR:
+    case SDL_SCANCODE_OUT:
+    case SDL_SCANCODE_OPER:
+    case SDL_SCANCODE_CLEARAGAIN:
+    case SDL_SCANCODE_CRSEL:
+    case SDL_SCANCODE_EXSEL:
+
+    case SDL_SCANCODE_KP_00:
+    case SDL_SCANCODE_KP_000:
+    case SDL_SCANCODE_THOUSANDSSEPARATOR:
+    case SDL_SCANCODE_DECIMALSEPARATOR:
+    case SDL_SCANCODE_CURRENCYUNIT:
+    case SDL_SCANCODE_CURRENCYSUBUNIT:
+    case SDL_SCANCODE_KP_LEFTPAREN:
+    case SDL_SCANCODE_KP_RIGHTPAREN:
+    case SDL_SCANCODE_KP_LEFTBRACE:
+    case SDL_SCANCODE_KP_RIGHTBRACE:
+    case SDL_SCANCODE_KP_TAB:
+    case SDL_SCANCODE_KP_BACKSPACE:
+    case SDL_SCANCODE_KP_A:
+    case SDL_SCANCODE_KP_B:
+    case SDL_SCANCODE_KP_C:
+    case SDL_SCANCODE_KP_D:
+    case SDL_SCANCODE_KP_E:
+    case SDL_SCANCODE_KP_F:
+    case SDL_SCANCODE_KP_XOR:
+    case SDL_SCANCODE_KP_POWER:
+    case SDL_SCANCODE_KP_PERCENT:
+    case SDL_SCANCODE_KP_LESS:
+    case SDL_SCANCODE_KP_GREATER:
+    case SDL_SCANCODE_KP_AMPERSAND:
+    case SDL_SCANCODE_KP_DBLAMPERSAND:
+    case SDL_SCANCODE_KP_VERTICALBAR:
+    case SDL_SCANCODE_KP_DBLVERTICALBAR:
+    case SDL_SCANCODE_KP_COLON:
+    case SDL_SCANCODE_KP_HASH:
+    case SDL_SCANCODE_KP_SPACE:
+    case SDL_SCANCODE_KP_AT:
+    case SDL_SCANCODE_KP_EXCLAM:
+    case SDL_SCANCODE_KP_MEMSTORE:
+    case SDL_SCANCODE_KP_MEMRECALL:
+    case SDL_SCANCODE_KP_MEMCLEAR:
+    case SDL_SCANCODE_KP_MEMADD:
+    case SDL_SCANCODE_KP_MEMSUBTRACT:
+    case SDL_SCANCODE_KP_MEMMULTIPLY:
+    case SDL_SCANCODE_KP_MEMDIVIDE:
+    case SDL_SCANCODE_KP_PLUSMINUS:
+    case SDL_SCANCODE_KP_CLEAR:
+    case SDL_SCANCODE_KP_CLEARENTRY:
+    case SDL_SCANCODE_KP_BINARY:
+    case SDL_SCANCODE_KP_OCTAL:
+    case SDL_SCANCODE_KP_DECIMAL:
+    case SDL_SCANCODE_KP_HEXADECIMAL:
+
+        // don't feel like adding the USB 0x0C and mobile keys, doubt they'll
+        // show up in practice. If they do I'll implement them
+
+    case SDL_SCANCODE_RESERVED:
+    case SDL_SCANCODE_COUNT:
+
+        return SynScancode::UNKNOWN; // No equivalent in SynScancode
+
+    default:
+        return static_cast<SynScancode>(
+            scancode); // It didn't equal one of the non-implemented values;
+                       // SynScancode and SDL_Scancode have a one-to-one
+                       // underlying mapping
+    }
+}
+
+inline constexpr SDL_Scancode _SynToSdl(const SynScancode& scancode) {
+    // SynScancode is a strict subset of SDL_Scancode so we don't have to do any
+    // checks
+    return static_cast<SDL_Scancode>(scancode);
+}
+
 /// @brief A virtual keyboard key. This is mapped to the meaning of the key, so
 /// SynKeycode::I will correspond to I on any keyboard
 enum class SynKeycode : uint32_t {
@@ -350,6 +486,24 @@ enum class SynKeycode : uint32_t {
     // MODE through RIGHT_HYPER intentionally omitted
 };
 
+inline constexpr SynKeycode _SdlToSyn(const SDL_Keycode& keycode) {
+    switch (keycode) {
+    case SDLK_EXTENDED_MASK:
+    case SDLK_SCANCODE_MASK:
+    // ...
+
+        return SynKeycode::UNKNOWN; // No equivalent in SynKeycode
+
+    default: return static_cast<SynKeycode>(keycode);
+    }
+}
+
+inline constexpr SDL_Keycode _SynToSdl(const SynKeycode& keycode) {
+    // SynKeycode is a strict subset of SDL_Keycode so we don't have to do any
+    // checks
+    return static_cast<SDL_Keycode>(keycode);
+}
+
 /// @brief A virtual modifier key
 struct SynKeymod {
     // This is a mirror of SDL_Keymod, with modifiers ommitted as needed and
@@ -358,7 +512,7 @@ struct SynKeymod {
   private:
     uint16_t _rawValue;
 
-    SynKeymod(uint16_t rawValue) : _rawValue(rawValue) {}
+    constexpr SynKeymod(uint16_t rawValue) : _rawValue(rawValue) {}
 
   public:
     // LEVEL_5_SHIFT, NUM_LOCK, CAPS_LOCK, and SCROLL_LOCK intentionally omitted
@@ -406,6 +560,16 @@ struct SynKeymod {
 
     bool operator==(const SynKeymod& other) const {
         return this->_rawValue == other._rawValue;
+    }
+
+    friend constexpr SynKeymod _SdlToSyn(const SDL_Keymod& keymod) {
+        // mask out the omitted modifiers
+        SDL_Keymod masked = keymod & ~static_cast<SDL_Keymod>(0xF000u);
+        return SynKeymod(static_cast<uint16_t>(masked));
+    }
+
+    friend constexpr SDL_Keymod _SynToSdl(const SynKeymod& keymod) {
+        return static_cast<SDL_Keymod>(keymod._rawValue);
     }
 };
 
