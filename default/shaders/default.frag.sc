@@ -1,24 +1,23 @@
 $input v_worldPos, v_worldNormal, v_viewDepth
 #include <bgfx_shader.sh>
-#include "shadow.sh"
+#include <shadow.sh>
 
 uniform vec4 u_lightDir;        // World space direction *from* the light source
 uniform vec4 u_baseColor;       // Base color of the material
 
+uniform vec4 u_dbg;
+
 void main() {
     vec3 normal = normalize(v_worldNormal);
-    vec3 directionToLight = normalize(u_lightDir.xyz); // Vector pointing towards the light
+    vec3 lightDir = normalize(u_lightDir.xyz); // Direction from light source to fragment
 
-    // Diffuse lighting
-    float diffuseIntensity = max(dot(normal, directionToLight), 0.0);
-
-    // Shadow factor
+    float diffuseIntensity = max(dot(normal, lightDir), 0.0);
     float shadowFactor = getShadowFactor(v_worldPos, normal, u_lightDir, v_viewDepth);
-
-    // TODO: make this from u_floats
-    float ambientIntensity = 0.20f; 
+    float ambientIntensity = 0.20;
 
     vec3 color = u_baseColor.rgb * (ambientIntensity + diffuseIntensity * shadowFactor);
-    
+    if (u_shadowParams.w > 0.5) {
+        color = vec3_splat(shadowFactor);
+    }
     gl_FragColor = vec4(color, u_baseColor.a);
 }

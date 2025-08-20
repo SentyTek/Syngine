@@ -282,7 +282,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     m_defaultUniformIds.insert(
         { "u_default_shadowMap",
           RegisterUniform(
-              textureProg, "u_shadowMap", UniformType::UNIFORM_SAMPLER) });
+              textureProg, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
 
     // Texture program uniforms
     m_defaultUniformIds.insert({ "u_texture_lightDir",
@@ -301,19 +301,19 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     m_defaultUniformIds.insert(
         { "u_texture_albedo",
           RegisterUniform(
-              textureProg, "u_albedo", UniformType::UNIFORM_SAMPLER) });
+              textureProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
         { "u_normalMap",
           RegisterUniform(
-              textureProg, "u_normalMap", UniformType::UNIFORM_SAMPLER) });
+              textureProg, "s_normalMap", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
         { "u_heightMap",
           RegisterUniform(
-              textureProg, "u_heightMap", UniformType::UNIFORM_SAMPLER) });
+              textureProg, "s_heightMap", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
         { "u_texture_shadowMap",
           RegisterUniform(
-              textureProg, "u_shadowMap", UniformType::UNIFORM_SAMPLER) });
+              textureProg, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
 
     // Shadow program uniforms
     m_defaultUniformIds.insert({ "u_default_csmSplits",
@@ -341,10 +341,22 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
                                  RegisterUniform(defaultProg,
                                                  "u_viewPos",
                                                  UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_texture_shadowParams",
+                                 RegisterUniform(textureProg,
+                                                 "u_shadowParams",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_default_shadowParams",
+                                 RegisterUniform(defaultProg,
+                                                 "u_shadowParams",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_dbg",
+                                 RegisterUniform(defaultProg,
+                                                 "u_dbg",
+                                                 UniformType::UNIFORM_VEC4) });
 
     // Initial sun direction in degrees (yaw, pitch, roll)
     // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive = up).
-    const float initialSunDir[3] = { 0.0f, 45.0f, 0.0f };
+    const float initialSunDir[3] = { 0.0f, 90.0f, 0.0f };
     float pitch = bx::toRad(initialSunDir[1]);
     float yaw   = bx::toRad(initialSunDir[0]);
     float cp    = cosf(pitch);
@@ -412,7 +424,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
             SHADOW_MAP_SIZE * 2,
             false,
             1,
-            bgfx::TextureFormat::D16,
+            bgfx::TextureFormat::D32,
             BGFX_TEXTURE_RT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
                 BGFX_SAMPLER_U_CLAMP |
                 BGFX_SAMPLER_V_CLAMP); // I wish I knew what the flags meant.
@@ -606,9 +618,9 @@ size_t Renderer::RegisterUniform(int                program,
                                  uint16_t           num) {
     Program* prog = _GetProgram(program);
     if (prog) {
-        Uniform u = { .handle = bgfx::createUniform(
-                          name.c_str(),
-                          static_cast<bgfx::UniformType::Enum>(type)),
+        Uniform u = {
+            .handle = bgfx::createUniform(
+                name.c_str(), static_cast<bgfx::UniformType::Enum>(type), num),
                       .type = type,
                       .name = name,
                       .num  = num };
@@ -731,148 +743,61 @@ void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
                                          float*           outCascadeSplits) {
     float lightDir[3];
     GetSunDirection(lightDir);
-    const bx::Vec3 lightDirVec =
-        bx::normalize(bx::Vec3(lightDir[0], lightDir[1], lightDir[2]));
+    const bx::Vec3 lightDirVec = bx::normalize(bx::Vec3(lightDir[0], lightDir[1], lightDir[2]));
+    
+    const float* camPos = camera->GetPosition();
 
-    Camera cam = camera->GetCamera();
-    float  invCamView[16];
-    bx::mtxInverse(invCamView, cam.view);
+    // Currently using fixed cascade sizes based on shadow distance
+    float cascadeSizes[NUM_CASCADES] = {
+        15, 40, round(m_config.shadowDist / 2), round(m_config.shadowDist)
+    };
 
-    float aspect = (float)width / (float)height;
-    float tanHalfFov = tanf(bx::toRad(cam.fov) / 2.0f);
-
-    float cascadeLambda = 0.95f; // Heavily favor logarithmic splits for better near-field resolution
-
-    float cascadeSplitDepths[NUM_CASCADES];
-    float nearClip = cam.nearPlane;
-    float farClip  = m_config.shadowDist;
-
-    for (uint32_t i = 0; i < NUM_CASCADES; ++i) {
-        float p       = (i + 1.0f) / (float)NUM_CASCADES;
-        float log     = nearClip * bx::pow(farClip / nearClip, p);
-        float uniform = nearClip + (farClip - nearClip) * p;
-        cascadeSplitDepths[i] = bx::lerp(uniform, log, cascadeLambda);
-    }
-
-    float lastSplitDist = nearClip;
+    float cascadeDistances[NUM_CASCADES] = {
+        15, 40, round(m_config.shadowDist / 2), round(m_config.shadowDist)
+    };
+    
+    float lightViewProj[NUM_CASCADES * 16];
+    
     for (uint32_t i = 0; i < NUM_CASCADES; i++) {
-        float splitDist = -cascadeSplitDepths[i];
+        float size = cascadeSizes[i];
 
-        bx::Vec3 frustumCorners[8] = {
-            bx::Vec3(-1.0f, 1.0f, -1.0f), bx::Vec3(1.0f, 1.0f, -1.0f),
-            bx::Vec3(1.0f, -1.0f, -1.0f), bx::Vec3(-1.0f, -1.0f, -1.0f),
-            bx::Vec3(-1.0f, 1.0f, 1.0f),  bx::Vec3(1.0f, 1.0f, 1.0f),
-            bx::Vec3(1.0f, -1.0f, 1.0f),  bx::Vec3(-1.0f, -1.0f, 1.0f),
+        // How far light is from camera
+        float lightDistance = 100.0f;
+        
+        bx::Vec3 lightPos = {
+            camPos[0] + lightDir[0] * lightDistance,
+            camPos[1] + lightDir[1] * lightDistance,
+            camPos[2] + lightDir[2] * lightDistance
         };
+        
+        bx::Vec3 target = {camPos[0], camPos[1], camPos[2]};
+        bx::Vec3 up     = { 0.0f, 1.0f, 0.0f };
 
-        // Calculate the 8 corners of the current cascade slice in world space
-        bx::Vec3 center = { 0.0f, 0.0f, 0.0f };
-        for (uint32_t j = 0; j < 8; ++j) {
-            // Get the corner in view space for the current slice
-            float farY = splitDist * tanHalfFov;
-            float farX = farY * aspect;
-            float nearY = lastSplitDist * tanHalfFov;
-            float nearX = nearY * aspect;
-
-            bx::Vec3 cornerVS = {0.0f, 0.0f, 0.0f};
-            cornerVS.x = frustumCorners[j].x * (j < 4 ? nearX : farX);
-            cornerVS.y = frustumCorners[j].y * (j < 4 ? nearY : farY);
-            cornerVS.z = -(j < 4 ? lastSplitDist : splitDist);
-
-            // Transform from view space to world space
-            float cornerWS[4];
-            float cornerVS4[4] = { cornerVS.x, cornerVS.y, cornerVS.z, 1.0f };
-            bx::vec4MulMtx(cornerWS, cornerVS4, invCamView);
-            frustumCorners[j] = {cornerWS[0], cornerWS[1], cornerWS[2]};
-            center = bx::add(center, frustumCorners[j]);
+        if (Core::_GetApp()->debug.CSMBounds) { 
+            // Draw line from light to target
+            float from[3] = { lightPos.x, lightPos.y, lightPos.z };
+            float to[3] = { target.x, target.y, target.z };
+            Core::_GetApp()->physicsManager->_DrawLine(from, to, JPH::Color::sYellow);
         }
-        center = bx::mul(center, 1.0f / 8.0f);
+        
+        bx::mtxLookAt(&outLightView[i * 16], lightPos, target, up);
 
-        // Create the light's view matrix
-        bx::Vec3 up = {0.0f, 1.0f, 0.0f};
-        // Handle edge case where light direction is parallel to 'up'
-        if (bx::abs(bx::dot(lightDirVec, up)) > 0.999f) {
-            up = {0.0f, 0.0f, 1.0f};
-        }
-        bx::Vec3 lightPos = bx::add(center, bx::mul(lightDirVec, farClip)); // Position light far away
-        bx::mtxLookAt(&outLightView[i * 16], lightPos, center, up);
-
-        // Transform frustum corners to light space to find the bounding box
-        float minX = FLT_MAX, maxX = -FLT_MAX;
-        float minY = FLT_MAX, maxY = -FLT_MAX;
-        float minZ = FLT_MAX, maxZ = -FLT_MAX;
-        for (uint32_t j = 0; j < 8; ++j) {
-            float cornerLS[4];
-            float cornerVec4[4] = { frustumCorners[j].x, frustumCorners[j].y, frustumCorners[j].z, 1.0f };
-            bx::vec4MulMtx(cornerLS, cornerVec4, &outLightView[i * 16]);
-            minX = bx::min(minX, cornerLS[0]);
-            maxX = bx::max(maxX, cornerLS[0]);
-            minY = bx::min(minY, cornerLS[1]);
-            maxY = bx::max(maxY, cornerLS[1]);
-            minZ = bx::min(minZ, cornerLS[2]);
-            maxZ = bx::max(maxZ, cornerLS[2]);
-        }
-
-        // Ensure proper near/far and add a small margin so geometry isn't clipped
-        float margin = 10.0f; // world units margin, tune as needed
-        float lightNear = minZ - margin;
-        float lightFar  = maxZ + margin;
-        if (lightNear > lightFar) std::swap(lightNear, lightFar);
-
-        // Make extents square (prevents non-square cascades)
-        float extX = bx::abs(maxX - minX);
-        float extY = bx::abs(maxY - minY);
-        float halfSpan = bx::max(extX, extY) * 0.5f;
-        float centerX = (minX + maxX) * 0.5f;
-        float centerY = (minY + maxY) * 0.5f;
-        float left  = centerX - halfSpan;
-        float right = centerX + halfSpan;
-        float bottom= centerY - halfSpan;
-        float top   = centerY + halfSpan;
-
-        // Snap to texel grid to stabilize (world units per texel)
-        float worldUnitsPerTexel = (right - left) / (float)SHADOW_MAP_SIZE;
-        if (worldUnitsPerTexel > 0.0f) {
-            left   = floorf(left   / worldUnitsPerTexel) * worldUnitsPerTexel;
-            right  = floorf(right  / worldUnitsPerTexel) * worldUnitsPerTexel;
-            bottom = floorf(bottom / worldUnitsPerTexel) * worldUnitsPerTexel;
-            top    = floorf(top    / worldUnitsPerTexel) * worldUnitsPerTexel;
-        }
-
-        float mtx[16];
-        bx::mtxOrtho(mtx, left, right, bottom, top, lightNear, lightFar, 0.0f, bgfx::getCaps()->homogeneousDepth);
-        bx::memCopy(&outLightProj[i * 16], mtx, sizeof(float) * 16);
-
-        outCascadeSplits[i] = splitDist;
-        lastSplitDist = splitDist;
+        // Try and keep tight near/far planes for good precision
+        float lightNear = 10.0f;
+        float lightFar = m_config.shadowDist + 50.0f; // Some margin
+        
+        bx::mtxOrtho(&outLightProj[i * 16],
+                     -size, size,
+                     -size, size,
+                     lightNear, lightFar,
+                     0.0f, bgfx::getCaps()->homogeneousDepth);
+        
+        outCascadeSplits[i] = cascadeDistances[i];
+        bx::mtxMul(&lightViewProj[i * 16], &outLightView[i * 16], &outLightProj[i * 16]);
     }
-}
-
-void Renderer::_GetLightViewProj(CameraComponent* camera,
-                                 float            radius,
-                                 float*           outView,
-                                 float*           outProj) {
-    const float rad = radius;
-    float light[3];
-    GetSunDirection(light);
-
-    const bx::Vec3 lightDir(light[0], light[1], light[2]);
-    const float* cam = camera->GetPosition();
-    const bx::Vec3 camPos(cam[0], cam[1], cam[2]);
-    const bx::Vec3 lightPos = bx::add(camPos, bx::mul(lightDir, rad));
-    bx::Vec3 up = {0.0f, 1.0f, 0.0f};
-
-    // Simple ortho bounds around scene center
-    bx::mtxLookAt(outView, lightPos, camPos, up);
-    bx::mtxOrtho(outProj,
-                 -rad,
-                 rad,
-                 -rad,
-                 rad,
-                 0.1f,
-                 2*rad,
-                 0.0f,
-                 bgfx::getCaps()->homogeneousDepth);
+    
+    SetUniform(m_defaultUniformIds["u_default_csmLightViewProj"], lightViewProj, NUM_CASCADES);
+    SetUniform(m_defaultUniformIds["u_texture_csmLightViewProj"], lightViewProj, NUM_CASCADES);
 }
 
 /*
@@ -881,7 +806,7 @@ void Renderer::_GetLightViewProj(CameraComponent* camera,
 
 void Renderer::_DrawShadows(const Program& program, CameraComponent* camera, uint8_t cascade) {
     const uint64_t renderState =
-        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
+        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
 
     if (Core::_GetApp()->debug.CSMBounds) {
         float view[16 * NUM_CASCADES], proj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
@@ -889,16 +814,7 @@ void Renderer::_DrawShadows(const Program& program, CameraComponent* camera, uin
         for (int i = 0; i < NUM_CASCADES; ++i) {
             Core::_GetApp()->physicsManager->_DrawOtherFrustum(view + i * 16, proj + i * 16);
         }
-        // Draw line from camera pos to light pos
-        float lightDir[3];
-        GetSunDirection(lightDir);
-        const float* camPos = camera->GetPosition();
-        bx::Vec3 camPosVec(camPos[0], camPos[1], camPos[2]);
-        bx::Vec3     lightPos = bx::add(
-            camPosVec,
-            bx::mul(bx::Vec3(lightDir[0], lightDir[1], lightDir[2]), 100.0f));
-        float final[3] = { lightPos.x, lightPos.y, lightPos.z };
-        Core::_GetApp()->physicsManager->_DrawLine(camera->GetPosition(), final, JPH::Color::sYellow);
+
     }
 
     std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
@@ -1009,12 +925,15 @@ void Renderer::_DrawForward(const Program& program, CameraComponent* camera) {
 
         if (m_config.useShadows) {
             // Set shadow map for the texture program
+            const uint64_t depthSampler =
+                BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
             std::string name = "u_" + program.name + "_shadowMap";
             bgfx::setTexture(
                 3,
                 _GetUniform(m_defaultUniformIds[name])->handle,
                 m_shadowDepth,
-                samplerFlags);
+                depthSampler);
         }
 
         bgfx::setVertexBuffer(0, meshData.vbh);
@@ -1108,9 +1027,10 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     float lightProj[NUM_CASCADES * 16];
     float cascadeSplits[NUM_CASCADES];
 
-    CameraComponent* ecam = Registry::GetGameObjectByName("EditorCamera")->GetComponent<CameraComponent>();
-    CameraComponent* pcam = Registry::GetGameObjectByName("player")->GetComponent<CameraComponent>();
-    const float* camPos = pcam->GetPosition();
+    CameraComponent* pcam = Registry::GetGameObjectByName("player")
+                                ->GetComponent<CameraComponent>();
+
+    const float* camPos = camera->GetPosition();
     float        viewPos[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
     SetUniform(m_defaultUniformIds["u_default_viewPos"], viewPos);
     SetUniform(m_defaultUniformIds["u_texture_viewPos"], viewPos);
@@ -1122,26 +1042,25 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     SetUniform(m_defaultUniformIds["u_texture_lightDir"], lightDirUniform);
 
     if (m_config.useShadows) {
-        _CalculateCascadeMatrices(pcam, lightView, lightProj, cascadeSplits);
+        _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
 
-        float lightViewProj[NUM_CASCADES * 16];
-        for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
-            bx::mtxMul(&lightViewProj[i * 16], &lightProj[i * 16], &lightView[i * 16]);
-        }
-
-        SetUniform(m_defaultUniformIds["u_default_csmLightViewProj"],
-                   lightViewProj, NUM_CASCADES);
-        SetUniform(m_defaultUniformIds["u_texture_csmLightViewProj"],
-                   lightViewProj, NUM_CASCADES);
-
-        // Normalize splits to [0,1] relative to shadowDist (m_config.shadowDist).
         float farClip = m_config.shadowDist;
-        float splits[4] = { cascadeSplits[0] / farClip,
-                            cascadeSplits[1] / farClip,
-                            cascadeSplits[2] / farClip,
-                            cascadeSplits[3] / farClip };
+        float splits[4] = { cascadeSplits[0],
+                            cascadeSplits[1],
+                            cascadeSplits[2],
+                            cascadeSplits[3] };
         SetUniform(m_defaultUniformIds["u_default_csmSplits"], splits);
         SetUniform(m_defaultUniformIds["u_texture_csmSplits"], splits);
+
+        float shadowParams[4] = {
+            bgfx::getCaps()->homogeneousDepth ? 1.0f
+                                              : 0.0f, // Homogeneous depth
+            1.0f / (float)(SHADOW_MAP_SIZE * 2),      // Inv shadow map size
+            m_config.shadowDist, // Light far plane
+            0.0f // Debug value
+        };
+        SetUniform(m_defaultUniformIds["u_default_shadowParams"], shadowParams);
+        SetUniform(m_defaultUniformIds["u_texture_shadowParams"], shadowParams);
     }
 
     // Update main camera matrices
@@ -1157,6 +1076,8 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 uint16_t y = (i / 2) * SHADOW_MAP_SIZE;
                 bgfx::setViewRect(
                     cascadeViewId, x, y, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+                bgfx::setViewScissor(
+                    cascadeViewId, x, y, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
                 bgfx::setViewClear(
                     cascadeViewId, BGFX_CLEAR_DEPTH, 0x00000000, 1.0f, 0);
                 bgfx::setViewTransform(
@@ -1169,7 +1090,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
             // Remove translation for skybox
             bgfx::setViewRect(view, 0, 0, bgfx::BackbufferRatio::Equal);
             camera->Update(view, width, height);
-            Camera cam = ecam->GetCamera();
+            Camera cam = camera->GetCamera();
             float  skyView[16];
             bx::memCopy(skyView, cam.view, sizeof(skyView));
             skyView[12] = skyView[13] = skyView[14] = 0.0f;
@@ -1178,7 +1099,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         }
         default: {
             bgfx::setViewRect(view, 0, 0, uint16_t(width), uint16_t(height));
-            Camera cam = ecam->GetCamera();
+            Camera cam = camera->GetCamera();
             bgfx::setViewTransform(view, cam.view, cam.proj);
             break;
         }
@@ -1206,10 +1127,10 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 _DrawSky(program);
                 break;
             case VIEW_FORWARD:
-                _DrawForward(program, ecam);
+                _DrawForward(program, camera);
                 break;
             case VIEW_DEBUG:
-                if (debug.Enabled) _DrawDebug(program, ecam, debug);
+                if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
             case VIEW_BILL_DBG:
                 if (debug.Enabled &&debug.Gizmos) _DrawBillboard(program);

@@ -78,7 +78,7 @@ struct Program {
 /// @brief To manage renderer configuration
 struct RendererConfig {
     bool useShadows = true; //* Whether to use shadow mapping
-    float shadowDist = 50.0f; //* Distance for shadow rendering
+    float shadowDist = 200.0f; //* Distance for shadow rendering
 };
 
 /// @brief Renderer class to manage rendering and shader programs
@@ -287,9 +287,6 @@ class Renderer {
                                           float*           outLightView,
                                           float*           outLightProj,
                                           float*           outCascadeSplits);
-
-    static void
-    _GetLightViewProj(CameraComponent* camera, float radius, float* outView, float* outProj);
 
     static constexpr std::array<Syngine::ViewID, 10> _allViews = {
         Syngine::VIEW_SHADOW,   Syngine::VIEW_SKY,       Syngine::VIEW_GBUFFER,
