@@ -24,39 +24,10 @@ namespace Syngine {
 /// @section Input
 struct KeyBinding {
 
-    constexpr bool operator==(const KeyBinding& other) const {
-        return binding == other.binding;
-    };
 
-    /// @brief Constructs an empty KeyBinding
-    KeyBinding();
-
-    /// @brief Constructs a KeyBinding from a SynKeycode
-    KeyBinding(SynKeycode key);
-
-    /// @brief Constructs a KeyBinding from a ModifierKey
-    KeyBinding(ModifierKey modifier);
-
-    /// @brief Constructs a KeyBinding from a SidedModifierKey
-    KeyBinding(SidedModifierKey modifier);
-
-    /// @brief Constructs a KeyBinding from a KeyboardShortcut
-    KeyBinding(KeyboardShortcut shortcut);
-
-    /// @brief Constructs a KeyBinding from an InputChord
-    KeyBinding(InputChord chord);
-
-  private:
-    // Intentionally not using KeyboardBindable so we don't have nested
-    // `std::variant`s
-    /// @brief This object's binding
-    std::variant<Unbound,
-                 SynKeycode,
-                 ModifierKey,
-                 SidedModifierKey,
-                 KeyboardShortcut,
-                 InputChord>
-        binding;
+    bool operator==(const KeyBinding& other) const {
+        return false; // TODO: actually implement this
+    }
 };
 
 /// @brief A bound input action

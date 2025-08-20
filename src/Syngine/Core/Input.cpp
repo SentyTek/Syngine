@@ -11,28 +11,6 @@
 #include "InputHelpers.h"
 #include "Syngine/Core/Logger.h"
 
-// KeyBinding constructors
-
-Syngine::KeyBinding::KeyBinding() : binding(Unbound{}) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::KeyboardKey key)
-    : binding(key) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::ModifierKey modifier)
-    : binding(modifier) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::SidedModifierKey modifier)
-    : binding(modifier) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::KeyboardShortcut shortcut)
-    : binding(shortcut) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::InputChord chord)
-    : binding(chord) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::MouseKey mouseKey)
-    : binding(mouseKey) {}
-
 // Initialize InputAction's static members
 
 std::vector<Syngine::InputAction*> Syngine::InputAction::_Bindings;
