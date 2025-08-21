@@ -10,10 +10,14 @@
 #ifndef SynInputHelpers_h
 #define SynInputHelpers_h
 
+#include "Syngine/Core/Logger.h"
+
 #include "SDL3/SDL_scancode.h"
 #include "SDL3/SDL_keycode.h"
+#include "SDL3/SDL_keyboard.h"
 
 #include <cstdint>
+#include <string>
 
 namespace Syngine {
 
@@ -289,19 +293,53 @@ inline constexpr SynScancode _SdlToSyn(const SDL_Scancode& scancode) {
     case SDL_SCANCODE_KP_DECIMAL:
     case SDL_SCANCODE_KP_HEXADECIMAL:
 
-        // don't feel like adding the USB 0x0C and mobile keys, doubt they'll
-        // show up in practice. If they do I'll implement them
+    case SDL_SCANCODE_SLEEP:
+    case SDL_SCANCODE_WAKE:
+
+    case SDL_SCANCODE_CHANNEL_INCREMENT:
+    case SDL_SCANCODE_CHANNEL_DECREMENT:
+
+    case SDL_SCANCODE_MEDIA_PLAY:
+    case SDL_SCANCODE_MEDIA_PAUSE:
+    case SDL_SCANCODE_MEDIA_RECORD:
+    case SDL_SCANCODE_MEDIA_FAST_FORWARD:
+    case SDL_SCANCODE_MEDIA_REWIND:
+    case SDL_SCANCODE_MEDIA_NEXT_TRACK:
+    case SDL_SCANCODE_MEDIA_PREVIOUS_TRACK:
+    case SDL_SCANCODE_MEDIA_STOP:
+    case SDL_SCANCODE_MEDIA_EJECT:
+    case SDL_SCANCODE_MEDIA_PLAY_PAUSE:
+    case SDL_SCANCODE_MEDIA_SELECT:
+
+    case SDL_SCANCODE_AC_NEW:
+    case SDL_SCANCODE_AC_OPEN:
+    case SDL_SCANCODE_AC_CLOSE:
+    case SDL_SCANCODE_AC_EXIT:
+    case SDL_SCANCODE_AC_SAVE:
+    case SDL_SCANCODE_AC_PRINT:
+    case SDL_SCANCODE_AC_PROPERTIES:
+
+    case SDL_SCANCODE_AC_SEARCH:
+    case SDL_SCANCODE_AC_HOME:
+    case SDL_SCANCODE_AC_BACK:
+    case SDL_SCANCODE_AC_FORWARD:
+    case SDL_SCANCODE_AC_STOP:
+    case SDL_SCANCODE_AC_REFRESH:
+    case SDL_SCANCODE_AC_BOOKMARKS:
+
+    case SDL_SCANCODE_SOFTLEFT:
+    case SDL_SCANCODE_SOFTRIGHT:
+    case SDL_SCANCODE_CALL:
+    case SDL_SCANCODE_ENDCALL:
 
     case SDL_SCANCODE_RESERVED:
     case SDL_SCANCODE_COUNT:
 
-        return SynScancode::UNKNOWN; // No equivalent in SynScancode
+        Logger::Warn("Untranslatable scancode: " +
+                     static_cast<std::string>(SDL_GetScancodeName(scancode)));
+        return SynScancode::UNKNOWN;
 
-    default:
-        return static_cast<SynScancode>(
-            scancode); // It didn't equal one of the non-implemented values;
-                       // SynScancode and SDL_Scancode have a one-to-one
-                       // underlying mapping
+    default: return static_cast<SynScancode>(scancode);
     }
 }
 
@@ -490,8 +528,135 @@ inline constexpr SynKeycode _SdlToSyn(const SDL_Keycode& keycode) {
     switch (keycode) {
     case SDLK_EXTENDED_MASK:
     case SDLK_SCANCODE_MASK:
-    // ...
 
+    case SDLK_POWER:
+
+    case SDLK_EXECUTE:
+    case SDLK_HELP:
+    case SDLK_MENU:
+    case SDLK_SELECT:
+    case SDLK_STOP:
+    case SDLK_AGAIN:
+    case SDLK_UNDO:
+    case SDLK_CUT:
+    case SDLK_COPY:
+    case SDLK_PASTE:
+    case SDLK_FIND:
+    case SDLK_MUTE:
+    case SDLK_VOLUMEUP:
+    case SDLK_VOLUMEDOWN:
+    case SDLK_KP_COMMA:
+    case SDLK_KP_EQUALSAS400:
+    case SDLK_ALTERASE:
+    case SDLK_SYSREQ:
+    case SDLK_CANCEL:
+    case SDLK_CLEAR:
+    case SDLK_PRIOR:
+    case SDLK_RETURN2:
+    case SDLK_SEPARATOR:
+    case SDLK_OUT:
+    case SDLK_OPER:
+    case SDLK_CLEARAGAIN:
+    case SDLK_CRSEL:
+    case SDLK_EXSEL:
+    case SDLK_KP_00:
+    case SDLK_KP_000:
+    case SDLK_THOUSANDSSEPARATOR:
+    case SDLK_DECIMALSEPARATOR:
+    case SDLK_CURRENCYUNIT:
+    case SDLK_CURRENCYSUBUNIT:
+    case SDLK_KP_LEFTPAREN:
+    case SDLK_KP_RIGHTPAREN:
+    case SDLK_KP_LEFTBRACE:
+    case SDLK_KP_RIGHTBRACE:
+    case SDLK_KP_TAB:
+    case SDLK_KP_BACKSPACE:
+    case SDLK_KP_A:
+    case SDLK_KP_B:
+    case SDLK_KP_C:
+    case SDLK_KP_D:
+    case SDLK_KP_E:
+    case SDLK_KP_F:
+    case SDLK_KP_XOR:
+    case SDLK_KP_POWER:
+    case SDLK_KP_PERCENT:
+    case SDLK_KP_LESS:
+    case SDLK_KP_GREATER:
+    case SDLK_KP_AMPERSAND:
+    case SDLK_KP_DBLAMPERSAND:
+    case SDLK_KP_VERTICALBAR:
+    case SDLK_KP_DBLVERTICALBAR:
+    case SDLK_KP_COLON:
+    case SDLK_KP_HASH:
+    case SDLK_KP_SPACE:
+    case SDLK_KP_AT:
+    case SDLK_KP_EXCLAM:
+    case SDLK_KP_MEMSTORE:
+    case SDLK_KP_MEMRECALL:
+    case SDLK_KP_MEMCLEAR:
+    case SDLK_KP_MEMADD:
+    case SDLK_KP_MEMSUBTRACT:
+    case SDLK_KP_MEMMULTIPLY:
+    case SDLK_KP_MEMDIVIDE:
+    case SDLK_KP_PLUSMINUS:
+    case SDLK_KP_CLEAR:
+    case SDLK_KP_CLEARENTRY:
+    case SDLK_KP_BINARY:
+    case SDLK_KP_OCTAL:
+    case SDLK_KP_DECIMAL:
+    case SDLK_KP_HEXADECIMAL:
+
+    case SDLK_MODE:
+
+    case SDLK_SLEEP:
+    case SDLK_WAKE:
+
+    case SDLK_CHANNEL_INCREMENT:
+    case SDLK_CHANNEL_DECREMENT:
+
+    case SDLK_MEDIA_PLAY:
+    case SDLK_MEDIA_PAUSE:
+    case SDLK_MEDIA_RECORD:
+    case SDLK_MEDIA_FAST_FORWARD:
+    case SDLK_MEDIA_REWIND:
+    case SDLK_MEDIA_NEXT_TRACK:
+    case SDLK_MEDIA_PREVIOUS_TRACK:
+    case SDLK_MEDIA_STOP:
+    case SDLK_MEDIA_EJECT:
+    case SDLK_MEDIA_PLAY_PAUSE:
+    case SDLK_MEDIA_SELECT:
+
+    case SDLK_AC_NEW:
+    case SDLK_AC_OPEN:
+    case SDLK_AC_CLOSE:
+    case SDLK_AC_EXIT:
+    case SDLK_AC_SAVE:
+    case SDLK_AC_PRINT:
+    case SDLK_AC_PROPERTIES:
+
+    case SDLK_AC_SEARCH:
+    case SDLK_AC_HOME:
+    case SDLK_AC_BACK:
+    case SDLK_AC_FORWARD:
+    case SDLK_AC_STOP:
+    case SDLK_AC_REFRESH:
+    case SDLK_AC_BOOKMARKS:
+
+    case SDLK_SOFTLEFT:
+    case SDLK_SOFTRIGHT:
+    case SDLK_CALL:
+    case SDLK_ENDCALL:
+
+    case SDLK_LEFT_TAB:
+    case SDLK_LEVEL5_SHIFT:
+    case SDLK_MULTI_KEY_COMPOSE:
+    case SDLK_LMETA:
+    case SDLK_RMETA:
+    case SDLK_LHYPER:
+    case SDLK_RHYPER:
+
+        Logger::Warn("Untranslatable keycode: " +
+                     static_cast<std::string>(SDL_GetKeyName(keycode)));
         return SynKeycode::UNKNOWN; // No equivalent in SynKeycode
 
     default: return static_cast<SynKeycode>(keycode);
@@ -540,31 +705,59 @@ struct SynKeymod {
     static constexpr uint16_t COMMAND       = SDL_KMOD_GUI; // Convenience
     static constexpr uint16_t WINDOWS       = SDL_KMOD_GUI; // Convenience
 
-    SynKeymod operator+(const SynKeymod& other) const {
+    constexpr SynKeymod operator+(const SynKeymod& other) const {
         return SynKeymod(this->_rawValue | other._rawValue);
     }
 
-    SynKeymod operator-(const SynKeymod& other) const {
+    constexpr SynKeymod operator-(const SynKeymod& other) const {
         return SynKeymod(this->_rawValue & ~other._rawValue);
     }
 
-    SynKeymod operator+=(const SynKeymod& other) {
+    constexpr SynKeymod operator+=(const SynKeymod& other) {
         this->_rawValue |= other._rawValue;
         return *this;
     }
 
-    SynKeymod operator-=(const SynKeymod& other) {
+    constexpr SynKeymod operator-=(const SynKeymod& other) {
         this->_rawValue &= ~other._rawValue;
         return *this;
     }
 
-    bool operator==(const SynKeymod& other) const {
+    constexpr bool operator==(const SynKeymod& other) const {
         return this->_rawValue == other._rawValue;
     }
 
     friend constexpr SynKeymod _SdlToSyn(const SDL_Keymod& keymod) {
+        // modifiers SDL vends that we don't support
+        const SDL_Keymod omitted = static_cast<SDL_Keymod>(0xF000u);
+
+        if (keymod & omitted) {
+            std::string omittedMods{};
+            bool        first{ true };
+            if (keymod & SDL_KMOD_NUM) {
+                omittedMods += "Num Lock";
+                first = false;
+            }
+            if (keymod & SDL_KMOD_CAPS) {
+                if (!first) omittedMods += ", ";
+                omittedMods += "Caps Lock";
+                first = false;
+            }
+            if (keymod & SDL_KMOD_MODE) {
+                if (!first) omittedMods += ", ";
+                omittedMods += "Mode";
+                first = false;
+            }
+            if (keymod & SDL_KMOD_SCROLL) {
+                if (!first) omittedMods += ", ";
+                omittedMods += "Scroll Lock";
+            }
+            Logger::Warn("Untranslatable modifiers: '" + omittedMods +
+                         "'. All other modifiers will be translated.");
+        }
+
         // mask out the omitted modifiers
-        SDL_Keymod masked = keymod & ~static_cast<SDL_Keymod>(0xF000u);
+        const SDL_Keymod masked = keymod & ~omitted;
         return SynKeymod(static_cast<uint16_t>(masked));
     }
 
