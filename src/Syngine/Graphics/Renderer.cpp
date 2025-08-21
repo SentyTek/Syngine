@@ -759,6 +759,7 @@ void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
         float size = cascadeSizes[i];
 
         // How far light is from camera
+        // Light is always targeting camera, will be some distance away
         float lightDistance = 100.0f;
         
         bx::Vec3 lightPos = {
@@ -1021,10 +1022,7 @@ void Renderer::_DrawUIDebug(CameraComponent* camera) {
 }
 
 bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
-    float lightView[NUM_CASCADES * 16];
-    float lightProj[NUM_CASCADES * 16];
-    float cascadeSplits[NUM_CASCADES];
-
+    // Prepare camera and light information
     CameraComponent* pcam = Registry::GetGameObjectByName("player")
                                 ->GetComponent<CameraComponent>();
 
@@ -1038,10 +1036,14 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     float lightDirUniform[4] = { sunDir[0], sunDir[1], sunDir[2], 0.0f };
     SetUniform(m_defaultUniformIds["u_default_lightDir"], lightDirUniform);
     SetUniform(m_defaultUniformIds["u_texture_lightDir"], lightDirUniform);
-
+    
+    float lightView[NUM_CASCADES * 16];
+    float lightProj[NUM_CASCADES * 16];
     if (m_config.useShadows) {
+        // Calculate the cascade matrices for shadow mapping and send to GPU
+        float cascadeSplits[NUM_CASCADES];
         _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
-
+        
         float farClip = m_config.shadowDist;
         float splits[4] = { cascadeSplits[0],
                             cascadeSplits[1],
