@@ -87,11 +87,7 @@ float getShadowFactor(vec3 worldPos, vec3 worldNormal, vec4 lightDir, float view
     // Perspective divide
     vec3 proj = sc.xyz / sc.w;
     vec2 projXY = proj.xy * 0.5 + 0.5;
-
-    // Flip Y coordinate for D3D, to match DirectX's coordinate system
-#if BGFX_SHADER_LANGUAGE_HLSL
     projXY.y = 1.0 - projXY.y;
-#endif
 
     float normalizedZ = proj.z;
 

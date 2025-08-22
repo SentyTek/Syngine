@@ -38,7 +38,6 @@ void main() {
     vec3 B      = cross(v_normalNormed, T) * v_tangent.w;
     vec3 Nmicro = normalize(T*nmap.x + B*nmap.y + v_normalNormed*nmap.z);
 
-
     //blend
     vec3 N      = normalize( mix(Nmacro, Nmicro, u_floats.y) );
 

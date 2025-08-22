@@ -16,6 +16,7 @@ void main() {
         // If the light is below the horizon, we consider it to be in shadow
         diffuseIntensity = 0.0;
     }
+    
     float shadowFactor = getShadowFactor(v_worldPos, normal, u_lightDir, v_viewDepth);
     float ambientIntensity = 0.20;
 
