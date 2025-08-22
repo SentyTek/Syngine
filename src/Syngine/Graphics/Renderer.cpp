@@ -349,10 +349,6 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
                                  RegisterUniform(defaultProg,
                                                  "u_shadowParams",
                                                  UniformType::UNIFORM_VEC4) });
-    m_defaultUniformIds.insert({ "u_dbg",
-                                 RegisterUniform(defaultProg,
-                                                 "u_dbg",
-                                                 UniformType::UNIFORM_VEC4) });
 
     // Initial sun direction in degrees (yaw, pitch, roll)
     // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive = up).
@@ -749,7 +745,7 @@ void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
 
     // Currently using fixed cascade sizes based on shadow distance
     float cascadeSizes[NUM_CASCADES] = {
-        10, 25, round(m_config.shadowDist / 3), round(m_config.shadowDist)
+        10, 50, round(m_config.shadowDist / 3), round(m_config.shadowDist)
     };
 
     float cascadeDistances[NUM_CASCADES];

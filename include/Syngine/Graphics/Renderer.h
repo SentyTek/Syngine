@@ -78,7 +78,7 @@ struct Program {
 /// @brief To manage renderer configuration
 struct RendererConfig {
     bool useShadows = true; //* Whether to use shadow mapping
-    float shadowDist = 200.0f; //* Distance for shadow rendering
+    float shadowDist = 500.0f; //* Distance for shadow rendering
 };
 
 /// @brief Renderer class to manage rendering and shader programs
