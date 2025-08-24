@@ -9,10 +9,14 @@
 #ifndef SynInput_h
 #define SynInput_h
 
-#include "Syngine/Core/InputHelpers.h"
+#include "../src/Syngine/Core/InputHelpers.h"
 
 #include "SDL3/SDL_events.h"
 
+#include <cstddef>
+#include <cstdint>
+#include <initializer_list>
+#include <sys/types.h>
 #include <variant>
 #include <string>
 #include <vector>
@@ -20,14 +24,125 @@
 
 namespace Syngine {
 
+enum class KeybindType : size_t {
+    UNBOUND  = 0,
+    KEYCODE  = 1,
+    SCANCODE = 2,
+    SHORTCUT = 3,
+    SEQUENCE = 4
+};
+
+using KeyUnbound = std::monostate;
+
+struct KeyShortcut {
+  private:
+    std::variant<Keycode, Scancode> key;
+    Keymod                          modifiers;
+
+  public:
+    KeyShortcut() = delete;
+
+    constexpr KeyShortcut(std::variant<Keycode, Scancode> key)
+        : key(key), modifiers() {}
+
+    constexpr KeyShortcut(std::variant<Keycode, Scancode> key, Keymod modifiers)
+        : key(key), modifiers(modifiers) {}
+
+    constexpr KeybindType type() const { return KeybindType::SHORTCUT; }
+
+    constexpr KeybindType subType() const {
+        return static_cast<KeybindType>(key.index() + 1);
+    }
+
+    constexpr bool operator==(const KeyShortcut& other) const {
+        return key == other.key && modifiers == other.modifiers;
+    }
+
+    constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
+};
+
+struct KeySequence {
+  private:
+    std::vector<std::variant<Keycode, Scancode, KeyShortcut>> bound;
+    uint32_t                                                  nextIndex;
+
+  public:
+    KeySequence() = delete;
+
+    constexpr KeySequence(std::variant<Keycode, Scancode, KeyShortcut> key)
+        : bound{ key }, nextIndex(0) {
+        bound.shrink_to_fit();
+    }
+
+    constexpr KeySequence(
+        std::initializer_list<std::variant<Keycode, Scancode, KeyShortcut>>
+            list)
+        : bound(list), nextIndex(0) {
+        bound.shrink_to_fit();
+    }
+
+    constexpr KeybindType subType(uint32_t index) const {
+        if (index < bound.size()) {
+            return static_cast<KeybindType>(bound[index].index() + 1);
+        } else {
+            return KeybindType::UNBOUND;
+        }
+    }
+
+    constexpr void reset() { nextIndex = 0; }
+
+    constexpr std::variant<KeyUnbound, Keycode, Scancode, KeyShortcut> next() {
+        if (bound.empty()) Logger::Fatal("KeySequence cannot be empty");
+
+        std::variant<Keycode, Scancode, KeyShortcut> nextKey = bound[nextIndex];
+
+        nextIndex = (nextIndex + 1) % bound.size();
+
+        switch (subType(nextIndex)) {
+        case KeybindType::UNBOUND: return KeyUnbound(); break;
+        case KeybindType::KEYCODE: return std::get<Keycode>(nextKey); break;
+        case KeybindType::SCANCODE: return std::get<Scancode>(nextKey); break;
+        case KeybindType::SHORTCUT:
+            return std::get<KeyShortcut>(nextKey);
+            break;
+        default: return KeyUnbound(); // Will probably never be called
+        }
+    }
+
+    constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
+
+    constexpr bool operator==(const KeySequence& other) const {
+        return bound == other.bound;
+    }
+};
+
 /// @brief Any key binding
 /// @section Input
 struct KeyBinding {
+  private:
+    std::variant<KeyUnbound, Keycode, Scancode, KeyShortcut, KeySequence>
+        binding;
 
+  public:
+    constexpr KeyBinding() : binding(KeyUnbound()) {}
 
-    bool operator==(const KeyBinding& other) const {
-        return false; // TODO: actually implement this
+    constexpr KeyBinding(Keycode keycode) : binding(keycode) {}
+
+    constexpr KeyBinding(Scancode scancode) : binding(scancode) {}
+
+    constexpr KeyBinding(KeyShortcut shortcut) : binding(shortcut) {}
+
+    constexpr KeyBinding(KeySequence sequence) : binding(sequence) {}
+
+    constexpr KeybindType subType() const {
+        return static_cast<KeybindType>(binding.index());
     }
+
+    constexpr bool operator==(const KeyBinding& other) const {
+        return binding == other.binding;
+    }
+
+    constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
 };
 
 /// @brief A bound input action
@@ -38,10 +153,10 @@ class InputAction {
   public:
     /// @brief A container for callbacks
     struct Callbacks {
-        // are these lambda expressions valid C++ code on all compilers?
-        std::function<void()> onPressed      = [] {};
-        std::function<void()> onReleased     = [] {};
-        std::function<void()> onStateChanged = [] {};
+
+        std::function<void()> onPressed      = []() -> void {};
+        std::function<void()> onReleased     = []() -> void {};
+        std::function<void()> onStateChanged = []() -> void {};
     };
 
     /// @brief The identifier for this input action
@@ -111,6 +226,7 @@ class InputAction {
                 Syngine::KeyBinding binding,
                 Callbacks           callbacks);
 
+    /// @note InputActions are non-copyable because of their unique identifiers
     InputAction(const InputAction& other) = delete;
 
     InputAction(InputAction&& other) = default;

@@ -7,9 +7,11 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Input.h"
-#include "SDL3/SDL_events.h"
-#include "InputHelpers.h"
 #include "Syngine/Core/Logger.h"
+
+#include "InputHelpers.h"
+
+#include "SDL3/SDL_events.h"
 
 // Initialize InputAction's static members
 
@@ -65,7 +67,7 @@ Syngine::InputAction::InputAction(const std::string&  identifier,
     : InputAction(identifier, name, "", binding, Callbacks()) {}
 
 Syngine::InputAction::~InputAction() {
-    Logger::Info("Removing InputAction '" + this->identifier + "'");
+    Logger::Warn("Removing InputAction '" + this->identifier + "'");
     Syngine::InputAction::_Bindings.erase(
         std::remove(Syngine::InputAction::_Bindings.begin(),
                     Syngine::InputAction::_Bindings.end(),
@@ -104,44 +106,81 @@ bool Syngine::InputAction::stateChanged() {
     return this->currentState != this->previousState;
 }
 
-void Syngine::InputAction::_HandleEvent(SDL_Event event) {
-    Syngine::KeyBinding called = _InputHelpers::_InputEventToKeyBinding(event);
-    bool                down;
-
-    if (called == Syngine::KeyBinding()) {
-        Logger::Log("Event contains no convertible binding");
-        return; // No binding, nothing to do
+constexpr bool
+Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+    switch (this->subType()) {
+    case KeybindType::KEYCODE:
+        return _SDLToSyn(event.key) == std::get<Keycode>(this->key) &&
+               (_SDLToSyn(event.mod) == this->modifiers);
+    case KeybindType::SCANCODE:
+        return _SDLToSyn(event.scancode) == std::get<Scancode>(this->key) &&
+               (_SDLToSyn(event.mod) == this->modifiers);
+    default: return false;
     }
+}
+
+constexpr bool
+Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+    bool triggered;
+
+    switch (this->subType(nextIndex)) {
+    case KeybindType::UNBOUND: return false;
+    case KeybindType::KEYCODE:
+        triggered = _SDLToSyn(event.key) == std::get<Keycode>(next());
+        break;
+    case KeybindType::SCANCODE:
+        triggered = _SDLToSyn(event.scancode) == std::get<Scancode>(next());
+        break;
+    case KeybindType::SHORTCUT:
+        triggered = std::get<KeyShortcut>(next())._isTriggeredByEvent(event);
+        break;
+    default: triggered = false;
+    }
+
+    if (!triggered) this->reset();
+    return triggered;
+}
+
+constexpr bool
+Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+    switch (this->subType()) {
+    case KeybindType::UNBOUND: return false;
+    case KeybindType::KEYCODE:
+        return _SDLToSyn(event.key) == std::get<Keycode>(this->binding);
+    case KeybindType::SCANCODE:
+        return _SDLToSyn(event.scancode) == std::get<Scancode>(this->binding);
+    case KeybindType::SHORTCUT:
+        return std::get<KeyShortcut>(this->binding)._isTriggeredByEvent(event);
+    case KeybindType::SEQUENCE:
+        return std::get<KeySequence>(this->binding)._isTriggeredByEvent(event);
+    }
+}
+
+void Syngine::InputAction::_HandleEvent(SDL_Event event) {
+    bool down = false;
 
     switch (event.type) {
-    case SDL_EVENT_KEY_DOWN:
-    case SDL_EVENT_MOUSE_BUTTON_DOWN: down = true; break;
-
-    case SDL_EVENT_MOUSE_BUTTON_UP:
-    case SDL_EVENT_KEY_UP: down = false; break;
-    
-    default:
-        Logger::Warn("Input event handler called with unimplemented event");
-        return; // Not a relevant event
-    }
-
-    // TODO: Get this to handle chords properly
-    for (InputAction* action : InputAction::_Bindings) {
-
-        if (action->binding == called) {
-            action->previousState = action->currentState;
-            action->currentState  = down;
-
-            Logger::Info(action->identifier + " has been called");
-
-            if (down) {
-                Logger::Info(action->identifier + " has been pressed");
-                action->callbacks.onPressed();
-            } else {
-                Logger::Info(action->identifier + " has been released");
-                action->callbacks.onReleased();
+    case SDL_EVENT_KEY_DOWN: down = true;
+    case SDL_EVENT_KEY_UP:
+        for (InputAction* action : InputAction::_Bindings) {
+            if (action->binding._isTriggeredByEvent(event.key)) {
+                Logger::Log("InputAction '" + action->identifier +
+                            "' triggered");
+                action->previousState = action->currentState;
+                action->currentState  = down;
+                action->callbacks.onStateChanged();
+                if (down) {
+                    action->callbacks.onPressed();
+                } else {
+                    action->callbacks.onReleased();
+                }
             }
-            action->callbacks.onStateChanged();
         }
+        break;
+
+    case SDL_EVENT_MOUSE_BUTTON_DOWN: down = true;
+    case SDL_EVENT_MOUSE_BUTTON_UP: break;
+
+    default: break;
     }
 }

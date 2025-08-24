@@ -33,7 +33,7 @@ struct Unbound {
 /// but Z on a French keyboard
 /// @note The names of scancodes are based on their position on an EN-US ANSI
 /// keyboard
-enum class SynScancode : uint32_t {
+enum class Scancode : uint32_t {
     // This is a mirror of SDL_Scancode with keys ommitted as needed and
     // convenience scancodes included
 
@@ -179,7 +179,7 @@ enum class SynScancode : uint32_t {
     // No need for an equivilant to SDL_SCANCODE_RESERVED or SDL_SCANCODE_COUNT
 };
 
-inline constexpr SynScancode _SdlToSyn(const SDL_Scancode& scancode) {
+inline constexpr Scancode _SDLToSyn(const SDL_Scancode& scancode) {
     switch (scancode) {
     case SDL_SCANCODE_NONUSHASH:
 
@@ -337,13 +337,13 @@ inline constexpr SynScancode _SdlToSyn(const SDL_Scancode& scancode) {
 
         Logger::Warn("Untranslatable scancode: " +
                      static_cast<std::string>(SDL_GetScancodeName(scancode)));
-        return SynScancode::UNKNOWN;
+        return Scancode::UNKNOWN;
 
-    default: return static_cast<SynScancode>(scancode);
+    default: return static_cast<Scancode>(scancode);
     }
 }
 
-inline constexpr SDL_Scancode _SynToSdl(const SynScancode& scancode) {
+inline constexpr SDL_Scancode _SynToSDL(const Scancode& scancode) {
     // SynScancode is a strict subset of SDL_Scancode so we don't have to do any
     // checks
     return static_cast<SDL_Scancode>(scancode);
@@ -351,7 +351,7 @@ inline constexpr SDL_Scancode _SynToSdl(const SynScancode& scancode) {
 
 /// @brief A virtual keyboard key. This is mapped to the meaning of the key, so
 /// SynKeycode::I will correspond to I on any keyboard
-enum class SynKeycode : uint32_t {
+enum class Keycode : uint32_t {
     // This is a mirror of SDL_Keycode, with keys ommitted as needed and
     // convenience scancodes included
 
@@ -524,7 +524,7 @@ enum class SynKeycode : uint32_t {
     // MODE through RIGHT_HYPER intentionally omitted
 };
 
-inline constexpr SynKeycode _SdlToSyn(const SDL_Keycode& keycode) {
+inline constexpr Keycode _SDLToSyn(const SDL_Keycode& keycode) {
     switch (keycode) {
     case SDLK_EXTENDED_MASK:
     case SDLK_SCANCODE_MASK:
@@ -657,27 +657,30 @@ inline constexpr SynKeycode _SdlToSyn(const SDL_Keycode& keycode) {
 
         Logger::Warn("Untranslatable keycode: " +
                      static_cast<std::string>(SDL_GetKeyName(keycode)));
-        return SynKeycode::UNKNOWN; // No equivalent in SynKeycode
+        return Keycode::UNKNOWN;
 
-    default: return static_cast<SynKeycode>(keycode);
+    default: return static_cast<Keycode>(keycode);
     }
 }
 
-inline constexpr SDL_Keycode _SynToSdl(const SynKeycode& keycode) {
+inline constexpr SDL_Keycode _SynToSDL(const Keycode& keycode) {
     // SynKeycode is a strict subset of SDL_Keycode so we don't have to do any
     // checks
     return static_cast<SDL_Keycode>(keycode);
 }
 
+struct Keymod; // Forward declaration for friend functions below
+
+constexpr Keymod     _SDLToSyn(const SDL_Keymod& keymod);
+constexpr SDL_Keymod _SynToSDL(const Keymod& keymod);
+
 /// @brief A virtual modifier key
-struct SynKeymod {
+struct Keymod {
     // This is a mirror of SDL_Keymod, with modifiers ommitted as needed and
     // convenience modifiers included
 
   private:
     uint16_t _rawValue;
-
-    constexpr SynKeymod(uint16_t rawValue) : _rawValue(rawValue) {}
 
   public:
     // LEVEL_5_SHIFT, NUM_LOCK, CAPS_LOCK, and SCROLL_LOCK intentionally omitted
@@ -705,29 +708,32 @@ struct SynKeymod {
     static constexpr uint16_t COMMAND       = SDL_KMOD_GUI; // Convenience
     static constexpr uint16_t WINDOWS       = SDL_KMOD_GUI; // Convenience
 
-    constexpr SynKeymod operator+(const SynKeymod& other) const {
-        return SynKeymod(this->_rawValue | other._rawValue);
+    constexpr Keymod() : _rawValue(NONE) {}
+    constexpr Keymod(uint16_t rawValue) : _rawValue(rawValue) {}
+
+    constexpr Keymod operator+(const Keymod& other) const {
+        return Keymod(this->_rawValue | other._rawValue);
     }
 
-    constexpr SynKeymod operator-(const SynKeymod& other) const {
-        return SynKeymod(this->_rawValue & ~other._rawValue);
+    constexpr Keymod operator-(const Keymod& other) const {
+        return Keymod(this->_rawValue & ~other._rawValue);
     }
 
-    constexpr SynKeymod operator+=(const SynKeymod& other) {
+    constexpr Keymod operator+=(const Keymod& other) {
         this->_rawValue |= other._rawValue;
         return *this;
     }
 
-    constexpr SynKeymod operator-=(const SynKeymod& other) {
+    constexpr Keymod operator-=(const Keymod& other) {
         this->_rawValue &= ~other._rawValue;
         return *this;
     }
 
-    constexpr bool operator==(const SynKeymod& other) const {
+    constexpr bool operator==(const Keymod& other) const {
         return this->_rawValue == other._rawValue;
     }
 
-    friend constexpr SynKeymod _SdlToSyn(const SDL_Keymod& keymod) {
+    friend constexpr Keymod _SDLToSyn(const SDL_Keymod& keymod) {
         // modifiers SDL vends that we don't support
         const SDL_Keymod omitted = static_cast<SDL_Keymod>(0xF000u);
 
@@ -758,10 +764,10 @@ struct SynKeymod {
 
         // mask out the omitted modifiers
         const SDL_Keymod masked = keymod & ~omitted;
-        return SynKeymod(static_cast<uint16_t>(masked));
+        return Keymod(static_cast<uint16_t>(masked));
     }
 
-    friend constexpr SDL_Keymod _SynToSdl(const SynKeymod& keymod) {
+    friend constexpr SDL_Keymod _SynToSDL(const Keymod& keymod) {
         return static_cast<SDL_Keymod>(keymod._rawValue);
     }
 };
