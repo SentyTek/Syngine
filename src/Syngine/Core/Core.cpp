@@ -178,12 +178,12 @@ bool Core::HandleEvents() {
         case SDL_EVENT_KEY_DOWN:
         case SDL_EVENT_KEY_UP:
             _HandleKeyEvent(event);
-            InputAction::_HandleEvent(event);
             break;
         }
 
         // Handle other events as needed
         BasicInput::_HandleEvent(event);
+        InputAction::_HandleEvent(event);
 
         if (m_internal.simulate) {
             auto players =

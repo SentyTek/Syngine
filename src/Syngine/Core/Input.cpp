@@ -7,42 +7,22 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Input.h"
-#include "SDL3/SDL_events.h"
-#include "InputHelpers.h"
 #include "Syngine/Core/Logger.h"
 
-// KeyBinding constructors
+#include "InputHelpers.h"
 
-Syngine::KeyBinding::KeyBinding() : binding(Unbound{}) {}
+#include "SDL3/SDL_events.h"
 
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::KeyboardKey key)
-    : binding(key) {}
+// MARK: Initialize InputAction's static members
 
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::ModifierKey modifier)
-    : binding(modifier) {}
+std::vector<Syngine::InputAction*> Syngine::InputAction::_Registry;
+std::list<Syngine::InputAction>    Syngine::InputAction::_HomelessShelter;
 
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::SidedModifierKey modifier)
-    : binding(modifier) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::KeyboardShortcut shortcut)
-    : binding(shortcut) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::InputChord chord)
-    : binding(chord) {}
-
-Syngine::KeyBinding::KeyBinding(Syngine::KeyBinding::MouseKey mouseKey)
-    : binding(mouseKey) {}
-
-// Initialize InputAction's static members
-
-std::vector<Syngine::InputAction*> Syngine::InputAction::_Bindings;
-std::vector<Syngine::InputAction>  Syngine::InputAction::_AnonymousActions;
-
-// InputAction private helpers and operators
+// MARK: InputAction private helpers and operators
 
 void Syngine::InputAction::EnsureUniqueIdentifier(
     const std::string& identifier) {
-    for (Syngine::InputAction* binding : Syngine::InputAction::_Bindings) {
+    for (Syngine::InputAction* binding : Syngine::InputAction::_Registry) {
         if (binding->identifier == identifier) {
             Syngine::Logger::Log("InputAction identifier '" + identifier +
                                      "' is not unique",
@@ -51,7 +31,7 @@ void Syngine::InputAction::EnsureUniqueIdentifier(
     }
 }
 
-// InputAction constructors
+// MARK: InputAction constructor implementation
 
 Syngine::InputAction::InputAction(const std::string&  identifier,
                                   const std::string&  name,
@@ -62,8 +42,10 @@ Syngine::InputAction::InputAction(const std::string&  identifier,
       currentState(false), previousState(false), callbacks(callbacks) {
     Logger::Log("Creating InputAction '" + identifier + "'");
     Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::_Bindings.push_back(this);
+    Syngine::InputAction::_Registry.push_back(this);
 }
+
+// MARK: InputAction convenience constructors
 
 Syngine::InputAction::InputAction(const std::string&  identifier,
                                   const std::string&  name,
@@ -87,30 +69,36 @@ Syngine::InputAction::InputAction(const std::string&  identifier,
     : InputAction(identifier, name, "", binding, Callbacks()) {}
 
 Syngine::InputAction::~InputAction() {
-    Logger::Info("Removing InputAction '" + this->identifier + "'");
-    Syngine::InputAction::_Bindings.erase(
-        std::remove(Syngine::InputAction::_Bindings.begin(),
-                    Syngine::InputAction::_Bindings.end(),
-                    this),
-        Syngine::InputAction::_Bindings.end());
+    Logger::Warn("Removing InputAction '" + this->identifier + "'");
+    auto it = std::find(_Registry.begin(), _Registry.end(), this);
+    if (it != _Registry.end()) {
+        _Registry.erase(it);
+    }
 }
 
-void Syngine::InputAction::RegisterAction(const std::string&  identifier,
-                                          const std::string&  name,
-                                          Syngine::KeyBinding binding,
-                                          Callbacks           callbacks) {
-    Syngine::InputAction::_AnonymousActions.emplace_back(
-        identifier, name, "", binding, callbacks);
-}
+// MARK: InputAction registration implementation
 
 void Syngine::InputAction::RegisterAction(const std::string&  identifier,
                                           const std::string&  name,
                                           const std::string&  category,
                                           Syngine::KeyBinding binding,
                                           Callbacks           callbacks) {
-    Syngine::InputAction::_AnonymousActions.emplace_back(
-        Syngine::InputAction(identifier, name, category, binding, callbacks));
+    Syngine::InputAction::_HomelessShelter.emplace_back(
+        identifier, name, category, binding, callbacks);
+    Syngine::InputAction::_Registry.back() =
+        &Syngine::InputAction::_HomelessShelter.back();
 }
+
+// MARK: InputAction convenience registration
+
+void Syngine::InputAction::RegisterAction(const std::string&  identifier,
+                                          const std::string&  name,
+                                          Syngine::KeyBinding binding,
+                                          Callbacks           callbacks) {
+    RegisterAction(identifier, name, "", binding, callbacks);
+}
+
+// MARK: InputAction state getters
 
 bool Syngine::InputAction::isPressed() { return this->currentState; }
 
@@ -126,44 +114,85 @@ bool Syngine::InputAction::stateChanged() {
     return this->currentState != this->previousState;
 }
 
-void Syngine::InputAction::_HandleEvent(SDL_Event event) {
-    Syngine::KeyBinding called = _InputHelpers::_InputEventToKeyBinding(event);
-    bool                down;
+// MARK: Input event handler private helpers
 
-    if (called == Syngine::KeyBinding()) {
-        Logger::Log("Event contains no convertible binding");
-        return; // No binding, nothing to do
+constexpr bool
+Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+    switch (this->subType()) {
+    case KeybindType::KEYCODE:
+        return _SDLToSyn(event.key) == std::get<Keycode>(this->key) &&
+               (_SDLToSyn(event.mod) == this->modifiers);
+    case KeybindType::SCANCODE:
+        return _SDLToSyn(event.scancode) == std::get<Scancode>(this->key) &&
+               (_SDLToSyn(event.mod) == this->modifiers);
+    default: return false;
     }
+}
+
+constexpr bool
+Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+    bool triggered;
+
+    switch (this->subType(nextIndex)) {
+    case KeybindType::UNBOUND: return false;
+    case KeybindType::KEYCODE:
+        triggered = _SDLToSyn(event.key) == std::get<Keycode>(next());
+        break;
+    case KeybindType::SCANCODE:
+        triggered = _SDLToSyn(event.scancode) == std::get<Scancode>(next());
+        break;
+    case KeybindType::SHORTCUT:
+        triggered = std::get<KeyShortcut>(next())._isTriggeredByEvent(event);
+        break;
+    default: triggered = false;
+    }
+
+    if (!triggered) this->reset();
+    return triggered;
+}
+
+constexpr bool
+Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+    switch (this->subType()) {
+    case KeybindType::UNBOUND: return false;
+    case KeybindType::KEYCODE:
+        return _SDLToSyn(event.key) == std::get<Keycode>(this->binding);
+    case KeybindType::SCANCODE:
+        return _SDLToSyn(event.scancode) == std::get<Scancode>(this->binding);
+    case KeybindType::SHORTCUT:
+        return std::get<KeyShortcut>(this->binding)._isTriggeredByEvent(event);
+    case KeybindType::SEQUENCE:
+        return std::get<KeySequence>(this->binding)._isTriggeredByEvent(event);
+    }
+}
+
+// MARK: Input event handler
+
+void Syngine::InputAction::_HandleEvent(SDL_Event event) {
+    bool down = false;
 
     switch (event.type) {
-    case SDL_EVENT_KEY_DOWN:
-    case SDL_EVENT_MOUSE_BUTTON_DOWN: down = true; break;
-
-    case SDL_EVENT_MOUSE_BUTTON_UP:
-    case SDL_EVENT_KEY_UP: down = false; break;
-    
-    default:
-        Logger::Warn("Input event handler called with unimplemented event");
-        return; // Not a relevant event
-    }
-
-    // TODO: Get this to handle chords properly
-    for (InputAction* action : InputAction::_Bindings) {
-
-        if (action->binding == called) {
-            action->previousState = action->currentState;
-            action->currentState  = down;
-
-            Logger::Info(action->identifier + " has been called");
-
-            if (down) {
-                Logger::Info(action->identifier + " has been pressed");
-                action->callbacks.onPressed();
-            } else {
-                Logger::Info(action->identifier + " has been released");
-                action->callbacks.onReleased();
+    case SDL_EVENT_KEY_DOWN: down = true;
+    case SDL_EVENT_KEY_UP:
+        for (InputAction* action : InputAction::_Registry) {
+            if (action->binding._isTriggeredByEvent(event.key)) {
+                Logger::Log("InputAction '" + action->identifier +
+                            "' triggered");
+                action->previousState = action->currentState;
+                action->currentState  = down;
+                action->callbacks.onStateChanged();
+                if (down) {
+                    action->callbacks.onPressed();
+                } else {
+                    action->callbacks.onReleased();
+                }
             }
-            action->callbacks.onStateChanged();
         }
+        break;
+
+    case SDL_EVENT_MOUSE_BUTTON_DOWN: down = true;
+    case SDL_EVENT_MOUSE_BUTTON_UP: break;
+
+    default: break;
     }
 }
