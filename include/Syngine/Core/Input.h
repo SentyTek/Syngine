@@ -20,6 +20,7 @@
 #include <variant>
 #include <string>
 #include <vector>
+#include <list>
 #include <functional>
 
 namespace Syngine {
@@ -220,6 +221,11 @@ class InputAction {
                 const std::string& category,
                 KeyBinding         binding);
 
+    InputAction(const std::string& identifier,
+                const std::string& name,
+                KeyBinding         binding,
+                Callbacks          callbacks);
+
     InputAction(const std::string&  identifier,
                 const std::string&  name,
                 const std::string&  category,
@@ -229,7 +235,16 @@ class InputAction {
     /// @note InputActions are non-copyable because of their unique identifiers
     InputAction(const InputAction& other) = delete;
 
-    InputAction(InputAction&& other) = default;
+    /// @note InputActions are non-copyable because of their unique identifiers
+    InputAction& operator=(const InputAction& other) = delete;
+
+    /// @note For now, InputActions are non-movable to keep the registry system
+    /// intact
+    InputAction(InputAction&& other) = delete;
+
+    /// @note For now, InputActions are non-movable to keep the registry system
+    /// intact
+    InputAction& operator=(InputAction&& other) = delete;
 
     /// @brief Deconstructs and cleans up the InputAction
     ~InputAction();
@@ -318,11 +333,17 @@ class InputAction {
     /// @brief An array of pointers to every active input action for tracking
     /// and updating. Each pointer is guaranteed to point to an existing object
     /// and be unique
-    static std::vector<InputAction*> _Bindings;
+    static std::vector<InputAction*> _Registry;
 
     /// @brief This is where input actions go if they're not handled as objects
     /// directly
-    static std::vector<InputAction> _AnonymousActions;
+    /// @note Implemented as std::list instead of std::vector because
+    /// InputAction does not have a move or copy constructor, so std::vector
+    /// would eventually run out of size and not be able to accommodate new
+    /// elements. We're not too worried about performance here since we'll
+    /// always access actions from the registry and users cannot access this
+    /// list
+    static std::list<InputAction> _HomelessShelter;
 
     /// @brief Logs a fatal error and halts the program if the provided
     /// identifier is not unique

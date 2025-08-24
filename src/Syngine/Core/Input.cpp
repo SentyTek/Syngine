@@ -13,16 +13,16 @@
 
 #include "SDL3/SDL_events.h"
 
-// Initialize InputAction's static members
+// MARK: Initialize InputAction's static members
 
-std::vector<Syngine::InputAction*> Syngine::InputAction::_Bindings;
-std::vector<Syngine::InputAction>  Syngine::InputAction::_AnonymousActions;
+std::vector<Syngine::InputAction*> Syngine::InputAction::_Registry;
+std::list<Syngine::InputAction>    Syngine::InputAction::_HomelessShelter;
 
-// InputAction private helpers and operators
+// MARK: InputAction private helpers and operators
 
 void Syngine::InputAction::EnsureUniqueIdentifier(
     const std::string& identifier) {
-    for (Syngine::InputAction* binding : Syngine::InputAction::_Bindings) {
+    for (Syngine::InputAction* binding : Syngine::InputAction::_Registry) {
         if (binding->identifier == identifier) {
             Syngine::Logger::Log("InputAction identifier '" + identifier +
                                      "' is not unique",
@@ -31,7 +31,7 @@ void Syngine::InputAction::EnsureUniqueIdentifier(
     }
 }
 
-// InputAction constructors
+// MARK: InputAction constructor implementation
 
 Syngine::InputAction::InputAction(const std::string&  identifier,
                                   const std::string&  name,
@@ -42,8 +42,10 @@ Syngine::InputAction::InputAction(const std::string&  identifier,
       currentState(false), previousState(false), callbacks(callbacks) {
     Logger::Log("Creating InputAction '" + identifier + "'");
     Syngine::InputAction::EnsureUniqueIdentifier(identifier);
-    Syngine::InputAction::_Bindings.push_back(this);
+    Syngine::InputAction::_Registry.push_back(this);
 }
+
+// MARK: InputAction convenience constructors
 
 Syngine::InputAction::InputAction(const std::string&  identifier,
                                   const std::string&  name,
@@ -68,29 +70,35 @@ Syngine::InputAction::InputAction(const std::string&  identifier,
 
 Syngine::InputAction::~InputAction() {
     Logger::Warn("Removing InputAction '" + this->identifier + "'");
-    Syngine::InputAction::_Bindings.erase(
-        std::remove(Syngine::InputAction::_Bindings.begin(),
-                    Syngine::InputAction::_Bindings.end(),
-                    this),
-        Syngine::InputAction::_Bindings.end());
+    auto it = std::find(_Registry.begin(), _Registry.end(), this);
+    if (it != _Registry.end()) {
+        _Registry.erase(it);
+    }
 }
 
-void Syngine::InputAction::RegisterAction(const std::string&  identifier,
-                                          const std::string&  name,
-                                          Syngine::KeyBinding binding,
-                                          Callbacks           callbacks) {
-    Syngine::InputAction::_AnonymousActions.emplace_back(
-        identifier, name, "", binding, callbacks);
-}
+// MARK: InputAction registration implementation
 
 void Syngine::InputAction::RegisterAction(const std::string&  identifier,
                                           const std::string&  name,
                                           const std::string&  category,
                                           Syngine::KeyBinding binding,
                                           Callbacks           callbacks) {
-    Syngine::InputAction::_AnonymousActions.emplace_back(
-        Syngine::InputAction(identifier, name, category, binding, callbacks));
+    Syngine::InputAction::_HomelessShelter.emplace_back(
+        identifier, name, category, binding, callbacks);
+    Syngine::InputAction::_Registry.back() =
+        &Syngine::InputAction::_HomelessShelter.back();
 }
+
+// MARK: InputAction convenience registration
+
+void Syngine::InputAction::RegisterAction(const std::string&  identifier,
+                                          const std::string&  name,
+                                          Syngine::KeyBinding binding,
+                                          Callbacks           callbacks) {
+    RegisterAction(identifier, name, "", binding, callbacks);
+}
+
+// MARK: InputAction state getters
 
 bool Syngine::InputAction::isPressed() { return this->currentState; }
 
@@ -105,6 +113,8 @@ bool Syngine::InputAction::wasReleased() {
 bool Syngine::InputAction::stateChanged() {
     return this->currentState != this->previousState;
 }
+
+// MARK: Input event handler private helpers
 
 constexpr bool
 Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) {
@@ -156,13 +166,15 @@ Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     }
 }
 
+// MARK: Input event handler
+
 void Syngine::InputAction::_HandleEvent(SDL_Event event) {
     bool down = false;
 
     switch (event.type) {
     case SDL_EVENT_KEY_DOWN: down = true;
     case SDL_EVENT_KEY_UP:
-        for (InputAction* action : InputAction::_Bindings) {
+        for (InputAction* action : InputAction::_Registry) {
             if (action->binding._isTriggeredByEvent(event.key)) {
                 Logger::Log("InputAction '" + action->identifier +
                             "' triggered");
