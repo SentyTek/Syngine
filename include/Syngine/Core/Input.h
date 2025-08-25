@@ -321,7 +321,17 @@ class InputAction {
     /// @see Core::HandleEvents()
     static void _HandleEvent(SDL_Event event);
 
+    /// @brief Temporary mouse move event registration
+    static void RegisterMouseMoveEvent(std::function<void(float, float)> callback);
+    /// @brief Temporary scroll event registration
+    static void RegisterScrollEvent(std::function<void(float, float)> callback);
+
   private:
+    /// @brief Temporary storage for the mouse move event callback
+    static std::function<void(float, float)> _MouseMoveCallback;
+    /// @brief Temporary storage for the scroll event callback
+    static std::function<void(float, float)> _ScrollCallback;
+
     /// @brief This object's callbacks, if any
     Callbacks callbacks;
 

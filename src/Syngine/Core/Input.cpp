@@ -193,6 +193,35 @@ void Syngine::InputAction::_HandleEvent(SDL_Event event) {
     case SDL_EVENT_MOUSE_BUTTON_DOWN: down = true;
     case SDL_EVENT_MOUSE_BUTTON_UP: break;
 
+    case SDL_EVENT_MOUSE_MOTION:
+        _MouseMoveCallback(event.motion.xrel, event.motion.yrel);
+        break;
+
+    case SDL_EVENT_MOUSE_WHEEL:
+        _ScrollCallback(event.wheel.x, event.wheel.y);
+        break;
+
     default: break;
     }
+}
+
+// MARK: Temporary mouse movement and scroll event handling
+
+// MARK: Temporary static member initialization
+
+std::function<void(float, float)> Syngine::InputAction::_MouseMoveCallback =
+    [](float, float) -> void {};
+std::function<void(float, float)> Syngine::InputAction::_ScrollCallback =
+    [](float, float) -> void {};
+
+// MARK: Temporary mouse movement and scroll event callback setters
+
+void Syngine::InputAction::RegisterMouseMoveEvent(
+    std::function<void(float, float)> callback) {
+    _MouseMoveCallback = callback;
+}
+
+void Syngine::InputAction::RegisterScrollEvent(
+    std::function<void(float, float)> callback) {
+    _ScrollCallback = callback;
 }
