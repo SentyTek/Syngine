@@ -159,10 +159,21 @@ Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
         return _SDLToSyn(event.key) == std::get<Keycode>(this->binding);
     case KeybindType::SCANCODE:
         return _SDLToSyn(event.scancode) == std::get<Scancode>(this->binding);
+    case KeybindType::MOUSE_BUTTON:
+        return false; // Mouse buttons are not triggered by keyboard events
     case KeybindType::SHORTCUT:
         return std::get<KeyShortcut>(this->binding)._isTriggeredByEvent(event);
     case KeybindType::SEQUENCE:
         return std::get<KeySequence>(this->binding)._isTriggeredByEvent(event);
+    }
+}
+
+constexpr bool
+Syngine::KeyBinding::_isTriggeredByEvent(SDL_MouseButtonEvent event) {
+    if (this->subType() == KeybindType::MOUSE_BUTTON) {
+        return _SDLToSyn(event.button) == std::get<MouseButton>(this->binding);
+    } else {
+        return false;
     }
 }
 
@@ -191,7 +202,22 @@ void Syngine::InputAction::_HandleEvent(SDL_Event event) {
         break;
 
     case SDL_EVENT_MOUSE_BUTTON_DOWN: down = true;
-    case SDL_EVENT_MOUSE_BUTTON_UP: break;
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+        for (InputAction* action : InputAction::_Registry) {
+            if (action->binding._isTriggeredByEvent(event.button)) {
+                Logger::Log("InputAction '" + action->identifier +
+                            "' triggered");
+                action->previousState = action->currentState;
+                action->currentState  = down;
+                action->callbacks.onStateChanged();
+                if (down) {
+                    action->callbacks.onPressed();
+                } else {
+                    action->callbacks.onReleased();
+                }
+            }
+        }
+        break;
 
     case SDL_EVENT_MOUSE_MOTION:
         _MouseMoveCallback(event.motion.xrel, event.motion.yrel);

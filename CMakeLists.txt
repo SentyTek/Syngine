@@ -58,7 +58,6 @@ add_library(Syngine STATIC
     src/Syngine/Core/Core.cpp
     src/Syngine/Core/Registry.cpp
     src/Syngine/Core/Logger.cpp
-    src/Syngine/Core/BasicInput.cpp
     src/Syngine/Core/Input.cpp
     src/Syngine/Graphics/Renderer.cpp
     src/Syngine/Graphics/Windowing.cpp

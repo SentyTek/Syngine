@@ -11,7 +11,6 @@
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/Input.h"
-#include "Syngine/Core/BasicInput.h"
 
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/Component.h"

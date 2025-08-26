@@ -15,6 +15,7 @@
 #include "SDL3/SDL_scancode.h"
 #include "SDL3/SDL_keycode.h"
 #include "SDL3/SDL_keyboard.h"
+#include "SDL3/SDL_mouse.h"
 
 #include <cstdint>
 #include <string>
@@ -771,6 +772,34 @@ struct Keymod {
         return static_cast<SDL_Keymod>(keymod._rawValue);
     }
 };
+
+enum class MouseButton : uint8_t {
+    _UNKNOWN  = 0, /// Not for public use, used for conversions with SDL
+    LEFT      = SDL_BUTTON_LEFT,
+    PRIMARY   = SDL_BUTTON_LEFT,
+    RIGHT     = SDL_BUTTON_RIGHT,
+    SECONDARY = SDL_BUTTON_RIGHT,
+    MIDDLE    = SDL_BUTTON_MIDDLE,
+    TERTIARY  = SDL_BUTTON_MIDDLE,
+    FOUR      = SDL_BUTTON_X1,
+    FIVE      = SDL_BUTTON_X2
+};
+
+/// @note Cannot accept `SDL_MouseButtonFlags` directly as the overload is
+/// ambiguous due to `SDL_MouseButtonFlags` being a macro typedef of uint32_t
+constexpr MouseButton _SDLToSyn(const uint8_t& button) {
+    if (button > 0 && button <= SDL_BUTTON_X2) {
+        return static_cast<MouseButton>(button);
+    } else {
+        Logger::Warn("Untranslatable mouse button: " +
+                     std::to_string(static_cast<uint32_t>(button)));
+        return MouseButton::_UNKNOWN;
+    }
+}
+
+constexpr SDL_MouseButtonFlags _SynToSDL(const MouseButton& button) {
+    return static_cast<SDL_MouseButtonFlags>(button);
+}
 
 } /* namespace Syngine */
 

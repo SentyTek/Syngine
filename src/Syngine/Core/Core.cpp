@@ -26,7 +26,6 @@
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
-#include "Syngine/Core/BasicInput.h"
 
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -56,13 +55,13 @@
 
 using namespace Syngine;
 
-Syngine::Core* Syngine::Core::m_instance = nullptr;
-Syngine::App*  Syngine::Core::m_app      = nullptr;
-Core::_internal Syngine::Core::m_internal;
+Syngine::Core*      Syngine::Core::m_instance = nullptr;
+Syngine::App*       Syngine::Core::m_app      = nullptr;
+Core::_internal     Syngine::Core::m_internal;
 Core::_FrameCounter Syngine::Core::m_frameCounter;
 
-float               Syngine::Core::deltaTime = 0.0f;
-bool                Syngine::Core::m_shouldClose = false;
+float Syngine::Core::deltaTime     = 0.0f;
+bool  Syngine::Core::m_shouldClose = false;
 
 Core::Core(const EngineConfig config) {
     if (m_instance) {
@@ -73,7 +72,7 @@ Core::Core(const EngineConfig config) {
     // Check if required folders exist (shaders, meshes)
     // CheckRequiredFolders will abort if any folder is missing
     if (Syngine::_CheckRequiredFolders()) {
-        m_app = new App();
+        m_app         = new App();
         m_app->config = config;
     }
 }
@@ -82,7 +81,7 @@ Core::~Core() {
     // Cleanup
     if (m_app) {
         if (m_app->window) {
-           m_app->window.reset();
+            m_app->window.reset();
         }
         if (m_app->renderer) {
             m_app->renderer.reset();
@@ -111,7 +110,8 @@ bool Core::Initialize() {
             Logger::Error("Failed to create window.");
         }
 
-        m_app->renderer = std::make_unique<Renderer>(m_app->config.windowWidth, m_app->config.windowHeight);
+        m_app->renderer = std::make_unique<Renderer>(
+            m_app->config.windowWidth, m_app->config.windowHeight);
         if (!m_app->renderer) {
             Logger::Error("Failed to create renderer.");
         }
@@ -127,8 +127,9 @@ bool Core::Initialize() {
         }
 
         m_app->physicsManager->_Init(m_app->debug);
-    } catch(const std::exception& e) {
-        Syngine::Logger::LogF(LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
+    } catch (const std::exception& e) {
+        Syngine::Logger::LogF(
+            LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
         return false;
     }
 
@@ -136,53 +137,44 @@ bool Core::Initialize() {
 }
 
 Syngine::Core* Syngine::Core::Get() { return m_instance; }
-Syngine::App* Syngine::Core::_GetApp() {
+Syngine::App*  Syngine::Core::_GetApp() {
     return m_instance ? m_instance->m_app : nullptr;
 }
 
-Syngine::Phys* Core::GetPhysicsManager() {
-    return m_app->physicsManager.get();
-}
+Syngine::Phys* Core::GetPhysicsManager() { return m_app->physicsManager.get(); }
 
 bool Core::IsRunning() {
     return !m_shouldClose && !m_app->window->ShouldClose();
 }
 
-void Core::SetSimulationState(bool simulate) {
-    m_internal.simulate = simulate;
-}
+void Core::SetSimulationState(bool simulate) { m_internal.simulate = simulate; }
 
-bool Core::GetSimulationState() {
-    return m_internal.simulate;
-}
+bool Core::GetSimulationState() { return m_internal.simulate; }
 
 bool Core::HandleEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
-        case SDL_EVENT_QUIT:
-            m_shouldClose = true;
-            break;
+        case SDL_EVENT_QUIT: m_shouldClose = true; break;
         case SDL_EVENT_WINDOW_RESIZED: {
-            int w, h;
-            SDL_Window* resizedWindow = SDL_GetWindowFromID(event.window.windowID);
+            int         w, h;
+            SDL_Window* resizedWindow =
+                SDL_GetWindowFromID(event.window.windowID);
             SDL_GetWindowSize(resizedWindow, &w, &h);
 
-            m_app->renderer->width = w;
+            m_app->renderer->width  = w;
             m_app->renderer->height = h;
-            bgfx::reset(w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
+            bgfx::reset(
+                w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
             bgfx::setViewRect(
                 0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
             break;
         }
         case SDL_EVENT_KEY_DOWN:
-        case SDL_EVENT_KEY_UP:
-            _HandleKeyEvent(event);
-            break;
+        case SDL_EVENT_KEY_UP: _HandleKeyEvent(event); break;
         }
 
-        // Handle other events as needed
-        BasicInput::_HandleEvent(event);
+        // Handle input events
         InputAction::_HandleEvent(event);
 
         if (m_internal.simulate) {
@@ -202,15 +194,16 @@ bool Core::HandleEvents() {
 bool Core::Update() {
     m_internal.last = m_internal.now;
     m_internal.now  = SDL_GetPerformanceCounter();
-    deltaTime = (m_internal.now - m_internal.last) /
-                      (float)SDL_GetPerformanceFrequency();
-    
+    deltaTime       = (m_internal.now - m_internal.last) /
+                (float)SDL_GetPerformanceFrequency();
+
     // Simulate physics
     if (m_app->physicsManager && m_internal.simulate) {
         m_internal.accumulator += deltaTime;
 
-        while(m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
-            m_app->physicsManager->_Update(m_internal.DEFAULT_PHYSICS_TIMESTEP, m_internal.DEFAULT_PHYSICS_STEPS);
+        while (m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
+            m_app->physicsManager->_Update(m_internal.DEFAULT_PHYSICS_TIMESTEP,
+                                           m_internal.DEFAULT_PHYSICS_STEPS);
             m_internal.accumulator -= m_internal.DEFAULT_PHYSICS_TIMESTEP;
             m_frameCounter.physCounter++;
         }
@@ -227,7 +220,8 @@ bool Core::Update() {
             pc->Update(keystate, deltaTime);
         }
 
-        auto rigidbodies = Registry::GetGameObjectsWithComponent(SYN_COMPONENT_RIGIDBODY);
+        auto rigidbodies =
+            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_RIGIDBODY);
         for (auto go : rigidbodies) {
             if (!go) continue;
             RigidbodyComponent* rb = go->GetComponent<RigidbodyComponent>();
@@ -257,9 +251,7 @@ bool Core::Render(CameraComponent* camera) {
     if (Renderer::IsReady()) {
         m_frameCounter.frameCount++;
 
-        m_app->renderer->_RenderFrame(lightDir,
-                                             camera,
-                                             this->m_app->debug);
+        m_app->renderer->_RenderFrame(lightDir, camera, this->m_app->debug);
 
         if (this->m_app->debug) {
             // christ on a stick this call is ridiculous
@@ -267,9 +259,11 @@ bool Core::Render(CameraComponent* camera) {
                 this->m_app->renderer->width,
                 this->m_app->renderer->height,
                 this->m_app->renderer->GetProgram("debugger").program,
-                Registry::GetGameObjectByName("player") // Player object has the camera
+                Registry::GetGameObjectByName(
+                    "player") // Player object has the camera
                     ->GetComponent<Syngine::CameraComponent>()
-                    ->GetCamera(), camera->GetCamera());
+                    ->GetCamera(),
+                camera->GetCamera());
         }
     }
     return true;
@@ -289,7 +283,7 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 
     // Get OS
     const char* platform = SDL_GetPlatform();
-    specs.osName = std::string(platform);
+    specs.osName         = std::string(platform);
 
     // Get CPU info (why on EARTH is this so complicated?)
     std::string cpu;
@@ -304,22 +298,24 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     for (unsigned int i = 0x80000002; i <= nExIds && i <= 0x80000004; ++i) {
         __cpuid(CPUInfo, i);
         // Copy returned values into the CPU brand string buffer
-        memcpy(CPUBrandString + (i - 0x80000002) * 16, CPUInfo, sizeof(CPUInfo));
+        memcpy(
+            CPUBrandString + (i - 0x80000002) * 16, CPUInfo, sizeof(CPUInfo));
     }
-    CPUBrandString[sizeof(CPUBrandString) - 1] = '\0'; // Null-terminate the string
-    cpu = std::string(CPUBrandString);
+    CPUBrandString[sizeof(CPUBrandString) - 1] =
+        '\0'; // Null-terminate the string
+    cpu            = std::string(CPUBrandString);
     specs.cpuModel = cpu;
 
     // Get arch
     std::string cpuArch;
     switch (sysInfo.wProcessorArchitecture) {
-        case PROCESSOR_ARCHITECTURE_AMD64: cpuArch = "x64"; break;
-        case PROCESSOR_ARCHITECTURE_INTEL: cpuArch = "x86"; break;
-        case PROCESSOR_ARCHITECTURE_ARM:   cpuArch = "ARM"; break;
-        case PROCESSOR_ARCHITECTURE_ARM64: cpuArch = "ARM64"; break;
-        default:                            cpuArch = "Unknown"; break;
+    case PROCESSOR_ARCHITECTURE_AMD64: cpuArch = "x64"; break;
+    case PROCESSOR_ARCHITECTURE_INTEL: cpuArch = "x86"; break;
+    case PROCESSOR_ARCHITECTURE_ARM: cpuArch = "ARM"; break;
+    case PROCESSOR_ARCHITECTURE_ARM64: cpuArch = "ARM64"; break;
+    default: cpuArch = "Unknown"; break;
     }
-    specs.cpuArch = cpuArch;
+    specs.cpuArch  = cpuArch;
     specs.cpuCores = sysInfo.dwNumberOfProcessors;
 
     // Get total physical memory
@@ -332,20 +328,20 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     // On macOS, gather system information using sysctl
     specs.osName = "macOS";
     try {
-        char cpuBrand[256];
+        char   cpuBrand[256];
         size_t size = sizeof(cpuBrand);
         sysctlbyname("machdep.cpu.brand_string", cpuBrand, &size, NULL, 0);
         specs.cpuModel = std::string(cpuBrand);
 
         // Get logical CPU count
         int cpuProc = 0;
-        size = sizeof(cpuProc);
+        size        = sizeof(cpuProc);
         sysctlbyname("machdep.cpu.core_count", &cpuProc, &size, NULL, 0);
         specs.cpuCores = cpuProc;
 
         // Get RAM info
         uint64_t ramSize = 0;
-        size = sizeof(ramSize);
+        size             = sizeof(ramSize);
         sysctlbyname("hw.memsize", &ramSize, &size, NULL, 0);
         specs.ramMB = ramSize / (1024 * 1024);
     } catch (const std::exception& e) {
@@ -359,7 +355,8 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
         specs.osName = "Unknown";
         return specs;
     }
-    specs.osName = std::string(sysInfo.sysname) + " " + std::string(sysInfo.release);
+    specs.osName =
+        std::string(sysInfo.sysname) + " " + std::string(sysInfo.release);
 
     // Get CPU info (name, architecture, etc.)
     std::ifstream cpuInfoFile("/proc/cpuinfo");
@@ -381,38 +378,39 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 
     // Get number of processors
     long numProcessors = sysconf(_SC_NPROCESSORS_ONLN);
-    specs.cpuCores = numProcessors;
+    specs.cpuCores     = numProcessors;
 
     // Get total physical memory
     long totalMemory = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGE_SIZE);
-    specs.ramMB = totalMemory / (1024 * 1024);
+    specs.ramMB      = totalMemory / (1024 * 1024);
 #endif
 
     // Get display size
     SDL_DisplayID dId = SDL_GetDisplayForWindow(m_app->window->_GetSDLWindow());
     SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
-    specs.screenWidth = disMode.w;
-    specs.screenHeight = disMode.h;
+    specs.screenWidth       = disMode.w;
+    specs.screenHeight      = disMode.h;
 
     // Get window resolution
     int w, h;
     SDL_GetWindowSize(m_app->window->_GetSDLWindow(), &w, &h);
-    specs.winWidth = w;
+    specs.winWidth  = w;
     specs.winHeight = h;
 
     // Get various GPU info from bgfx
     const bgfx::Caps* caps = bgfx::getCaps();
     if (caps) {
-        specs.gpuVendorID = caps->vendorId;
-        specs.gpuDeviceID = caps->deviceId;
-        specs.maxTextureSize = caps->limits.maxTextureSize;
+        specs.gpuVendorID     = caps->vendorId;
+        specs.gpuDeviceID     = caps->deviceId;
+        specs.maxTextureSize  = caps->limits.maxTextureSize;
         specs.supportsCompute = (caps->supported & BGFX_CAPS_COMPUTE) != 0;
-        specs.supports3DTextures = (caps->supported & BGFX_CAPS_TEXTURE_3D) != 0;
+        specs.supports3DTextures =
+            (caps->supported & BGFX_CAPS_TEXTURE_3D) != 0;
     } else {
-        specs.gpuVendorID = 0;
-        specs.gpuDeviceID = 0;
-        specs.maxTextureSize = 0;
-        specs.supportsCompute = false;
+        specs.gpuVendorID        = 0;
+        specs.gpuDeviceID        = 0;
+        specs.maxTextureSize     = 0;
+        specs.supportsCompute    = false;
         specs.supports3DTextures = false;
     }
     return specs;
@@ -421,34 +419,35 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 void Core::_HandleKeyEvent(const SDL_Event& event) {
     if (event.type == SDL_EVENT_KEY_DOWN) {
         switch (event.key.key) {
-            case SDLK_F1: {
-                // Toggle debug mode
-                this->m_app->debug = !this->m_app->debug;
-                if (this->m_app->debug) {
-                    Syngine::Logger::Info("Debug mode enabled");
-                } else {
-                    Syngine::Logger::Info("Debug mode disabled");
+        case SDLK_F1: {
+            // Toggle debug mode
+            this->m_app->debug = !this->m_app->debug;
+            if (this->m_app->debug) {
+                Syngine::Logger::Info("Debug mode enabled");
+            } else {
+                Syngine::Logger::Info("Debug mode disabled");
+            }
+            break;
+        }
+        case SDLK_F5: {
+            // Reload changed assets
+            for (auto& go :
+                 Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
+                MeshComponent* mc = go->GetComponent<MeshComponent>();
+                if (!mc) continue;
+                MeshData& mesh = mc->meshData;
+                if (!mesh.valid) continue;
+                if (mesh.lastWriteTime !=
+                    std::filesystem::last_write_time(mesh.path)) {
+                    mc->ReloadMesh();
                 }
-                break;
             }
-            case SDLK_F5: {
-                // Reload changed assets
-                for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
-                    MeshComponent* mc = go->GetComponent<MeshComponent>();
-                    if (!mc) continue;
-                    MeshData& mesh = mc->meshData;
-                    if (!mesh.valid) continue;
-                    if (mesh.lastWriteTime !=
-                        std::filesystem::last_write_time(mesh.path)) {
-                        mc->ReloadMesh();
-                    }
-                }
-                break;
-            }
-            case SDLK_F6: {
-                // Reload all shaders
-                m_app->renderer->ReloadAllPrograms();
-            }
+            break;
+        }
+        case SDLK_F6: {
+            // Reload all shaders
+            m_app->renderer->ReloadAllPrograms();
+        }
         }
     }
 }

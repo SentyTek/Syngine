@@ -26,11 +26,12 @@
 namespace Syngine {
 
 enum class KeybindType : size_t {
-    UNBOUND  = 0,
-    KEYCODE  = 1,
-    SCANCODE = 2,
-    SHORTCUT = 3,
-    SEQUENCE = 4
+    UNBOUND      = 0,
+    KEYCODE      = 1,
+    SCANCODE     = 2,
+    MOUSE_BUTTON = 5,
+    SHORTCUT     = 3,
+    SEQUENCE     = 4
 };
 
 using KeyUnbound = std::monostate;
@@ -121,7 +122,7 @@ struct KeySequence {
 /// @section Input
 struct KeyBinding {
   private:
-    std::variant<KeyUnbound, Keycode, Scancode, KeyShortcut, KeySequence>
+    std::variant<KeyUnbound, Keycode, Scancode, KeyShortcut, KeySequence, MouseButton>
         binding;
 
   public:
@@ -130,6 +131,8 @@ struct KeyBinding {
     constexpr KeyBinding(Keycode keycode) : binding(keycode) {}
 
     constexpr KeyBinding(Scancode scancode) : binding(scancode) {}
+
+    constexpr KeyBinding(MouseButton button) : binding(button) {}
 
     constexpr KeyBinding(KeyShortcut shortcut) : binding(shortcut) {}
 
@@ -144,6 +147,8 @@ struct KeyBinding {
     }
 
     constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
+
+    constexpr bool _isTriggeredByEvent(SDL_MouseButtonEvent event);
 };
 
 /// @brief A bound input action
@@ -322,7 +327,8 @@ class InputAction {
     static void _HandleEvent(SDL_Event event);
 
     /// @brief Temporary mouse move event registration
-    static void RegisterMouseMoveEvent(std::function<void(float, float)> callback);
+    static void
+    RegisterMouseMoveEvent(std::function<void(float, float)> callback);
     /// @brief Temporary scroll event registration
     static void RegisterScrollEvent(std::function<void(float, float)> callback);
 
