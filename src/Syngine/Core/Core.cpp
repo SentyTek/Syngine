@@ -133,6 +133,30 @@ bool Core::Initialize() {
         return false;
     }
 
+    // if we ever need to disable debug keybinds we can put this block into an
+    // if statement
+    {
+        Logger::Log("Initializing debug keybinds");
+
+        InputAction::RegisterAction(
+            "syngine.debugMode",
+            "Toggle debug mode",
+            KeyBinding(Keycode::F1),
+            { .onPressed = Core::_ToggleDebugMode });
+
+        InputAction::RegisterAction(
+            "syngine.reloadAssets",
+            "Reload Assets",
+            KeyBinding(Keycode::F5),
+            { .onPressed = Core::_ReloadChangedAssets });
+
+        InputAction::RegisterAction(
+            "syngine.reloadShaders",
+            "Reload Shaders",
+            KeyBinding(Keycode::F6),
+            { .onPressed = Core::_ReloadShaders });
+    }
+
     return true;
 }
 
@@ -170,8 +194,6 @@ bool Core::HandleEvents() {
                 0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
             break;
         }
-        case SDL_EVENT_KEY_DOWN:
-        case SDL_EVENT_KEY_UP: _HandleKeyEvent(event); break;
         }
 
         // Handle input events
@@ -415,6 +437,31 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     }
     return specs;
 }
+
+// copied the internals of _HandleKeyEvents into these two functions to make
+// it a bit nicer to call with the new keybind system
+void Core::_ToggleDebugMode() {
+    m_app->debug = !m_app->debug;
+    if (m_app->debug) {
+        Syngine::Logger::Info("Debug mode enabled");
+    } else {
+        Syngine::Logger::Info("Debug mode disabled");
+    }
+}
+
+void Core::_ReloadChangedAssets() {
+    for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
+        MeshComponent* mc = go->GetComponent<MeshComponent>();
+        if (!mc) continue;
+        MeshData& mesh = mc->meshData;
+        if (!mesh.valid) continue;
+        if (mesh.lastWriteTime != std::filesystem::last_write_time(mesh.path)) {
+            mc->ReloadMesh();
+        }
+    }
+}
+
+void Core::_ReloadShaders() { m_app->renderer->ReloadAllPrograms(); }
 
 void Core::_HandleKeyEvent(const SDL_Event& event) {
     if (event.type == SDL_EVENT_KEY_DOWN) {

@@ -117,7 +117,7 @@ bool Syngine::InputAction::stateChanged() {
 // MARK: Input event handler private helpers
 
 constexpr bool
-Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) const {
     switch (this->subType()) {
     case KeybindType::KEYCODE:
         return _SDLToSyn(event.key) == std::get<Keycode>(this->key) &&
@@ -131,24 +131,30 @@ Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) {
 
 constexpr bool
 Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
-    bool triggered;
+    const auto next = this->next();
+    bool       triggered;
 
-    switch (this->subType(nextIndex)) {
-    case KeybindType::UNBOUND: return false;
+    switch (static_cast<KeybindType>(next.index())) {
     case KeybindType::KEYCODE:
-        triggered = _SDLToSyn(event.key) == std::get<Keycode>(next());
+        triggered = _SDLToSyn(event.key) == std::get<Keycode>(next);
         break;
     case KeybindType::SCANCODE:
-        triggered = _SDLToSyn(event.scancode) == std::get<Scancode>(next());
+        triggered = _SDLToSyn(event.scancode) == std::get<Scancode>(next);
         break;
     case KeybindType::SHORTCUT:
-        triggered = std::get<KeyShortcut>(next())._isTriggeredByEvent(event);
+        triggered = std::get<KeyShortcut>(next)._isTriggeredByEvent(event);
         break;
-    default: triggered = false;
+    default: triggered = false; break;
     }
 
-    if (!triggered) this->reset();
-    return triggered;
+    if (triggered && this->wasReset()) {
+        return true;
+    } else if (triggered) {
+        return false;
+    } else {
+        this->reset();
+        return false;
+    }
 }
 
 constexpr bool

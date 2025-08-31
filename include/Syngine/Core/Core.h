@@ -190,6 +190,11 @@ class Core {
     static _internal m_internal;
     static _FrameCounter m_frameCounter;
 
+    static void _ToggleDebugMode();
+    static void _ReloadChangedAssets();
+    static void _ReloadShaders();
+
+    /// @deprecated In favor of the new input system
     void _HandleKeyEvent(const SDL_Event& event);
 };
 

@@ -60,7 +60,7 @@ struct KeyShortcut {
         return key == other.key && modifiers == other.modifiers;
     }
 
-    constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
+    constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event) const;
 };
 
 struct KeySequence {
@@ -93,23 +93,31 @@ struct KeySequence {
 
     constexpr void reset() { nextIndex = 0; }
 
-    constexpr std::variant<KeyUnbound, Keycode, Scancode, KeyShortcut> next() {
-        if (bound.empty()) Logger::Fatal("KeySequence cannot be empty");
+    constexpr std::variant<Keycode, Scancode, KeyShortcut> next() {
 
-        std::variant<Keycode, Scancode, KeyShortcut> nextKey = bound[nextIndex];
+        const uint32_t nextIndex = this->nextIndex;
 
-        nextIndex = (nextIndex + 1) % bound.size();
+        const std::variant<Keycode, Scancode, KeyShortcut> nextKey =
+            bound[nextIndex];
+
+        // Update the object without modifying our local copy
+        this->nextIndex = (nextIndex + 1) % bound.size();
 
         switch (subType(nextIndex)) {
-        case KeybindType::UNBOUND: return KeyUnbound(); break;
         case KeybindType::KEYCODE: return std::get<Keycode>(nextKey); break;
         case KeybindType::SCANCODE: return std::get<Scancode>(nextKey); break;
         case KeybindType::SHORTCUT:
             return std::get<KeyShortcut>(nextKey);
             break;
-        default: return KeyUnbound(); // Will probably never be called
+        default:
+            if (bound.empty()) Logger::Error("KeySequence cannot be empty");
+            Logger::Fatal("KeySequence::subType() failed");
+            return Keycode(); // will never be called; program terminates on
+                              // line above
         }
     }
+
+    constexpr bool wasReset() const { return nextIndex == 0; }
 
     constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
 
@@ -122,7 +130,12 @@ struct KeySequence {
 /// @section Input
 struct KeyBinding {
   private:
-    std::variant<KeyUnbound, Keycode, Scancode, KeyShortcut, KeySequence, MouseButton>
+    std::variant<KeyUnbound,
+                 Keycode,
+                 Scancode,
+                 KeyShortcut,
+                 KeySequence,
+                 MouseButton>
         binding;
 
   public:
