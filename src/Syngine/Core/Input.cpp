@@ -147,14 +147,13 @@ Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     default: triggered = false; break;
     }
 
-    if (triggered && this->wasReset()) {
-        return true;
-    } else if (triggered) {
-        return false;
-    } else {
+    if (triggered) {
+        this->increment();
+        return this->wasReset();
+    } else if (event.type == SDL_EVENT_KEY_DOWN) {
         this->reset();
-        return false;
     }
+    return false;
 }
 
 constexpr bool
@@ -193,8 +192,6 @@ void Syngine::InputAction::_HandleEvent(SDL_Event event) {
     case SDL_EVENT_KEY_UP:
         for (InputAction* action : InputAction::_Registry) {
             if (action->binding._isTriggeredByEvent(event.key)) {
-                Logger::Log("InputAction '" + action->identifier +
-                            "' triggered");
                 action->previousState = action->currentState;
                 action->currentState  = down;
                 action->callbacks.onStateChanged();
@@ -211,8 +208,6 @@ void Syngine::InputAction::_HandleEvent(SDL_Event event) {
     case SDL_EVENT_MOUSE_BUTTON_UP:
         for (InputAction* action : InputAction::_Registry) {
             if (action->binding._isTriggeredByEvent(event.button)) {
-                Logger::Log("InputAction '" + action->identifier +
-                            "' triggered");
                 action->previousState = action->currentState;
                 action->currentState  = down;
                 action->callbacks.onStateChanged();

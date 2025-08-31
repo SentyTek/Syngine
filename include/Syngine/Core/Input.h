@@ -9,6 +9,7 @@
 #ifndef SynInput_h
 #define SynInput_h
 
+// pretty ugly include statement but it's necessary
 #include "../src/Syngine/Core/InputHelpers.h"
 
 #include "SDL3/SDL_events.h"
@@ -29,12 +30,17 @@ enum class KeybindType : size_t {
     UNBOUND      = 0,
     KEYCODE      = 1,
     SCANCODE     = 2,
-    MOUSE_BUTTON = 5,
     SHORTCUT     = 3,
-    SEQUENCE     = 4
+    SEQUENCE     = 4,
+	MOUSE_BUTTON = 5
 };
 
 using KeyUnbound = std::monostate;
+
+struct KeyShortcut;
+struct KeySequence;
+
+using AnyKeybind = std::variant<KeyUnbound, Keycode, Scancode, KeyShortcut, KeySequence, MouseButton>;
 
 struct KeyShortcut {
   private:
@@ -93,17 +99,11 @@ struct KeySequence {
 
     constexpr void reset() { nextIndex = 0; }
 
-    constexpr std::variant<Keycode, Scancode, KeyShortcut> next() {
-
-        const uint32_t nextIndex = this->nextIndex;
-
+    constexpr AnyKeybind next() {
         const std::variant<Keycode, Scancode, KeyShortcut> nextKey =
-            bound[nextIndex];
+            bound[this->nextIndex];
 
-        // Update the object without modifying our local copy
-        this->nextIndex = (nextIndex + 1) % bound.size();
-
-        switch (subType(nextIndex)) {
+        switch (subType(this->nextIndex)) {
         case KeybindType::KEYCODE: return std::get<Keycode>(nextKey); break;
         case KeybindType::SCANCODE: return std::get<Scancode>(nextKey); break;
         case KeybindType::SHORTCUT:
@@ -116,6 +116,10 @@ struct KeySequence {
                               // line above
         }
     }
+	
+	constexpr void increment() {
+		this->nextIndex = (nextIndex + 1) % bound.size();
+	}
 
     constexpr bool wasReset() const { return nextIndex == 0; }
 
@@ -130,13 +134,7 @@ struct KeySequence {
 /// @section Input
 struct KeyBinding {
   private:
-    std::variant<KeyUnbound,
-                 Keycode,
-                 Scancode,
-                 KeyShortcut,
-                 KeySequence,
-                 MouseButton>
-        binding;
+    AnyKeybind binding;
 
   public:
     constexpr KeyBinding() : binding(KeyUnbound()) {}
@@ -353,7 +351,7 @@ class InputAction {
 
     /// @brief This object's callbacks, if any
     Callbacks callbacks;
-
+	 
     /// @brief The state of this action in this frame
     bool currentState;
     /// @brief The state of this action in the last frame
