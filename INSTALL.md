@@ -8,9 +8,11 @@
 - Ninja 1.12.1 or later
 
 ### macOS
+The project requires the Xcode toolchain, even if you're editing with a different IDE
 - macOS 15.2 or later
 - Xcode 16 or later
 - CMake 3.16 or later
+- Ninja 1.12.1 or later
 
 ### Linux
 - I don't know what distros will and will not work. Probably doesn't matter if you build from source
@@ -46,12 +48,18 @@
     /engine (This is the cloned repo)
   ```
 - In Terminal in the `engine/` folder, run `git submodule update --init --recursive` to download all third party addons. This may take a moment
-- Move the `engine/testgame` folder to the `myProject` folder, so it is outside of `engine`
-- In the `build` directory of your project, run `cmake .. -G Xcode` in Terminal. We use Xcode to generate the final project.
-- Open the `.xcodeproj` file in the `build` directory. It should open Xcode.
+
+#### Editing with Xcode
+- Create two new directories in the `build` directory, `Ninja` and `Xcode`
+- In the `Xcode` directory, run `cmake -S ../.. -G Xcode` in Terminal.
+- Navigate to the `build/Ninja` directory in Terminal and run `cmake -S ../.. -G Ninja`.
+- Open the `.xcodeproj` file in the `build/Xcode` directory. It should open Xcode.
+- Navigate to the project settings, the root object in the file tree.
+- Create a new build target, select `External Build Tool` and name it `bakerman-build`.
 - Press `cmd + b` to build, and once that's finished **RERUN** Cmake and **REBUILD** Xcode! This is crucial to ensure shaders get properly built!
   - Xcode may present an error about BX_CONFIG_DEBUG not being defined. This is fine, delete the erroring if statement.
 - Press `cmd + r` in Xcode to run, or open the compiled `bakerman.app` app bundle in the `build/Debug` folder.
+#### Editing with an external IDE
 
 ### Linux
 - Clone or download the repository
