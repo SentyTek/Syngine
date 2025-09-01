@@ -138,11 +138,10 @@ bool Core::Initialize() {
     {
         Logger::Log("Initializing debug keybinds");
 
-        InputAction::RegisterAction(
-            "syngine.debugMode",
-            "Toggle debug mode",
-            KeyBinding(Keycode::F1),
-            { .onPressed = Core::_ToggleDebugMode });
+        InputAction::RegisterAction("syngine.debugMode",
+                                    "Toggle debug mode",
+                                    KeyBinding(Keycode::F1),
+                                    { .onPressed = Core::_ToggleDebugMode });
 
         InputAction::RegisterAction(
             "syngine.reloadAssets",
@@ -150,11 +149,10 @@ bool Core::Initialize() {
             KeyBinding(Keycode::F5),
             { .onPressed = Core::_ReloadChangedAssets });
 
-        InputAction::RegisterAction(
-            "syngine.reloadShaders",
-            "Reload Shaders",
-            KeyBinding(Keycode::F6),
-            { .onPressed = Core::_ReloadShaders });
+        InputAction::RegisterAction("syngine.reloadShaders",
+                                    "Reload Shaders",
+                                    KeyBinding(Keycode::F6),
+                                    { .onPressed = Core::_ReloadShaders });
     }
 
     return true;

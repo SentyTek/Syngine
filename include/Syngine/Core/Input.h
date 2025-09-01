@@ -26,62 +26,133 @@
 
 namespace Syngine {
 
+/// @brief A tag enum representing each of the keybindable types
+/// @since 0.0.1
+/// @section Input
 enum class KeybindType : size_t {
     UNBOUND      = 0,
     KEYCODE      = 1,
     SCANCODE     = 2,
     SHORTCUT     = 3,
     SEQUENCE     = 4,
-	MOUSE_BUTTON = 5
+    MOUSE_BUTTON = 5
 };
 
+/// @brief A type representing an unbound action, or the lack of a key binding
+/// @since 0.0.1
+/// @section Input
 using KeyUnbound = std::monostate;
 
+// forward declarations for `AnyKeybind`
 struct KeyShortcut;
 struct KeySequence;
 
-using AnyKeybind = std::variant<KeyUnbound, Keycode, Scancode, KeyShortcut, KeySequence, MouseButton>;
+/// @brief A type representing any keybind
+/// @since 0.0.1
+/// @section Input
+using AnyKeybind = std::variant<KeyUnbound,
+                                Keycode,
+                                Scancode,
+                                KeyShortcut,
+                                KeySequence,
+                                MouseButton>;
 
+/// @brief A type representing a keyboard shortcut; a single keycode or scancode
+/// and any number of modifiers
+/// @since 0.0.1
+/// @section Input
 struct KeyShortcut {
   private:
+    /// @brief The stored key
+    /// @since 0.0.1
+    /// @internal
+
     std::variant<Keycode, Scancode> key;
-    Keymod                          modifiers;
+    /// @brief The stored modifiers
+    /// @since 0.0.1
+    /// @internal
+    Keymod modifiers;
 
   public:
+    /// @brief `KeyShortcut`s aren't default-constructable
+    /// @since 0.0.1
+    /// @note Use a ``KeyBinding`` holding a ``KeyUnknown`` (the default
+    /// constructor of `KeyBinding`) instead
     KeyShortcut() = delete;
 
+    /// @brief Create a ``KeyShortcut`` with no modifiers
+    /// @param key The key to bind
+    /// @since 0.0.1
     constexpr KeyShortcut(std::variant<Keycode, Scancode> key)
         : key(key), modifiers() {}
 
+    /// @brief Create a ``KeyShortcut`` with the given modifiers
+    /// @param key The key to bind
+    /// @param modifiers The modifiers to bind
+    /// @since 0.0.1
     constexpr KeyShortcut(std::variant<Keycode, Scancode> key, Keymod modifiers)
         : key(key), modifiers(modifiers) {}
 
-    constexpr KeybindType type() const { return KeybindType::SHORTCUT; }
-
+    /// @brief Returns the ``KeybindType`` corresponding to the type this object
+    /// contains, if any
+    /// @returns The contained subtype as a ``KeybindType``
+    /// @since 0.0.1
     constexpr KeybindType subType() const {
         return static_cast<KeybindType>(key.index() + 1);
     }
 
+    /// @brief Equality operator for ``KeyShortcut``
+    /// @param other The ``KeyShortcut`` to compare against
+    /// @returns `true` if the objects are equal, `false` otherwise
+    /// @since 0.0.1
     constexpr bool operator==(const KeyShortcut& other) const {
         return key == other.key && modifiers == other.modifiers;
     }
 
+    /// @brief Checks if the keyboard event triggers this binding
+    /// @param event The event to check against
+    /// @returns `true` if the event triggers the binding, `false` otherwise
+    /// @since 0.0.1
+    /// @section Input
+    /// @internal
     constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event) const;
 };
 
+/// @brief An array of key bindings which is triggered when pressed in sequence
+/// @since 0.0.1
+/// @section Input
 struct KeySequence {
   private:
+    /// @brief The stored bindings
+    /// @since 0.0.1
+    /// @internal
     std::vector<std::variant<Keycode, Scancode, KeyShortcut>> bound;
-    uint32_t                                                  nextIndex;
+
+    /// @brief The index of the next binding that hasn't been triggered
+    /// @since 0.0.1
+    /// @internal
+    uint32_t nextIndex;
 
   public:
+    /// @brief `KeySequence`s aren't default-constructable and must hold at
+    /// least one binding
+    /// @since 0.0.1
+    /// @note Use a ``KeyBinding`` holding a ``KeyUnknown`` (the default
+    /// constructor of `KeyBinding`) instead
     KeySequence() = delete;
 
+    /// @brief Create a ``KeySequence`` with a single binding. This isn't very
+    /// useful on it's own and may be removed
+    /// @param key The binding to bind
+    /// @since 0.0.1
     constexpr KeySequence(std::variant<Keycode, Scancode, KeyShortcut> key)
         : bound{ key }, nextIndex(0) {
         bound.shrink_to_fit();
     }
 
+    /// @brief Create a ``KeySequence`` with a list of bindings
+    /// @param list The list of bindings to bind
+    /// @since 0.0.1
     constexpr KeySequence(
         std::initializer_list<std::variant<Keycode, Scancode, KeyShortcut>>
             list)
@@ -89,6 +160,12 @@ struct KeySequence {
         bound.shrink_to_fit();
     }
 
+    /// @brief Returns the ``KeybindType`` corresponding to the type this object
+    /// contains at the given index, or ``KeybindType::UNBOUND`` if the index is
+    /// out of bounds
+    /// @param index The index to find the type of
+    /// @returns The contained subtype at the given index as a ``KeybindType``
+    /// @since 0.0.1
     constexpr KeybindType subType(uint32_t index) const {
         if (index < bound.size()) {
             return static_cast<KeybindType>(bound[index].index() + 1);
@@ -97,8 +174,17 @@ struct KeySequence {
         }
     }
 
+    /// @brief Resets the trigger progress of the sequence
+    /// @note You probably shouldn't call this unless you really need to, and it
+    /// might be removed
+    /// @since 0.0.1
     constexpr void reset() { nextIndex = 0; }
 
+    /// @brief Gets the next key to be triggered
+    /// @returns The key that must be triggered for the sequence to progress
+    /// @note You probably shouldn't call this unless you really need to, and it
+    /// might be removed
+    /// @since 0.0.1
     constexpr AnyKeybind next() {
         const std::variant<Keycode, Scancode, KeyShortcut> nextKey =
             bound[this->nextIndex];
@@ -116,49 +202,113 @@ struct KeySequence {
                               // line above
         }
     }
-	
-	constexpr void increment() {
-		this->nextIndex = (nextIndex + 1) % bound.size();
-	}
 
+    /// @brief Increments the trigger progress of the sequence, as if the
+    /// previous key had been triggered
+    /// @note You probably shouldn't call this unless you really need to, and it
+    /// might be removed
+    /// @since 0.0.1
+    constexpr void increment() {
+        this->nextIndex = (nextIndex + 1) % bound.size();
+    }
+
+    /// @brief Gets the reset state of the sequence
+    /// @returns `true` if the sequence was complete or reset (if the next index
+    /// is 0), `false` otherwise
+    /// @since 0.0.1
     constexpr bool wasReset() const { return nextIndex == 0; }
 
+    /// @brief Determines if the keybind is triggered, increments the progress
+    /// if it was, and resets the sequence if it wasn't
+    /// @param event The ``SDL_KeyboardEvent`` to check the sequence against
+    /// @returns `true` if the sequence was just triggered *and* was also reset,
+    /// `false` otherwise (even if the sequence was triggered)
+    /// @since 0.0.1
+    /// @section Input
+    /// @internal
     constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
 
+    /// @brief Equality operator for ``KeySequence``
+    /// @param other The ``KeySequence`` to compare against
+    /// @returns `true` if the objects are equal, `false` otherwise
+    /// @since 0.0.1
     constexpr bool operator==(const KeySequence& other) const {
         return bound == other.bound;
     }
 };
 
-/// @brief Any key binding
+/// @brief A container for holding any type of keybind
+/// @since 0.0.1
 /// @section Input
 struct KeyBinding {
   private:
+    /// @brief The stored binding
+    /// @since 0.0.1
+    /// @internal
     AnyKeybind binding;
 
   public:
-    constexpr KeyBinding() : binding(KeyUnbound()) {}
+    /// @brief Construct a `KeyBinding` containing a ``KeyUnbound``
+    /// @since 0.0.1
+    constexpr KeyBinding() : binding(KeyUnbound()) {};
 
+    /// @brief Construct a `KeyBinding` from a ``Keycode``
+    /// @param keycode The keycode to bind
+    /// @since 0.0.1
     constexpr KeyBinding(Keycode keycode) : binding(keycode) {}
 
+    /// @brief Construct a `KeyBinding` from a ``Scancode``
+    /// @param scancode The scancode to bind
+    /// @since 0.0.1
     constexpr KeyBinding(Scancode scancode) : binding(scancode) {}
 
+    /// @brief Construct a `KeyBinding` from a ``MouseButton``
+    /// @param button The button to bind
+    /// @since 0.0.1
     constexpr KeyBinding(MouseButton button) : binding(button) {}
 
+    /// @brief Construct a `KeyBinding` from a ``KeyShortcut``
+    /// @param shortcut The shortcut to bind
+    /// @since 0.0.1
     constexpr KeyBinding(KeyShortcut shortcut) : binding(shortcut) {}
 
+    /// @brief Construct a `KeyBinding` from a ``KeySequence``
+    /// @param sequence The sequence to bind
+    /// @since 0.0.1
     constexpr KeyBinding(KeySequence sequence) : binding(sequence) {}
 
+    /// @brief Returns the ``KeybindType`` corresponding to the type this object
+    /// contains
+    /// @returns The contained subtype as a ``KeybindType``
+    /// @since 0.0.1
     constexpr KeybindType subType() const {
         return static_cast<KeybindType>(binding.index());
     }
 
+    /// @brief Equality operator for ``KeyBinding``
+    /// @param other The ``KeyBinding`` to compare against
+    /// @returns `true` if the objects are equal, `false` otherwise
+    /// @since 0.0.1
     constexpr bool operator==(const KeyBinding& other) const {
         return binding == other.binding;
     }
 
+    /// @brief Determines if the KeyBinding is triggered by a keyboard event
+    /// @param event The ``SDL_KeyboardEvent`` to check against
+    /// @returns `true` if the contained subtype is triggered by the event,
+    /// `false` otherwise
+    /// @since 0.0.1
+    /// @section Input
+    /// @internal
     constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
 
+    /// @brief Determines if the KeyBinding is triggered by a keyboard event
+    /// @param event The ``SDL_KeyboardEvent`` to check against
+    /// @returns `true` if the contained subtype is triggered by the event,
+    /// `false` otherwise
+    /// @since 0.0.1
+    /// @section Input
+    /// @internal
     constexpr bool _isTriggeredByEvent(SDL_MouseButtonEvent event);
 };
 
@@ -169,23 +319,37 @@ struct KeyBinding {
 class InputAction {
   public:
     /// @brief A container for callbacks
+    /// @since 0.0.1
     struct Callbacks {
 
-        std::function<void()> onPressed      = []() -> void {};
-        std::function<void()> onReleased     = []() -> void {};
+        /// @brief The callback called when the action is triggered
+        /// @since 0.0.1
+        std::function<void()> onPressed = []() -> void {};
+
+        /// @brief The callback called when the action is released
+        /// @since 0.0.1
+        std::function<void()> onReleased = []() -> void {};
+
+        /// @brief The callback called whenever the trigger state of the action
+        /// changes
+        /// @since 0.0.1
         std::function<void()> onStateChanged = []() -> void {};
     };
 
     /// @brief The identifier for this input action
+    /// @since 0.0.1
     const std::string identifier;
 
     /// @brief The display name for this input action
+    /// @since 0.0.1
     std::string name;
 
     /// @brief The display category for this input action
+    /// @since 0.0.1
     std::string category;
 
     /// @brief The binding for this input action
+    /// @since 0.0.1
     Syngine::KeyBinding binding;
 
     /// @brief Make an empty InputAction
@@ -237,55 +401,103 @@ class InputAction {
                 const std::string& category,
                 KeyBinding         binding);
 
+    /// @brief Make an InputAction with a binding and callbacks
+    /// @param identifier The identifier for the input action. This is required
+    /// and *must* be unique
+    /// @param name The name for the input action. This is the display name that
+    /// is shown in the bindings menu
+    /// @param binding The binding for the input action
+    /// @param callbacks The callbacks to be called when the input action is
+    /// triggered
+    /// @note Logs a fatal error and crashes the program if the identifier is
+    /// not unique
     InputAction(const std::string& identifier,
                 const std::string& name,
                 KeyBinding         binding,
                 Callbacks          callbacks);
 
+    /// @brief Make an InputAction with a binding and callbacks
+    /// @param identifier The identifier for the input action. This is required
+    /// and *must* be unique
+    /// @param name The name for the input action. This is the display name that
+    /// is shown in the bindings menu
+    /// @param category The category for the input action. This is used for
+    /// organizing actions in the bindings menu
+    /// @param binding The binding for the input action
+    /// @param callbacks The callbacks to be called when the input action is
+    /// triggered
+    /// @note Logs a fatal error and crashes the program if the identifier is
+    /// not unique
     InputAction(const std::string&  identifier,
                 const std::string&  name,
                 const std::string&  category,
                 Syngine::KeyBinding binding,
                 Callbacks           callbacks);
 
-    /// @note InputActions are non-copyable because of their unique identifiers
+    /// @brief InputActions are non-copyable because of their unique identifiers
+    /// @since 0.0.1
     InputAction(const InputAction& other) = delete;
 
-    /// @note InputActions are non-copyable because of their unique identifiers
+    /// @brief InputActions are non-copyable because of their unique identifiers
+    /// @since 0.0.1
     InputAction& operator=(const InputAction& other) = delete;
 
-    /// @note For now, InputActions are non-movable to keep the registry system
+    /// @brief For now, InputActions are non-movable to keep the registry system
     /// intact
+    /// @since 0.0.1
     InputAction(InputAction&& other) = delete;
 
-    /// @note For now, InputActions are non-movable to keep the registry system
+    /// @brief For now, InputActions are non-movable to keep the registry system
     /// intact
+    /// @since 0.0.1
     InputAction& operator=(InputAction&& other) = delete;
 
     /// @brief Deconstructs and cleans up the InputAction
+    /// @since 0.0.1
     ~InputAction();
 
     /// @brief Returns true if the binding is currently being pressed
+    /// @returns `true` for every frame the binding is triggered, `false`
+    /// otherwise
+    /// @since 0.0.1
     bool isPressed();
 
     /// @brief Returns true if the binding was pressed since the previous frame
+    /// @returns `true` the first frame the binding is triggered, `false`
+    /// otherwise
+    /// @since 0.0.1
     bool wasPressed();
 
     /// @brief Returns true if the binding was released since the last frame
+    /// @returns `true` the first frame the binding is released, `false`
+    /// otherwise
+    /// @since 0.0.1
     bool wasReleased();
 
     /// @brief Returns true if the binding's state has changed since the last
     /// frame
+    /// @returns `true` on every frame where the state is different from the
+    /// last frame, `false` otherwise
+    /// @since 0.0.1
     bool stateChanged();
 
+    /// @brief Sets the `onPressed` callback
+    /// @param callback The callback to set
+    /// @since 0.0.1
     void setOnPressedCallback(std::function<void()> callback) {
         callbacks.onPressed = callback;
     }
 
+    /// @brief Sets the `onReleased` callback
+    /// @param callback The callback to set
+    /// @since 0.0.1
     void setOnReleasedCallback(std::function<void()> callback) {
         callbacks.onReleased = callback;
     }
 
+    /// @brief Sets the `onStateChanged` callback
+    /// @param callback The callback to set
+    /// @since 0.0.1
     void setOnStateChangedCallback(std::function<void()> callback) {
         callbacks.onStateChanged = callback;
     }
@@ -300,6 +512,7 @@ class InputAction {
     /// @param callbacks The callbacks to call when the action state updates
     /// @note Logs a fatal error and crashes the program if the identifier is
     /// not unique
+    /// @since 0.0.1
     static void RegisterAction(const std::string& identifier,
                                const std::string& name,
                                KeyBinding         binding,
@@ -317,15 +530,19 @@ class InputAction {
     /// @param callbacks The callbacks to call when the action state updates
     /// @note Logs a fatal error and crashes the program if the identifier is
     /// not unique
+    /// @since 0.0.1
     static void RegisterAction(const std::string& identifier,
                                const std::string& name,
                                const std::string& category,
                                KeyBinding         binding,
                                Callbacks          callbacks);
 
-    /// @brief Equality operator for InputAction
+    /// @brief Equality operator for ``InputAction``
+    /// @param other The ``InputAction`` to compare against
+    /// @returns `true` if the objects are equal, `false` otherwise
     /// @note Does not check for full equality, only for equal bindings, as
     /// InputActions are guaranteed to be unique
+    /// @since 0.0.1
     constexpr bool operator==(const InputAction& other) const {
         return binding == other.binding;
     };
@@ -333,33 +550,51 @@ class InputAction {
     /// @brief Handle input events. This should *not* be called outside of
     /// Core::HandleEvents()
     /// @param event The SDL event to handle
+    /// @since 0.0.1
     /// @internal
     /// @see Core::HandleEvents()
     static void _HandleEvent(SDL_Event event);
 
     /// @brief Temporary mouse move event registration
+    /// @param callback The callback to call on mouse move
+    /// @note This will be removed in favor of a better API at some point
+    /// @since 0.0.1
     static void
     RegisterMouseMoveEvent(std::function<void(float, float)> callback);
-    /// @brief Temporary scroll event registration
+
+    /// @brief Temporary mouse scroll event registration
+    /// @param callback The callback to call on mouse move
+    /// @note This will be removed in favor of a better API at some point
+    /// @since 0.0.1
     static void RegisterScrollEvent(std::function<void(float, float)> callback);
 
   private:
     /// @brief Temporary storage for the mouse move event callback
+    /// @note This will be removed in favor of a better API at some point
+    /// @since 0.0.1
     static std::function<void(float, float)> _MouseMoveCallback;
+
     /// @brief Temporary storage for the scroll event callback
+    /// @note This will be removed in favor of a better API at some point
+    /// @since 0.0.1
     static std::function<void(float, float)> _ScrollCallback;
 
     /// @brief This object's callbacks, if any
+    /// @since 0.0.1
     Callbacks callbacks;
-	 
+
     /// @brief The state of this action in this frame
+    /// @since 0.0.1
     bool currentState;
+
     /// @brief The state of this action in the last frame
+    /// @since 0.0.1
     bool previousState;
 
     /// @brief An array of pointers to every active input action for tracking
     /// and updating. Each pointer is guaranteed to point to an existing object
     /// and be unique
+    /// @since 0.0.1
     static std::vector<InputAction*> _Registry;
 
     /// @brief This is where input actions go if they're not handled as objects
@@ -370,10 +605,15 @@ class InputAction {
     /// elements. We're not too worried about performance here since we'll
     /// always access actions from the registry and users cannot access this
     /// list
+    /// @note This will be removed in favor of a better API at some point
+    /// @since 0.0.1
     static std::list<InputAction> _HomelessShelter;
 
     /// @brief Logs a fatal error and halts the program if the provided
     /// identifier is not unique
+    /// @param identifer The identifier to check
+    /// @since 0.0.1
+    /// @internal
     static void EnsureUniqueIdentifier(const std::string& identifier);
 };
 

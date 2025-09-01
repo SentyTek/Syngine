@@ -5,7 +5,7 @@
 // │ Copyright (c) SentyTek 2025-2025     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
-// Keycode and scancode definitions
+// behold the horrors
 
 #ifndef SynInputHelpers_h
 #define SynInputHelpers_h
@@ -22,23 +22,17 @@
 
 namespace Syngine {
 
-/// @brief A type representing the lack of a binding
-struct Unbound {
-    /// @brief Always returns true, since every instance of Unbound is the
-    /// same
-    constexpr bool operator==(const Unbound& other) const { return true; }
-};
-
 /// @brief A physical keyboard key. This is mapped to the physical position of
 /// the key, so SynScancode::W will correspond to the W key on an ANSI keyboard
 /// but Z on a French keyboard
 /// @note The names of scancodes are based on their position on an EN-US ANSI
 /// keyboard
+/// @since 0.0.1
 enum class Scancode : uint32_t {
     // This is a mirror of SDL_Scancode with keys ommitted as needed and
     // convenience scancodes included
 
-    UNKNOWN = SDL_SCANCODE_UNKNOWN,
+    _UNKNOWN = SDL_SCANCODE_UNKNOWN, /// Internal, should not be used directly
 
     A = SDL_SCANCODE_A,
     B = SDL_SCANCODE_B,
@@ -67,16 +61,16 @@ enum class Scancode : uint32_t {
     Y = SDL_SCANCODE_Y,
     Z = SDL_SCANCODE_Z,
 
-    _1 = SDL_SCANCODE_1,
-    _2 = SDL_SCANCODE_2,
-    _3 = SDL_SCANCODE_3,
-    _4 = SDL_SCANCODE_4,
-    _5 = SDL_SCANCODE_5,
-    _6 = SDL_SCANCODE_6,
-    _7 = SDL_SCANCODE_7,
-    _8 = SDL_SCANCODE_8,
-    _9 = SDL_SCANCODE_9,
-    _0 = SDL_SCANCODE_0,
+    NUM_1 = SDL_SCANCODE_1,
+    NUM_2 = SDL_SCANCODE_2,
+    NUM_3 = SDL_SCANCODE_3,
+    NUM_4 = SDL_SCANCODE_4,
+    NUM_5 = SDL_SCANCODE_5,
+    NUM_6 = SDL_SCANCODE_6,
+    NUM_7 = SDL_SCANCODE_7,
+    NUM_8 = SDL_SCANCODE_8,
+    NUM_9 = SDL_SCANCODE_9,
+    NUM_0 = SDL_SCANCODE_0,
 
     ENTER     = SDL_SCANCODE_RETURN,
     ESCAPE    = SDL_SCANCODE_ESCAPE,
@@ -113,11 +107,11 @@ enum class Scancode : uint32_t {
     F11 = SDL_SCANCODE_F11,
     F12 = SDL_SCANCODE_F12,
 
-    // INSERT can be generated when Help is pressed on some Mac keyboards
     PRINT_SCREEN = SDL_SCANCODE_PRINTSCREEN,
     SCROLL_LOCK  = SDL_SCANCODE_SCROLLLOCK,
     PAUSE        = SDL_SCANCODE_PAUSE,
-    INSERT       = SDL_SCANCODE_INSERT,
+    INSERT = SDL_SCANCODE_INSERT, /// Can be generated when `Help` is pressed on
+                                  /// some Mac keyboards
 
     HOME      = SDL_SCANCODE_HOME,
     PAGE_UP   = SDL_SCANCODE_PAGEUP,
@@ -129,8 +123,8 @@ enum class Scancode : uint32_t {
     DOWN      = SDL_SCANCODE_DOWN,
     UP        = SDL_SCANCODE_UP,
 
-    NUM_LOCK = SDL_SCANCODE_NUMLOCKCLEAR,
-    CLEAR    = SDL_SCANCODE_NUMLOCKCLEAR, // Convenience scancode
+    NUM_LOCK = SDL_SCANCODE_NUMLOCKCLEAR, /// Equivilant to `CLEAR`
+    CLEAR    = SDL_SCANCODE_NUMLOCKCLEAR, /// Equivilant to `NUM_LOCK`
 
     KEYPAD_DIVIDE   = SDL_SCANCODE_KP_DIVIDE,
     KEYPAD_MULTIPLY = SDL_SCANCODE_KP_MULTIPLY,
@@ -150,8 +144,8 @@ enum class Scancode : uint32_t {
 
     // POWER (after compose) intentionally ommitted
     NON_US_BACKSLASH = SDL_SCANCODE_NONUSBACKSLASH,
-    APPLICATION      = SDL_SCANCODE_APPLICATION,
-    COMPOSE          = SDL_SCANCODE_APPLICATION, // Convenience scancode
+    APPLICATION      = SDL_SCANCODE_APPLICATION, /// Equivilant to `COMPOSE`
+    COMPOSE          = SDL_SCANCODE_APPLICATION, /// Equivilant to `APPLICATION`
 
     // F13 through VOLUME_DOWN and KEYPAD_EQUALS_AS_400 intentionally ommitted
     KEYPAD_EQUALS = SDL_SCANCODE_KP_EQUALS,
@@ -161,25 +155,36 @@ enum class Scancode : uint32_t {
 
     LEFT_CONTROL = SDL_SCANCODE_LCTRL,
     LEFT_SHIFT   = SDL_SCANCODE_LSHIFT,
-    LEFT_ALT     = SDL_SCANCODE_LALT,
-    LEFT_OPTION  = SDL_SCANCODE_LALT, // Convenience scancode
-    LEFT_GUI     = SDL_SCANCODE_LGUI,
-    LEFT_COMMAND = SDL_SCANCODE_LGUI, // Convenience scancode
-    LEFT_WINDOWS = SDL_SCANCODE_LGUI, // Convenience scancode
+    LEFT_ALT     = SDL_SCANCODE_LALT, /// Equivilant to `LEFT_OPTION`
+    LEFT_OPTION  = SDL_SCANCODE_LALT, /// Equivilant to `LEFT_ALT`
+    LEFT_GUI =
+        SDL_SCANCODE_LGUI, /// Equivilant to `LEFT_COMMAND` and `LEFT_WINDOWS`
+    LEFT_COMMAND =
+        SDL_SCANCODE_LGUI, /// Equivilant to `LEFT_GUI` and `LEFT_WINDOWS`
+    LEFT_WINDOWS =
+        SDL_SCANCODE_LGUI, /// Equivilant to `LEFT_GUI` and `LEFT_COMMAND`
 
     RIGHT_CONTROL = SDL_SCANCODE_RCTRL,
     RIGHT_SHIFT   = SDL_SCANCODE_RSHIFT,
-    RIGHT_ALT     = SDL_SCANCODE_RALT,
-    RIGHT_OPTION  = SDL_SCANCODE_RALT, // Convenience scancode
-    RIGHT_GUI     = SDL_SCANCODE_RGUI,
-    RIGHT_COMMAND = SDL_SCANCODE_RGUI, // Convenience scancode
-    RIGHT_WINDOWS = SDL_SCANCODE_RGUI, // Convenience scancode
+    RIGHT_ALT     = SDL_SCANCODE_RALT, /// Equivilant to `RIGHT_OPTION`
+    RIGHT_OPTION  = SDL_SCANCODE_RALT, /// Equivilant to `RIGHT_ALT`
+    RIGHT_GUI =
+        SDL_SCANCODE_RGUI, /// Equivilant to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
+    RIGHT_COMMAND =
+        SDL_SCANCODE_RGUI, /// Equivilant to `RIGHT_GUI` and `RIGHT_WINDOWS`
+    RIGHT_WINDOWS =
+        SDL_SCANCODE_RGUI, /// Equivilant to `RIGHT_GUI` and `RIGHT_COMMAND`
 
     // MODE through END_CALL intentionally ommitted
 
     // No need for an equivilant to SDL_SCANCODE_RESERVED or SDL_SCANCODE_COUNT
 };
 
+/// @brief Convert a ``SDL_Scancode`` to a ``Scancode``
+/// @param scancode The ``SDL_Scancode`` to convert
+/// @return The converted ``Scancode``
+/// @since 0.0.1
+/// @internal
 inline constexpr Scancode _SDLToSyn(const SDL_Scancode& scancode) {
     switch (scancode) {
     case SDL_SCANCODE_NONUSHASH:
@@ -338,12 +343,17 @@ inline constexpr Scancode _SDLToSyn(const SDL_Scancode& scancode) {
 
         Logger::Warn("Untranslatable scancode: " +
                      static_cast<std::string>(SDL_GetScancodeName(scancode)));
-        return Scancode::UNKNOWN;
+        return Scancode::_UNKNOWN;
 
     default: return static_cast<Scancode>(scancode);
     }
 }
 
+/// @brief Convert a ``Scancode`` to a ``SDL_Scancode``
+/// @param scancode The ``Scancode`` to convert
+/// @return The converted ``SDL_Scancode``
+/// @since 0.0.1
+/// @internal
 inline constexpr SDL_Scancode _SynToSDL(const Scancode& scancode) {
     // SynScancode is a strict subset of SDL_Scancode so we don't have to do any
     // checks
@@ -352,6 +362,7 @@ inline constexpr SDL_Scancode _SynToSDL(const Scancode& scancode) {
 
 /// @brief A virtual keyboard key. This is mapped to the meaning of the key, so
 /// SynKeycode::I will correspond to I on any keyboard
+/// @since 0.0.1
 enum class Keycode : uint32_t {
     // This is a mirror of SDL_Keycode, with keys ommitted as needed and
     // convenience scancodes included
@@ -359,7 +370,7 @@ enum class Keycode : uint32_t {
     // No need for an equivalent to SDLK_EXTENDED_MASK, SDLK_SCANCODE_MASK, or
     // SDLK_SCANCODE_TO_KEYCODE(X)
 
-    UNKNOWN = SDLK_UNKNOWN,
+    _UNKNOWN = SDLK_UNKNOWN, /// Internal, should not be used directly
 
     ENTER     = SDLK_RETURN,
     ESCAPE    = SDLK_ESCAPE,
@@ -382,16 +393,16 @@ enum class Keycode : uint32_t {
     PERIOD            = SDLK_PERIOD,
     SLASH             = SDLK_SLASH,
 
-    _0 = SDLK_0,
-    _1 = SDLK_1,
-    _2 = SDLK_2,
-    _3 = SDLK_3,
-    _4 = SDLK_4,
-    _5 = SDLK_5,
-    _6 = SDLK_6,
-    _7 = SDLK_7,
-    _8 = SDLK_8,
-    _9 = SDLK_9,
+    NUM_0 = SDLK_0,
+    NUM_1 = SDLK_1,
+    NUM_2 = SDLK_2,
+    NUM_3 = SDLK_3,
+    NUM_4 = SDLK_4,
+    NUM_5 = SDLK_5,
+    NUM_6 = SDLK_6,
+    NUM_7 = SDLK_7,
+    NUM_8 = SDLK_8,
+    NUM_9 = SDLK_9,
 
     COLON         = SDLK_COLON,
     SEMICOLON     = SDLK_SEMICOLON,
@@ -469,8 +480,8 @@ enum class Keycode : uint32_t {
     DOWN  = SDLK_DOWN,
     UP    = SDLK_UP,
 
-    NUM_LOCK = SDLK_NUMLOCKCLEAR,
-    CLEAR    = SDLK_NUMLOCKCLEAR, // Convenience keycode
+    NUM_LOCK = SDLK_NUMLOCKCLEAR, /// Equivilant to `CLEAR`
+    CLEAR    = SDLK_NUMLOCKCLEAR, /// Equivilant to `NUM_LOCK`
 
     // POWER (between KEYPAD_PERIOD and KEYPAD_EQUALS) intentionally omitted
     KEYPAD_DIVIDE   = SDLK_KP_DIVIDE,
@@ -508,23 +519,28 @@ enum class Keycode : uint32_t {
 
     LEFT_CONTROL = SDLK_LCTRL,
     LEFT_SHIFT   = SDLK_LSHIFT,
-    LEFT_ALT     = SDLK_LALT,
-    LEFT_OPTION  = SDLK_LALT, // Convenience keycode
-    LEFT_GUI     = SDLK_LGUI,
-    LEFT_COMMAND = SDLK_LGUI, // Convenience keycode
-    LEFT_WINDOWS = SDLK_LGUI, // Convenience keycode
+    LEFT_ALT     = SDLK_LALT, /// Equivilant to `LEFT_OPTION`
+    LEFT_OPTION  = SDLK_LALT, /// Equivilant to `LEFT_ALT`
+    LEFT_GUI = SDLK_LGUI, /// Equivilant to `LEFT_COMMAND` and `LEFT_WINDOWS`
+    LEFT_COMMAND = SDLK_LGUI, /// Equivilant to `LEFT_GUI` and `LEFT_WINDOWS`
+    LEFT_WINDOWS = SDLK_LGUI, /// Equivilant to `LEFT_GUI` and `LEFT_COMMAND`
 
     RIGHT_CONTROL = SDLK_RCTRL,
     RIGHT_SHIFT   = SDLK_RSHIFT,
-    RIGHT_ALT     = SDLK_RALT,
-    RIGHT_OPTION  = SDLK_RALT, // Convenience keycode
-    RIGHT_GUI     = SDLK_RGUI,
-    RIGHT_COMMAND = SDLK_RGUI, // Convenience keycode
-    RIGHT_WINDOWS = SDLK_RGUI, // Convenience keycode
+    RIGHT_ALT     = SDLK_RALT, /// Equivilant to `RIGHT_OPTION`
+    RIGHT_OPTION  = SDLK_RALT, /// Equivilant to `RIGHT_ALT`
+    RIGHT_GUI = SDLK_RGUI, /// Equivilant to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
+    RIGHT_COMMAND = SDLK_RGUI, /// Equivilant to `RIGHT_GUI` and `RIGHT_WINDOWS`
+    RIGHT_WINDOWS = SDLK_RGUI, /// Equivilant to `RIGHT_GUI` and `RIGHT_COMMAND`
 
     // MODE through RIGHT_HYPER intentionally omitted
 };
 
+/// @brief Convert a ``SDL_Keycode`` to a ``Keycode``
+/// @param scancode The ``SDL_Keycode`` to convert
+/// @return The converted ``Keycode``
+/// @since 0.0.1
+/// @internal
 inline constexpr Keycode _SDLToSyn(const SDL_Keycode& keycode) {
     switch (keycode) {
     case SDLK_EXTENDED_MASK:
@@ -658,29 +674,49 @@ inline constexpr Keycode _SDLToSyn(const SDL_Keycode& keycode) {
 
         Logger::Warn("Untranslatable keycode: " +
                      static_cast<std::string>(SDL_GetKeyName(keycode)));
-        return Keycode::UNKNOWN;
+        return Keycode::_UNKNOWN;
 
     default: return static_cast<Keycode>(keycode);
     }
 }
 
+/// @brief Convert a ``Keycode`` to a ``SDL_Keycode``
+/// @param scancode The ``Keycode`` to convert
+/// @return The converted ``SDL_Keycode``
+/// @since 0.0.1
+/// @internal
 inline constexpr SDL_Keycode _SynToSDL(const Keycode& keycode) {
     // SynKeycode is a strict subset of SDL_Keycode so we don't have to do any
     // checks
     return static_cast<SDL_Keycode>(keycode);
 }
 
-struct Keymod; // Forward declaration for friend functions below
+// Forward declaration for friend functions below
+struct Keymod;
 
+// Friend functions for `Keymod`
 constexpr Keymod     _SDLToSyn(const SDL_Keymod& keymod);
 constexpr SDL_Keymod _SynToSDL(const Keymod& keymod);
 
 /// @brief A virtual modifier key
+/// @example The recommend method of constructing a `Keymod` is to use the `+`
+/// operator with the static constants in the class, optionally calling the
+/// `Keymod(uint16_t)` constructor explicitly;
+/// ```cpp
+/// Keymod someKeymod = Keymod::LEFT_SHIFT + Keymod::RIGHT_CONTROL;
+/// someFunctionThatTakesAModifier(Keymod(Keymod::MODE + Keymod::LEFT_ALT));
+/// ```
+/// All involved functions are marked `constexpr`, so there won't be any
+/// performance downsides from doing this
+/// @since 0.0.1
 struct Keymod {
     // This is a mirror of SDL_Keymod, with modifiers ommitted as needed and
     // convenience modifiers included
 
   private:
+    /// @brief The raw value of the bitset
+    /// @since 0.0.1
+    /// @internal
     uint16_t _rawValue;
 
   public:
@@ -688,52 +724,109 @@ struct Keymod {
     static constexpr uint16_t NONE          = SDL_KMOD_NONE;
     static constexpr uint16_t LEFT_SHIFT    = SDL_KMOD_LSHIFT;
     static constexpr uint16_t RIGHT_SHIFT   = SDL_KMOD_RSHIFT;
-    static constexpr uint16_t LEFT_CONTROL  = SDL_KMOD_LCTRL; // Convenience
-    static constexpr uint16_t RIGHT_CONTROL = SDL_KMOD_RCTRL; // Convenience
-    static constexpr uint16_t LEFT_ALT      = SDL_KMOD_LALT;
-    static constexpr uint16_t LEFT_OPTION   = SDL_KMOD_LALT; // Convenience
-    static constexpr uint16_t RIGHT_ALT     = SDL_KMOD_RALT;
-    static constexpr uint16_t RIGHT_OPTION  = SDL_KMOD_RALT; // Convenience
-    static constexpr uint16_t LEFT_GUI      = SDL_KMOD_LGUI;
-    static constexpr uint16_t LEFT_COMMAND  = SDL_KMOD_LGUI; // Convenience
-    static constexpr uint16_t LEFT_WINDOWS  = SDL_KMOD_LGUI; // Convenience
-    static constexpr uint16_t RIGHT_GUI     = SDL_KMOD_RGUI;
-    static constexpr uint16_t RIGHT_COMMAND = SDL_KMOD_RGUI; // Convenience
-    static constexpr uint16_t RIGHT_WINDOWS = SDL_KMOD_RGUI; // Convenience
-    static constexpr uint16_t MODE          = SDL_KMOD_MODE;
-    static constexpr uint16_t CONTROL       = SDL_KMOD_CTRL;
-    static constexpr uint16_t SHIFT         = SDL_KMOD_SHIFT;
-    static constexpr uint16_t ALT           = SDL_KMOD_ALT;
-    static constexpr uint16_t OPTION        = SDL_KMOD_ALT; // Convenience
-    static constexpr uint16_t GUI           = SDL_KMOD_GUI;
-    static constexpr uint16_t COMMAND       = SDL_KMOD_GUI; // Convenience
-    static constexpr uint16_t WINDOWS       = SDL_KMOD_GUI; // Convenience
+    static constexpr uint16_t LEFT_CONTROL  = SDL_KMOD_LCTRL;
+    static constexpr uint16_t RIGHT_CONTROL = SDL_KMOD_RCTRL;
 
+    /// @note Equivilant to `LEFT_OPTION`
+    static constexpr uint16_t LEFT_ALT = SDL_KMOD_LALT;
+    /// @note Equivilant to `LEFT_ALT`
+    static constexpr uint16_t LEFT_OPTION = SDL_KMOD_LALT;
+
+    /// @note Equivilant to `RIGHT_OPTION`
+    static constexpr uint16_t RIGHT_ALT = SDL_KMOD_RALT;
+    /// @note Equivilant to `RIGHT_ALT`
+    static constexpr uint16_t RIGHT_OPTION = SDL_KMOD_RALT;
+
+    /// @note Equivilant to `LEFT_COMMAND` and `LEFT_WINDOWS`
+    static constexpr uint16_t LEFT_GUI = SDL_KMOD_LGUI;
+    /// @note Equivilant to `LEFT_GUI` and `LEFT_WINDOWS`
+    static constexpr uint16_t LEFT_COMMAND = SDL_KMOD_LGUI;
+    /// @note Equivilant to `LEFT_GUI` and `LEFT_COMMAND`
+    static constexpr uint16_t LEFT_WINDOWS = SDL_KMOD_LGUI;
+
+    /// @note Equivilant to `RIGHT_COMMANd` and `RIGHT_WINDOWS`
+    static constexpr uint16_t RIGHT_GUI = SDL_KMOD_RGUI;
+    /// @note Equivilant to `RIGHT_GUI` and `RIGHT_WINDOWS`
+    static constexpr uint16_t RIGHT_COMMAND = SDL_KMOD_RGUI;
+    /// @note Equivilant to `RIGHT_GUI` and `RIGHT_COMMAND`
+    static constexpr uint16_t RIGHT_WINDOWS = SDL_KMOD_RGUI;
+
+    static constexpr uint16_t MODE    = SDL_KMOD_MODE;
+    static constexpr uint16_t CONTROL = SDL_KMOD_CTRL;
+    static constexpr uint16_t SHIFT   = SDL_KMOD_SHIFT;
+
+    /// @note Equivilant to `OPTION`
+    static constexpr uint16_t ALT = SDL_KMOD_ALT;
+    /// @note Equivilant to `ALT`
+    static constexpr uint16_t OPTION = SDL_KMOD_ALT;
+    /// @note Equivilant to `COMMAND` and `WINDOWS`
+    static constexpr uint16_t GUI = SDL_KMOD_GUI;
+    /// @note Equivilant to `GUI` and `WINDOWS`
+    static constexpr uint16_t COMMAND = SDL_KMOD_GUI;
+    /// @note Equivilant to `GUI` and `COMMAND`
+    static constexpr uint16_t WINDOWS = SDL_KMOD_GUI;
+
+    /// @brief Construct an empty ``Keymod``
+    /// @since 0.0.1
     constexpr Keymod() : _rawValue(NONE) {}
+
+    /// @brief Construct a ``Keymod`` from a raw value
+    /// @since 0.0.1
     constexpr Keymod(uint16_t rawValue) : _rawValue(rawValue) {}
 
+    /// @brief Merge two ``Keymod``s together
+    /// @param other The ``Keymod`` to combine
+    /// @return A keymod equivilant to the union of the two given keymods
+    /// @since 0.0.1
     constexpr Keymod operator+(const Keymod& other) const {
         return Keymod(this->_rawValue | other._rawValue);
     }
 
+    /// @brief Subtract a ``Keymod`` from another `Keymod`
+    /// @param other The ``Keymod`` to subtract
+    /// @return A keymod equivilant to the first ``Keymod`` with every modifier
+    /// from the second `Keymod` removed
+    /// @since 0.0.1
     constexpr Keymod operator-(const Keymod& other) const {
         return Keymod(this->_rawValue & ~other._rawValue);
     }
 
+    /// @brief Merge a ``Keymod`` into an existing `Keymod`
+    /// @param other The ``Keymod`` to combine
+    /// @return A keymod equivilant to the union of the two given keymods
+    /// @post The keymod this is called on will be modified to the value of the
+    /// returned keymod
+    /// @since 0.0.1
     constexpr Keymod operator+=(const Keymod& other) {
         this->_rawValue |= other._rawValue;
         return *this;
     }
 
+    /// @brief Subtract a ``Keymod`` out of an existing `Keymod`
+    /// @param other The ``Keymod`` to subtract
+    /// @return A keymod equivilant to the first ``Keymod`` with every modifier
+    /// from the second `Keymod` removed
+    /// @post The keymod this is called on will be modified to the value of the
+    /// returned keymod
+    /// @since 0.0.1
     constexpr Keymod operator-=(const Keymod& other) {
         this->_rawValue &= ~other._rawValue;
         return *this;
     }
 
+    /// @brief Equality operator for ``Keymod``
+    /// @param other The ``Keymod`` to compare against
+    /// @returns `true` if the objects are equal, `false` otherwise
+    /// @since 0.0.1
     constexpr bool operator==(const Keymod& other) const {
         return this->_rawValue == other._rawValue;
     }
 
+    /// @brief Convert a ``SDL_Keymod`` to a ``Keymod``
+    /// @param scancode The ``SDL_Keymod`` to convert
+    /// @return The converted ``Keymod``
+    /// @since 0.0.1
+    /// @internal
     friend constexpr Keymod _SDLToSyn(const SDL_Keymod& keymod) {
         // modifiers SDL vends that we don't support
         const SDL_Keymod omitted = static_cast<SDL_Keymod>(0xF000u);
@@ -768,25 +861,39 @@ struct Keymod {
         return Keymod(static_cast<uint16_t>(masked));
     }
 
+    /// @brief Convert a ``Keymod`` to a ``SDL_Keymod``
+    /// @param scancode The ``Keymod`` to convert
+    /// @return The converted ``SDL_Keymod``
+    /// @since 0.0.1
+    /// @internal
     friend constexpr SDL_Keymod _SynToSDL(const Keymod& keymod) {
         return static_cast<SDL_Keymod>(keymod._rawValue);
     }
 };
 
+/// @brief A mouse button
+/// @since 0.0.1
+/// @section Input
 enum class MouseButton : uint8_t {
-    _UNKNOWN  = 0, /// Not for public use, used for conversions with SDL
-    LEFT      = SDL_BUTTON_LEFT,
-    PRIMARY   = SDL_BUTTON_LEFT,
-    RIGHT     = SDL_BUTTON_RIGHT,
-    SECONDARY = SDL_BUTTON_RIGHT,
-    MIDDLE    = SDL_BUTTON_MIDDLE,
-    TERTIARY  = SDL_BUTTON_MIDDLE,
+    _UNKNOWN  = 0,                 /// Internal, should not be used directly
+    LEFT      = SDL_BUTTON_LEFT,   /// Equivilant to `PRIMARY`
+    PRIMARY   = SDL_BUTTON_LEFT,   /// Equivilant to `LEFT`
+    RIGHT     = SDL_BUTTON_RIGHT,  /// Equivilant to `SECONDARY`
+    SECONDARY = SDL_BUTTON_RIGHT,  /// Equivilant to `RIGHT`
+    MIDDLE    = SDL_BUTTON_MIDDLE, /// Equivilant to `TERTIARY`
+    TERTIARY  = SDL_BUTTON_MIDDLE, /// Equivilant to `MIDDLE`
     FOUR      = SDL_BUTTON_X1,
     FIVE      = SDL_BUTTON_X2
 };
 
+/// @brief Convert a ``SDL_MouseButtonFlags`` as a `uint8_t` to a
+/// ``MouseButton``
+/// @param scancode The ``uint8_t`` to convert
+/// @return The converted ``MouseButton``
 /// @note Cannot accept `SDL_MouseButtonFlags` directly as the overload is
 /// ambiguous due to `SDL_MouseButtonFlags` being a macro typedef of uint32_t
+/// @since 0.0.1
+/// @internal
 constexpr MouseButton _SDLToSyn(const uint8_t& button) {
     if (button > 0 && button <= SDL_BUTTON_X2) {
         return static_cast<MouseButton>(button);
@@ -797,6 +904,11 @@ constexpr MouseButton _SDLToSyn(const uint8_t& button) {
     }
 }
 
+/// @brief Convert a ``SDL_Scancode`` to a ``Scancode``
+/// @param scancode The ``SDL_Scancode`` to convert
+/// @return The converted ``Scancode``
+/// @since 0.0.1
+/// @internal
 constexpr SDL_MouseButtonFlags _SynToSDL(const MouseButton& button) {
     return static_cast<SDL_MouseButtonFlags>(button);
 }
