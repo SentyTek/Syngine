@@ -1,6 +1,6 @@
 # ╒═══════════════════ GameConfig.cmake ═╕
 # │ Syngine                              │
-# │ Created YYYY-MM-DD                   │
+# │ Created 2025-08-05                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2025     │
 # │ Placeholder License                  │
@@ -177,12 +177,12 @@ function(add_assets target)
         set(ICON_NAME ${target}.icon)
         set(ICON_PATH ${CMAKE_SOURCE_DIR}/game/src/res/${ICON_NAME})
         # ensure the build cache directory for the icon exists
-        file(MAKE_DIRECTORY ${CMAKE_SOURCE_DIR}/build/build/.${target}-icon)
+        file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/macOS)
         # find the icon build cache we just made, as well as the compiled icon
-        set(ICON_PACKAGE_PATH ${CMAKE_SOURCE_DIR}/build/build/.${target}-icon)
+        set(ICON_PACKAGE_PATH ${CMAKE_BINARY_DIR}/macOS)
         set(ICON_PACKAGE ${ICON_PACKAGE_PATH}/Assets.car)
         # find the Info.plist file in the build cache
-        set(PLIST_PATH ${CMAKE_SOURCE_DIR}/build/build/.${target}-icon/Info.plist)
+        set(PLIST_PATH ${CMAKE_BINARY_DIR}/macOS/Info.plist)
 
         # configure the Info.plist file
 
@@ -356,5 +356,9 @@ endif()
 
 # Post build asset copying for win/linux
 add_assets(${name})
+
+# Add version
+include(${SYNGINE_SOURCE_DIR}/cmake/versioning.cmake)
+define_version()
 
 endfunction()

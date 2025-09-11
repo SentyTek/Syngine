@@ -10,6 +10,7 @@
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/TextureHelpers.h"
 
+#include "Syngine/Utils/FsUtils.h"
 #include "bgfx/bgfx.h"
 
 #include "bx/math.h"
@@ -71,30 +72,31 @@ bool AssimpLoader::_LoadModel(MeshData& out, const std::string& path, bool loadT
                             | aiProcess_GenSmoothNormals;
 
     //read file. ideally use some kind of post processing (tangents, join indices, etc), but this is a simple example
-    const aiScene* scene = importer.ReadFile(path, flags);
+    const std::string resolvedPath = _ResolveOSPath(path.c_str());
+    const aiScene* scene = importer.ReadFile(resolvedPath, flags);
     if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->HasMeshes()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Error loading model: %s", importer.GetErrorString());
         return false;
     }
 
     if(scene->mNumMeshes == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "No meshes found in model: %s", path.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "No meshes found in model: %s", resolvedPath.c_str());
         return false;
     }
 
     MeshData meshData;
-    if (!processScene(meshData, scene, path, loadTextures)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to process scene for model: %s", path.c_str());
+    if (!processScene(meshData, scene, resolvedPath, loadTextures)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to process scene for model: %s", resolvedPath.c_str());
         return false;
     }
     meshData.hasTextures = loadTextures;
-    meshData.path        = path;
+    meshData.path        = resolvedPath;
     meshData.id          = loadedMeshes.size();
 
     try {
-        meshData.lastWriteTime = std::filesystem::last_write_time(path);
+        meshData.lastWriteTime = std::filesystem::last_write_time(resolvedPath);
     } catch (const std::filesystem::filesystem_error& e) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Failed to get last write time for %s: %s", path.c_str(), e.what()); // e.what() lol what a name
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, "Failed to get last write time for %s: %s", resolvedPath.c_str(), e.what()); // e.what() lol what a name
     }
     meshData.valid = true; // Mark as valid after processing
 

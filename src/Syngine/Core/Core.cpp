@@ -37,6 +37,7 @@
 #include "Syngine/ECS/Component.h"
 
 #include "Syngine/Utils/FsUtils.h"
+#include "Syngine/Utils/Version.h"
 
 #include "SDL3/SDL_events.h"
 #include "SDL3/SDL_keycode.h"
@@ -72,7 +73,8 @@ Core::Core(const EngineConfig config) {
     // Check if required folders exist (shaders, meshes)
     // CheckRequiredFolders will abort if any folder is missing
     if (Syngine::_CheckRequiredFolders()) {
-        m_app         = new App();
+        Syngine::Logger::LogF(LogLevel::INFO, "Using Syngine v%s", SYN_VERSION_STRING);
+        m_app = new App();
         m_app->config = config;
     }
 }
@@ -177,7 +179,10 @@ bool Core::HandleEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
-        case SDL_EVENT_QUIT: m_shouldClose = true; break;
+        case SDL_EVENT_QUIT:
+            Logger::Info("Quit event received, will exit on next frame");
+            m_shouldClose = true;
+            break;
         case SDL_EVENT_WINDOW_RESIZED: {
             int         w, h;
             SDL_Window* resizedWindow =
@@ -266,25 +271,10 @@ bool Core::Update() {
 
 bool Core::Render(CameraComponent* camera) {
     // Render the application
-    // TODO: fucking fix this this is not okay
-    bx::Vec3 lightDir = { 0.0f, -1.0f, 0.0f };
     if (Renderer::IsReady()) {
         m_frameCounter.frameCount++;
 
-        m_app->renderer->_RenderFrame(lightDir, camera, this->m_app->debug);
-
-        if (this->m_app->debug) {
-            // christ on a stick this call is ridiculous
-            this->m_app->physicsManager->_DrawDebug(
-                this->m_app->renderer->width,
-                this->m_app->renderer->height,
-                this->m_app->renderer->GetProgram("debugger").program,
-                Registry::GetGameObjectByName(
-                    "player") // Player object has the camera
-                    ->GetComponent<Syngine::CameraComponent>()
-                    ->GetCamera(),
-                camera->GetCamera());
-        }
+        m_app->renderer->_RenderFrame(camera, m_app->debug);
     }
     return true;
 }

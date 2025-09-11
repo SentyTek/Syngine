@@ -1,6 +1,6 @@
 # ╒═══════════════ CompileShaders.cmake ═╕
 # │ Syngine                              │
-# │ Created YYYY-MM-DD                   │
+# │ Created 2025-06-05                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2025     │
 # │ Placeholder License                  │
