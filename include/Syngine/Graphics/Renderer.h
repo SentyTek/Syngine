@@ -89,6 +89,14 @@ class Renderer {
     static int width; //* Width of the game window in pixels
     static int height; //* Height of the game window in pixels
 
+    /// @brief Constructor for the Renderer class
+    /// @param width Width of the game window in pixels
+    /// @param height Height of the game window in pixels
+    /// @param config Renderer configuration options
+    /// @throws std::runtime_error if initialization fails (e.g., bgfx::init()
+    /// fails or missing files)
+    /// @threadsafety not-safe
+    /// @since v0.0.1
     Renderer(int width, int height, const RendererConfig& config = RendererConfig());
     ~Renderer();
 
@@ -236,8 +244,8 @@ class Renderer {
     void _RegisterGizmo(const std::string& tag, float size = 1.0f);
   private:
     struct Gizmo {
-        bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; //* Texture handle for the gizmo
-        float size = 1.0f; //* Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
+        bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; // Texture handle for the gizmo
+        float size = 1.0f; // Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
     };
 
     static std::string m_title;

@@ -53,7 +53,7 @@ struct EngineConfig {
 /// @section Core
 /// @since v0.0.1
 struct DebugModes {
-    bool Enabled = true;
+    bool Enabled = true; //* Global debug toggle
     bool PhysWireframes = true; //* Whether to draw physics wireframes
     bool Gizmos = true; //* Gizmos such as cameras, lights, and audio sources
     bool CSMBounds = true; //* Cascading Shadow Map zone bounds.
@@ -76,6 +76,11 @@ struct App {
 /// @since v0.0.1
 class Core {
   public:
+    /// @brief Constructor for the Core class
+    /// @param config Engine configuration options
+    /// @throws std::runtime_error if initialization fails (e.g., SDL_Init()
+    /// fails or missing files)
+    /// @since v0.0.1
     Core(const EngineConfig config);
     ~Core();
 
