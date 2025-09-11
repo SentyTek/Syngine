@@ -45,31 +45,7 @@ Syngine::InputAction::InputAction(const std::string&  identifier,
     Syngine::InputAction::_Registry.push_back(this);
 }
 
-// MARK: InputAction convenience constructors
-
-Syngine::InputAction::InputAction(const std::string&  identifier,
-                                  const std::string&  name,
-                                  const std::string&  category,
-                                  Syngine::KeyBinding binding)
-    : InputAction(identifier, name, category, binding, Callbacks()) {}
-
-Syngine::InputAction::InputAction(const std::string& identifier,
-                                  const std::string& name)
-    : InputAction(identifier, name, "", Syngine::KeyBinding(), Callbacks()) {}
-
-Syngine::InputAction::InputAction(const std::string& identifier,
-                                  const std::string& name,
-                                  const std::string& category)
-    : InputAction(
-          identifier, name, category, Syngine::KeyBinding(), Callbacks()) {}
-
-Syngine::InputAction::InputAction(const std::string&  identifier,
-                                  const std::string&  name,
-                                  Syngine::KeyBinding binding)
-    : InputAction(identifier, name, "", binding, Callbacks()) {}
-
 Syngine::InputAction::~InputAction() {
-    Logger::Warn("Removing InputAction '" + this->identifier + "'");
     auto it = std::find(_Registry.begin(), _Registry.end(), this);
     if (it != _Registry.end()) {
         _Registry.erase(it);
@@ -87,15 +63,6 @@ void Syngine::InputAction::RegisterAction(const std::string&  identifier,
         identifier, name, category, binding, callbacks);
     Syngine::InputAction::_Registry.back() =
         &Syngine::InputAction::_HomelessShelter.back();
-}
-
-// MARK: InputAction convenience registration
-
-void Syngine::InputAction::RegisterAction(const std::string&  identifier,
-                                          const std::string&  name,
-                                          Syngine::KeyBinding binding,
-                                          Callbacks           callbacks) {
-    RegisterAction(identifier, name, "", binding, callbacks);
 }
 
 // MARK: InputAction state getters
@@ -231,8 +198,6 @@ void Syngine::InputAction::_HandleEvent(SDL_Event event) {
     default: break;
     }
 }
-
-// MARK: Temporary mouse movement and scroll event handling
 
 // MARK: Temporary static member initialization
 

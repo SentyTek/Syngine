@@ -30,12 +30,14 @@ namespace Syngine {
 /// @since 0.0.1
 /// @section Input
 enum class KeybindType : size_t {
-    UNBOUND      = 0, //* A keybind that is not bound to any key
-    KEYCODE      = 1, //* A keybind that is bound to a specific keycode
-    SCANCODE     = 2, //* A keybind that is bound to a specific scancode
-    SHORTCUT     = 3, //* A keybind that is bound to a keycode or scancode and a set of modifiers
-    SEQUENCE     = 4, //* A keybind that is bound to a sequence of keycodes, scancodes, and/or shortcuts
-    MOUSE_BUTTON = 5  //* A keybind that is bound to a mouse button
+    UNBOUND  = 0, //* A keybind that is not bound to any key
+    KEYCODE  = 1, //* A keybind that is bound to a specific keycode
+    SCANCODE = 2, //* A keybind that is bound to a specific scancode
+    SHORTCUT = 3, //* A keybind that is bound to a keycode or scancode and a set
+                  //of modifiers
+    SEQUENCE = 4, //* A keybind that is bound to a sequence of keycodes,
+                  //scancodes, and/or shortcuts
+    MOUSE_BUTTON = 5 //* A keybind that is bound to a mouse button
 };
 
 /// @brief A type representing an unbound action, or the lack of a key binding
@@ -352,70 +354,6 @@ class InputAction {
     /// @since 0.0.1
     Syngine::KeyBinding binding;
 
-    /// @brief Make an empty InputAction
-    /// @param identifier The identifier for the input action. This is required
-    /// and *must* be unique
-    /// @param name The name for the input action. This is the display name that
-    /// is shown in the bindings menu
-    /// @note Logs a fatal error and crashes the program if the identifier is
-    /// not unique
-    InputAction(const std::string& identifier, const std::string& name);
-
-    /// @brief Make an empty InputAction
-    /// @param identifier The identifier for the input action. This is required
-    /// and *must* be unique
-    /// @param name The name for the input action. This is the display name that
-    /// is shown in the bindings menu
-    /// @param category The category for the input action. This is used for
-    /// organizing actions in the bindings menu
-    /// @note Logs a fatal error and crashes the program if the identifier is
-    /// not unique
-    InputAction(const std::string& identifier,
-                const std::string& name,
-                const std::string& category);
-
-    /// @brief Make an InputAction with a binding
-    /// @param identifier The identifier for the input action. This is required
-    /// and *must* be unique
-    /// @param name The name for the input action. This is the display name that
-    /// is shown in the bindings menu
-    /// @param binding The binding for the input action
-    /// @note Logs a fatal error and crashes the program if the identifier is
-    /// not unique
-    InputAction(const std::string& identifier,
-                const std::string& name,
-                KeyBinding         binding);
-
-    /// @brief Make an InputAction with a binding
-    /// @param identifier The identifier for the input action. This is required
-    /// and *must* be unique
-    /// @param name The name for the input action. This is the display name that
-    /// is shown in the bindings menu
-    /// @param category The category for the input action. This is used for
-    /// organizing actions in the bindings menu
-    /// @param binding The binding for the input action
-    /// @note Logs a fatal error and crashes the program if the identifier is
-    /// not unique
-    InputAction(const std::string& identifier,
-                const std::string& name,
-                const std::string& category,
-                KeyBinding         binding);
-
-    /// @brief Make an InputAction with a binding and callbacks
-    /// @param identifier The identifier for the input action. This is required
-    /// and *must* be unique
-    /// @param name The name for the input action. This is the display name that
-    /// is shown in the bindings menu
-    /// @param binding The binding for the input action
-    /// @param callbacks The callbacks to be called when the input action is
-    /// triggered
-    /// @note Logs a fatal error and crashes the program if the identifier is
-    /// not unique
-    InputAction(const std::string& identifier,
-                const std::string& name,
-                KeyBinding         binding,
-                Callbacks          callbacks);
-
     /// @brief Make an InputAction with a binding and callbacks
     /// @param identifier The identifier for the input action. This is required
     /// and *must* be unique
@@ -430,9 +368,11 @@ class InputAction {
     /// not unique
     InputAction(const std::string&  identifier,
                 const std::string&  name,
-                const std::string&  category,
-                Syngine::KeyBinding binding,
-                Callbacks           callbacks);
+                const std::string&  category  = "",
+                Syngine::KeyBinding binding   = KeyBinding(),
+                Callbacks           callbacks = { .onPressed  = []() -> void {},
+                                                  .onReleased = []() -> void {},
+                                                  .onStateChanged = []() -> void {} });
 
     /// @brief InputActions are non-copyable because of their unique identifiers
     /// @since 0.0.1
@@ -501,22 +441,6 @@ class InputAction {
     void setOnStateChangedCallback(std::function<void()> callback) {
         callbacks.onStateChanged = callback;
     }
-
-    /// @brief Registers an action which calls the provided callback(s) when the
-    /// input state changes
-    /// @param identifier The identifier for the input action. This is required
-    /// and *must* be unique
-    /// @param name The name for the input action. This is the display name that
-    /// is shown in the bindings menu
-    /// @param binding The binding for the input action
-    /// @param callbacks The callbacks to call when the action state updates
-    /// @note Logs a fatal error and crashes the program if the identifier is
-    /// not unique
-    /// @since 0.0.1
-    static void RegisterAction(const std::string& identifier,
-                               const std::string& name,
-                               KeyBinding         binding,
-                               Callbacks          callbacks);
 
     /// @brief Registers an action which calls the provided callback when the
     /// action is pressed
