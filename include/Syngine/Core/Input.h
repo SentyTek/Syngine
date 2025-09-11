@@ -30,12 +30,12 @@ namespace Syngine {
 /// @since 0.0.1
 /// @section Input
 enum class KeybindType : size_t {
-    UNBOUND      = 0,
-    KEYCODE      = 1,
-    SCANCODE     = 2,
-    SHORTCUT     = 3,
-    SEQUENCE     = 4,
-    MOUSE_BUTTON = 5
+    UNBOUND      = 0, //* A keybind that is not bound to any key
+    KEYCODE      = 1, //* A keybind that is bound to a specific keycode
+    SCANCODE     = 2, //* A keybind that is bound to a specific scancode
+    SHORTCUT     = 3, //* A keybind that is bound to a keycode or scancode and a set of modifiers
+    SEQUENCE     = 4, //* A keybind that is bound to a sequence of keycodes, scancodes, and/or shortcuts
+    MOUSE_BUTTON = 5  //* A keybind that is bound to a mouse button
 };
 
 /// @brief A type representing an unbound action, or the lack of a key binding
