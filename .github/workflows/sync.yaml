@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-      projects: write
       repository-projects: write
 
     steps:
