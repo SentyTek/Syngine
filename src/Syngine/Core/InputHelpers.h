@@ -32,7 +32,7 @@ enum class Scancode : uint32_t {
     // This is a mirror of SDL_Scancode with keys ommitted as needed and
     // convenience scancodes included
 
-    _UNKNOWN = SDL_SCANCODE_UNKNOWN, /// Internal, should not be used directly
+    _UNKNOWN = SDL_SCANCODE_UNKNOWN, // Internal, should not be used directly
 
     A = SDL_SCANCODE_A,
     B = SDL_SCANCODE_B,
@@ -110,9 +110,8 @@ enum class Scancode : uint32_t {
     PRINT_SCREEN = SDL_SCANCODE_PRINTSCREEN,
     SCROLL_LOCK  = SDL_SCANCODE_SCROLLLOCK,
     PAUSE        = SDL_SCANCODE_PAUSE,
-    INSERT = SDL_SCANCODE_INSERT, /// Can be generated when `Help` is pressed on
-                                  /// some Mac keyboards
-
+    INSERT       = SDL_SCANCODE_INSERT, //* Can be generated when `Help`
+                                        //* is pressed on some Mac keyboards
     HOME      = SDL_SCANCODE_HOME,
     PAGE_UP   = SDL_SCANCODE_PAGEUP,
     DELETE    = SDL_SCANCODE_DELETE,
@@ -123,8 +122,8 @@ enum class Scancode : uint32_t {
     DOWN      = SDL_SCANCODE_DOWN,
     UP        = SDL_SCANCODE_UP,
 
-    NUM_LOCK = SDL_SCANCODE_NUMLOCKCLEAR, /// Equivilant to `CLEAR`
-    CLEAR    = SDL_SCANCODE_NUMLOCKCLEAR, /// Equivilant to `NUM_LOCK`
+    NUM_LOCK = SDL_SCANCODE_NUMLOCKCLEAR, //* Equivilant to `CLEAR`
+    CLEAR    = SDL_SCANCODE_NUMLOCKCLEAR, //* Equivilant to `NUM_LOCK`
 
     KEYPAD_DIVIDE   = SDL_SCANCODE_KP_DIVIDE,
     KEYPAD_MULTIPLY = SDL_SCANCODE_KP_MULTIPLY,
@@ -144,8 +143,8 @@ enum class Scancode : uint32_t {
 
     // POWER (after compose) intentionally ommitted
     NON_US_BACKSLASH = SDL_SCANCODE_NONUSBACKSLASH,
-    APPLICATION      = SDL_SCANCODE_APPLICATION, /// Equivilant to `COMPOSE`
-    COMPOSE          = SDL_SCANCODE_APPLICATION, /// Equivilant to `APPLICATION`
+    APPLICATION      = SDL_SCANCODE_APPLICATION, //* Equivilant to `COMPOSE`
+    COMPOSE          = SDL_SCANCODE_APPLICATION, //* Equivilant to `APPLICATION`
 
     // F13 through VOLUME_DOWN and KEYPAD_EQUALS_AS_400 intentionally ommitted
     KEYPAD_EQUALS = SDL_SCANCODE_KP_EQUALS,
@@ -155,25 +154,25 @@ enum class Scancode : uint32_t {
 
     LEFT_CONTROL = SDL_SCANCODE_LCTRL,
     LEFT_SHIFT   = SDL_SCANCODE_LSHIFT,
-    LEFT_ALT     = SDL_SCANCODE_LALT, /// Equivilant to `LEFT_OPTION`
-    LEFT_OPTION  = SDL_SCANCODE_LALT, /// Equivilant to `LEFT_ALT`
+    LEFT_ALT     = SDL_SCANCODE_LALT, //* Equivilant to `LEFT_OPTION`
+    LEFT_OPTION  = SDL_SCANCODE_LALT, //* Equivilant to `LEFT_ALT`
     LEFT_GUI =
-        SDL_SCANCODE_LGUI, /// Equivilant to `LEFT_COMMAND` and `LEFT_WINDOWS`
+        SDL_SCANCODE_LGUI, //* Equivilant to `LEFT_COMMAND` and `LEFT_WINDOWS`
     LEFT_COMMAND =
-        SDL_SCANCODE_LGUI, /// Equivilant to `LEFT_GUI` and `LEFT_WINDOWS`
+        SDL_SCANCODE_LGUI, //* Equivilant to `LEFT_GUI` and `LEFT_WINDOWS`
     LEFT_WINDOWS =
-        SDL_SCANCODE_LGUI, /// Equivilant to `LEFT_GUI` and `LEFT_COMMAND`
+        SDL_SCANCODE_LGUI, //* Equivilant to `LEFT_GUI` and `LEFT_COMMAND`
 
     RIGHT_CONTROL = SDL_SCANCODE_RCTRL,
     RIGHT_SHIFT   = SDL_SCANCODE_RSHIFT,
-    RIGHT_ALT     = SDL_SCANCODE_RALT, /// Equivilant to `RIGHT_OPTION`
-    RIGHT_OPTION  = SDL_SCANCODE_RALT, /// Equivilant to `RIGHT_ALT`
+    RIGHT_ALT     = SDL_SCANCODE_RALT, //* Equivilant to `RIGHT_OPTION`
+    RIGHT_OPTION  = SDL_SCANCODE_RALT, //* Equivilant to `RIGHT_ALT`
     RIGHT_GUI =
-        SDL_SCANCODE_RGUI, /// Equivilant to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
+        SDL_SCANCODE_RGUI, //* Equivilant to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
     RIGHT_COMMAND =
-        SDL_SCANCODE_RGUI, /// Equivilant to `RIGHT_GUI` and `RIGHT_WINDOWS`
+        SDL_SCANCODE_RGUI, //* Equivilant to `RIGHT_GUI` and `RIGHT_WINDOWS`
     RIGHT_WINDOWS =
-        SDL_SCANCODE_RGUI, /// Equivilant to `RIGHT_GUI` and `RIGHT_COMMAND`
+        SDL_SCANCODE_RGUI, //* Equivilant to `RIGHT_GUI` and `RIGHT_COMMAND`
 
     // MODE through END_CALL intentionally ommitted
 
