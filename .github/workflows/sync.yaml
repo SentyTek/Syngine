@@ -1,7 +1,7 @@
 name: Sync Backlog label
 
 on:
-  workflow_ dispatch:
+  workflow_dispatch:
     issues:
       types: [opened, edited, labeled, unlabeled]
     project_card:
