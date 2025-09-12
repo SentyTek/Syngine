@@ -1,0 +1,31 @@
+name: Generate Lua Docs
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0 # so we can push back
+      
+      - name: Install Lua
+        uses: leafo/gh-actions-lua@v10
+        with:
+          lua-version: '5.4'
+
+      - name: Run lua
+        run: lua docs/lua/main.lua
+
+      - name: Commit and push changes
+        with:
+          commit_message: "docs: Auto-generate Lua documentation"
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          file_pattern: "docs/ docs/api"
