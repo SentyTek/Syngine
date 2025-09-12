@@ -20,3 +20,4 @@ jobs:
           close-pr-message: 'Closing due to inactivity.'
           days-before-stale: 30
           days-before-close: 7
+          exempt-issue-labels: 'backlog'
