@@ -1,20 +1,22 @@
 local start = os.clock() * 1000
 
 -- Add script's directory to package path to find modules
-local script_path = debug.getinfo(1, "S").source:sub(2)
-local script_dir = script_path:match("(.*[/\\])")
-if script_dir then
-    package.path = package.path .. ";" .. script_dir .. "?.lua"
+local scriptPath = debug.getinfo(1, "S").source:sub(2)
+local scriptDir = scriptPath:match("(.*[/\\])")
+if scriptDir then
+    package.path = package.path .. ";" .. scriptDir .. "?.lua"
 else
     -- If no path separator is found, the script is in the current directory.
     package.path = package.path .. ";./?.lua"
 end
 
+local scriptBaseDir = scriptDir or "./"
+
 local DocGen = require("docgen")
 local MdGen = require("mdgen")
 
-local incPath = "../../include/Syngine"
-local srcPath = "../../src/Syngine"
+local incPath = scriptBaseDir .. "../../include/Syngine"
+local srcPath = scriptBaseDir .. "../../src/Syngine"
 local names = {}
 local files = {}
 
