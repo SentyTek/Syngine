@@ -21,7 +21,8 @@ jobs:
           lua-version: '5.4'
 
       - name: Run lua
-        run: lua docs/lua/main.lua
+        run: lua main.lua
+        working-directory: ./docs/lua
 
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v5
