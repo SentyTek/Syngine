@@ -72,8 +72,9 @@ Core::Core(const EngineConfig config) {
     // Check if required folders exist (shaders, meshes)
     // CheckRequiredFolders will abort if any folder is missing
     if (Syngine::_CheckRequiredFolders()) {
-        Syngine::Logger::LogF(LogLevel::INFO, "Using Syngine v%s", SYN_VERSION_STRING);
-        m_app = new App();
+        Syngine::Logger::LogF(
+            LogLevel::INFO, "Using Syngine v%s", SYN_VERSION_STRING);
+        m_app         = new App();
         m_app->config = config;
     }
 }
@@ -141,17 +142,20 @@ bool Core::Initialize() {
 
         InputAction::RegisterAction("syngine.debugMode",
                                     "Toggle debug mode",
+                                    "",
                                     KeyBinding(Keycode::F1),
                                     { .onPressed = Core::_ToggleDebugMode });
 
         InputAction::RegisterAction(
             "syngine.reloadAssets",
             "Reload Assets",
+            "",
             KeyBinding(Keycode::F5),
             { .onPressed = Core::_ReloadChangedAssets });
 
         InputAction::RegisterAction("syngine.reloadShaders",
                                     "Reload Shaders",
+                                    "",
                                     KeyBinding(Keycode::F6),
                                     { .onPressed = Core::_ReloadShaders });
     }

@@ -34,9 +34,9 @@ enum class KeybindType : size_t {
     KEYCODE  = 1, //* A keybind that is bound to a specific keycode
     SCANCODE = 2, //* A keybind that is bound to a specific scancode
     SHORTCUT = 3, //* A keybind that is bound to a keycode or scancode and a set
-                  //of modifiers
+                  // of modifiers
     SEQUENCE = 4, //* A keybind that is bound to a sequence of keycodes,
-                  //scancodes, and/or shortcuts
+                  // scancodes, and/or shortcuts
     MOUSE_BUTTON = 5 //* A keybind that is bound to a mouse button
 };
 

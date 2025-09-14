@@ -112,15 +112,15 @@ enum class Scancode : uint32_t {
     PAUSE        = SDL_SCANCODE_PAUSE,
     INSERT       = SDL_SCANCODE_INSERT, //* Can be generated when `Help`
                                         //* is pressed on some Mac keyboards
-    HOME      = SDL_SCANCODE_HOME,
-    PAGE_UP   = SDL_SCANCODE_PAGEUP,
-    DELETE    = SDL_SCANCODE_DELETE,
-    END       = SDL_SCANCODE_END,
-    PAGE_DOWN = SDL_SCANCODE_PAGEDOWN,
-    RIGHT     = SDL_SCANCODE_RIGHT,
-    LEFT      = SDL_SCANCODE_LEFT,
-    DOWN      = SDL_SCANCODE_DOWN,
-    UP        = SDL_SCANCODE_UP,
+    HOME       = SDL_SCANCODE_HOME,
+    PAGE_UP    = SDL_SCANCODE_PAGEUP,
+    DELETE_KEY = SDL_SCANCODE_DELETE, // MSVC trips out if it's `DELETE`
+    END        = SDL_SCANCODE_END,
+    PAGE_DOWN  = SDL_SCANCODE_PAGEDOWN,
+    RIGHT      = SDL_SCANCODE_RIGHT,
+    LEFT       = SDL_SCANCODE_LEFT,
+    DOWN       = SDL_SCANCODE_DOWN,
+    UP         = SDL_SCANCODE_UP,
 
     NUM_LOCK = SDL_SCANCODE_NUMLOCKCLEAR, //* Equivilant to `CLEAR`
     CLEAR    = SDL_SCANCODE_NUMLOCKCLEAR, //* Equivilant to `NUM_LOCK`
@@ -448,7 +448,7 @@ enum class Keycode : uint32_t {
     PIPE                = SDLK_PIPE,
     RIGHT_CURLY_BRACKET = SDLK_RIGHTBRACE,
     TILDE               = SDLK_TILDE,
-    DELETE              = SDLK_DELETE,
+    DELETE_KEY          = SDLK_DELETE, // MSVC trips out if it's `DELETE`
     PLUS_MINUS          = SDLK_PLUSMINUS,
     CAPS_LOCK           = SDLK_CAPSLOCK,
 
