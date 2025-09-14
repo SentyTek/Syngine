@@ -6,8 +6,6 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Core/Input.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -26,6 +24,7 @@
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
+#include "Syngine/Core/Input.h"
 
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
