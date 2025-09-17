@@ -41,7 +41,7 @@ int MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
     // Load the mesh data from the file
     AssimpLoader loader;
     if (!loader._LoadModel(
-            this->meshData, _ResolveOSPath(path.c_str()), loadTextures)) {
+            this->meshData, path.c_str(), loadTextures)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to load mesh from %s",
                               _ResolveOSPath(path.c_str()).c_str());
