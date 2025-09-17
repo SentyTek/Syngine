@@ -85,21 +85,21 @@ struct KeyShortcut {
     /// @brief Create a ``KeyShortcut`` with no modifiers
     /// @param key The key to bind
     /// @since 0.0.1
-    constexpr KeyShortcut(std::variant<Keycode, Scancode> key)
+    KeyShortcut(std::variant<Keycode, Scancode> key)
         : key(key), modifiers() {}
 
     /// @brief Create a ``KeyShortcut`` with the given modifiers
     /// @param key The key to bind
     /// @param modifiers The modifiers to bind
     /// @since 0.0.1
-    constexpr KeyShortcut(std::variant<Keycode, Scancode> key, Keymod modifiers)
+    KeyShortcut(std::variant<Keycode, Scancode> key, Keymod modifiers)
         : key(key), modifiers(modifiers) {}
 
     /// @brief Returns the ``KeybindType`` corresponding to the type this object
     /// contains, if any
     /// @returns The contained subtype as a ``KeybindType``
     /// @since 0.0.1
-    constexpr KeybindType subType() const {
+    KeybindType subType() const {
         return static_cast<KeybindType>(key.index() + 1);
     }
 
@@ -107,7 +107,7 @@ struct KeyShortcut {
     /// @param other The ``KeyShortcut`` to compare against
     /// @returns `true` if the objects are equal, `false` otherwise
     /// @since 0.0.1
-    constexpr bool operator==(const KeyShortcut& other) const {
+    bool operator==(const KeyShortcut& other) const {
         return key == other.key && modifiers == other.modifiers;
     }
 
@@ -117,7 +117,7 @@ struct KeyShortcut {
     /// @since 0.0.1
     /// @section Input
     /// @internal
-    constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event) const;
+    bool _isTriggeredByEvent(SDL_KeyboardEvent event) const;
 };
 
 /// @brief An array of key bindings which is triggered when pressed in sequence
@@ -147,7 +147,7 @@ struct KeySequence {
     /// useful on it's own and may be removed
     /// @param key The binding to bind
     /// @since 0.0.1
-    constexpr KeySequence(std::variant<Keycode, Scancode, KeyShortcut> key)
+    KeySequence(std::variant<Keycode, Scancode, KeyShortcut> key)
         : bound{ key }, nextIndex(0) {
         bound.shrink_to_fit();
     }
@@ -155,7 +155,7 @@ struct KeySequence {
     /// @brief Create a ``KeySequence`` with a list of bindings
     /// @param list The list of bindings to bind
     /// @since 0.0.1
-    constexpr KeySequence(
+    KeySequence(
         std::initializer_list<std::variant<Keycode, Scancode, KeyShortcut>>
             list)
         : bound(list), nextIndex(0) {
@@ -168,7 +168,7 @@ struct KeySequence {
     /// @param index The index to find the type of
     /// @returns The contained subtype at the given index as a ``KeybindType``
     /// @since 0.0.1
-    constexpr KeybindType subType(uint32_t index) const {
+    KeybindType subType(uint32_t index) const {
         if (index < bound.size()) {
             return static_cast<KeybindType>(bound[index].index() + 1);
         } else {
@@ -180,14 +180,14 @@ struct KeySequence {
     /// @note You probably shouldn't call this unless you really need to, and it
     /// might be removed
     /// @since 0.0.1
-    constexpr void reset() { nextIndex = 0; }
+    void reset() { nextIndex = 0; }
 
     /// @brief Gets the next key to be triggered
     /// @returns The key that must be triggered for the sequence to progress
     /// @note You probably shouldn't call this unless you really need to, and it
     /// might be removed
     /// @since 0.0.1
-    constexpr AnyKeybind next() {
+    AnyKeybind next() {
         const std::variant<Keycode, Scancode, KeyShortcut> nextKey =
             bound[this->nextIndex];
 
@@ -210,7 +210,7 @@ struct KeySequence {
     /// @note You probably shouldn't call this unless you really need to, and it
     /// might be removed
     /// @since 0.0.1
-    constexpr void increment() {
+    void increment() {
         this->nextIndex = (nextIndex + 1) % bound.size();
     }
 
@@ -218,7 +218,7 @@ struct KeySequence {
     /// @returns `true` if the sequence was complete or reset (if the next index
     /// is 0), `false` otherwise
     /// @since 0.0.1
-    constexpr bool wasReset() const { return nextIndex == 0; }
+    bool wasReset() const { return nextIndex == 0; }
 
     /// @brief Determines if the keybind is triggered, increments the progress
     /// if it was, and resets the sequence if it wasn't
@@ -228,13 +228,13 @@ struct KeySequence {
     /// @since 0.0.1
     /// @section Input
     /// @internal
-    constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
+    bool _isTriggeredByEvent(SDL_KeyboardEvent event);
 
     /// @brief Equality operator for ``KeySequence``
     /// @param other The ``KeySequence`` to compare against
     /// @returns `true` if the objects are equal, `false` otherwise
     /// @since 0.0.1
-    constexpr bool operator==(const KeySequence& other) const {
+    bool operator==(const KeySequence& other) const {
         return bound == other.bound;
     }
 };
@@ -252,38 +252,18 @@ struct KeyBinding {
   public:
     /// @brief Construct a `KeyBinding` containing a ``KeyUnbound``
     /// @since 0.0.1
-    constexpr KeyBinding() : binding(KeyUnbound()) {};
+    KeyBinding() : binding(KeyUnbound()) {};
 
-    /// @brief Construct a `KeyBinding` from a ``Keycode``
+    /// @brief Construct a `KeyBinding` from ``AnyKeybind``
     /// @param keycode The keycode to bind
     /// @since 0.0.1
-    constexpr KeyBinding(Keycode keycode) : binding(keycode) {}
-
-    /// @brief Construct a `KeyBinding` from a ``Scancode``
-    /// @param scancode The scancode to bind
-    /// @since 0.0.1
-    constexpr KeyBinding(Scancode scancode) : binding(scancode) {}
-
-    /// @brief Construct a `KeyBinding` from a ``MouseButton``
-    /// @param button The button to bind
-    /// @since 0.0.1
-    constexpr KeyBinding(MouseButton button) : binding(button) {}
-
-    /// @brief Construct a `KeyBinding` from a ``KeyShortcut``
-    /// @param shortcut The shortcut to bind
-    /// @since 0.0.1
-    constexpr KeyBinding(KeyShortcut shortcut) : binding(shortcut) {}
-
-    /// @brief Construct a `KeyBinding` from a ``KeySequence``
-    /// @param sequence The sequence to bind
-    /// @since 0.0.1
-    constexpr KeyBinding(KeySequence sequence) : binding(sequence) {}
+    KeyBinding(AnyKeybind bind) : binding(bind) {}
 
     /// @brief Returns the ``KeybindType`` corresponding to the type this object
     /// contains
     /// @returns The contained subtype as a ``KeybindType``
     /// @since 0.0.1
-    constexpr KeybindType subType() const {
+    KeybindType subType() const {
         return static_cast<KeybindType>(binding.index());
     }
 
@@ -291,7 +271,7 @@ struct KeyBinding {
     /// @param other The ``KeyBinding`` to compare against
     /// @returns `true` if the objects are equal, `false` otherwise
     /// @since 0.0.1
-    constexpr bool operator==(const KeyBinding& other) const {
+    bool operator==(const KeyBinding& other) const {
         return binding == other.binding;
     }
 
@@ -302,7 +282,7 @@ struct KeyBinding {
     /// @since 0.0.1
     /// @section Input
     /// @internal
-    constexpr bool _isTriggeredByEvent(SDL_KeyboardEvent event);
+    bool _isTriggeredByEvent(SDL_KeyboardEvent event);
 
     /// @brief Determines if the KeyBinding is triggered by a keyboard event
     /// @param event The ``SDL_KeyboardEvent`` to check against
@@ -311,7 +291,7 @@ struct KeyBinding {
     /// @since 0.0.1
     /// @section Input
     /// @internal
-    constexpr bool _isTriggeredByEvent(SDL_MouseButtonEvent event);
+    bool _isTriggeredByEvent(SDL_MouseButtonEvent event);
 };
 
 /// @brief A bound input action
@@ -467,7 +447,7 @@ class InputAction {
     /// @note Does not check for full equality, only for equal bindings, as
     /// InputActions are guaranteed to be unique
     /// @since 0.0.1
-    constexpr bool operator==(const InputAction& other) const {
+    bool operator==(const InputAction& other) const {
         return binding == other.binding;
     };
 

@@ -83,7 +83,7 @@ bool Syngine::InputAction::stateChanged() {
 
 // MARK: Input event handler private helpers
 
-constexpr bool
+bool
 Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) const {
     switch (this->subType()) {
     case KeybindType::KEYCODE:
@@ -96,7 +96,7 @@ Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) const {
     }
 }
 
-constexpr bool
+bool
 Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     const auto next = this->next();
     bool       triggered;
@@ -123,7 +123,7 @@ Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     return false;
 }
 
-constexpr bool
+bool
 Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     switch (this->subType()) {
     case KeybindType::UNBOUND: return false;
@@ -140,7 +140,7 @@ Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     }
 }
 
-constexpr bool
+bool
 Syngine::KeyBinding::_isTriggeredByEvent(SDL_MouseButtonEvent event) {
     if (this->subType() == KeybindType::MOUSE_BUTTON) {
         return _SDLToSyn(event.button) == std::get<MouseButton>(this->binding);
