@@ -29,7 +29,7 @@ jobs:
       - name: Commit and push changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "docs: Auto-generate Lua documentation"
+          commit_message: "docs: Auto-generate documentation"
           commit_user_name: "GitHub Actions Bot"
           commit_user_email: "github-actions[bot]@users.noreply.github.com"
           file_pattern: "docs/ docs/api"
