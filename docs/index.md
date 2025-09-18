@@ -28,8 +28,8 @@ We have several pages of documentation available. Note the API reference is auto
 #### Core
 
 
-- [Basicinput](api/basicinput_doc.md)
 - [Core](api/core_doc.md)
+- [Input](api/input_doc.md)
 - [Logger](api/logger_doc.md)
 - [Registry](api/registry_doc.md)
 

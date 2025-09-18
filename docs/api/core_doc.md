@@ -29,6 +29,7 @@
 - [GetSystemSpecifications](#coregetsystemspecifications)
 - [SetSimulationState](#coresetsimulationstate)
 - [GetSimulationState](#coregetsimulationstate)
+- [_HandleKeyEvent](#core_handlekeyevent)
 
 ---
 
@@ -338,6 +339,21 @@ Signature:
 ```
 
 **Returns:** True if simulation is enabled, false otherwise
+
+---
+
+#### **`Core::_HandleKeyEvent`**
+
+
+~~~~
+
+**DEPRECATED**
+
+Signature:
+
+```cpp
+ void _HandleKeyEvent(const SDL_Event& event);
+```
 
 ---
 
