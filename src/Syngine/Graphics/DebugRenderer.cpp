@@ -157,6 +157,60 @@ void DebugRender::DrawFrustum(Syngine::Camera camera) {
     DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[7]), JPH::Color::sWhite);
 }
 
+void DebugRender::DrawOtherFrustum(const float* view, const float* proj) {
+    float viewMtx[16], projMtx[16];
+
+    memcpy(&viewMtx, view, sizeof(float) * 16);
+    memcpy(&projMtx, proj, sizeof(float) * 16);
+
+    float viewProj[16];
+    bx::mtxMul(viewProj, viewMtx, projMtx);
+
+    float invViewProj[16];
+    bx::mtxInverse(invViewProj, viewProj);
+
+    // Define 8 corners of the normalized device coordinates (NDC) frustum
+    // We use Z from 0-1, standard for all but OGL for some fucking reason
+    const bx::Vec3 corners[8] = {
+        bx::Vec3(-1.0f, -1.0f, 0.0f), bx::Vec3(1.0f, -1.0f, 0.0f),
+        bx::Vec3(1.0f, 1.0f, 0.0f),   bx::Vec3(-1.0f, 1.0f, 0.0f),
+        bx::Vec3(-1.0f, -1.0f, 1.0f), bx::Vec3(1.0f, -1.0f, 1.0f),
+        bx::Vec3(1.0f, 1.0f, 1.0f),   bx::Vec3(-1.0f, 1.0f, 1.0f)
+    };
+
+    // Transform NDC to world space using the inverse view-projection matrix
+    float worldCorners[8][4];
+    for (int i = 0; i < 8; ++i) {
+        float corner[4] = { corners[i].x, corners[i].y, corners[i].z, 1.0f };
+        bx::vec4MulMtx(worldCorners[i], corner, invViewProj);
+        float w = worldCorners[i][3];
+        if (w != 0.0f) {
+            worldCorners[i][0] /= w; // Normalize by w
+            worldCorners[i][1] /= w;
+            worldCorners[i][2] /= w;
+        }
+    }
+
+    auto toJolt = [](const float* v) { return JPH::RVec3(v[0], v[1], v[2]); };
+
+    // Draw the frustum lines
+    DrawLine(toJolt(worldCorners[0]), toJolt(worldCorners[1]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[1]), toJolt(worldCorners[2]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[2]), toJolt(worldCorners[3]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[0]), JPH::Color::sPurple);
+    // Far plane
+    DrawLine(toJolt(worldCorners[4]), toJolt(worldCorners[5]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[5]), toJolt(worldCorners[6]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[6]), toJolt(worldCorners[7]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[7]), toJolt(worldCorners[4]), JPH::Color::sPurple);
+    // Connecting edges
+    DrawLine(toJolt(worldCorners[0]), toJolt(worldCorners[4]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[1]), toJolt(worldCorners[5]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[2]), toJolt(worldCorners[6]), JPH::Color::sPurple);
+    DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[7]), JPH::Color::sPurple);
+}
+
+
 void DebugRender::RenderLines(const float*        view,
                               const float*        proj,
                               int                 width,

@@ -109,27 +109,27 @@ bool Core::Initialize() {
     try {
         m_app->window = std::make_unique<Window>(m_app->config);
         if (!m_app->window) {
-            Logger::Error("Failed to create window.");
+            Logger::Error("Failed to create window. Check the log for more details.");
         }
 
         m_app->renderer = std::make_unique<Renderer>(
             m_app->config.windowWidth, m_app->config.windowHeight);
         if (!m_app->renderer) {
-            Logger::Error("Failed to create renderer.");
+            Logger::Error("Failed to create renderer. Check the log for more details.");
         }
 
         m_app->synModels = std::make_unique<AssimpLoader>();
         if (!m_app->synModels) {
-            Logger::Error("Failed to create AssimpLoader.");
+            Logger::Error("Failed to create AssimpLoader. Check the log for more details.");
         }
 
         m_app->physicsManager = std::make_unique<Phys>();
         if (!m_app->physicsManager) {
-            Logger::Error("Failed to create PhysicsManager.");
+            Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
         }
 
-        m_app->physicsManager->_Init(m_app->debug);
-    } catch (const std::exception& e) {
+        m_app->physicsManager->_Init();
+    } catch(const std::exception& e) {
         Syngine::Logger::LogF(
             LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
         return false;
@@ -140,11 +140,27 @@ bool Core::Initialize() {
     {
         Logger::Log("Initializing debug keybinds");
 
-        InputAction::RegisterAction("syngine.debugMode",
+        /*InputAction::RegisterAction("syngine.debugMode",
                                     "Toggle debug mode",
-                                    "",
+                                    "Debug",
                                     KeyBinding(Keycode::F1),
-                                    { .onPressed = Core::_ToggleDebugMode });
+                                    { .onPressed = Core::_ToggleDebugEnabled });*/
+        InputAction::RegisterAction(
+            "syngine.debugWireframes",
+            "Toggle debug wireframes",
+            "Debug",
+            KeyBinding(Keycode::F1),
+            { .onPressed = Core::_ToggleDebugWireframes });
+        InputAction::RegisterAction("syngine.debugGizmos",
+                                    "Toggle debug gizmos",
+                                    "Debug",
+                                    KeyBinding(Keycode::F2),
+                                    { .onPressed = Core::_ToggleDebugGizmos });
+        InputAction::RegisterAction("syngine.debugShadows",
+                                    "Toggle debug shadows",
+                                    "Debug",
+                                    KeyBinding(Keycode::F3),
+                                    { .onPressed = Core::_ToggleDebugShadows });
 
         InputAction::RegisterAction(
             "syngine.reloadAssets",
@@ -431,13 +447,18 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 
 // copied the internals of _HandleKeyEvents into these two functions to make
 // it a bit nicer to call with the new keybind system
-void Core::_ToggleDebugMode() {
-    m_app->debug = !m_app->debug;
-    if (m_app->debug) {
-        Syngine::Logger::Info("Debug mode enabled");
-    } else {
-        Syngine::Logger::Info("Debug mode disabled");
-    }
+void Core::_ToggleDebugEnabled() {
+    m_app->debug.Enabled = !m_app->debug.Enabled;
+}
+
+void Core::_ToggleDebugWireframes() {
+    m_app->debug.PhysWireframes = !m_app->debug.PhysWireframes;
+}
+
+void Core::_ToggleDebugGizmos() { m_app->debug.Gizmos = !m_app->debug.Gizmos; }
+
+void Core::_ToggleDebugShadows() {
+    m_app->debug.CSMBounds = !m_app->debug.CSMBounds;
 }
 
 void Core::_ReloadChangedAssets() {
@@ -454,38 +475,59 @@ void Core::_ReloadChangedAssets() {
 
 void Core::_ReloadShaders() { m_app->renderer->ReloadAllPrograms(); }
 
+// DEPRECATED - in favor of the new input system
 void Core::_HandleKeyEvent(const SDL_Event& event) {
     if (event.type == SDL_EVENT_KEY_DOWN) {
         switch (event.key.key) {
-        case SDLK_F1: {
-            // Toggle debug mode
-            this->m_app->debug = !this->m_app->debug;
-            if (this->m_app->debug) {
-                Syngine::Logger::Info("Debug mode enabled");
-            } else {
-                Syngine::Logger::Info("Debug mode disabled");
-            }
-            break;
-        }
-        case SDLK_F5: {
-            // Reload changed assets
-            for (auto& go :
-                 Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
-                MeshComponent* mc = go->GetComponent<MeshComponent>();
-                if (!mc) continue;
-                MeshData& mesh = mc->meshData;
-                if (!mesh.valid) continue;
-                if (mesh.lastWriteTime !=
-                    std::filesystem::last_write_time(mesh.path)) {
-                    mc->ReloadMesh();
+            // Toggle debug modes
+            case SDLK_F1: {
+                // Toggle physics wireframes
+                this->m_app->debug.PhysWireframes = !this->m_app->debug.PhysWireframes;
+                if (this->m_app->debug.PhysWireframes) {
+                    Syngine::Logger::Info("Physics wireframes enabled");
+                } else {
+                    Syngine::Logger::Info("Physics wireframes disabled");
                 }
+                break;
             }
-            break;
-        }
-        case SDLK_F6: {
-            // Reload all shaders
-            m_app->renderer->ReloadAllPrograms();
-        }
+            case SDLK_F2: {
+                // Toggle gizmos
+                this->m_app->debug.Gizmos = !this->m_app->debug.Gizmos;
+                if (this->m_app->debug.Gizmos) {
+                    Syngine::Logger::Info("Gizmos enabled");
+                } else {
+                    Syngine::Logger::Info("Gizmos disabled");
+                }
+                break;
+            }
+            case SDLK_F3: {
+                // Toggle CSM bounds
+                this->m_app->debug.CSMBounds = !this->m_app->debug.CSMBounds;
+                if (this->m_app->debug.CSMBounds) {
+                    Syngine::Logger::Info("CSM Bounds enabled");
+                } else {
+                    Syngine::Logger::Info("CSM Bounds disabled");
+                }
+                break;
+            }
+            case SDLK_F5: {
+                // Reload changed assets
+                for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
+                    MeshComponent* mc = go->GetComponent<MeshComponent>();
+                    if (!mc) continue;
+                    MeshData& mesh = mc->meshData;
+                    if (!mesh.valid) continue;
+                    if (mesh.lastWriteTime !=
+                        std::filesystem::last_write_time(mesh.path)) {
+                        mc->ReloadMesh();
+                    }
+                }
+                break;
+            }
+            case SDLK_F6: {
+                // Reload all shaders
+                m_app->renderer->ReloadAllPrograms();
+            }
         }
     }
 }

@@ -8,6 +8,7 @@
 
 #pragma once
 #include "Jolt/Core/Core.h"
+#include "Syngine/Core/Input.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -47,7 +48,17 @@ struct EngineConfig {
     std::string windowTitle;  //* Title of the game window
     int         windowWidth;  //* Width of the game window in pixels
     int         windowHeight; //* Height of the game window in pixels
-    bool        vsync;        //* Whether vertical sync is enabled
+    bool        vsync; //* Whether vertical sync is enabled
+};
+
+/// @brief the various debug modes possible
+/// @section Core
+/// @since v0.0.1
+struct DebugModes {
+    bool Enabled = true; //* Global debug toggle
+    bool PhysWireframes = true; //* Whether to draw physics wireframes
+    bool Gizmos = true; //* Gizmos such as cameras, lights, and audio sources
+    bool CSMBounds = true; //* Cascading Shadow Map zone bounds.
 };
 
 /// @brief Struct to hold application state
@@ -59,7 +70,7 @@ struct App {
     std::unique_ptr<Renderer>       renderer;  //* Pointer to the render system
     std::unique_ptr<SynModelLoader> synModels; //* Pointer to the model loader
     std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
-    bool                  debug = true;   //* Debug mode flag
+    DebugModes debug;   //* Debug modes flags
 };
 
 /// @brief Core class to manage the application
@@ -67,6 +78,11 @@ struct App {
 /// @since v0.0.1
 class Core {
   public:
+    /// @brief Constructor for the Core class
+    /// @param config Engine configuration options
+    /// @throws std::runtime_error if initialization fails (e.g., SDL_Init()
+    /// fails or missing files)
+    /// @since v0.0.1
     Core(const EngineConfig config);
     ~Core();
 
@@ -158,6 +174,9 @@ class Core {
         bool mouseState = false;
     };
 
+    /// @brief Frame counter for FPS and TPS tracking
+    /// @internal
+    /// @since v0.0.1
     struct _FrameCounter {
         float oneSecond    = 0.0f;
         int   frameCount   = 0;
@@ -186,15 +205,19 @@ class Core {
         }
     };
 
-    static Core*         m_instance;
-    static App*          m_app;
-    static bool          m_shouldClose;
-    static _internal     m_internal;
-    static _FrameCounter m_frameCounter;
-
-    static void _ToggleDebugMode();
+    // Debug keybind actions
+    static void _ToggleDebugEnabled();
+    static void _ToggleDebugWireframes();
+    static void _ToggleDebugGizmos();
+    static void _ToggleDebugShadows();
     static void _ReloadChangedAssets();
     static void _ReloadShaders();
+
+    static Core*         m_instance;     //* Pointer to the global Core instance
+    static App*          m_app;          //* Pointer to the global App instance
+    static bool          m_shouldClose;  //* Whether the application should close
+    static _internal     m_internal;     //* Internal state struct
+    static _FrameCounter m_frameCounter; //* Frame counter for FPS/TPS tracking
 
     /// @deprecated In favor of the new input system
     void _HandleKeyEvent(const SDL_Event& event);

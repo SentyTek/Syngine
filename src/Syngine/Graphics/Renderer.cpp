@@ -6,6 +6,7 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
+#include "Jolt/Core/Core.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -30,6 +31,7 @@
 #include "bgfx/defines.h"
 #include "bx/math.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <set>
@@ -58,15 +60,19 @@ std::unordered_map<bgfx::ViewId, std::vector<Program>> Renderer::viewPrograms;
 std::unordered_map<uint16_t, Uniform> Renderer::m_uniformRegistry;
 std::unordered_map<std::string, uint16_t> Renderer::m_defaultUniformIds;
 
+bgfx::TextureHandle       Renderer::m_shadowDepth = BGFX_INVALID_HANDLE;
+bgfx::FrameBufferHandle   Renderer::m_shadowFB = BGFX_INVALID_HANDLE;
+
 int                          Renderer::width        = 0;
 int                          Renderer::height       = 0;
+RendererConfig                Renderer::m_config;
 
-Renderer::Renderer(int width, int height) {
+Renderer::Renderer(int width, int height, const RendererConfig& config) {
     Renderer::width = width;
     Renderer::height = height;
     Renderer::win = Window::_GetSDLWindow();
 
-    if (!_CreateRenderer()) {
+    if (!_CreateRenderer(config)) {
         Syngine::Logger::Fatal("Failed to create renderer");
     }
 };
@@ -124,7 +130,8 @@ Renderer::~Renderer() {
     bgfx::shutdown(); // Shut down bgfx BEFORE destroying the window
 }
 
-bool Renderer::_CreateRenderer() {
+bool Renderer::_CreateRenderer(const RendererConfig& config) {
+    m_config = config;
     if (!win) {
         Syngine::Logger::Fatal("No app to create renderer for");
         return false;
@@ -199,40 +206,48 @@ bool Renderer::_CreateRenderer() {
     
     // Create default shaders
     m_isReady = true; // set true for now just to create default shaders
-    size_t defaultProg = AddProgram("shaders/default.vert.sc.bin",
-                                    "shaders/default.frag.sc.bin",
-                                    "default");
+    size_t defaultProg = AddProgram("shaders/default", "default");
     if (defaultProg == (size_t)-1) {
+        Syngine::Logger::Error("Failed to create default program");
         bgfx::shutdown();
         SDL_DestroyWindow(win);
         SDL_Quit();
         return false;
     }
 
-    size_t textureProg = AddProgram("shaders/texture.vert.sc.bin",
-                                     "shaders/texture.frag.sc.bin",
-                                     "texture");
+    size_t textureProg = AddProgram("shaders/default_texture", "texture");
     if (textureProg == (size_t)-1) {
+        Syngine::Logger::Error("Failed to create texture program");
         bgfx::shutdown();
         SDL_DestroyWindow(win);
         SDL_Quit();
         return false;
     }
 
-    size_t debugProg = AddProgram("shaders/debug.vert.sc.bin",
-                                  "shaders/debug.frag.sc.bin",
-                                  "debugger", VIEW_DEBUG);
+    size_t debugProg =
+        AddProgram("shaders/default_debug", "default_debugger", VIEW_DEBUG);
     if (debugProg == (size_t)-1) {
+        Syngine::Logger::Error("Failed to create debug program");
         bgfx::shutdown();
         SDL_DestroyWindow(win);
         SDL_Quit();
         return false;
     }
 
-    size_t debugBillboardProg = AddProgram("shaders/billboard.vert.sc.bin",
-                                      "shaders/billboard.frag.sc.bin",
-                                      "billboard", VIEW_BILL_DBG);
+    size_t debugBillboardProg =
+        AddProgram("shaders/default_debug_billboard", "default_billboard", VIEW_BILL_DBG);
     if (debugBillboardProg == (size_t)-1) {
+        Syngine::Logger::Error("Failed to create debug billboard program");
+        bgfx::shutdown();
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return false;
+    }
+
+    size_t shadowProg =
+        AddProgram("shaders/default_shadow", "shadow", VIEW_SHADOW);
+    if (shadowProg == (size_t)-1) {
+        Syngine::Logger::Error("Failed to create shadow program");
         bgfx::shutdown();
         SDL_DestroyWindow(win);
         SDL_Quit();
@@ -264,6 +279,11 @@ bool Renderer::_CreateRenderer() {
                                                  "u_normalMatrix",
                                                  UniformType::UNIFORM_MAT3) });
 
+    m_defaultUniformIds.insert(
+        { "u_default_shadowMap",
+          RegisterUniform(
+              textureProg, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
+
     // Texture program uniforms
     m_defaultUniformIds.insert({ "u_texture_lightDir",
                                  RegisterUniform(textureProg,
@@ -277,28 +297,74 @@ bool Renderer::_CreateRenderer() {
                                  RegisterUniform(textureProg,
                                                  "u_normalMatrix",
                                                  UniformType::UNIFORM_MAT3) });
+
     m_defaultUniformIds.insert(
         { "u_texture_albedo",
           RegisterUniform(
-              textureProg, "u_albedo", UniformType::UNIFORM_SAMPLER) });
+              textureProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
         { "u_normalMap",
           RegisterUniform(
-              textureProg, "u_normalMap", UniformType::UNIFORM_SAMPLER) });
+              textureProg, "s_normalMap", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
         { "u_heightMap",
           RegisterUniform(
-              textureProg, "u_heightMap", UniformType::UNIFORM_SAMPLER) });
+              textureProg, "s_heightMap", UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "u_texture_shadowMap",
+          RegisterUniform(
+              textureProg, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
+
+    // Shadow program uniforms
+    m_defaultUniformIds.insert({ "u_default_csmSplits",
+                                 RegisterUniform(defaultProg,
+                                                 "u_csmSplits",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_default_csmLightViewProj",
+                                 RegisterUniform(defaultProg,
+                                                 "u_csmLightViewProj",
+                                                 UniformType::UNIFORM_MAT4, 4) });
+    m_defaultUniformIds.insert({ "u_texture_csmSplits",
+                                 RegisterUniform(textureProg,
+                                                 "u_csmSplits",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_texture_csmLightViewProj",
+                                 RegisterUniform(textureProg,
+                                                 "u_csmLightViewProj",
+                                                 UniformType::UNIFORM_MAT4,
+                                                 4) });
+    m_defaultUniformIds.insert({ "u_texture_viewPos",
+                                 RegisterUniform(textureProg,
+                                                 "u_viewPos",
+                                                 UniformType::UNIFORM_VEC4) });;
+    m_defaultUniformIds.insert({ "u_default_viewPos",
+                                 RegisterUniform(defaultProg,
+                                                 "u_viewPos",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_texture_shadowParams",
+                                 RegisterUniform(textureProg,
+                                                 "u_shadowParams",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_default_shadowParams",
+                                 RegisterUniform(defaultProg,
+                                                 "u_shadowParams",
+                                                 UniformType::UNIFORM_VEC4) });
 
     // Initial sun direction in degrees (yaw, pitch, roll)
-    const float initialSunDir[3] = { 180.0f, -45.0f, 0.0f };
+    // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive = up).
+    const float initialSunDir[3] = { 0.0f, 45.0f, 0.0f };
     float pitch = bx::toRad(initialSunDir[1]);
     float yaw   = bx::toRad(initialSunDir[0]);
-    float cy    = cosf(pitch);
+    float cp    = cosf(pitch);
+    float sp    = sinf(pitch);
+    float cy    = cosf(yaw);
+    float sy    = sinf(yaw);
+
+    // y = +sin(pitch) when pitch is above horizon. (Ensure convention matches UI)
+    bx::Vec3 dirVec = { cp * sy, sp, cp * cy };
     
-    bx::Vec3 dirVec = { cy * sinf(yaw), sinf(pitch), cy * cosf(yaw) };
     dirVec = bx::normalize(dirVec);
-    
+
     float final[3] = { dirVec.x, dirVec.y, dirVec.z };
     SetSunDirection(final);
 
@@ -346,6 +412,31 @@ bool Renderer::_CreateRenderer() {
         Renderer::dummy = fullscreenDummyVBH;
     }
 #endif
+
+    // If shadows are enabled, initialize shadow mapping resources
+    if (m_config.useShadows) {
+        Renderer::m_shadowDepth = bgfx::createTexture2D(
+            SHADOW_MAP_SIZE * 2,
+            SHADOW_MAP_SIZE * 2,
+            false,
+            1,
+            bgfx::TextureFormat::D16,
+            BGFX_TEXTURE_RT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                BGFX_SAMPLER_U_CLAMP |
+                BGFX_SAMPLER_V_CLAMP); // I wish I knew what the flags meant.
+
+        if (!bgfx::isValid(Renderer::m_shadowDepth)) {
+            Syngine::Logger::Error("Failed to create shadow depth texture");
+            return false;
+        }
+
+        Renderer::m_shadowFB = bgfx::createFrameBuffer(1, &Renderer::m_shadowDepth, true);
+        if (!bgfx::isValid(Renderer::m_shadowFB)) {
+            Syngine::Logger::Error("Failed to create shadow framebuffer");
+            bgfx::destroy(Renderer::m_shadowDepth);
+            return false;
+        }
+    }
 
     m_isReady = true;
     Window::_SetContextCreated(true);
@@ -420,7 +511,6 @@ Program* Renderer::_GetProgram(size_t id) {
     return nullptr;
 }
 
-// FUTURE ME: MAKE THESE REMOVE UNIFORMS
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& name) {
     for (int i = 0; i < viewPrograms[viewId].size(); ++i) {
         if (viewPrograms[viewId][i].name == name) {
@@ -520,35 +610,40 @@ bool Renderer::IsReady() {
 
 size_t Renderer::RegisterUniform(int                program,
                                  const std::string& name,
-                                 UniformType        type) {
+                                 UniformType        type,
+                                 uint16_t           num) {
     Program* prog = _GetProgram(program);
     if (prog) {
-        Uniform u = { .handle = bgfx::createUniform(
-                          name.c_str(),
-                          static_cast<bgfx::UniformType::Enum>(type)),
+        Uniform u = {
+            .handle = bgfx::createUniform(
+                name.c_str(), static_cast<bgfx::UniformType::Enum>(type), num),
                       .type = type,
-                      .name = name };
+                      .name = name,
+                      .num  = num };
 
         // Allocate memory based on uniform type
+        size_t size = 0;
         switch (type) {
         case UNIFORM_SAMPLER:
             u.data = nullptr; // Samplers don't need data storage
             break;
         case UNIFORM_VEC4:
-            u.data = malloc(sizeof(float) * 4);
-            memset(u.data, 0, sizeof(float) * 4);
+            size = sizeof(float) * 4;
             break;
         case UNIFORM_MAT3:
-            u.data = malloc(sizeof(float) * 9);
-            memset(u.data, 0, sizeof(float) * 9);
+            size = sizeof(float) * 9;
             break;
         case UNIFORM_MAT4:
-            u.data = malloc(sizeof(float) * 16);
-            memset(u.data, 0, sizeof(float) * 16);
+            size = sizeof(float) * 16;
             break;
         default:
             u.data = nullptr;
             break;
+        }
+
+        if (size > 0) {
+            u.data = malloc(size * num);
+            memset(u.data, 0, size * num);
         }
 
         prog->uniforms.push_back(u);
@@ -567,34 +662,33 @@ Uniform* Renderer::_GetUniform(uint16_t id) {
     return nullptr;
 }
 
-void Renderer::SetUniform(uint16_t id, const void* data) {
+void Renderer::SetUniform(uint16_t id, const void* data, uint16_t num) {
     Uniform* u = _GetUniform(id);
     if (u && bgfx::isValid(u->handle)) {
+        size_t size = 0;
         switch (u->type) {
         case UNIFORM_SAMPLER:
             SDL_Log("Cannot set texture uniform. Use bgfx::setTexture instead.");
             break;
         case UNIFORM_VEC4:
-            bgfx::setUniform(u->handle, static_cast<const float*>(data));
-            if (u->data) {
-                memcpy(u->data, data, sizeof(float) * 4);
-            }
+            size = sizeof(float) * 4;
+            bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
             break;
         case UNIFORM_MAT3:
-            bgfx::setUniform(u->handle, static_cast<const float*>(data));
-            if (u->data) {
-                memcpy(u->data, data, sizeof(float) * 9);
-            }
+            size = sizeof(float) * 9;
+            bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
             break;
         case UNIFORM_MAT4:
-            bgfx::setUniform(u->handle, static_cast<const float*>(data));
-            if (u->data) {
-                memcpy(u->data, data, sizeof(float) * 16);
-            }
+            size = sizeof(float) * 16;
+            bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
             break;
         default:
             Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Unknown uniform type");
             break;
+        }
+
+        if (size > 0) {
+            memcpy(u->data, data, size * num);
         }
     }
 }
@@ -639,6 +733,107 @@ void Renderer::SetSunDirection(const float* lightDir) {
     }
 }
 
+void Renderer::_CalculateCascadeMatrices(CameraComponent* camera,
+                                         float*           outLightView,
+                                         float*           outLightProj,
+                                         float*           outCascadeSplits) {
+    float lightDir[3];
+    GetSunDirection(lightDir);
+    const bx::Vec3 lightDirVec = bx::normalize(bx::Vec3(lightDir[0], lightDir[1], lightDir[2]));
+    
+    const float* camPos = camera->GetPosition();
+
+    // Currently using fixed cascade sizes based on shadow distance
+    float cascadeSizes[NUM_CASCADES] = {
+        10, 50, round(m_config.shadowDist / 3), round(m_config.shadowDist)
+    };
+
+    float cascadeDistances[NUM_CASCADES];
+    float lightViewProj[NUM_CASCADES * 16];
+    
+    for (uint32_t i = 0; i < NUM_CASCADES; i++) {
+        float size = cascadeSizes[i];
+
+        // How far light is from camera
+        // Light is always targeting camera, will be some distance away
+        float lightDistance = 100.0f;
+        
+        bx::Vec3 lightPos = {
+            camPos[0] + lightDir[0] * lightDistance,
+            camPos[1] + lightDir[1] * lightDistance,
+            camPos[2] + lightDir[2] * lightDistance
+        };
+        
+        bx::Vec3 target = {camPos[0], camPos[1], camPos[2]};
+        bx::Vec3 up     = { 0.0f, 1.0f, 0.0f };
+
+        if (Core::_GetApp()->debug.CSMBounds) { 
+            // Draw line from light to target
+            float from[3] = { lightPos.x, lightPos.y, lightPos.z };
+            float to[3] = { target.x, target.y, target.z };
+            Core::_GetApp()->physicsManager->_DrawLine(from, to, JPH::Color::sYellow);
+        }
+        
+        bx::mtxLookAt(&outLightView[i * 16], lightPos, target, up);
+
+        // Try and keep tight near/far planes for good precision
+        float lightNear = 20.0f;
+        float lightFar = m_config.shadowDist + 50.0f; // Some margin
+        
+        bx::mtxOrtho(&outLightProj[i * 16],
+                     -size, size,
+                     -size, size,
+                     lightNear, lightFar,
+                     0.0f, bgfx::getCaps()->homogeneousDepth);
+
+        cascadeDistances[i] = cascadeSizes[i] / 2.0f;
+        outCascadeSplits[i] = cascadeDistances[i];
+        bx::mtxMul(&lightViewProj[i * 16], &outLightView[i * 16], &outLightProj[i * 16]);
+    }
+    
+    SetUniform(m_defaultUniformIds["u_default_csmLightViewProj"], lightViewProj, NUM_CASCADES);
+    SetUniform(m_defaultUniformIds["u_texture_csmLightViewProj"], lightViewProj, NUM_CASCADES);
+}
+
+/*
+--- Drawing functions ---
+*/
+
+void Renderer::_DrawShadows(const Program& program, CameraComponent* camera, uint8_t cascade) {
+    const uint64_t renderState =
+        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
+
+    if (Core::_GetApp()->debug.CSMBounds) {
+        float view[16 * NUM_CASCADES], proj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
+        _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
+        for (int i = 0; i < NUM_CASCADES; ++i) {
+            Core::_GetApp()->physicsManager->_DrawOtherFrustum(view + i * 16, proj + i * 16);
+        }
+
+    }
+
+    std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
+
+    for (auto& gameObject : gameObjects) {
+        if (!gameObject) continue;
+
+        MeshData meshData = gameObject->GetComponent<MeshComponent>()->meshData;
+        if (!meshData.valid || !gameObject->GetComponent<MeshComponent>()->isEnabled) continue;
+
+        // Get the transform for this object
+        float modelMtx[16];
+        gameObject->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
+        bgfx::setTransform(modelMtx);
+
+        bgfx::setState(renderState);
+        bgfx::setVertexBuffer(0, meshData.vbh);
+        bgfx::setIndexBuffer(meshData.ibh);
+
+        // Shadow shaders are simple, just output depth
+        bgfx::submit(program.viewId + cascade, program.program);
+    }
+}
+
 void Renderer::_DrawSky(const Program& program) {
     bgfx::setViewClear(program.viewId,
                        BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
@@ -657,7 +852,7 @@ void Renderer::_DrawSky(const Program& program) {
     bgfx::submit(program.viewId, program.program);
 }
 
-void Renderer::_DrawForward(const Program& program) {
+void Renderer::_DrawForward(const Program& program, CameraComponent* camera) {
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
                                  BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
 
@@ -674,6 +869,9 @@ void Renderer::_DrawForward(const Program& program) {
             objectsWithProgram.push_back(gameObject);
         }
     }
+
+    const uint64_t samplerFlags =
+                BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
     
     for (auto& gameObject : objectsWithProgram) {
         MeshData meshData = gameObject->GetComponent<MeshComponent>()->meshData;
@@ -695,8 +893,6 @@ void Renderer::_DrawForward(const Program& program) {
             };
             SetUniform(m_defaultUniformIds["u_floats"], u_floats);
 
-            const uint64_t samplerFlags =
-                BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
             bgfx::setTexture(
                 0,
                 _GetUniform(m_defaultUniformIds["u_texture_albedo"])->handle,
@@ -720,6 +916,19 @@ void Renderer::_DrawForward(const Program& program) {
                 Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Program %s not found", gameObject->type.c_str());
                 continue;
             }
+        }
+
+        if (m_config.useShadows) {
+            // Set shadow map for the texture program
+            const uint64_t depthSampler =
+                BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
+            std::string name = "u_" + program.name + "_shadowMap";
+            bgfx::setTexture(
+                3,
+                _GetUniform(m_defaultUniformIds[name])->handle,
+                m_shadowDepth,
+                depthSampler);
         }
 
         bgfx::setVertexBuffer(0, meshData.vbh);
@@ -746,10 +955,9 @@ void Renderer::_DrawForward(const Program& program) {
 
         bgfx::submit(program.viewId, program.program);
     }
-    
 }
 
-void Renderer::_DrawDebug(const Program& program, CameraComponent* camera) {
+void Renderer::_DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug) {
     Core::_GetApp()->physicsManager->_DrawDebug(
         width,
         height,
@@ -757,7 +965,7 @@ void Renderer::_DrawDebug(const Program& program, CameraComponent* camera) {
         Registry::GetGameObjectByName("player")
             ->GetComponent<CameraComponent>()
             ->GetCamera(),
-        camera->GetCamera());
+        camera->GetCamera(), debug);
 }
 
 void Renderer::_DrawBillboard(const Program& program) {
@@ -809,10 +1017,72 @@ void Renderer::_DrawUIDebug(CameraComponent* camera) {
         1, maxRows - 1, 0x0C, "FOR INTERNAL USE ONLY - NOT FOR PUBLIC RELEASE");
 }
 
-bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
+bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
+    // Prepare camera and light information
+    CameraComponent* pcam = Registry::GetGameObjectByName("player")
+                                ->GetComponent<CameraComponent>();
+
+    const float* camPos = camera->GetPosition();
+    float        viewPos[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
+    SetUniform(m_defaultUniformIds["u_default_viewPos"], viewPos);
+    SetUniform(m_defaultUniformIds["u_texture_viewPos"], viewPos);
+
+    float sunDir[3];
+    GetSunDirection(sunDir); // returns normalized world-space direction TO the light (direction-to-light)
+    float lightDirUniform[4] = { sunDir[0], sunDir[1], sunDir[2], 0.0f };
+    SetUniform(m_defaultUniformIds["u_default_lightDir"], lightDirUniform);
+    SetUniform(m_defaultUniformIds["u_texture_lightDir"], lightDirUniform);
+    
+    float lightView[NUM_CASCADES * 16];
+    float lightProj[NUM_CASCADES * 16];
+    if (m_config.useShadows) {
+        // Calculate the cascade matrices for shadow mapping and send to GPU
+        float cascadeSplits[NUM_CASCADES];
+        _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
+        
+        float farClip = m_config.shadowDist;
+        float splits[4] = { cascadeSplits[0],
+                            cascadeSplits[1],
+                            cascadeSplits[2],
+                            cascadeSplits[3] };
+        SetUniform(m_defaultUniformIds["u_default_csmSplits"], splits);
+        SetUniform(m_defaultUniformIds["u_texture_csmSplits"], splits);
+
+        float shadowParams[4] = {
+            bgfx::getCaps()->homogeneousDepth ? 1.0f
+                                              : 0.0f, // Homogeneous depth
+            1.0f / (float)(SHADOW_MAP_SIZE * 2),      // Inv shadow map size
+            m_config.shadowDist, // Light far plane
+            0.0f // Debug value, not used
+        };
+        SetUniform(m_defaultUniformIds["u_default_shadowParams"], shadowParams);
+        SetUniform(m_defaultUniformIds["u_texture_shadowParams"], shadowParams);
+    }
+
     // Update main camera matrices
     for (Syngine::ViewID view : _allViews) {
-        if (view == ViewID::VIEW_SKY) {
+        switch (view) {
+        case ViewID::VIEW_SHADOW: {
+            if (!m_config.useShadows) break; // Skip if shadows are disabled
+            
+            for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
+                bgfx::ViewId cascadeViewId = view + i;
+                bgfx::setViewFrameBuffer(cascadeViewId, Renderer::m_shadowFB);
+                uint16_t x = (i % 2) * SHADOW_MAP_SIZE;
+                uint16_t y = (i / 2) * SHADOW_MAP_SIZE;
+                bgfx::setViewRect(
+                    cascadeViewId, x, y, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+                bgfx::setViewScissor(
+                    cascadeViewId, x, y, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE);
+                bgfx::setViewClear(
+                    cascadeViewId, BGFX_CLEAR_DEPTH, 0x00000000, 1.0f, 0);
+                bgfx::setViewTransform(
+                    cascadeViewId, &lightView[i * 16], &lightProj[i * 16]);
+            }
+            
+            break;
+        }
+        case ViewID::VIEW_SKY: {
             // Remove translation for skybox
             bgfx::setViewRect(view, 0, 0, bgfx::BackbufferRatio::Equal);
             camera->Update(view, width, height);
@@ -821,10 +1091,14 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
             bx::memCopy(skyView, cam.view, sizeof(skyView));
             skyView[12] = skyView[13] = skyView[14] = 0.0f;
             bgfx::setViewTransform(view, skyView, cam.proj);
-        } else {
+            break;
+        }
+        default: {
             bgfx::setViewRect(view, 0, 0, uint16_t(width), uint16_t(height));
             Camera cam = camera->GetCamera();
             bgfx::setViewTransform(view, cam.view, cam.proj);
+            break;
+        }
         }
     }
     
@@ -838,17 +1112,24 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
             
             // Draw logic based on view type
             switch (view) {
+            case VIEW_SHADOW:
+                if (m_config.useShadows) {
+                    for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
+                        _DrawShadows(program, pcam, i);
+                    }
+                }
+                break;
             case VIEW_SKY:
                 _DrawSky(program);
                 break;
             case VIEW_FORWARD:
-                _DrawForward(program);
+                _DrawForward(program, camera);
                 break;
             case VIEW_DEBUG:
-                if (debug) _DrawDebug(program, camera);
+                if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
             case VIEW_BILL_DBG:
-                if (debug) _DrawBillboard(program);
+                if (debug.Enabled &&debug.Gizmos) _DrawBillboard(program);
                 break;
             default:
                 break;
@@ -856,8 +1137,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, bool debug) {
         }
     }
 
-    if (debug) _DrawUIDebug(camera);
-
+    _DrawUIDebug(camera);
 
     bgfx::frame();
     return true;

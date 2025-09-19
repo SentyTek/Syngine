@@ -16,8 +16,15 @@ namespace Syngine {
 
 /// @brief Manages all of the windowing operations
 /// @section Window
+/// @internal
 class Window {
   public:
+    /// @brief Constructor for the Window class
+    /// @param config Engine configuration options
+    /// @throws std::runtime_error if initialization fails (e.g., SDL_CreateWindow()
+    /// fails or missing files)
+    /// @threadsafety not-safe
+    /// @since v0.0.1
     Window(const EngineConfig& config);
     ~Window();
 

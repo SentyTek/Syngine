@@ -180,7 +180,7 @@ void Logger::Log(const std::string_view message, LogLevel level, bool toConsole)
             When done, resume execution. This will terminate the program.
             !!!
         */
-        if (Syngine::Core::_GetApp()->debug) {
+        if (Syngine::Core::_GetApp()->debug.Enabled) {
             DEBUG_BREAK();
         }
         

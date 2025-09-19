@@ -22,6 +22,7 @@
 
 namespace Syngine {
 class CameraComponent; // Forward declaration
+struct DebugModes; // Forward declaration
 
 /// @brief Collection of view IDs for rendering. Rendered in the order they are
 /// defined here.
@@ -29,15 +30,15 @@ class CameraComponent; // Forward declaration
 /// @since v0.0.1
 enum ViewID : bgfx::ViewId {
     VIEW_SHADOW    = 0, //* Shadow map rendering
-    VIEW_SKY       = 1, //* Skybox rendering
-    VIEW_GBUFFER   = 2, //* G-Buffer rendering for deferred shading
-    VIEW_LIGHTING  = 3, //* Lighting pass for deferred shading
-    VIEW_FORWARD   = 4, //* Forward rendering pass for translucent objects
-    VIEW_BILLBOARD = 5, //* Billboard rendering
-    VIEW_DEBUG     = 6, //* Debug rendering pass for debug rendering
-    VIEW_BILL_DBG  = 7, //* Billboard debug rendering
-    VIEW_UI        = 8, //* UI rendering
-    VIEW_UI_DEBUG  = 9, //* UI debug rendering
+    VIEW_SKY       = 4, //* Skybox rendering
+    VIEW_GBUFFER   = 5, //* G-Buffer rendering for deferred shading
+    VIEW_LIGHTING  = 6, //* Lighting pass for deferred shading
+    VIEW_FORWARD   = 7, //* Forward rendering pass for translucent objects
+    VIEW_BILLBOARD = 8, //* Billboard rendering
+    VIEW_DEBUG     = 9, //* Debug rendering pass for debug rendering
+    VIEW_BILL_DBG  = 10, //* Billboard debug rendering
+    VIEW_UI        = 11, //* UI rendering
+    VIEW_UI_DEBUG  = 12, //* UI debug rendering
 };
 
 /// @brief Different types of shader uniforms
@@ -58,7 +59,8 @@ struct Uniform {
     bgfx::UniformHandle handle = BGFX_INVALID_HANDLE; //* Handle for the uniform
     UniformType type = UniformType::UNIFORM_UNKNOWN;  //* Type of the uniform
     void*       data = nullptr; //* Pointer to the uniform data
-    std::string name; //* Name of the uniform
+    std::string name;           //* Name of the uniform
+    uint16_t    num = 1;       //* Number of elements in the uniform (for arrays)
 };
 
 /// @brief Program structure to hold shader program information
@@ -73,6 +75,12 @@ struct Program {
     std::vector<Uniform> uniforms;     //* List of shader uniforms
 };
 
+/// @brief To manage renderer configuration
+struct RendererConfig {
+    bool useShadows = true; //* Whether to use shadow mapping
+    float shadowDist = 500.0f; //* Distance for shadow rendering
+};
+
 /// @brief Renderer class to manage rendering and shader programs
 /// @section Renderer
 /// @since v0.0.1
@@ -81,7 +89,15 @@ class Renderer {
     static int width; //* Width of the game window in pixels
     static int height; //* Height of the game window in pixels
 
-    Renderer(int width, int height);
+    /// @brief Constructor for the Renderer class
+    /// @param width Width of the game window in pixels
+    /// @param height Height of the game window in pixels
+    /// @param config Renderer configuration options
+    /// @throws std::runtime_error if initialization fails (e.g., bgfx::init()
+    /// fails or missing files)
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    Renderer(int width, int height, const RendererConfig& config = RendererConfig());
     ~Renderer();
 
     /// @brief Load a shader from vertex and fragment shader file paths and
@@ -176,21 +192,23 @@ class Renderer {
     /// @param program The ID of the shader program to register the uniform with
     /// @param name The name of the uniform variable
     /// @param type The type of the uniform variable
+    /// @param num The number of elements for the uniform variable (default is 1)
     /// @pre The shader program must exist
     /// @return The ID of the registered uniform variable to use when
     /// setting, 0 if failure
     /// @threadsafety not-safe
     /// @since v0.0.1
     static size_t
-    RegisterUniform(int program, const std::string& name, UniformType type);
+    RegisterUniform(int program, const std::string& name, UniformType type, uint16_t num = 1);
 
     /// @brief Set a uniform variable
     /// @param id The ID of the uniform variable to set, returned from
     /// RegisterUniform
     /// @param data Pointer to the data to set the uniform to
+    /// @param num The number of elements to set (default is 1)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void SetUniform(uint16_t id, const void* data);
+    static void SetUniform(uint16_t id, const void* data, uint16_t num = 1);
 
     /// @brief Get the global sun light direction
     /// @param outLightDir A 3 float array to store the light direction.
@@ -214,7 +232,7 @@ class Renderer {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    bool _RenderFrame(CameraComponent* camera, bool debug = false);
+    bool _RenderFrame(CameraComponent* camera, DebugModes debug);
 
     /// @brief Register a gizmo with a tag and optional size
     /// @param tag Name of the gizmo
@@ -226,12 +244,13 @@ class Renderer {
     void _RegisterGizmo(const std::string& tag, float size = 1.0f);
   private:
     struct Gizmo {
-        bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; //* Texture handle for the gizmo
-        float size = 1.0f; //* Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
+        bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; // Texture handle for the gizmo
+        float size = 1.0f; // Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
     };
 
     static std::string m_title;
     static bool        m_isReady;
+    static RendererConfig m_config;
 
     static std::map<std::string, Gizmo> m_gizmoRegistry;
     static bgfx::VertexBufferHandle     m_billboardVbh;
@@ -243,8 +262,12 @@ class Renderer {
     static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms;
 
     static std::unordered_map<uint16_t, Uniform> m_uniformRegistry;
-
     static std::unordered_map<std::string, uint16_t> m_defaultUniformIds;
+
+    static bgfx::TextureHandle m_shadowDepth;
+    static bgfx::FrameBufferHandle m_shadowFB;
+    static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
+    static constexpr uint8_t       NUM_CASCADES    = 4;
 
     /// @brief Initialize the graphics system
     /// @return true on success, false on failure
@@ -254,7 +277,7 @@ class Renderer {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    static bool _CreateRenderer();
+    static bool _CreateRenderer(const RendererConfig& config);
 
     /// @brief Render all nearby gizmos
     /// @param camera Pointer to the camera component for rendering
@@ -268,22 +291,22 @@ class Renderer {
     static Uniform* _GetUniform(uint16_t id);
     static Program* _GetProgram(size_t id);
 
+    static void _CalculateCascadeMatrices(CameraComponent* camera,
+                                          float*           outLightView,
+                                          float*           outLightProj,
+                                          float*           outCascadeSplits);
+
     static constexpr std::array<Syngine::ViewID, 10> _allViews = {
-        Syngine::VIEW_SHADOW,
-        Syngine::VIEW_SKY,
-        Syngine::VIEW_GBUFFER,
-        Syngine::VIEW_LIGHTING,
-        Syngine::VIEW_FORWARD,
-        Syngine::VIEW_DEBUG,
-        Syngine::VIEW_BILL_DBG,
-        Syngine::VIEW_BILLBOARD,
-        Syngine::VIEW_UI,
+        Syngine::VIEW_SHADOW,   Syngine::VIEW_SKY,       Syngine::VIEW_GBUFFER,
+        Syngine::VIEW_LIGHTING, Syngine::VIEW_FORWARD,   Syngine::VIEW_DEBUG,
+        Syngine::VIEW_BILL_DBG, Syngine::VIEW_BILLBOARD, Syngine::VIEW_UI,
         Syngine::VIEW_UI_DEBUG
     };
 
+    static void _DrawShadows(const Program& program, CameraComponent* camera, uint8_t cascade);
     static void _DrawSky(const Program& program);
-    static void _DrawForward(const Program& program);
-    static void _DrawDebug(const Program& program, CameraComponent* camera);
+    static void _DrawForward(const Program& program, CameraComponent* camera);
+    static void _DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug);
     static void _DrawBillboard(const Program& program);
     static void _DrawUIDebug(CameraComponent* camera);
 };
