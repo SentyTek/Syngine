@@ -1,4 +1,5 @@
 # Code policies
+[<- Back](index.md)
 
 ## Code update policy
 The update policy is fairly easy. Document your code as best you can, undocumented code might not get accepted!

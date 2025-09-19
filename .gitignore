@@ -7,3 +7,5 @@ build
 cmake_install.cmake
 CMakeScripts
 src/Syngine/Utils/Version.h
+docs/api
+docs/index.md

@@ -1,0 +1,55 @@
+name: Sync Backlog label
+
+on:
+  workflow_dispatch:
+    issues:
+      types: [opened, edited, labeled, unlabeled]
+    project_card:
+      types: [created, moved]
+    
+jobs:
+  sync-backlog:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      repository-projects: write
+
+    steps:
+      - name: Check if issue is in Backlog
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue || context.payload.project_card?.content_url;
+            if (!issue) return;
+
+            // Grab issue number
+            const issueNumber = issue.number || parseInt(issue.split('/').pop());
+
+            // Find the project card
+            const { data: cards } = await github.rest.projects.listCards({
+              column_id: process.env.BACKLOG_COLUMN_ID, // Set this in repo secrets
+            });
+
+            const isInBacklog = cards.some(card => card.content_url?.endsWith(`/issues/${issueNumber}`));
+
+            if (isInBacklog) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                labels: ['backlog']
+              });
+            } else {
+              // Optionally strip the label if it’s not in backlog anymore
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issueNumber,
+                  name: 'backlog'
+                });
+              } catch (err) {
+                // ignore if label not there
+              }
+            }

@@ -8,6 +8,7 @@
 
 #pragma once
 #include "Jolt/Core/Core.h"
+#include "Syngine/Core/Input.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -20,21 +21,22 @@ class Window;
 
 /// @brief Struct to hold hardware specifications
 /// @section Core
-/// @note This should only be called after window creation, as it relies on SDL for some information.
+/// @note This should only be called after window creation, as it relies on SDL
+/// for some information.
 /// @since v0.0.1
 struct HardwareSpecs {
-    std::string osName; //* Operating system name
-    std::string cpuModel; //* CPU model name
-    std::string cpuArch; //* CPU architecture (e.g., x86_64, ARM)
-    int         cpuCores; //* Number of CPU cores
-    int         ramMB; //* Amount of RAM in MB
-    int         screenWidth; //* Width of the screen in pixels
-    int         screenHeight; //* Height of the screen in pixels
-    int         winWidth; //* Width of the game window in pixels
-    int         winHeight; //* Height of the game window in pixels
-    int         gpuVendorID; //* GPU vendor ID
-    int         gpuDeviceID; //* GPU device ID
-    int         maxTextureSize; //* Maximum texture size supported by the GPU
+    std::string osName;          //* Operating system name
+    std::string cpuModel;        //* CPU model name
+    std::string cpuArch;         //* CPU architecture (e.g., x86_64, ARM)
+    int         cpuCores;        //* Number of CPU cores
+    int         ramMB;           //* Amount of RAM in MB
+    int         screenWidth;     //* Width of the screen in pixels
+    int         screenHeight;    //* Height of the screen in pixels
+    int         winWidth;        //* Width of the game window in pixels
+    int         winHeight;       //* Height of the game window in pixels
+    int         gpuVendorID;     //* GPU vendor ID
+    int         gpuDeviceID;     //* GPU device ID
+    int         maxTextureSize;  //* Maximum texture size supported by the GPU
     bool        supportsCompute; //* Whether the GPU supports compute shaders
     bool        supports3DTextures; //* Whether the GPU supports 3D textures
 };
@@ -43,8 +45,8 @@ struct HardwareSpecs {
 /// @section Core
 /// @since v0.0.1
 struct EngineConfig {
-    std::string windowTitle; //* Title of the game window
-    int         windowWidth; //* Width of the game window in pixels
+    std::string windowTitle;  //* Title of the game window
+    int         windowWidth;  //* Width of the game window in pixels
     int         windowHeight; //* Height of the game window in pixels
     bool        vsync; //* Whether vertical sync is enabled
 };
@@ -63,9 +65,9 @@ struct DebugModes {
 /// @section Core
 /// @since v0.0.1
 struct App {
-    EngineConfig config; //* Engine configuration
-    std::unique_ptr<Window> window; //* Pointer to the window
-    std::unique_ptr<Renderer> renderer; //* Pointer to the render system
+    EngineConfig                    config;    //* Engine configuration
+    std::unique_ptr<Window>         window;    //* Pointer to the window
+    std::unique_ptr<Renderer>       renderer;  //* Pointer to the render system
     std::unique_ptr<SynModelLoader> synModels; //* Pointer to the model loader
     std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
     DebugModes debug;   //* Debug modes flags
@@ -136,7 +138,8 @@ class Core {
 
     /// @brief Get system specifications
     /// @return Hardware specifications of the system
-    /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
+    /// @pre Renderer must be initialized (Core::Initialize() called or
+    /// Renderer::IsReady() == true)
     Syngine::HardwareSpecs GetSystemSpecifications();
 
     /// @brief Set the simulation state
@@ -164,27 +167,30 @@ class Core {
 
         float accumulator = 0.0f; // Accumulator for physics updates
 
-        uint64_t    now              = 0;
-        uint64_t    last             = 0;
+        uint64_t now  = 0;
+        uint64_t last = 0;
 
-        bool simulate = false; // Toggles the physics simulation
+        bool simulate   = false; // Toggles the physics simulation
         bool mouseState = false;
     };
 
+    /// @brief Frame counter for FPS and TPS tracking
+    /// @internal
+    /// @since v0.0.1
     struct _FrameCounter {
-        float       oneSecond        = 0.0f;
-        int         frameCount       = 0;
-        int         frameDisplay     = 0;
-        int         physCounter      = 0;
-        int         lastFPS          = 0;
-        int         lastTPS          = 0;
+        float oneSecond    = 0.0f;
+        int   frameCount   = 0;
+        int   frameDisplay = 0;
+        int   physCounter  = 0;
+        int   lastFPS      = 0;
+        int   lastTPS      = 0;
 
         void Update(float deltaTime, bool simulate, size_t gameObjectCount) {
             oneSecond += deltaTime;
 
             if (oneSecond >= 1.0f) {
-                lastFPS = frameCount;
-                lastTPS = physCounter;
+                lastFPS      = frameCount;
+                lastTPS      = physCounter;
                 frameDisplay = 0;
                 oneSecond    = 0.0f;
                 physCounter  = 0;
@@ -199,12 +205,21 @@ class Core {
         }
     };
 
-    static Core* m_instance;
-    static App*  m_app;
-    static bool  m_shouldClose;
-    static _internal m_internal;
-    static _FrameCounter m_frameCounter;
+    // Debug keybind actions
+    static void _ToggleDebugEnabled();
+    static void _ToggleDebugWireframes();
+    static void _ToggleDebugGizmos();
+    static void _ToggleDebugShadows();
+    static void _ReloadChangedAssets();
+    static void _ReloadShaders();
 
+    static Core*         m_instance;     //* Pointer to the global Core instance
+    static App*          m_app;          //* Pointer to the global App instance
+    static bool          m_shouldClose;  //* Whether the application should close
+    static _internal     m_internal;     //* Internal state struct
+    static _FrameCounter m_frameCounter; //* Frame counter for FPS/TPS tracking
+
+    /// @deprecated In favor of the new input system
     void _HandleKeyEvent(const SDL_Event& event);
 };
 
