@@ -117,7 +117,9 @@ bool Core::Initialize() {
         if (!m_app->renderer) {
             Logger::Error("Failed to create renderer. Check the log for more details.");
         }
-
+        
+        Syngine::Logger::LogHardwareInfo();
+            
         m_app->synModels = std::make_unique<AssimpLoader>();
         if (!m_app->synModels) {
             Logger::Error("Failed to create AssimpLoader. Check the log for more details.");
