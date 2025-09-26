@@ -171,76 +171,106 @@ function(add_assets target)
     # --- Add the app icon ---
     if(MSVC)
         # on Windows, we can use a resource file to set the icon
-        target_sources(${target} PRIVATE "src/res/app.rc")
+        target_sources(${target} PRIVATE "${CMAKE_SOURCE_DIR}/system/app.rc")
     elseif(APPLE)
-        # find the source icon name and path
-        set(ICON_NAME ${target}.icon)
-        set(ICON_PATH ${CMAKE_SOURCE_DIR}/game/src/res/${ICON_NAME})
+        # find the source icon path
+        set(ICON_PATH "${CMAKE_SOURCE_DIR}/system/assets/${target}.icon")
+        # find the asset bundle path
+        set(ASSET_BUNDLE ${CMAKE_SOURCE_DIR}/system/assets/Assets.xcassets)
         # ensure the build cache directory for the icon exists
         file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/macOS)
         # find the icon build cache we just made, as well as the compiled icon
-        set(ICON_PACKAGE_PATH ${CMAKE_BINARY_DIR}/macOS)
-        set(ICON_PACKAGE ${ICON_PACKAGE_PATH}/Assets.car)
-        # find the Info.plist file in the build cache
-        set(PLIST_PATH ${CMAKE_BINARY_DIR}/macOS/Info.plist)
+        set(MAC_CACHE_PATH ${CMAKE_BINARY_DIR}/macOS)
+        file(MAKE_DIRECTORY "${MAC_CACHE_PATH}")
 
-        # configure the Info.plist file
+        set(ASSET_PACKAGE ${MAC_CACHE_PATH}/Assets.car)
+        # path to the generated-info.plist file in the build cache
+        set(GENERATED_PLIST_PATH ${MAC_CACHE_PATH}/generated-info.plist)
+        # path to the final Info.plist file in the build cache
+        set(FINAL_PLIST_PATH ${MAC_CACHE_PATH}/Info.plist)
+        # find the icon-info.plist file actool will spit out
+        set(ICON_PLIST_PATH ${MAC_CACHE_PATH}/icon-info.plist)
+        # find the .icns file actool will spit out
+        set(ICON_BUNDLE_PATH "${MAC_CACHE_PATH}/${target}.icns")
 
-        configure_file("${CMAKE_SOURCE_DIR}/game/src/Info.plist.in"
-                       "${PLIST_PATH}"
+        # configure the Info.plist file and place it into the build cache
+        configure_file("${CMAKE_SOURCE_DIR}/system/Info.plist.in"
+                       "${GENERATED_PLIST_PATH}"
         )
 
         # make a command to run the asset compiler
         add_custom_command(
-            # tell CMake what it outputs
-            OUTPUT "${ICON_PACKAGE}"
+            OUTPUT "${ASSET_PACKAGE}" "${ICON_PLIST_PATH}" "${ICON_BUNDLE_PATH}"
             COMMAND xcrun actool
-                # tell the compiler where to spit the output
-                --compile ${ICON_PACKAGE_PATH}
-                # tell the compiler where the source is
-                --app-icon ${ICON_PATH}
+                "${ASSET_BUNDLE}"
+                "${ICON_PATH}"
+                --compile "${MAC_CACHE_PATH}"
+                --output-format human-readable-text
+                --notices
+                --warnings
+                --output-partial-info-plist "${ICON_PLIST_PATH}"
+                --app-icon "${target}"
+                --accent-color AccentColor
+                --development-region en
+                --target-device mac
+                --minimum-deployment-target "${MINIMUM_MACOS_VERSION}"
                 --platform macosx
-                # this is defined in the root CmakeLists.txt
-                --minimum-deployment-target ${MINIMUM_MACOS_VERSION}
-                # add the new plist keys to CMake's existing generated plist
-                --output-partial-info-plist ${PLIST_PATH}
-                # for some reason the asset compiler wants the raw icon twice
-                ${ICON_PATH}
-            # tell CMake we need the icon and plist to exist before calling the command
-            DEPENDS "${ICON_PATH}"
-            DEPENDS "${PLIST_PATH}"
-            COMMENT "Compiling app icon for macOS"
+            DEPENDS "${ASSET_BUNDLE}" "${ICON_PATH}"
+            COMMENT "Compiling app icon and system assets for macOS"
         )
 
-        # make a build target for the app icon that depends on the icon being built
-        add_custom_target(${target}-icon ALL
-            DEPENDS "${ICON_PACKAGE}"
+        add_custom_target(CompileMacAssets ALL
+            DEPENDS "${ASSET_PACKAGE}"
+            DEPENDS "${ICON_PLIST_PATH}"
+            DEPENDS "${ICON_BUNDLE_PATH}"
+        )
+        add_dependencies(${target} CompileMacAssets)
+
+        # set the compiled asset bundle as a target for the app and copy it into Resources
+        target_sources(${target} PRIVATE "${ASSET_PACKAGE}")
+        set_property(SOURCE "${ASSET_PACKAGE}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
+
+        # add the icon bundle to the target and copy it into Resources
+        target_sources(${target} PRIVATE "${ICON_BUNDLE_PATH}")
+        set_property(SOURCE "${ICON_BUNDLE_PATH}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
+
+        # merge the icon-info.plist into the main Info.plist
+        add_custom_command(
+            OUTPUT "${FINAL_PLIST_PATH}"
+            COMMAND ${CMAKE_COMMAND} -E copy "${GENERATED_PLIST_PATH}" "${FINAL_PLIST_PATH}"
+            COMMAND /usr/libexec/PlistBuddy -c "Merge '${ICON_PLIST_PATH}'" "${FINAL_PLIST_PATH}"
+            DEPENDS "${ICON_PLIST_PATH}" "${GENERATED_PLIST_PATH}"
+            COMMENT "Merging icon-info.plist into main Info.plist"
         )
 
-        # add the icon target as a dependency of the main target
-        add_dependencies(${target} ${target}-icon)
-        # set the built icon as a target for the app and copy it into Resources
-        target_sources(${target} PRIVATE ${ICON_PACKAGE})
-        set_property(SOURCE ${ICON_PACKAGE} PROPERTY MACOSX_PACKAGE_LOCATION "Resources")
+        add_custom_target(InfoPlistMerge ALL
+            DEPENDS "${FINAL_PLIST_PATH}"
+        )
+        add_dependencies(${target} InfoPlistMerge)
 
         # add the Info.plist to the target and have it depend on the icon
-        set_property(SOURCE "${PLIST_PATH}" PROPERTY MACOSX_PACKAGE_LOCATION "Contents/" DEPENDS ${target}-icon)
+        set_property(
+            SOURCE "${FINAL_PLIST_PATH}"
+            PROPERTY MACOSX_PACKAGE_LOCATION "Contents/"
+        )
+        
         # tell Xcode this is the bundle Info.plist
-        set_target_properties(${name} PROPERTIES
-            MACOSX_BUNDLE_INFO_PLIST ${PLIST_PATH}
+        set_target_properties(${target} PROPERTIES
+            XCODE_ATTRIBUTE_INFOPLIST_FILE ${FINAL_PLIST_PATH}
         )
 
-        message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/Assets.car")
+        message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/${target}.icns")
+        message(STATUS "Compiling assets for macOS ${MINIMUM_MACOS_VERSION}: ${ASSET_BUNDLE} -> Resources/Assets.car")
         message(STATUS "Added macOS icon property list")
     else()
         set(DESKTOP_FILE "${CMAKE_BINARY_DIR}/${target}.desktop")
         set(ICON_NAME "$ENV{HOME}/.local/share/pixmaps/${target}.png")
-        set(ICON_SOURCE "${GAME_DIR}/src/res/icon.png")
+        set(ICON_SOURCE "${CMAKE_SOURCE_DIR}/system/assets/icon.png")
         set(ICON_TARGET "${CMAKE_BINARY_DIR}/${ICON_NAME}.png")
         set(EXEC_PATH "$ENV{HOME}/.local/bin/${target}")
 
         # Configure .desktop file from template
-        configure_file("${GAME_DIR}/src/res/${target}.desktop.in"
+        configure_file("${CMAKE_SOURCE_DIR}/system/${target}.desktop.in"
                     "${DESKTOP_FILE}"
                     @ONLY)
         configure_file("${ICON_SOURCE}" "${ICON_TARGET}" COPYONLY)

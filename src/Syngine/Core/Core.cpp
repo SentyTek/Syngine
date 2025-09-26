@@ -98,6 +98,8 @@ Core::~Core() {
         }
         m_instance = nullptr; // Reset the singleton instance
     }
+    delete m_app;
+    m_app = nullptr;
 }
 
 bool Core::Initialize() {
@@ -117,7 +119,9 @@ bool Core::Initialize() {
         if (!m_app->renderer) {
             Logger::Error("Failed to create renderer. Check the log for more details.");
         }
-
+        
+        Syngine::Logger::LogHardwareInfo();
+            
         m_app->synModels = std::make_unique<AssimpLoader>();
         if (!m_app->synModels) {
             Logger::Error("Failed to create AssimpLoader. Check the log for more details.");
@@ -351,7 +355,7 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     MEMORYSTATUSEX statex;
     statex.dwLength = sizeof(statex);
     GlobalMemoryStatusEx(&statex);
-    specs.ramMB = statex.ullTotalPhys / (1024 * 1024);
+    specs.ramMB = (int)(statex.ullTotalPhys / (1024 * 1024));
 
 #elif __APPLE__
     // On macOS, gather system information using sysctl
