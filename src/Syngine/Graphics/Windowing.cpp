@@ -55,6 +55,7 @@ Window::~Window() {
 
     // Cleanup
     SDL_DestroyWindow(m_window);
+    SDL_Quit();
     m_window = nullptr;
     Syngine::Logger::Info("Window destroyed successfully");
 }

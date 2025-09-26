@@ -58,7 +58,7 @@ struct DebugModes {
     bool Enabled = true; //* Global debug toggle
     bool PhysWireframes = true; //* Whether to draw physics wireframes
     bool Gizmos = true; //* Gizmos such as cameras, lights, and audio sources
-    bool CSMBounds = true; //* Cascading Shadow Map zone bounds.
+    bool CSMBounds = false; //* Cascading Shadow Map zone bounds.
 };
 
 /// @brief Struct to hold application state

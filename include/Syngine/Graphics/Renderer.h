@@ -7,6 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include "Syngine/Graphics/Renderer.h"
+
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -16,9 +18,6 @@
 
 #include <SDL3/SDL.h>
 #include <bgfx/bgfx.h>
-#include "SDL3/SDL_stdinc.h"
-#include "Syngine/Graphics/Renderer.h"
-#include "bx/math.h"
 
 namespace Syngine {
 class CameraComponent; // Forward declaration
@@ -199,7 +198,7 @@ class Renderer {
     /// @threadsafety not-safe
     /// @since v0.0.1
     static size_t
-    RegisterUniform(int program, const std::string& name, UniformType type, uint16_t num = 1);
+    RegisterUniform(size_t program, const std::string& name, UniformType type, uint16_t num = 1);
 
     /// @brief Set a uniform variable
     /// @param id The ID of the uniform variable to set, returned from
@@ -208,7 +207,7 @@ class Renderer {
     /// @param num The number of elements to set (default is 1)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void SetUniform(uint16_t id, const void* data, uint16_t num = 1);
+    static void SetUniform(size_t id, const void* data, uint16_t num = 1);
 
     /// @brief Get the global sun light direction
     /// @param outLightDir A 3 float array to store the light direction.
@@ -243,9 +242,12 @@ class Renderer {
     /// @internal
     void _RegisterGizmo(const std::string& tag, float size = 1.0f);
   private:
+    
+    /// @brief Struct to hold gizmo information
+    /// @section Renderer
     struct Gizmo {
-        bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; // Texture handle for the gizmo
-        float size = 1.0f; // Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
+        bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; //* Texture handle for the gizmo
+        float size = 1.0f; //* Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
     };
 
     static std::string m_title;
@@ -288,7 +290,7 @@ class Renderer {
     /// @internal
     void _RenderGizmos(CameraComponent* camera);
 
-    static Uniform* _GetUniform(uint16_t id);
+    static Uniform* _GetUniform(size_t id);
     static Program* _GetProgram(size_t id);
 
     static void _CalculateCascadeMatrices(CameraComponent* camera,

@@ -608,7 +608,7 @@ bool Renderer::IsReady() {
     return m_isReady;
 }
 
-size_t Renderer::RegisterUniform(int                program,
+size_t Renderer::RegisterUniform(size_t             program,
                                  const std::string& name,
                                  UniformType        type,
                                  uint16_t           num) {
@@ -654,7 +654,7 @@ size_t Renderer::RegisterUniform(int                program,
     return 0;
 }
 
-Uniform* Renderer::_GetUniform(uint16_t id) {
+Uniform* Renderer::_GetUniform(size_t id) {
     auto it = m_uniformRegistry.find(id);
     if (it != m_uniformRegistry.end()) {
         return &it->second;
@@ -662,7 +662,7 @@ Uniform* Renderer::_GetUniform(uint16_t id) {
     return nullptr;
 }
 
-void Renderer::SetUniform(uint16_t id, const void* data, uint16_t num) {
+void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
     Uniform* u = _GetUniform(id);
     if (u && bgfx::isValid(u->handle)) {
         size_t size = 0;
@@ -1019,8 +1019,10 @@ void Renderer::_DrawUIDebug(CameraComponent* camera) {
 
 bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     // Prepare camera and light information
-    CameraComponent* pcam = Registry::GetGameObjectByName("player")
-                                ->GetComponent<CameraComponent>();
+    if (!camera) {
+        Syngine::Logger::Fatal("No camera provided to render frame");
+        return false;
+    }
 
     const float* camPos = camera->GetPosition();
     float        viewPos[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
@@ -1115,7 +1117,7 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
             case VIEW_SHADOW:
                 if (m_config.useShadows) {
                     for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
-                        _DrawShadows(program, pcam, i);
+                        _DrawShadows(program, camera, i);
                     }
                 }
                 break;
