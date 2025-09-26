@@ -98,6 +98,8 @@ Core::~Core() {
         }
         m_instance = nullptr; // Reset the singleton instance
     }
+    delete m_app;
+    m_app = nullptr;
 }
 
 bool Core::Initialize() {
@@ -353,7 +355,7 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     MEMORYSTATUSEX statex;
     statex.dwLength = sizeof(statex);
     GlobalMemoryStatusEx(&statex);
-    specs.ramMB = statex.ullTotalPhys / (1024 * 1024);
+    specs.ramMB = (int)(statex.ullTotalPhys / (1024 * 1024));
 
 #elif __APPLE__
     // On macOS, gather system information using sysctl

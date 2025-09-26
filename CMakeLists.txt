@@ -55,17 +55,27 @@ endif()
 
 # Add all required source files
 add_library(Syngine STATIC
+    # Core
+    src/Syngine/Core/Entry.cpp
     src/Syngine/Core/Core.cpp
     src/Syngine/Core/Registry.cpp
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
+
+    # Graphics
     src/Syngine/Graphics/Renderer.cpp
     src/Syngine/Graphics/Windowing.cpp
     src/Syngine/Graphics/DebugRenderer.cpp
     src/Syngine/Graphics/TextureHelpers.cpp
+
+    # Utils
     src/Syngine/Utils/ModelLoader.cpp
     src/Syngine/Utils/FsUtils.cpp
+
+    # Physics
     src/Syngine/Physics/Physics.cpp
+
+    # ECS
     src/Syngine/ECS/GameObject.cpp
     src/Syngine/ECS/Components/MeshComponent.cpp
     src/Syngine/ECS/Components/TransformComponent.cpp
