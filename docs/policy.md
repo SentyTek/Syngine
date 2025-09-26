@@ -72,8 +72,8 @@ Structs and Enums should be documented similarly to functions, with any tags tha
 /// @brief An enum to hold the state
 /// @section PlayerComponent
 enum States = {
-    RUNNING   = 0, /// When running!
-    EXPLODING = 1, /// When exploding!
+    RUNNING   = 0, //* When running!
+    EXPLODING = 1, //* When exploding!
 }
 ```
 Multiline or block comments are also supported like so:
@@ -83,8 +83,8 @@ Multiline or block comments are also supported like so:
  * @section PlayerComponent
  */
 enum States = {
-    RUNNING   = 0, /// When running!
-    EXPLODING = 1, /// When exploding!
+    RUNNING   = 0, //* When running!
+    EXPLODING = 1, //* When exploding!
 }
 ```
 Note the use of `/**` and ` */`, along with ` * @brief` bullet points. (space-asterisk-space-at symbol)
