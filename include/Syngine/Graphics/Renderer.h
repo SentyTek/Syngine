@@ -7,7 +7,6 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/Graphics/Renderer.h"
 
 #include <cstdint>
 #include <string>

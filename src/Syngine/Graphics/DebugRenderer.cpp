@@ -6,6 +6,7 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/Graphics/Renderer.h"
 #include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 
@@ -216,7 +217,7 @@ void DebugRender::RenderLines(const float*        view,
                               int                 width,
                               int                 height,
                               bgfx::ProgramHandle program) {
-    unsigned short viewId = 25; // Why the hell does anyone use shorts
+    unsigned short viewId = ViewID::VIEW_DEBUG; // Why the hell does anyone use shorts
     bgfx::setViewTransform(viewId, view, proj);
     bgfx::setViewRect(viewId, 0, 0, width, height);
     bgfx::touch(viewId);
