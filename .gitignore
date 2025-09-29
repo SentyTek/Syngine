@@ -6,3 +6,4 @@ build
 .clangd
 cmake_install.cmake
 CMakeScripts
+src/Syngine/Utils/Version.h

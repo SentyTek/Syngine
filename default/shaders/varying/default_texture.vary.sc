@@ -1,0 +1,12 @@
+vec3 a_position : POSITION;
+vec3 a_normal : NORMAL;
+vec4 a_tangent : TANGENT;
+vec2 a_texcoord0 : TEXCOORD0;
+vec2 a_texcoord1 : TEXCOORD1;
+
+vec2 v_uvMacro : TEXCOORD2;
+vec2 v_uvDetail : TEXCOORD3;
+vec3 v_normal : TEXCOORD4;
+vec4 v_tangent : TEXCOORD5;
+vec3 v_worldPos : TEXCOORD6;
+float v_viewDepth : TEXCOORD7;
