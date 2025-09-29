@@ -100,6 +100,8 @@ class SynModelLoader {
       /// @since v0.0.1
       /// @internal
       static MeshData* _GetMeshById(int id);
+
+      virtual ~SynModelLoader() = default; // this keeps getting deleted???
 };
 
 /// @brief AssimpLoader class for loading 3D models using Assimp
