@@ -146,6 +146,12 @@ class ZoneComponent : public Syngine::Component {
     /// @since v0.0.1
     void SetActive(bool active);
 
+    /// @brief Check if the zone is a one-shot zone.
+    /// @return True if the zone is a one-shot zone, false otherwise.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    bool IsOneShot() const;
+
     // --- Actual zone functions
 
     /// @brief Check if a point is inside the zone.
