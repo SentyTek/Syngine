@@ -152,6 +152,20 @@ class ZoneComponent : public Syngine::Component {
     /// @since v0.0.1
     bool IsOneShot() const;
 
+    /// @brief Add an object to the triggered list (for one-shot zones).
+    /// @param object The GameObject to add.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
+    void _AddTriggeredObject(GameObject* object);
+
+    /// @brief Remove an object from the triggered list (for one-shot zones).
+    /// @param object The GameObject to remove.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
+    void _RemoveTriggeredObject(GameObject* object);
+
     // --- Actual zone functions
 
     /// @brief Check if a point is inside the zone.
