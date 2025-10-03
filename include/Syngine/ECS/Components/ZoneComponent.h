@@ -164,6 +164,14 @@ class ZoneComponent : public Syngine::Component {
     /// @internal
     void _AddTriggeredObject(GameObject* object);
 
+    /// @brief Check if an object is in the triggered list (for one-shot zones).
+    /// @param object The GameObject to check.
+    /// @return True if the object is in the triggered list, false otherwise.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    /// @internal
+    bool _HasTriggeredObject(GameObject* object);
+
     /// @brief Remove an object from the triggered list (for one-shot zones).
     /// @param object The GameObject to remove.
     /// @threadsafety not-safe
@@ -235,8 +243,15 @@ class ZoneComponent : public Syngine::Component {
     std::vector<GameObject*>
     GetObjectsInZoneByTag(const std::string& tag) const;
 
+    /// @brief Get the owner GameObject of this zone component.
+    /// @return Pointer to the owner GameObject.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    /// @internal
+    GameObject* _GetOwner() const;
+
     std::function<void(GameObject*)> OnEnter; //* Function called when an object enters the zone
-    std::function<void(GameObject*)> OnExit;  //* Function called when an object 
+    std::function<void(GameObject*)> OnExit;  //* Function called when an object exits the zone
 };
 
 } // namespace Syngine
