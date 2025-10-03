@@ -17,7 +17,7 @@ namespace Syngine {
 /// @section ZoneManager
 /// @internal
 class ZoneManager {
-    std::vector<ZoneComponent*> m_zones; //* List of all zones in the game
+    static std::vector<ZoneComponent*> m_zones; //* List of all zones in the game
   public:
     
     /// @brief Registers a zone with the manager.
@@ -26,7 +26,8 @@ class ZoneManager {
     /// @threadsafety not-safe
     /// @internal
     /// @note This is called automatically when a ZoneComponent is created.
-    void _RegisterZone(ZoneComponent* zone);
+    /// @noexcept
+    static void _RegisterZone(ZoneComponent* zone) noexcept;
 
     /// @brief Unregisters a zone from the manager.
     /// @param zone The zone to unregister.
@@ -34,14 +35,16 @@ class ZoneManager {
     /// @threadsafety not-safe
     /// @internal
     /// @note This is called automatically when a ZoneComponent is destroyed.
-    void _UnregisterZone(ZoneComponent* zone);
+    /// @noexcept
+    static void _UnregisterZone(ZoneComponent* zone) noexcept;
 
     /// @brief Updates all zones, checking for GameObjects entering or exiting
     /// zones and triggering events as necessary.
     /// @since v0.0.1
     /// @threadsafety not-safe
     /// @internal
-    void _UpdateZones();
+    /// @throws IDK a runtime error maybe lol
+    static void _UpdateZones();
 };
 
 } // namespace Syngine
