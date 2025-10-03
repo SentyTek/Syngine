@@ -43,6 +43,9 @@ class CameraComponent : public Syngine::Component {
     /// @since v0.0.1
     /// @internal
     CameraComponent(GameObject* owner);
+
+    CameraComponent(const CameraComponent& other);
+    CameraComponent& operator=(const CameraComponent& other);
     
     ~CameraComponent();
 

@@ -32,6 +32,9 @@ class MeshComponent : public Syngine::Component {
                   const std::string& path         = "",
                   bool               loadTextures = true);
 
+    MeshComponent(const MeshComponent& other);
+    MeshComponent& operator=(const MeshComponent& other);
+    
     ~MeshComponent();
       
     /// @brief Get the type of this component

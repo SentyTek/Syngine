@@ -56,8 +56,10 @@ class PlayerComponent : public Syngine::Component {
     /// @note This should only be called by GameObject::AddComponent<T>()
     /// @since v0.0.1
     /// @internal
-    PlayerComponent(GameObject*               owner,
-                    Syngine::CameraComponent* camera);
+    PlayerComponent(GameObject* owner, Syngine::CameraComponent* camera);
+
+    // No assignment operator because the copy is bad enough
+    PlayerComponent(const PlayerComponent& other);
     
     ~PlayerComponent();
 

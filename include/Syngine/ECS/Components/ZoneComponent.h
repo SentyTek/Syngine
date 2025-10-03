@@ -45,6 +45,8 @@ class ZoneComponent : public Syngine::Component {
     bool m_oneShot = false; //* Whether the zone is a one-shot zone
     std::unordered_set<GameObject*> m_triggeredObjects; //* Objects that have been triggered
 
+    std::unordered_set<std::string> m_tags; //* Tags of the zone
+
     GameObject* m_owner; // Reference to the owner game object
   public:
     static constexpr Syngine::Components componentType =
@@ -62,6 +64,9 @@ class ZoneComponent : public Syngine::Component {
                   const float pos[3]  = (const float[]){ 0.0f, 0.0f, 0.0f },
                   const float size[3] = (const float[]){ 1.0f, 1.0f, 1.0f },
                   bool        oneShot = false);
+
+    ZoneComponent(const ZoneComponent& other);
+    ZoneComponent& operator=(const ZoneComponent& other);
 
     ~ZoneComponent();
 
@@ -165,6 +170,37 @@ class ZoneComponent : public Syngine::Component {
     /// @since v0.0.1
     /// @internal
     void _RemoveTriggeredObject(GameObject* object);
+
+    /// @brief Add a tag to the zone.
+    /// @param tag The tag to add.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void AddTag(const std::string& tag);
+
+    /// @brief Remove a tag from the zone.
+    /// @param tag The tag to remove.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void RemoveTag(const std::string& tag);
+
+    /// @brief Check if the zone has a specific tag.
+    /// @param tag The tag to check.
+    /// @return True if the zone has the specified tag, false otherwise.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    bool HasTag(const std::string& tag) const;
+
+    /// @brief Get all tags of the zone.
+    /// @return A vector of all tags of the zone.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    std::vector<std::string> GetTags() const;
+
+    /// @brief Set several tags to the zone at once, replacing existing tags.
+    /// @param tags A vector of tags to set.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetTags(const std::vector<std::string>& tags);
 
     // --- Actual zone functions
 

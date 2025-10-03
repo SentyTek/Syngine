@@ -65,6 +65,9 @@ class RigidbodyComponent : public Syngine::Component {
     /// @since v0.0.1
     RigidbodyComponent(GameObject*                  owner,
                        Syngine::RigidbodyParameters params = {});
+
+    RigidbodyComponent(const RigidbodyComponent& other);
+    RigidbodyComponent& operator=(const RigidbodyComponent& other);
     
     ~RigidbodyComponent();
 

@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <xstring>
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/AllComponents.h"
@@ -40,7 +41,15 @@ class GameObject {
     /// @since v0.0.1
     GameObject(string name, string type = "default");
 
+    GameObject(const GameObject& other);
+    GameObject& operator=(const GameObject& other);
+
     ~GameObject();
+
+    // Operator overload yippee
+    bool operator==(const GameObject& other) const {
+        return this->id == other.id;
+    }
 
     /// @brief Get the ID of the GameObject
     /// @return ID of the GameObject

@@ -24,6 +24,19 @@ MeshComponent::MeshComponent(GameObject*        owner,
     this->Init(path, loadTextures);
 }
 
+MeshComponent::MeshComponent(const MeshComponent& other) {
+    this->meshData = other.meshData; // Shallow copy, deep copy may be needed
+    this->m_owner  = other.m_owner;
+}
+
+MeshComponent& MeshComponent::operator=(const MeshComponent& other) {
+    if (this != &other) {
+        this->meshData = other.meshData; // Shallow copy, deep copy may be needed
+        this->m_owner  = other.m_owner;
+    }
+    return *this;
+}
+
 MeshComponent::~MeshComponent() {
     // Unload the mesh data when the component is destroyed
     this->UnloadMesh();

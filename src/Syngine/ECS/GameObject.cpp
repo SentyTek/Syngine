@@ -10,6 +10,8 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 
+#include <type_traits>
+
 using namespace Syngine;
 
 GameObject::GameObject(string name, string type) {
@@ -19,6 +21,43 @@ GameObject::GameObject(string name, string type) {
     this->gizmo = "none";
 
     Registry::AddGameObject(this);
+}
+
+GameObject::GameObject(const GameObject& other) {
+    this->name = other.name;
+    this->type = other.type;
+    this->gizmo = other.gizmo;
+    this->id   = other.id;
+    this->isActive = other.isActive;
+
+    // Deep copy components
+    for (const auto& [type, comp] : other.components) {
+        // Use the AddComponent method to ensure proper registration
+        this->AddComponent<typename std::remove_reference_t<decltype(*comp)>>(*comp);
+    }
+
+    Registry::AddGameObject(this);
+}
+
+GameObject& GameObject::operator=(const GameObject& other) {
+    if (this == &other) return *this; // Self-assignment check
+
+    this->name = other.name;
+    this->type = other.type;
+    this->gizmo = other.gizmo;
+    this->id   = other.id;
+    this->isActive = other.isActive;
+
+    // Clear existing components
+    this->components.clear();
+
+    // Deep copy components
+    for (const auto& [type, comp] : other.components) {
+        // Use the AddComponent method to ensure proper registration
+        this->AddComponent<typename std::remove_reference_t<decltype(*comp)>>(*comp);
+    }
+
+    return *this;
 }
 
 GameObject::~GameObject() {

@@ -33,6 +33,27 @@ CameraComponent::CameraComponent(GameObject* owner) {
     }
 }
 
+CameraComponent::CameraComponent(const CameraComponent& other) {
+    this->m_owner = other.m_owner;
+    this->camera = other.camera;
+
+    if (this->m_owner) {
+        this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+    }
+}
+
+CameraComponent& CameraComponent::operator=(const CameraComponent& other) {
+    if (this != &other) {
+        this->m_owner = other.m_owner;
+        this->camera = other.camera;
+
+        if (this->m_owner) {
+            this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+        }
+    }
+    return *this;
+}
+
 CameraComponent::~CameraComponent() {
     // No specific cleanup needed for now
 }
