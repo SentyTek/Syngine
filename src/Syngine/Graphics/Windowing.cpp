@@ -28,10 +28,15 @@ Window::Window(const EngineConfig& config) {
                               SDL_GetError());
     }
 
-    m_window = SDL_CreateWindow(m_title.c_str(),
-                                 config.windowWidth,
-                                 config.windowHeight,
-                                 SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN);
+    m_window = SDL_CreateWindow(
+        m_title.c_str(),
+        config.windowWidth,
+        config.windowHeight,
+        SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN
+#if BX_PLATFORM_OSX
+            | SDL_WINDOW_METAL
+#endif
+    );
 
     if (!m_window) {
         Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
@@ -43,8 +48,12 @@ Window::Window(const EngineConfig& config) {
 #if BX_PLATFORM_OSX
     // macOS requires some kind of renderer to be created before Metal can be
     // initialized
-    SDL_Renderer* renderer = SDL_CreateRenderer(m_window, NULL);
-    SDL_DestroyRenderer(renderer);
+    SDL_ShowWindow(m_window);
+    SDL_MetalView mv = SDL_Metal_CreateView(m_window);
+    if (!mv) {
+        Syngine::Logger::Error("Failed to create Metal view");
+    }
+    SDL_HideWindow(m_window);
 #endif
 }
 
