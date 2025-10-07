@@ -43,9 +43,9 @@ class ZoneComponent : public Syngine::Component {
     bool m_active = true; //* Whether the zone is active or not
 
     bool m_oneShot = false; //* Whether the zone is a one-shot zone
-    std::unordered_set<GameObject*> m_triggeredObjects; //* Objects that have been triggered
+    std::vector<GameObject*> m_triggeredObjects; //* Objects that have been triggered
 
-    std::unordered_set<std::string> m_tags; //* Tags of the zone
+    std::vector<std::string> m_tags; //* Tags of the zone
 
     GameObject* m_owner; // Reference to the owner game object
   public:
