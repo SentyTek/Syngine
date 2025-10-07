@@ -11,7 +11,7 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <xstring>
+
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/AllComponents.h"

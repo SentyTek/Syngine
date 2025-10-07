@@ -117,24 +117,28 @@ bool ZoneComponent::IsOneShot() const { return m_oneShot; }
 void ZoneComponent::_AddTriggeredObject(GameObject* object) {
     if (object && std::find(m_triggeredObjects.begin(), m_triggeredObjects.end(),
                             object) == m_triggeredObjects.end()) {
-        m_triggeredObjects.emplace(object);
+        m_triggeredObjects.emplace_back(object);
     }
 }
 
 bool ZoneComponent::_HasTriggeredObject(GameObject* object) {
-    return object &&
-           (m_triggeredObjects.find(object) != m_triggeredObjects.end());
+    return object && (std::find(m_triggeredObjects.begin(),
+                                m_triggeredObjects.end(),
+                                object) != m_triggeredObjects.end());
 }
 
 void ZoneComponent::_RemoveTriggeredObject(GameObject* object) {
     if (object) {
-        m_triggeredObjects.erase(object);
+        m_triggeredObjects.erase(std::remove(m_triggeredObjects.begin(),
+                                             m_triggeredObjects.end(),
+                                             object),
+                                 m_triggeredObjects.end());
     }
 }
 
 void ZoneComponent::AddTag(const std::string& tag) {
     if (std::find(m_tags.begin(), m_tags.end(), tag) == m_tags.end()) {
-        m_tags.emplace(tag);
+        m_tags.emplace_back(tag);
     }
 }
 

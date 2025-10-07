@@ -11,7 +11,6 @@
 #include "Syngine/ECS/GameObject.h"
 
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 namespace Syngine {
