@@ -8,6 +8,7 @@
 
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Registry.h"
+#include "Syngine/Core/ZoneManager.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 

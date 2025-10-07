@@ -60,13 +60,19 @@ class ZoneComponent : public Syngine::Component {
     /// @param oneShot Whether the zone is a one-shot zone (triggers only once per object).
     /// @note This should only be called by GameObject::AddComponent<T>()
     ZoneComponent(GameObject* owner,
-                  ZoneShape   shape   = ZoneShape::BOX,
-                  const float pos[3]  = (const float[]){ 0.0f, 0.0f, 0.0f },
-                  const float size[3] = (const float[]){ 1.0f, 1.0f, 1.0f },
+                  ZoneShape   shape,
+                  const float pos[3],
+                  const float size[3],
                   bool        oneShot = false);
 
     ZoneComponent(const ZoneComponent& other);
     ZoneComponent& operator=(const ZoneComponent& other);
+
+    /// @brief Clone the ZoneComponent
+    /// @return A unique pointer to the cloned ZoneComponent
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<ZoneComponent>(*this);
+    }
 
     ~ZoneComponent();
 
@@ -85,10 +91,10 @@ class ZoneComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    void Init(ZoneShape   shape   = ZoneShape::BOX,
-              const float pos[3]  = (const float[]){ 0.0f, 0.0f, 0.0f },
-              const float size[3] = (const float[]){ 1.0f, 1.0f, 1.0f },
-              bool        oneShot = false);
+    void Init(ZoneShape   shape,
+              const float pos[3],
+              const float size[3],
+              bool        oneShot);
 
     /// @brief Update the zone component.
     /// @note There is no specific update logic for the zone component

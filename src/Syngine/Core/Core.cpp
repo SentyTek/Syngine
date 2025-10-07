@@ -6,7 +6,6 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Core/ZoneManager.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -26,6 +25,7 @@
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/Input.h"
+#include "Syngine/Core/ZoneManager.h"
 
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -41,9 +41,6 @@
 
 #include <SDL3/SDL.h>
 
-#include "bx/bx.h"
-#include "bx/constants.h"
-#include "bx/math.h"
 #include "bgfx/defines.h"
 
 #include <filesystem>
