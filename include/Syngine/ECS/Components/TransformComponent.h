@@ -30,6 +30,12 @@ class TransformComponent : public Syngine::Component {
         TransformComponent(const TransformComponent& other);
         TransformComponent& operator=(const TransformComponent& other);
 
+        /// @brief Clone the TransformComponent
+        /// @return A unique pointer to the cloned TransformComponent
+        std::unique_ptr<Component> Clone() const override {
+            return std::make_unique<TransformComponent>(*this);
+        }
+
         /// @brief Initializes the transform component with default values.
         /// @param position Initial position of the GameObject
         /// @param rotation Initial rotation of the GameObject (as a quaternion)

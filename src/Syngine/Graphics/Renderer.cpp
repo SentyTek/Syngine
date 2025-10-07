@@ -655,7 +655,7 @@ size_t Renderer::RegisterUniform(size_t             program,
 }
 
 Uniform* Renderer::_GetUniform(size_t id) {
-    auto it = m_uniformRegistry.find(id);
+    auto it = m_uniformRegistry.find(static_cast<uint16_t>(id));
     if (it != m_uniformRegistry.end()) {
         return &it->second;
     }

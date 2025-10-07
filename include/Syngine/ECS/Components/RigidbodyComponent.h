@@ -77,6 +77,12 @@ class RigidbodyComponent : public Syngine::Component {
     /// @since v0.0.1
     Syngine::Components GetComponentType() override;
 
+    /// @brief Clone the RigidbodyComponent
+    /// @return A unique pointer to the cloned RigidbodyComponent
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<RigidbodyComponent>(*this);
+    }
+
     /// @brief Initialize the RigidbodyComponent
     /// @param params Rigidbody parameters to initialize the component
     /// @note This should only be called when the component is added to a GameObject

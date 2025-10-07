@@ -69,6 +69,12 @@ class PlayerComponent : public Syngine::Component {
     /// @since v0.0.1
     Syngine::Components GetComponentType() override;
 
+    /// @brief Clone the PlayerComponent
+    /// @return A unique pointer to the cloned PlayerComponent
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<PlayerComponent>(*this);
+    }
+
     /// @brief Initializes the player component with camera, window, and physics
     /// manager.
     /// @param camera The camera component to use for the player.

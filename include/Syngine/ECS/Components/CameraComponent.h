@@ -55,6 +55,13 @@ class CameraComponent : public Syngine::Component {
     /// @since v0.0.1
     Syngine::Components GetComponentType() override;
 
+    /// @brief Clone the CameraComponent
+    /// @return A unique pointer to the cloned CameraComponent
+
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<CameraComponent>(*this);
+    }
+
     /// @brief Initialize the camera component
     /// @note This should only be called when the component is added to a GameObject
     /// @threadsafety not-safe

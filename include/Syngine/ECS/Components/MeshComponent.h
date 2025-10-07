@@ -43,6 +43,12 @@ class MeshComponent : public Syngine::Component {
     /// @since v0.0.1
     Components GetComponentType() override;
 
+      /// @brief Clone the MeshComponent
+      /// @return A unique pointer to the cloned MeshComponent
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<MeshComponent>(*this);
+    }
+
     /// @brief Initialize the mesh component
     /// @param path Path to the model file
     /// @param loadTextures Whether to load textures for the model

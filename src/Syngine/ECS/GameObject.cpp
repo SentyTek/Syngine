@@ -14,9 +14,10 @@
 
 using namespace Syngine;
 
-GameObject::GameObject(string name, string type) {
+GameObject::GameObject(string name, string type, string initialTag) {
     this->name = name;
     this->type = type;
+    this->tags.push_back(initialTag);
     this->id   = -1;
     this->gizmo = "none";
 
@@ -32,15 +33,20 @@ GameObject::GameObject(const GameObject& other) {
 
     // Deep copy components
     for (const auto& [type, comp] : other.components) {
-        // Use the AddComponent method to ensure proper registration
-        this->AddComponent<typename std::remove_reference_t<decltype(*comp)>>(*comp);
+        this->components[type] = comp->Clone();
+        this->components[type]->m_owner = this;
     }
 
+    // Register the new GameObject
+    // This should ensure it can be categorized properly
     Registry::AddGameObject(this);
 }
 
 GameObject& GameObject::operator=(const GameObject& other) {
     if (this == &other) return *this; // Self-assignment check
+
+    // Unregister the current GameObject
+    Registry::RemoveGameObject(this);
 
     this->name = other.name;
     this->type = other.type;
@@ -54,8 +60,13 @@ GameObject& GameObject::operator=(const GameObject& other) {
     // Deep copy components
     for (const auto& [type, comp] : other.components) {
         // Use the AddComponent method to ensure proper registration
-        this->AddComponent<typename std::remove_reference_t<decltype(*comp)>>(*comp);
+        this->components[type] = comp->Clone();
+        this->components[type]->m_owner = this;
     }
+
+    // Register the new GameObject
+    // This should ensure it can be categorized properly
+    Registry::AddGameObject(this);
 
     return *this;
 }
@@ -64,8 +75,29 @@ GameObject::~GameObject() {
     Registry::RemoveGameObject(this);
 }
 
-void GameObject::SetActive(bool active) noexcept {
-    this->isActive = active;
+void GameObject::SetActive(bool active) noexcept { this->isActive = active; }
+
+void GameObject::AddTag(const std::string& tag) {
+    if (std::find(tags.begin(), tags.end(), tag) == tags.end()) {
+        tags.push_back(tag);
+    }
+}
+
+void GameObject::RemoveTag(const std::string& tag) {
+    auto it = std::find(tags.begin(), tags.end(), tag);
+    if (it != tags.end()) {
+        tags.erase(it);
+    }
+}
+
+bool GameObject::HasTag(const std::string& tag) const {
+    return std::find(tags.begin(), tags.end(), tag) != tags.end();
+}
+
+void GameObject::ClearTags() { tags.clear(); }
+
+size_t GameObject::GetComponentCount() const noexcept {
+    return this->components.size();
 }
 
 int GameObject::RemoveComponent(Syngine::Components type) {

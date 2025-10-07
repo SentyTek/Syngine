@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include <memory>
 
 namespace Syngine {
 // Forward declaration
@@ -51,6 +52,8 @@ class Component {
      * @return The component type as an enum value.
      */
     virtual Components GetComponentType() = 0;
+
+    virtual std::unique_ptr<Component> Clone() const = 0;
 
     virtual ~Component() = default;
 
