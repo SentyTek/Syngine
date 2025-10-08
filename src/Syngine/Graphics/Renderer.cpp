@@ -7,18 +7,20 @@
 // ╰──────────────────────────────────────╯
 
 #include "Jolt/Core/Core.h"
+
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/Logger.h"
+#include "Syngine/Core/ZoneManager.h"
 #include "Syngine/Graphics/Renderer.h"
-#include "Syngine/ECS/Components/MeshComponent.h"
+#include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/Graphics/Shaders.h"
 #include "Syngine/Graphics/TextureHelpers.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/ECS/Components/TransformComponent.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
-#include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/Windowing.h"
+#include "Syngine/ECS/Component.h"
+#include "Syngine/ECS/AllComponents.h"
+#include "Syngine/ECS/GameObject.h"
+#include "Syngine/Physics/Physics.h"
+#include "Syngine/Utils/ModelLoader.h"
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
@@ -34,7 +36,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <set>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -65,7 +66,10 @@ bgfx::FrameBufferHandle   Renderer::m_shadowFB = BGFX_INVALID_HANDLE;
 
 int                          Renderer::width        = 0;
 int                          Renderer::height       = 0;
-RendererConfig                Renderer::m_config;
+RendererConfig               Renderer::m_config;
+
+DebugRender* Renderer::m_drender = nullptr;
+bool         Renderer::m_isFirstFrame = true;
 
 Renderer::Renderer(int width, int height, const RendererConfig& config) {
     Renderer::width = width;
@@ -807,7 +811,7 @@ void Renderer::_DrawShadows(const Program& program, CameraComponent* camera, uin
         float view[16 * NUM_CASCADES], proj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
         _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
         for (int i = 0; i < NUM_CASCADES; ++i) {
-            Core::_GetApp()->physicsManager->_DrawOtherFrustum(view + i * 16, proj + i * 16);
+            Core::_GetApp()->physicsManager->_DrawFrustum(view + i * 16, proj + i * 16);
         }
 
     }
@@ -965,7 +969,41 @@ void Renderer::_DrawDebug(const Program& program, CameraComponent* camera, Debug
         Registry::GetGameObjectByName("player")
             ->GetComponent<CameraComponent>()
             ->GetCamera(),
-        camera->GetCamera(), debug);
+        camera->GetCamera(),
+        debug);
+
+    // Draw various debug overlays
+    if (debug.Gizmos) {
+        // Draw zone boundaries
+        std::vector<ZoneComponent*> zones = Core::_GetApp()->zoneManager.get()->GetZones();
+        for (auto zone : zones) {
+            if (!zone || !zone->isEnabled || !m_drender) continue;
+            switch (zone->GetShape()) {
+                case ZoneShape::BOX: {
+                    float min[3], max[3], pos[3], size[3];
+                    zone->GetPosition(pos);
+                    zone->GetSize(size);
+                    for (int i = 0; i < 3; ++i) {
+                        min[i] = pos[i] - size[i] * 0.5f;
+                        max[i] = pos[i] + size[i] * 0.5f;
+                    }
+
+                    m_drender->DrawBox(min, max, JPH::Color::sRed);
+                    break;
+                }
+                case ZoneShape::SPHERE: {
+                    float pos[3];
+                    float size[3];
+                    zone->GetPosition(pos);
+                    zone->GetSize(size); // size.x is radius
+                    m_drender->DrawSphere(JPH::Vec3(pos[0], pos[1], pos[2]),
+                                        size[0],
+                                        JPH::Color::sRed);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 void Renderer::_DrawBillboard(const Program& program) {
@@ -1018,6 +1056,11 @@ void Renderer::_DrawUIDebug(CameraComponent* camera) {
 }
 
 bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
+    if (m_isFirstFrame) {
+        m_isFirstFrame = false;
+        m_drender = Core::_GetApp()->physicsManager->_GetDebugRenderer();
+    }
+
     // Prepare camera and light information
     if (!camera) {
         Syngine::Logger::Fatal("No camera provided to render frame");
