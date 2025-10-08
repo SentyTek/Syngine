@@ -45,6 +45,10 @@ class ZoneManager {
     /// @internal
     /// @throws IDK a runtime error maybe lol
     static void _UpdateZones();
+
+    /// @brief Gets all registered zones.
+    /// @return A const reference to the vector of registered zones.
+    static const std::vector<ZoneComponent*>& GetZones();
 };
 
 } // namespace Syngine

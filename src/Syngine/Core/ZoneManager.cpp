@@ -33,17 +33,23 @@ void ZoneManager::_UpdateZones() {
 
             bool inZone = zone->IsInZone(objPtr);
 
-            // Handle one-shot zones
-            // Not sure if this'll work
-            if (inZone && !zone->_HasTriggeredObject(objPtr)) {
+            // Handle zones
+            // If an object is in, and not already tracked, it just entered.
+            // Or, if an object is in, and is in the onetime list, don't do
+            // anything If an object is not in, and is tracked, it just exited.
+            if (inZone && !zone->_IsTrackingObject(objPtr) && !zone->_HasOneTimeObject(objPtr)) {
                 zone->OnEnter(objPtr);
-                if (zone->IsOneShot()) zone->_AddTriggeredObject(objPtr);
-            } else if (!inZone && zone->_HasTriggeredObject(objPtr)) {
+                zone->_AddObject(objPtr);
+            } else if (!inZone && zone->_IsTrackingObject(objPtr)) {
                 zone->OnExit(objPtr);
-                if (zone->IsOneShot()) zone->_RemoveTriggeredObject(objPtr);
+                zone->_RemoveObject(objPtr);
             }
         }
     }
+}
+
+const std::vector<ZoneComponent*>& ZoneManager::GetZones() {
+    return m_zones;
 }
 
 } // namespace Syngine
