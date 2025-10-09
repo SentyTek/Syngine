@@ -20,16 +20,33 @@ class TransformComponent;
 /// @section RigidbodyComponent
 /// @since v0.0.1
 enum class PhysicsShapes {
-    SPHERE,
-    BOX,
-    CAPSULE,
-    CAPSULE_TAPERED,
-    CYLINDER,
-    CYLINDER_TAPERED,
-    CONE,
-    CONVEX_HULL,
-    PLANE,
-    MESH,
+    SPHERE,           //* Sphere shape
+    BOX,              //* Box shape
+    CAPSULE,          //* Capsule shape
+    CAPSULE_TAPERED,  //* Tapered capsule shape
+    CYLINDER,         //* Cylinder shape
+    CYLINDER_TAPERED, //* Tapered cylinder shape
+    CONE,             //* Cone shape
+    CONVEX_HULL,      //* Convex hull shape
+    PLANE,            //* Plane shape
+    MESH,             //* Mesh shape
+};
+
+/// @brief Enum for different force application modes
+/// @section RigidbodyComponent
+/// @since v0.0.1
+enum class ForceMode {
+    FORCE, //* Add a continuous force to the rigidbody using its mass (F = m *
+           // a) (Newtons)
+    ACCELERATION, //* Add a continuous acceleration to the rigidbody, ignoring
+                  // its mass. Note: This is not well supported, and is
+                  // equivalent to FORCE if you did NOT manually set the mass
+                  // yourself.
+    IMPULSE,      //* Add an instant force impulse, using its mass (I = m * dv) (
+                  // Newton-seconds)
+    VELOCITY_CHANGE //* Change velocity instantaneously, ignoring its mass. Note:
+                     // This is not well supported, and is equivalent to IMPULSE if
+                     // you did NOT manually set the mass yourself.
 };
 
 /// @brief Struct to hold parameters for the RigidbodyComponent.
@@ -155,6 +172,30 @@ class RigidbodyComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetRestitution(float newRestitution);
+
+    /// @brief Add a force to the rigidbody
+    /// @param force The force to add (vec3)
+    /// @param mode The mode of force application
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void AddForce(const float* force, ForceMode mode = ForceMode::FORCE);
+
+    /// @brief Add a force to the rigidbody at a specific position
+    /// @param force The force to add (vec3)
+    /// @param position The position to apply the force at (vec3)
+    /// @param mode The mode of force application
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void AddForceAtPosition(const float* force,
+                            const float* position,
+                            ForceMode    mode = ForceMode::FORCE);
+
+    /// @brief Add a torque to the rigidbody
+    /// @param torque The torque to add (vec3)
+    /// @param mode The mode of torque application
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void AddTorque(const float* torque, ForceMode mode = ForceMode::FORCE);
 
   private:
     TransformComponent*   transform; // Reference to the transform component

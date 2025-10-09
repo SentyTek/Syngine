@@ -22,9 +22,8 @@
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 #include "Jolt/Physics/EActivation.h"
 
-
 #include "Jolt/Math/MathTypes.h"
-#include "Jolt/Physics/Body/MotionType.h"
+#include "Jolt/Physics/Body/MotionProperties.h"
 #include <vector>
 
 namespace Syngine {
@@ -293,5 +292,72 @@ void RigidbodyComponent::SetRestitution(float newRestitution) {
     restitution = newRestitution;
     physicsManager->_GetBodyInterface().SetRestitution(bodyID, restitution);
 }
+
+//----- Forces and whatnot
+// Important to note again that ACCELERATION and VELOCITY_CHANGE modes are
+// identical to FORCE and IMPULSE respectively, at least if user did not set
+// mass manually during rb creation. Jolt doesn't really support these modes so
+// it is what it is.
+void RigidbodyComponent::AddForce(const float* force, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]));
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]) * (mass == 0 ? 1.0f : mass));
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]));
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]) * (mass == 0 ? 1.0f : mass));
+        break;
+    }
+}
+
+void RigidbodyComponent::AddForceAtPosition(const float* force, const float* position, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    JPH::RVec3 pos(position[0], position[1], position[2]);
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]), pos);
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]) * mass, pos);
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]), pos);
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]) * mass, pos);
+        break;
+    }
+}
+
+void RigidbodyComponent::AddTorque(const float* torque, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddTorque(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]));
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddTorque(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]) * mass);
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddAngularImpulse(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]));
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddAngularImpulse(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]) * mass);
+        break;
+    }
+}
+
 
 } // namespace Syngine
