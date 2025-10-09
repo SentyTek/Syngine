@@ -176,6 +176,7 @@ class RigidbodyComponent : public Syngine::Component {
     /// @brief Add a force to the rigidbody
     /// @param force The force to add (vec3)
     /// @param mode The mode of force application
+    /// @note Force values for visible movement may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
     void AddForce(const float* force, ForceMode mode = ForceMode::FORCE);
@@ -184,6 +185,7 @@ class RigidbodyComponent : public Syngine::Component {
     /// @param force The force to add (vec3)
     /// @param position The position to apply the force at (vec3)
     /// @param mode The mode of force application
+    /// @note Force values for visible movement may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
     void AddForceAtPosition(const float* force,
@@ -193,6 +195,7 @@ class RigidbodyComponent : public Syngine::Component {
     /// @brief Add a torque to the rigidbody
     /// @param torque The torque to add (vec3)
     /// @param mode The mode of torque application
+    /// @note Torque values for visible rotation may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
     void AddTorque(const float* torque, ForceMode mode = ForceMode::FORCE);
