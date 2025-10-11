@@ -208,9 +208,9 @@ class RigidbodyComponent : public Syngine::Component {
     float                 mass = 0.0f;    // Mass of the physics body
     float                 friction = 0.5f; // Friction of the physics body
     float restitution = 0.5f; // Restitution of the physics body, default to 0.5
-    std::vector<float>
-
-        shapeParameters; // Parameters for the shape, e.g., radius for sphere,
+    std::vector<float> shapeParameters; // Parameters for the shape, e.g., radius for sphere,
                          // half extents for box
+
+    void _MatrixToQuat(float* outQuat, const float* mtx);
 };
 } // namespace Syngine

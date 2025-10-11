@@ -24,6 +24,8 @@
 
 #include "Jolt/Math/MathTypes.h"
 #include "Jolt/Physics/Body/MotionProperties.h"
+#include "bx/math.h"
+
 #include <vector>
 
 namespace Syngine {
@@ -61,9 +63,14 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         return;
     }
 
-    float* position = transform->position;
-    float* rotation = transform->rotation;
-    JPH::Quat rotationQuat = JPH::Quat::sEulerAngles(JPH::Vec3(rotation[0], rotation[1], rotation[2]));
+    float modelMatrix[16];
+    transform->GetModelMatrix(modelMatrix);
+
+    float position[3] = { modelMatrix[12], modelMatrix[13], modelMatrix[14] };
+    float rotation[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    transform->GetGlobalRotation(rotation);
+
+    JPH::Quat rotationQuat(rotation[0], rotation[1], rotation[2], rotation[3]);
     JPH::RVec3 posVec(position[0], position[1], position[2]);
 
     switch (shape) {
@@ -141,42 +148,58 @@ void RigidbodyComponent::Update(bool simulate) {
     BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
 
     if(simulate) {
-        // Smoothly lerp the TransformComponent towards the physics body's
-        // position and rotation over time
-        static const float lerpAlpha = 1.0f / 5.0f;
-
+        // When physics drives the transform
         RVec3 physicsPos = bodyInterface.GetPosition(bodyID);
-        Quat  physicsRot = bodyInterface.GetRotation(bodyID);
+        Quat physicsRot = bodyInterface.GetRotation(bodyID);
 
-        Vec3 currentPos(transform->position[0],
-                        transform->position[1],
-                        transform->position[2]);
-        Quat currentRot(transform->rotation[0],
-                        transform->rotation[1],
-                        transform->rotation[2],
-                        transform->rotation[3]);
+        // If we have a parent, we need to convert the world-space physics transform
+        // into local space before setting it on our transform component.
+        if (transform->GetParent()) {
+            float parentMatrix[16];
+            transform->GetParent()->GetModelMatrix(parentMatrix);
 
-        // Lerp pos and slerp rot
-        Vec3 lerpedPos =
-            currentPos +
-            (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) -
-             currentPos) *
-                lerpAlpha;
-        Quat lerpedRot = currentRot.SLERP(physicsRot, lerpAlpha);
+            float invParentMatrix[16];
+            bx::mtxInverse(invParentMatrix, parentMatrix);
 
-        transform->SetPosition(
-            lerpedPos.GetX(), lerpedPos.GetY(), lerpedPos.GetZ());
-        transform->SetRotation(lerpedRot.GetX(), lerpedRot.GetY(),
-                               lerpedRot.GetZ(), lerpedRot.GetW());
+            float physicsMatrix[16];
+            bx::mtxFromQuaternion(physicsMatrix, {physicsRot.GetX(), physicsRot.GetY(), physicsRot.GetZ(), physicsRot.GetW()});
+            physicsMatrix[12] = physicsPos.GetX();
+            physicsMatrix[13] = physicsPos.GetY();
+            physicsMatrix[14] = physicsPos.GetZ();
+
+            float localMatrix[16];
+            bx::mtxMul(localMatrix, physicsMatrix, invParentMatrix);
+
+            // Decompose local matrix back to position and rotation
+            bx::Vec3 localPos(localMatrix[12], localMatrix[13], localMatrix[14]);
+            float localRotQuat[4];
+            _MatrixToQuat(localRotQuat, localMatrix);
+
+            transform->SetPosition(localPos.x, localPos.y, localPos.z);
+            transform->SetRotation(localRotQuat[0], localRotQuat[1], localRotQuat[2], localRotQuat[3]);
+
+        } else {
+            // No parent, just set the global position/rotation directly
+            transform->SetPosition(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ());
+            transform->SetRotation(physicsRot.GetX(), physicsRot.GetY(), physicsRot.GetZ(), physicsRot.GetW());
+        }
     } else {
-        Vec3 pos(transform->position[0], 
-                  transform->position[1], 
-                  transform->position[2]);
-        Quat rot(transform->rotation[0],
-                  transform->rotation[1],
-                  transform->rotation[2],
-                  transform->rotation[3]);
+        // When transform drives physics
+        float position[3];
+        float rotation[4];
         
+        float modelMatrix[16];
+        transform->GetModelMatrix(modelMatrix);
+        
+        position[0] = modelMatrix[12];
+        position[1] = modelMatrix[13];
+        position[2] = modelMatrix[14];
+
+        transform->GetGlobalRotation(rotation);
+
+        Vec3 pos(position[0], position[1], position[2]);
+        Quat rot(rotation[0], rotation[1], rotation[2], rotation[3]);
+
         bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
     }
 }
@@ -359,5 +382,39 @@ void RigidbodyComponent::AddTorque(const float* torque, ForceMode mode) {
     }
 }
 
+// Helper to convert 4x4 matrix to quaternion
+void RigidbodyComponent::_MatrixToQuat(float* outQuat, const float* mtx) {
+    // Assumes rotation matrix
+    float trace = mtx[0] + mtx[5] + mtx[10];
+    float s;
+
+    if (trace > 0.0f) {
+        s = 0.5 / std::sqrt(trace + 1.0f);
+        outQuat[3] = 0.25 / s;              // w
+        outQuat[0] = (mtx[6] - mtx[9]) * s; // x
+        outQuat[1] = (mtx[8] - mtx[2]) * s; // y
+        outQuat[2] = (mtx[1] - mtx[4]) * s; // z
+    } else {
+        if (mtx[0] > mtx[5] && mtx[0] > mtx[10]) {
+            s = 2.0 * std::sqrt(1.0 + mtx[0] - mtx[5] - mtx[10]);
+            outQuat[3] = (mtx[6] - mtx[9]) / s; // w
+            outQuat[0] = 0.25 * s;              // x
+            outQuat[1] = (mtx[1] + mtx[4]) / s; // y
+            outQuat[2] = (mtx[8] + mtx[2]) / s; // z
+        } else if (mtx[5] > mtx[10]) {
+            s = 2.0 * std::sqrt(1.0 + mtx[5] - mtx[0] - mtx[10]);
+            outQuat[3] = (mtx[8] - mtx[2]) / s; // w
+            outQuat[0] = (mtx[1] + mtx[4]) / s; // x
+            outQuat[1] = 0.25 * s;              // y
+            outQuat[2] = (mtx[6] + mtx[9]) / s; // z
+        } else {
+            s = 2.0 * std::sqrt(1.0 + mtx[10] - mtx[0] - mtx[5]);
+            outQuat[3] = (mtx[1] - mtx[4]) / s; // w
+            outQuat[0] = (mtx[8] + mtx[2]) / s; // x
+            outQuat[1] = (mtx[6] + mtx[9]) / s; // y
+            outQuat[2] = 0.25 * s;              // z
+        }
+    }
+}
 
 } // namespace Syngine
