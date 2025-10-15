@@ -11,27 +11,44 @@
 #include "Syngine/ECS/GameObject.h"
 
 namespace Syngine {
-/*
- * @brief Syngine Transform Component. The TransformComponent is used to
- * represent the position, rotation, and scale of a GameObject in the game world.
- * @section TransformComponent
- * @since v0.0.1
- */
+
+/// @brief Component to handle position, rotation, and scale of a GameObject.
+/// @section TransformComponent
+/// @since v0.0.1
 class TransformComponent : public Syngine::Component {
+        // local TRS
         float m_position[3]; //* Position of the transform
         float m_rotation[4]; //* Rotation of the transform (Quaternion)
         float m_scale[3];    //* Scale of the transform
 
-        TransformComponent* m_parent = nullptr; //* Parent transform, if any
-        std::vector<TransformComponent*> m_children; //* Child transforms
+        TransformComponent* m_parent =
+            nullptr; //* Parent transform component (if any)
+        std::vector<TransformComponent*>
+            m_children; //* Child transform components
 
-        void _AddChild(TransformComponent* child);
-        void _RemoveChild(TransformComponent* child);
-        void _CalcModelMatrix(float* result);
+        // Cached matrices and world TRS
+        mutable float m_localMtx[16];
+        mutable float m_worldMtx[16];
+        mutable float m_worldPosition[3];
+        mutable float m_worldRotation[4];
 
-      public:
-        static constexpr Syngine::Components componentType =
-            SYN_COMPONENT_TRANSFORM; //* Transform component type
+        mutable bool m_dirtyLocal = true;
+        mutable bool m_dirtyWorld = true;
+
+        // dirty helpers
+        void _MarkLocalDirty();
+        void _MarkWorldDirty();
+
+        void _UpdateLocalMatrix() const;
+        void _UpdateWorldMatrix() const;
+
+        static void
+        _QuatFromEulerDeg(float x, float y, float z, float* outQuat);
+        static void _QuatNormalize(float* quat);
+        static void
+        _QuatMultiply(const float* q1, const float* q2, float* outQuat);
+    public:
+        static constexpr Syngine::Components componentType = SYN_COMPONENT_TRANSFORM; //* Transform component type
 
         /// @brief Constructor for the TransformComponent class
         /// @param owner Pointer to the GameObject that owns this component
@@ -63,7 +80,7 @@ class TransformComponent : public Syngine::Component {
         /// @since v0.0.1
         Syngine::Components GetComponentType() override;
 
-        /// @brief Get the rotation of the transform as Euler angles (in radians)
+        /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
         /// @param x X component of the rotation
         /// @param y Y component of the rotation
         /// @param z Z component of the rotation
@@ -71,19 +88,55 @@ class TransformComponent : public Syngine::Component {
         /// @since v0.0.1
         void GetRotationEuler(float& x, float& y, float& z) const;
 
-        /// @brief Get the rotation of the transform as a quaternion
+        /// @brief Get the GLOBAL rotation of the transform as a quaternion
         /// @return Array of 4 floats representing the quaternion (x, y, z, w)
         /// @threadsafety read-only
         /// @since v0.0.1
-        float* GetRotationQuat() const;
+        void GetRotationQuaternion(float& x, float& y, float& z, float& w) const;
 
-        /// @brief Get the global rotation of the transform as a quaternion
-        /// @param outQuat Array of 4 floats to store the quaternion (x, y, z, w)
+        /// @brief Get a GLOBAL model matrix for the transform
+        /// @param result Array to fill with the model matrix (16 floats)
         /// @threadsafety read-only
         /// @since v0.0.1
-        void GetGlobalRotation(float* outQuat);
+        void GetModelMatrix(float* result);
 
-        /// @brief Set the position of the transform
+        /// @brief Get a LOCAL model matrix for the transform
+        /// @param result Array to fill with the local model matrix (16 floats)
+        /// @threadsafety read-only
+        /// @since v0.0.1
+        void GetLocalMatrix(float* result);
+
+        /// @brief Get the GLOBAL position of the transform
+        /// @return Array of 3 floats representing the position (x, y, z)
+        /// @threadsafety read-only
+        /// @since v0.0.1
+        float* GetPosition();
+
+        /// @brief Get the GLOBAL scale of the transform
+        /// @return Array of 3 floats representing the scale (x, y, z)
+        /// @threadsafety read-only
+        /// @since v0.0.1
+        float* GetScale();
+
+        /// @brief Get the LOCAL position of the transform
+        /// @return Array of 3 floats representing the local position (x, y, z)
+        /// @threadsafety read-only
+        /// @since v0.0.1
+        float* GetLocalPosition();
+
+        /// @brief Get the LOCAL rotation of the transform as a quaternion
+        /// @return Array of 4 floats representing the local rotation quaternion (x, y, z, w)
+        /// @threadsafety read-only
+        /// @since v0.0.1
+        float* GetLocalRotation();
+
+        /// @brief Get the LOCAL scale of the transform
+        /// @return Array of 3 floats representing the local scale (x, y, z)
+        /// @threadsafety read-only
+        /// @since v0.0.1
+        float* GetLocalScale();
+
+        /// @brief Set the LOCAL position of the transform
         /// @param x X component of the position
         /// @param y Y component of the position
         /// @param z Z component of the position
@@ -93,24 +146,24 @@ class TransformComponent : public Syngine::Component {
                          float y,
                          float z);
 
-        /// @brief Set the rotation of the transform as Euler angles (in radians)
+        /// @brief Set the LOCAL rotation of the transform as XYZ Euler angles (in degrees)
         /// @param x X component of the rotation
         /// @param y Y component of the rotation
         /// @param z Z component of the rotation
         /// @threadsafety not-safe
         /// @since v0.0.1
-        void SetRotation(float x, float y, float z);
+        void SetRotationEuler(float x, float y, float z);
 
-        /// @brief Set the rotation of the transform as a quaternion
+        /// @brief Set the LOCAL rotation of the transform as a quaternion
         /// @param x X component of the quaternion
         /// @param y Y component of the quaternion
         /// @param z Z component of the quaternion
         /// @param w W component of the quaternion
         /// @threadsafety not-safe
         /// @since v0.0.1
-        void SetRotation(float x, float y, float z, float w);
+        void SetRotationQuat(float x, float y, float z, float w);
 
-        /// @brief Set the scale of the transform
+        /// @brief Set the LOCAL scale of the transform
         /// @param x X component of the scale
         /// @param y Y component of the scale
         /// @param z Z component of the scale
@@ -118,43 +171,57 @@ class TransformComponent : public Syngine::Component {
         /// @since v0.0.1
         void SetScale(float x, float y, float z);
 
-        /// @brief Get a model matrix for the transform
-        /// @param result Array to fill with the model matrix (16 floats)
-        /// @threadsafety read-only
+        /// @brief Set the GLOBAL position of the transform
+        /// @param x X component of the position
+        /// @param y Y component of the position
+        /// @param z Z component of the position
+        /// @threadsafety not-safe
         /// @since v0.0.1
-        void GetModelMatrix(float* result);
+        void SetWorldPosition(float x, float y, float z);
 
-        /// @brief Get the position of the transform
-        /// @return Array of 3 floats representing the position (x, y, z)
-        /// @param global If true, returns the global position (including parent
-        /// transforms). If false, returns the local position.
-        /// @threadsafety read-only
+        /// @brief Set the GLOBAL rotation of the transform as a quaternion
+        /// @param x X component of the quaternion
+        /// @param y Y component of the quaternion
+        /// @param z Z component of the quaternion
+        /// @param w W component of the quaternion
+        /// @threadsafety not-safe
         /// @since v0.0.1
-        float* GetPosition(bool global = false);
+        void SetWorldRotationQuat(float x, float y, float z, float w);
+
+        /// @brief Set the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
+        /// @param x X component of the rotation
+        /// @param y Y component of the rotation
+        /// @param z Z component of the rotation
+        /// @threadsafety not-safe
+        /// @since v0.0.1
+        void SetWorldRotationEuler(float x, float y, float z);
+
+        /// @brief Set the GLOBAL scale of the transform
+        /// @param x X component of the scale
+        /// @param y Y component of the scale
+        /// @param z Z component of the scale
+        /// @threadsafety not-safe
+        /// @since v0.0.1
+        void SetWorldScale(float x, float y, float z);
 
         /// @brief Set the parent transform of this transform
         /// @param parent Pointer to the parent TransformComponent
+        /// @note This will automatically update the child list of the parent
         /// @threadsafety not-safe
         /// @since v0.0.1
         void SetParent(TransformComponent* parent);
 
         /// @brief Get the parent transform of this transform
-        /// @return Pointer to the parent TransformComponent, or nullptr if none
+        /// @return Pointer to the parent TransformComponent (or nullptr if none)
         /// @threadsafety read-only
         /// @since v0.0.1
         TransformComponent* GetParent() const;
 
-        /// @brief Is this transform a root (no parent)?
-        /// @return true if this transform has no parent, false otherwise
+        /// @brief Get the child transforms of this transform
+        /// @return Vector of pointers to the child TransformComponents
         /// @threadsafety read-only
         /// @since v0.0.1
-        bool IsRoot() const;
-
-        /// @brief Get the number of child transforms
-        /// @return Number of child transforms
-        /// @threadsafety read-only
-        /// @since v0.0.1
-        size_t GetChildCount() const;
+        std::vector<TransformComponent*>& GetChildren() const;
 };
 
 } // namespace Syngine

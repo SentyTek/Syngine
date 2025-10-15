@@ -63,20 +63,20 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         return;
     }
 
-    float modelMatrix[16];
-    transform->GetModelMatrix(modelMatrix);
+    float* curPos = transform->GetPosition();
+    float curRot[4];
+    transform->GetRotationQuaternion(
+        curRot[0], curRot[1], curRot[2], curRot[3]);
 
-    float position[3] = { modelMatrix[12], modelMatrix[13], modelMatrix[14] };
-    float rotation[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-    transform->GetGlobalRotation(rotation);
-
-    JPH::Quat rotationQuat(rotation[0], rotation[1], rotation[2], rotation[3]);
+    float* position = curPos;
+    float* rotation = curRot;
+    JPH::Quat rotationQuat = JPH::Quat::sEulerAngles(JPH::Vec3(rotation[0], rotation[1], rotation[2]));
     JPH::RVec3 posVec(position[0], position[1], position[2]);
 
     switch (shape) {
         case PhysicsShapes::SPHERE: {
             if (shapeParameters.empty()) { Syngine::Logger::Error("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
-            float radius = shapeParameters[0]/2;
+            float radius = shapeParameters[0];
             bodyID = physicsManager->_CreateSphere(posVec, radius, params.motionType, params.layer, mass);
             break;
         }
@@ -85,7 +85,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                 Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for box shape.");
                 return;
             }
-            JPH::Vec3 shapeParametersVec(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
+            JPH::Vec3 shapeParametersVec(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             bodyID         = physicsManager->_CreateBox(posVec,
                                                rotationQuat,
                                                shapeParametersVec,
@@ -107,7 +107,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
 
             JPH::Vec3 scale(0.5f, 0.5f, 0.5f);
             if (!shapeParameters.empty()) {
-                scale = JPH::Vec3(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
+                scale = JPH::Vec3(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             }
 
             bodyID = physicsManager->_CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale);
@@ -147,59 +147,42 @@ void RigidbodyComponent::Update(bool simulate) {
 
     BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
 
-    if(simulate) {
+    if (simulate) {
+        // Smoothly lerp the TransformComponent towards the physics body's
+        // position and rotation over time
+        static const float lerpAlpha = 1.0f / 5.0f;
         // When physics drives the transform
         RVec3 physicsPos = bodyInterface.GetPosition(bodyID);
         Quat physicsRot = bodyInterface.GetRotation(bodyID);
 
-        // If we have a parent, we need to convert the world-space physics transform
-        // into local space before setting it on our transform component.
-        if (transform->GetParent()) {
-            float parentMatrix[16];
-            transform->GetParent()->GetModelMatrix(parentMatrix);
+        float* curPos = transform->GetPosition();
+        float curRot[4];
+        transform->GetRotationQuaternion(
+            curRot[0], curRot[1], curRot[2], curRot[3]);
+        
+        Vec3 currentPos(curPos[0], curPos[1], curPos[2]);
+        Quat currentRot(curRot[0], curRot[1], curRot[2], curRot[3]);
 
-            float invParentMatrix[16];
-            bx::mtxInverse(invParentMatrix, parentMatrix);
+        // Lerp pos and slerp rot
+        Vec3 lerpedPos =
+            currentPos +
+            (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) -
+             currentPos) *
+                lerpAlpha;
+        Quat lerpedRot = currentRot.SLERP(physicsRot, lerpAlpha);
 
-            float physicsMatrix[16];
-            bx::mtxFromQuaternion(physicsMatrix, {physicsRot.GetX(), physicsRot.GetY(), physicsRot.GetZ(), physicsRot.GetW()});
-            physicsMatrix[12] = physicsPos.GetX();
-            physicsMatrix[13] = physicsPos.GetY();
-            physicsMatrix[14] = physicsPos.GetZ();
-
-            float localMatrix[16];
-            bx::mtxMul(localMatrix, physicsMatrix, invParentMatrix);
-
-            // Decompose local matrix back to position and rotation
-            bx::Vec3 localPos(localMatrix[12], localMatrix[13], localMatrix[14]);
-            float localRotQuat[4];
-            _MatrixToQuat(localRotQuat, localMatrix);
-
-            transform->SetPosition(localPos.x, localPos.y, localPos.z);
-            transform->SetRotation(localRotQuat[0], localRotQuat[1], localRotQuat[2], localRotQuat[3]);
-
-        } else {
-            // No parent, just set the global position/rotation directly
-            transform->SetPosition(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ());
-            transform->SetRotation(physicsRot.GetX(), physicsRot.GetY(), physicsRot.GetZ(), physicsRot.GetW());
-        }
+        transform->SetWorldPosition(
+            lerpedPos.GetX(), lerpedPos.GetY(), lerpedPos.GetZ());
+        transform->SetWorldRotationQuat(lerpedRot.GetX(), lerpedRot.GetY(),
+                               lerpedRot.GetZ(), lerpedRot.GetW());
     } else {
-        // When transform drives physics
-        float position[3];
-        float rotation[4];
+        float* curPos = transform->GetPosition();
+        float  curRot[4];
+        transform->GetRotationQuaternion(
+            curRot[0], curRot[1], curRot[2], curRot[3]);
+        Vec3 pos(curPos[0], curPos[1], curPos[2]);
+        Quat rot(curRot[0], curRot[1], curRot[2], curRot[3]);
         
-        float modelMatrix[16];
-        transform->GetModelMatrix(modelMatrix);
-        
-        position[0] = modelMatrix[12];
-        position[1] = modelMatrix[13];
-        position[2] = modelMatrix[14];
-
-        transform->GetGlobalRotation(rotation);
-
-        Vec3 pos(position[0], position[1], position[2]);
-        Quat rot(rotation[0], rotation[1], rotation[2], rotation[3]);
-
         bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
     }
 }
