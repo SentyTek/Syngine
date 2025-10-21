@@ -114,39 +114,46 @@ void TransformComponent::_MarkWorldDirty() {
 void TransformComponent::_UpdateLocalMatrix() const {
     if (!m_dirtyLocal) return;
 
-    // Build from local TRS (column-major?)
-    float rx = m_rotation[0], ry = m_rotation[1], rz = m_rotation[2],
-          rw = m_rotation[3];
-    float sx = m_scale[0], sy = m_scale[1], sz = m_scale[2];
+    // Convert quaternion to Euler angles (in radians)
+    float x, y, z;
 
-    float xx = rx * rx, xy = rx * ry, xz = rx * rz;
-    float yy = ry * ry, yz = ry * rz, zz = rz * rz;
-    float wx = rw * rx, wy = rw * ry, wz = rw * rz;
+    const float qx = m_rotation[0];
+    const float qy = m_rotation[1];
+    const float qz = m_rotation[2];
+    const float qw = m_rotation[3];
 
-    float m[16];
-    m[0] = (1.0f - 2.0f * (yy + zz)) * sx;
-    m[1] = (2.0f * (xy + wz)) * sx;
-    m[2] = (2.0f * (xz - wy)) * sx;
-    m[3] = 0.0f;
+    // Quaternion → Euler XYZ (roll, pitch, yaw)
+    float sinr_cosp = 2.0f * (qw * qx + qy * qz);
+    float cosr_cosp = 1.0f - 2.0f * (qx * qx + qy * qy);
+    x = std::atan2(sinr_cosp, cosr_cosp);
 
-    m[4] = (2.0f * (xy - wz)) * sy;
-    m[5] = (1.0f - 2.0f * (xx + zz)) * sy;
-    m[6] = (2.0f * (yz + wx)) * sy;
-    m[7] = 0.0f;
+    float sinp = 2.0f * (qw * qy - qz * qx);
+    if (std::abs(sinp) >= 1.0f)
+        y = std::copysign(3.1415926f / 2.0f, sinp);
+    else
+        y = std::asin(sinp);
 
-    m[8]  = (2.0f * (xz + wy)) * sz;
-    m[9]  = (2.0f * (yz - wx)) * sz;
-    m[10] = (1.0f - 2.0f * (xx + yy)) * sz;
-    m[11] = 0.0f;
+    float siny_cosp = 2.0f * (qw * qz + qx * qy);
+    float cosy_cosp = 1.0f - 2.0f * (qy * qy + qz * qz);
+    z = std::atan2(siny_cosp, cosy_cosp);
 
-    m[12] = m_position[0];
-    m[13] = m_position[1];
-    m[14] = m_position[2];
-    m[15] = 1.0f;
+    // bx::mtxSRT expects radians for rotation
+    bx::mtxSRT(m_localMtx, m_scale[0], m_scale[1], m_scale[2], x, y, z, m_position[0], m_position[1], m_position[2]);
 
-    std::copy(std::begin(m), std::end(m), std::begin(m_localMtx));
     m_dirtyLocal = false;
 }
+
+static void mtxMul(float out[16], const float b[16], const float a[16]) {
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            out[i * 4 + j] = 0.0f;
+            for (int k = 0; k < 4; ++k) {
+                out[i * 4 + j] += a[i * 4 + k] * b[k * 4 + j];
+            }
+        }
+    }
+}
+
 void TransformComponent::_UpdateWorldMatrix() const {
     if (!m_dirtyWorld) return;
     _UpdateLocalMatrix();
@@ -155,15 +162,18 @@ void TransformComponent::_UpdateWorldMatrix() const {
         m_parent->_UpdateWorldMatrix();
 
         // World = Parent * local
-        bx::mtxMul(m_worldMtx, m_parent->m_worldMtx, m_localMtx);
-        float tmp[4];
-        _QuatMultiply(m_parent->m_worldRotation, m_rotation, tmp);
-        std::copy(std::begin(tmp), std::end(tmp), std::begin(m_worldRotation));
+        mtxMul(m_worldMtx, m_parent->m_worldMtx, m_localMtx);
+        _QuatMultiply(m_parent->m_worldRotation, m_rotation, m_worldRotation);
         _QuatNormalize(m_worldRotation);
     } else { // No parent, world = local
         std::copy(std::begin(m_localMtx),
                   std::end(m_localMtx),
                   std::begin(m_worldMtx));
+        
+        std::copy(std::begin(m_rotation),
+                  std::end(m_rotation),
+                  std::begin(m_worldRotation));
+        _QuatNormalize(m_worldRotation);
     }
 
     // Extract world position from matrix
@@ -209,10 +219,10 @@ void TransformComponent::GetRotationQuaternion(float& x,
                                                float& z,
                                                float& w) const {
     _UpdateWorldMatrix();
-    x = m_rotation[0];
-    y = m_rotation[1];
-    z = m_rotation[2];
-    w = m_rotation[3];
+    x = m_worldRotation[0];
+    y = m_worldRotation[1];
+    z = m_worldRotation[2];
+    w = m_worldRotation[3];
 }
 
 void TransformComponent::SetPosition(float x, float y, float z) {
@@ -223,7 +233,9 @@ void TransformComponent::SetPosition(float x, float y, float z) {
 }
 
 void TransformComponent::SetRotationEuler(float x, float y, float z) {
-    //Convert Euler angles to quaternion
+    // Convert Euler angles to quaternion
+    // LOCAL rotation
+    // this will probably break
     x = bx::toRad(x);
     y = bx::toRad(y);
     z = bx::toRad(z);
@@ -239,23 +251,18 @@ void TransformComponent::SetRotationEuler(float x, float y, float z) {
     m_rotation[1] = cr * sp * cy + sr * cp * sy; // y
     m_rotation[2] = cr * cp * sy - sr * sp * cy; // z
     m_rotation[3] = cr * cp * cy + sr * sp * sy; // w
-    // this will probably break
+    _QuatNormalize(m_rotation);
+    
    _MarkLocalDirty();
 }
 
 void TransformComponent::SetRotationQuat(float x, float y, float z, float w) {
-    float worldQ[4] = { x,y,z,w };
-    _QuatNormalize(worldQ);
-    if (m_parent) {
-        m_parent->_UpdateWorldMatrix();
-        float pw[4] = { m_parent->m_worldRotation[0], m_parent->m_worldRotation[1], m_parent->m_worldRotation[2], m_parent->m_worldRotation[3] };
-        float pinv[4] = { -pw[0], -pw[1], -pw[2], pw[3] };
-        float localQ[4];
-        _QuatMultiply(pinv, worldQ, localQ);
-        m_rotation[0]=localQ[0]; m_rotation[1]=localQ[1]; m_rotation[2]=localQ[2]; m_rotation[3]=localQ[3];
-    } else {
-        m_rotation[0]=worldQ[0]; m_rotation[1]=worldQ[1]; m_rotation[2]=worldQ[2]; m_rotation[3]=worldQ[3];
-    }
+    // LOCAL rotation
+    m_rotation[0] = x;
+    m_rotation[1] = y;
+    m_rotation[2] = z;
+    m_rotation[3] = w;
+    _QuatNormalize(m_rotation);
     _MarkLocalDirty();
 }
 
