@@ -143,7 +143,7 @@ void TransformComponent::_UpdateLocalMatrix() const {
     m_dirtyLocal = false;
 }
 
-static void mtxMul(float out[16], const float b[16], const float a[16]) {
+static void mtxMul(float* out, const float* b, const float* a) {
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
             out[i * 4 + j] = 0.0f;
