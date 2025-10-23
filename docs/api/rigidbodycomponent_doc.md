@@ -15,6 +15,7 @@
 
 - [Constructor](#class-constructor)
 - [PhysicsShapes](#synginephysicsshapes)
+- [ForceMode](#syngineforcemode)
 - [shape](#syngineshape)
 - [GetComponentType](#synginegetcomponenttype)
 - [Clone](#syngineclone)
@@ -30,6 +31,9 @@
 - [UpdateShapeParameters](#syngineupdateshapeparameters)
 - [SetFriction](#synginesetfriction)
 - [SetRestitution](#synginesetrestitution)
+- [AddForce](#syngineaddforce)
+- [AddForceAtPosition](#syngineaddforceatposition)
+- [AddTorque](#syngineaddtorque)
 
 ---
 
@@ -74,6 +78,42 @@ Signature:
 enum class PhysicsShapes 
 ```
 
+**Members:**
+
+| Name | Description |
+| --- | --- | 
+| `SPHERE` | Sphere shape |
+| `BOX` | Box shape |
+| `CAPSULE` | Capsule shape |
+| `CAPSULE_TAPERED` | Tapered capsule shape |
+| `CYLINDER` | Cylinder shape |
+| `CYLINDER_TAPERED` | Tapered cylinder shape |
+| `CONE` | Cone shape |
+| `CONVEX_HULL` | Convex hull shape |
+| `PLANE` | Plane shape |
+| `MESH` | Mesh shape |
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::ForceMode`**
+
+
+ Enum for different force application modes
+
+Signature:
+
+```cpp
+enum class ForceMode 
+```
+
+**Members:**
+
+| Name | Description |
+| --- | --- | 
+| `FORCE` | Add a continuous force to the rigidbody using its mass (F = m * |
+
 **This function has been available since:** v0.0.1
 
 ---
@@ -88,6 +128,11 @@ Signature:
 ```cpp
  PhysicsShapes shape = PhysicsShapes::BOX; // The shape of the rigidbody
 ```
+
+**Parameters:**
+
+- `IMPULSE`: Add an instant force impulse, using its mass (I = m * dv) (
+- `VELOCITY_CHANGE`: Change velocity instantaneously, ignoring its mass. Note:
 
 **This function has been available since:** v0.0.1
 
@@ -372,6 +417,79 @@ Signature:
 **Parameters:**
 
 - `newRestitution`: The new restitution value to set
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::AddForce`**
+
+
+ Add a force to the rigidbody
+
+**Note:** Force values for visible movement may be higher than expected.
+
+Signature:
+
+```cpp
+ void AddForce(const float* force, ForceMode mode = ForceMode::FORCE);
+```
+
+**Parameters:**
+
+- `force`: The force to add (vec3)
+- `mode`: The mode of force application
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::AddForceAtPosition`**
+
+
+ Add a force to the rigidbody at a specific position
+
+**Note:** Force values for visible movement may be higher than expected.
+
+Signature:
+
+```cpp
+ void AddForceAtPosition(const float* force, const float* position,
+```
+
+**Parameters:**
+
+- `force`: The force to add (vec3)
+- `position`: The position to apply the force at (vec3)
+- `mode`: The mode of force application
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::AddTorque`**
+
+
+ Add a torque to the rigidbody
+
+**Note:** Torque values for visible rotation may be higher than expected.
+
+Signature:
+
+```cpp
+ void AddTorque(const float* torque, ForceMode mode = ForceMode::FORCE);
+```
+
+**Parameters:**
+
+- `torque`: The torque to add (vec3)
+- `mode`: The mode of torque application
 
 **Thread Safety:** not-safe
 

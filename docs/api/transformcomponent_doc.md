@@ -19,13 +19,26 @@
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [GetComponentType](#synginegetcomponenttype)
-- [GetRotationAsEuler](#synginegetrotationaseuler)
-- [SetPosition](#synginesetposition)
-- [SetRotation](#synginesetrotation)
-- [SetRotation](#synginesetrotation)
-- [SetScale](#synginesetscale)
+- [GetRotationEuler](#synginegetrotationeuler)
+- [GetRotationQuaternion](#synginegetrotationquaternion)
 - [GetModelMatrix](#synginegetmodelmatrix)
+- [GetLocalMatrix](#synginegetlocalmatrix)
 - [GetPosition](#synginegetposition)
+- [GetScale](#synginegetscale)
+- [GetLocalPosition](#synginegetlocalposition)
+- [GetLocalRotation](#synginegetlocalrotation)
+- [GetLocalScale](#synginegetlocalscale)
+- [SetPosition](#synginesetposition)
+- [SetRotationEuler](#synginesetrotationeuler)
+- [SetRotationQuat](#synginesetrotationquat)
+- [SetScale](#synginesetscale)
+- [SetWorldPosition](#synginesetworldposition)
+- [SetWorldRotationQuat](#synginesetworldrotationquat)
+- [SetWorldRotationEuler](#synginesetworldrotationeuler)
+- [SetWorldScale](#synginesetworldscale)
+- [SetParent](#synginesetparent)
+- [GetParent](#synginegetparent)
+- [GetChildren](#synginegetchildren)
 
 ---
 
@@ -134,15 +147,15 @@ Signature:
 
 ---
 
-#### **`Syngine::GetRotationAsEuler`**
+#### **`Syngine::GetRotationEuler`**
 
 
- Get the rotation of the transform as Euler angles (in radians)
+ Get the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
 
 Signature:
 
 ```cpp
- void GetRotationAsEuler(float& x, float& y, float& z) const;
+ void GetRotationEuler(float& x, float& y, float& z) const;
 ```
 
 **Parameters:**
@@ -157,10 +170,166 @@ Signature:
 
 ---
 
+#### **`Syngine::GetRotationQuaternion`**
+
+
+ Get the GLOBAL rotation of the transform as a quaternion
+
+Signature:
+
+```cpp
+ void GetRotationQuaternion(float& x, float& y, float& z, float& w) const;
+```
+
+**Returns:** Array of 4 floats representing the quaternion (x, y, z, w)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::GetModelMatrix`**
+
+
+ Get a GLOBAL model matrix for the transform
+
+Signature:
+
+```cpp
+ void GetModelMatrix(float* result);
+```
+
+**Parameters:**
+
+- `result`: Array to fill with the model matrix (16 floats)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::GetLocalMatrix`**
+
+
+ Get a LOCAL model matrix for the transform
+
+Signature:
+
+```cpp
+ void GetLocalMatrix(float* result);
+```
+
+**Parameters:**
+
+- `result`: Array to fill with the local model matrix (16 floats)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::GetPosition`**
+
+
+ Get the GLOBAL position of the transform
+
+Signature:
+
+```cpp
+ float* GetPosition();
+```
+
+**Returns:** Array of 3 floats representing the position (x, y, z)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::GetScale`**
+
+
+ Get the GLOBAL scale of the transform
+
+Signature:
+
+```cpp
+ float* GetScale();
+```
+
+**Returns:** Array of 3 floats representing the scale (x, y, z)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::GetLocalPosition`**
+
+
+ Get the LOCAL position of the transform
+
+Signature:
+
+```cpp
+ float* GetLocalPosition();
+```
+
+**Returns:** Array of 3 floats representing the local position (x, y, z)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::GetLocalRotation`**
+
+
+ Get the LOCAL rotation of the transform as a quaternion
+
+Signature:
+
+```cpp
+ float* GetLocalRotation();
+```
+
+**Returns:** Array of 4 floats representing the local rotation quaternion (x, y, z, w)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::GetLocalScale`**
+
+
+ Get the LOCAL scale of the transform
+
+Signature:
+
+```cpp
+ float* GetLocalScale();
+```
+
+**Returns:** Array of 3 floats representing the local scale (x, y, z)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
 #### **`Syngine::SetPosition`**
 
 
- Set the position of the transform
+ Set the LOCAL position of the transform
 
 Signature:
 
@@ -180,15 +349,15 @@ Signature:
 
 ---
 
-#### **`Syngine::SetRotation`**
+#### **`Syngine::SetRotationEuler`**
 
 
- Set the rotation of the transform as Euler angles (in radians)
+ Set the LOCAL rotation of the transform as XYZ Euler angles (in degrees)
 
 Signature:
 
 ```cpp
- void SetRotation(float x, float y, float z);
+ void SetRotationEuler(float x, float y, float z);
 ```
 
 **Parameters:**
@@ -203,15 +372,15 @@ Signature:
 
 ---
 
-#### **`Syngine::SetRotation`**
+#### **`Syngine::SetRotationQuat`**
 
 
- Set the rotation of the transform as a quaternion
+ Set the LOCAL rotation of the transform as a quaternion
 
 Signature:
 
 ```cpp
- void SetRotation(float x, float y, float z, float w);
+ void SetRotationQuat(float x, float y, float z, float w);
 ```
 
 **Parameters:**
@@ -230,7 +399,7 @@ Signature:
 #### **`Syngine::SetScale`**
 
 
- Set the scale of the transform
+ Set the LOCAL scale of the transform
 
 Signature:
 
@@ -250,20 +419,134 @@ Signature:
 
 ---
 
-#### **`Syngine::GetModelMatrix`**
+#### **`Syngine::SetWorldPosition`**
 
 
- Get a model matrix for the transform
+ Set the GLOBAL position of the transform
 
 Signature:
 
 ```cpp
- void GetModelMatrix(float* result);
+ void SetWorldPosition(float x, float y, float z);
 ```
 
 **Parameters:**
 
-- `result`: Array to fill with the model matrix (16 floats)
+- `x`: X component of the position
+- `y`: Y component of the position
+- `z`: Z component of the position
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::SetWorldRotationQuat`**
+
+
+ Set the GLOBAL rotation of the transform as a quaternion
+
+Signature:
+
+```cpp
+ void SetWorldRotationQuat(float x, float y, float z, float w);
+```
+
+**Parameters:**
+
+- `x`: X component of the quaternion
+- `y`: Y component of the quaternion
+- `z`: Z component of the quaternion
+- `w`: W component of the quaternion
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::SetWorldRotationEuler`**
+
+
+ Set the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
+
+Signature:
+
+```cpp
+ void SetWorldRotationEuler(float x, float y, float z);
+```
+
+**Parameters:**
+
+- `x`: X component of the rotation
+- `y`: Y component of the rotation
+- `z`: Z component of the rotation
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::SetWorldScale`**
+
+
+ Set the GLOBAL scale of the transform
+
+Signature:
+
+```cpp
+ void SetWorldScale(float x, float y, float z);
+```
+
+**Parameters:**
+
+- `x`: X component of the scale
+- `y`: Y component of the scale
+- `z`: Z component of the scale
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::SetParent`**
+
+
+ Set the parent transform of this transform
+
+**Note:** This will automatically update the child list of the parent
+
+Signature:
+
+```cpp
+ void SetParent(TransformComponent* parent);
+```
+
+**Parameters:**
+
+- `parent`: Pointer to the parent TransformComponent
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::GetParent`**
+
+
+ Get the parent transform of this transform
+
+Signature:
+
+```cpp
+ TransformComponent* GetParent() const;
+```
+
+**Returns:** Pointer to the parent TransformComponent (or nullptr if none)
 
 **Thread Safety:** read-only
 
@@ -271,18 +554,18 @@ Signature:
 
 ---
 
-#### **`Syngine::GetPosition`**
+#### **`Syngine::GetChildren`**
 
 
- Get the position of the transform
+ Get the child transforms of this transform
 
 Signature:
 
 ```cpp
- const float* GetPosition();
+ std::vector<TransformComponent*>& GetChildren() const;
 ```
 
-**Returns:** Array of 3 floats representing the position (x, y, z)
+**Returns:** Vector of pointers to the child TransformComponents
 
 **Thread Safety:** read-only
 
@@ -295,10 +578,10 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
+| `float` | `m_position` | Position of the transform |
+| `float` | `m_rotation` | Rotation of the transform (Quaternion) |
+| `float` | `m_scale` | Scale of the transform |
 | `constexpr` | `Syngine` | Transform component type |
-| `float` | `position` | Position of the transform |
-| `float` | `rotation` | Rotation of the transform (Quaternion) |
-| `float` | `scale` | Scale of the transform |
 
 ---
 
