@@ -22,9 +22,10 @@
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 #include "Jolt/Physics/EActivation.h"
 
-
 #include "Jolt/Math/MathTypes.h"
-#include "Jolt/Physics/Body/MotionType.h"
+#include "Jolt/Physics/Body/MotionProperties.h"
+#include "bx/math.h"
+
 #include <vector>
 
 namespace Syngine {
@@ -89,15 +90,18 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         return;
     }
 
-    float* position = transform->position;
-    float* rotation = transform->rotation;
-    JPH::Quat rotationQuat = JPH::Quat::sEulerAngles(JPH::Vec3(rotation[0], rotation[1], rotation[2]));
-    JPH::RVec3 posVec(position[0], position[1], position[2]);
+    float* curPos = transform->GetPosition();
+    float curRot[4];
+    transform->GetRotationQuaternion(
+        curRot[0], curRot[1], curRot[2], curRot[3]);
+
+    JPH::Quat rotationQuat(curRot[0], curRot[1], curRot[2], curRot[3]);
+    JPH::RVec3 posVec(curPos[0], curPos[1], curPos[2]);
 
     switch (shape) {
         case PhysicsShapes::SPHERE: {
             if (shapeParameters.empty()) { Syngine::Logger::Error("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
-            float radius = shapeParameters[0]/2;
+            float radius = shapeParameters[0];
             bodyID = physicsManager->_CreateSphere(posVec, radius, params.motionType, params.layer, mass);
             break;
         }
@@ -106,7 +110,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                 Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for box shape.");
                 return;
             }
-            JPH::Vec3 shapeParametersVec(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
+            JPH::Vec3 shapeParametersVec(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             bodyID         = physicsManager->_CreateBox(posVec,
                                                rotationQuat,
                                                shapeParametersVec,
@@ -128,7 +132,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
 
             JPH::Vec3 scale(0.5f, 0.5f, 0.5f);
             if (!shapeParameters.empty()) {
-                scale = JPH::Vec3(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
+                scale = JPH::Vec3(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             }
 
             bodyID = physicsManager->_CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale);
@@ -168,42 +172,39 @@ void RigidbodyComponent::Update(bool simulate) {
 
     BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
 
-    if(simulate) {
+    if (simulate) {
         // Smoothly lerp the TransformComponent towards the physics body's
         // position and rotation over time
-        static const float lerpAlpha = 1.0f / 5.0f;
-
+        static const float lerpAlpha = 0.2f;
+        // When physics drives the transform
         RVec3 physicsPos = bodyInterface.GetPosition(bodyID);
-        Quat  physicsRot = bodyInterface.GetRotation(bodyID);
+        Quat physicsRot = bodyInterface.GetRotation(bodyID);
 
-        Vec3 currentPos(transform->position[0],
-                        transform->position[1],
-                        transform->position[2]);
-        Quat currentRot(transform->rotation[0],
-                        transform->rotation[1],
-                        transform->rotation[2],
-                        transform->rotation[3]);
+        float* curPos = transform->GetPosition(); // World position
+        float curRot[4];
+        transform->GetRotationQuaternion(
+            curRot[0], curRot[1], curRot[2], curRot[3]);
+        
+        Vec3 currentPos(curPos[0], curPos[1], curPos[2]);
+        Quat currentRot(curRot[0], curRot[1], curRot[2], curRot[3]);
 
         // Lerp pos and slerp rot
-        Vec3 lerpedPos =
-            currentPos +
-            (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) -
-             currentPos) *
-                lerpAlpha;
-        Quat lerpedRot = currentRot.SLERP(physicsRot, lerpAlpha);
+        Vec3 lerpedPos = currentPos + (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) - currentPos) * lerpAlpha;
 
-        transform->SetPosition(
+        Quat targetRot = physicsRot.Conjugated();
+        Quat lerpedRot = currentRot.SLERP(targetRot, lerpAlpha);
+
+        transform->SetWorldPosition(
             lerpedPos.GetX(), lerpedPos.GetY(), lerpedPos.GetZ());
-        transform->SetRotation(lerpedRot.GetX(), lerpedRot.GetY(),
+        transform->SetWorldRotationQuat(lerpedRot.GetX(), lerpedRot.GetY(),
                                lerpedRot.GetZ(), lerpedRot.GetW());
     } else {
-        Vec3 pos(transform->position[0], 
-                  transform->position[1], 
-                  transform->position[2]);
-        Quat rot(transform->rotation[0],
-                  transform->rotation[1],
-                  transform->rotation[2],
-                  transform->rotation[3]);
+        float* curPos = transform->GetPosition();
+        float  curRot[4];
+        transform->GetRotationQuaternion(
+            curRot[0], curRot[1], curRot[2], curRot[3]);
+        Vec3 pos(curPos[0], curPos[1], curPos[2]);
+        Quat rot(curRot[0], curRot[1], curRot[2], curRot[3]);
         
         bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
     }
@@ -319,6 +320,107 @@ void RigidbodyComponent::SetRestitution(float newRestitution) {
 
     restitution = newRestitution;
     physicsManager->_GetBodyInterface().SetRestitution(bodyID, restitution);
+}
+
+//----- Forces and whatnot
+// Important to note again that ACCELERATION and VELOCITY_CHANGE modes are
+// identical to FORCE and IMPULSE respectively, at least if user did not set
+// mass manually during rb creation. Jolt doesn't really support these modes so
+// it is what it is.
+void RigidbodyComponent::AddForce(const float* force, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]));
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]) * (mass == 0 ? 1.0f : mass));
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]));
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]) * (mass == 0 ? 1.0f : mass));
+        break;
+    }
+}
+
+void RigidbodyComponent::AddForceAtPosition(const float* force, const float* position, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    JPH::RVec3 pos(position[0], position[1], position[2]);
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]), pos);
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]) * mass, pos);
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]), pos);
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]) * mass, pos);
+        break;
+    }
+}
+
+void RigidbodyComponent::AddTorque(const float* torque, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddTorque(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]));
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddTorque(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]) * mass);
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddAngularImpulse(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]));
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddAngularImpulse(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]) * mass);
+        break;
+    }
+}
+
+// Helper to convert 4x4 matrix to quaternion
+void RigidbodyComponent::_MatrixToQuat(float* outQuat, const float* mtx) {
+    // Assumes rotation matrix
+    float trace = mtx[0] + mtx[5] + mtx[10];
+    float s;
+
+    if (trace > 0.0f) {
+        s = 0.5 / std::sqrt(trace + 1.0f);
+        outQuat[3] = 0.25 / s;              // w
+        outQuat[0] = (mtx[6] - mtx[9]) * s; // x
+        outQuat[1] = (mtx[8] - mtx[2]) * s; // y
+        outQuat[2] = (mtx[1] - mtx[4]) * s; // z
+    } else {
+        if (mtx[0] > mtx[5] && mtx[0] > mtx[10]) {
+            s = 2.0 * std::sqrt(1.0 + mtx[0] - mtx[5] - mtx[10]);
+            outQuat[3] = (mtx[6] - mtx[9]) / s; // w
+            outQuat[0] = 0.25 * s;              // x
+            outQuat[1] = (mtx[1] + mtx[4]) / s; // y
+            outQuat[2] = (mtx[8] + mtx[2]) / s; // z
+        } else if (mtx[5] > mtx[10]) {
+            s = 2.0 * std::sqrt(1.0 + mtx[5] - mtx[0] - mtx[10]);
+            outQuat[3] = (mtx[8] - mtx[2]) / s; // w
+            outQuat[0] = (mtx[1] + mtx[4]) / s; // x
+            outQuat[1] = 0.25 * s;              // y
+            outQuat[2] = (mtx[6] + mtx[9]) / s; // z
+        } else {
+            s = 2.0 * std::sqrt(1.0 + mtx[10] - mtx[0] - mtx[5]);
+            outQuat[3] = (mtx[1] - mtx[4]) / s; // w
+            outQuat[0] = (mtx[8] + mtx[2]) / s; // x
+            outQuat[1] = (mtx[6] + mtx[9]) / s; // y
+            outQuat[2] = 0.25 * s;              // z
+        }
+    }
 }
 
 } // namespace Syngine

@@ -121,9 +121,8 @@ void PlayerComponent::Init(Syngine::CameraComponent* camera) {
     settings->mFriction = 0.45f;
     settings->mMass     = 80.0f;
 
-    JPH::RVec3 initialPosition(m_transform->position[0],
-                               m_transform->position[1],
-                               m_transform->position[2]);
+    float* pos = m_transform->GetPosition();
+    JPH::RVec3 initialPosition(pos[0], pos[1], pos[2]);
 
     m_character = new JPH::Character(settings,
                                      initialPosition,
@@ -132,10 +131,7 @@ void PlayerComponent::Init(Syngine::CameraComponent* camera) {
                                      &m_physicsManager->_GetPhysicsSystem());
     m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
 
-    m_camera->SetPosition(m_transform->position[0],
-                          m_transform->position[1],
-                          m_transform->position[2]);
-
+    m_camera->SetPosition(pos[0], pos[1], pos[2]);
 }
 
 PlayerComponent::~PlayerComponent() {
@@ -253,14 +249,14 @@ void PlayerComponent::Update(const bool* keystate, float deltaTime) {
         } else { // Reset sizes only when state changes 
             if (m_prevPlayerState == PlayerState::CROUCHING || m_prevPlayerState == PlayerState::SLIDING) {
                 // Adjust position so collider actually changes size
-                m_transform->position[1] += (standHeight - crouchHeight);
-                m_character->SetPosition(JPH::RVec3(m_transform->position[0],
-                                                    m_transform->position[1],
-                                                    m_transform->position[2]));
+                float* pos = m_transform->GetPosition();
+                pos[1] += (standHeight - crouchHeight);
+                m_character->SetPosition(JPH::RVec3(pos[0], pos[1], pos[2]));
 
                 // Reset to normal size
-                m_character->SetShape(new JPH::CapsuleShape(standHeight, playerRadius),
-                                      0.1f); // Reset to normal size
+                m_character->SetShape(
+                    new JPH::CapsuleShape(standHeight, playerRadius),
+                    0.1f); // Reset to normal size
             }
             m_targetEyeHeight = 0.5f; // Normal eye height
         }
@@ -344,22 +340,19 @@ void PlayerComponent::_PostPhysicsUpdate() {
     }
 
     // Update transform
+    float* playerPos = m_transform->GetPosition();
     JPH::RVec3 charPos    = m_character->GetPosition();
     bx::Vec3   targetPos  = { charPos.GetX(), charPos.GetY(), charPos.GetZ() };
-    bx::Vec3   currentPos = { m_transform->position[0],
-                              m_transform->position[1],
-                              m_transform->position[2] };
+
+    float* pos = m_transform->GetPosition();
+    bx::Vec3   currentPos = { pos[0], pos[1], pos[2] };
 
     const float positionLerpSpeed = 12.0f;
     bx::Vec3   newPos     = bx::lerp(currentPos, targetPos, 1.0f - bx::exp(-positionLerpSpeed * m_deltaTime));
-    m_transform->position[0] = newPos.x;
-    m_transform->position[1] = newPos.y;
-    m_transform->position[2] = newPos.z;
+    m_transform->SetPosition(newPos.x, newPos.y, newPos.z);
 
     // Update camera position and orientation
-    m_camera->SetPosition(m_transform->position[0],
-                          m_transform->position[1] + m_eyeHeight,
-                          m_transform->position[2]);
+    m_camera->SetPosition(newPos.x, newPos.y + m_eyeHeight, newPos.z);
     m_camera->SetAngles(m_currentYaw, m_currentPitch);
 }
 
