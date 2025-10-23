@@ -61,6 +61,7 @@ add_library(Syngine STATIC
     src/Syngine/Core/Registry.cpp
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
+    src/Syngine/Core/ZoneManager.cpp
 
     # Graphics
     src/Syngine/Graphics/Renderer.cpp
@@ -82,6 +83,7 @@ add_library(Syngine STATIC
     src/Syngine/ECS/Components/RigidbodyComponent.cpp
     src/Syngine/ECS/Components/PlayerComponent.cpp
     src/Syngine/ECS/Components/CameraComponent.cpp
+    src/Syngine/ECS/Components/ZoneComponent.cpp
 )
 
 # Apple needs OBJC++ files for Metal support

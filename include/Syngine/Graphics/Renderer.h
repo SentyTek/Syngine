@@ -19,6 +19,7 @@
 #include <bgfx/bgfx.h>
 
 namespace Syngine {
+class DebugRender; // Forward declaration
 class CameraComponent; // Forward declaration
 struct DebugModes; // Forward declaration
 
@@ -279,6 +280,10 @@ class Renderer {
     /// @since v0.0.1
     /// @internal
     static bool _CreateRenderer(const RendererConfig& config);
+
+    static DebugRender* m_drender; //* Debug renderer instance
+
+    static bool m_isFirstFrame; //* Whether this is the first frame being rendered
 
     /// @brief Render all nearby gizmos
     /// @param camera Pointer to the camera component for rendering

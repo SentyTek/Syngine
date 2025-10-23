@@ -10,6 +10,8 @@
 #include <memory>
 #include <string>
 #include <map>
+#include <vector>
+
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/AllComponents.h"
@@ -28,19 +30,28 @@ class GameObject {
     string name; //* Name of the GameObject, used for identification and
                  //* debugging.
 
-    string type; //* Type of the GameObject, used for categorization and
-                 //* filtering. e.g., "player", "enemy", "item", etc.
+    string type; //* Type of the GameObject, used for shaders.
 
     string gizmo; //* Gizmo type for rendering in the editor, e.g.,
                   //* "camera_render", "mesh_render"
+
+    std::vector<std::string> tags; //* Tags for grouping and identifying GameObjects
 
     /// @brief Constructor for the GameObject class
     /// @param name Name of the GameObject
     /// @param type Type of the GameObject, defaults to "default"
     /// @since v0.0.1
-    GameObject(string name, string type = "default");
+    GameObject(string name, string type = "default", string initialTag = "");
+
+    GameObject(const GameObject& other);
+    GameObject& operator=(const GameObject& other);
 
     ~GameObject();
+
+    // Operator overload yippee
+    bool operator==(const GameObject& other) const {
+        return this->id == other.id;
+    }
 
     /// @brief Get the ID of the GameObject
     /// @return ID of the GameObject
@@ -68,6 +79,42 @@ class GameObject {
     /// @since v0.0.1
     void SetActive(bool active) noexcept;
 
+    /// @brief Get the tags of the GameObject
+    /// @return Vector of tags of the GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
+    inline std::vector<std::string> GetTags() const noexcept { return tags; }
+
+    /// @brief Add a tag to the GameObject
+    /// @param tag Tag to add
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void AddTag(const std::string& tag);
+
+    /// @brief Remove a tag from the GameObject
+    /// @param tag Tag to remove
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void RemoveTag(const std::string& tag);
+
+    /// @brief Check if the GameObject has a specific tag
+    /// @param tag Tag to check
+    /// @return true if the tag exists, false otherwise
+    /// @threadsafety safe
+    /// @since v0.0.1
+    bool HasTag(const std::string& tag) const;
+
+    /// @brief Clear all tags from the GameObject
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void ClearTags();
+
+    /// @brief Get the number of components attached to the GameObject
+    /// @return Number of components attached to the GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
+    size_t GetComponentCount() const noexcept;
+
     /// @brief Remove a component from the GameObject
     /// @param type Type of the component to remove
     /// @return 0 on success, -1 if the component was not found
@@ -87,7 +134,7 @@ class GameObject {
     /// @return Pointer to the component if it exists, nullptr otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    template <typename T> T* GetComponent();
+    template <typename T> T* GetComponent() const;
 
     /// @brief Add a component to the GameObject
     /// @param T Type of the component to add
@@ -107,7 +154,7 @@ class GameObject {
 };
 
 template<typename T>
-T* GameObject::GetComponent() {
+T* GameObject::GetComponent() const {
     auto it = this->components.find(T::componentType);
     if (it == this->components.end()) {
         return nullptr; // Component not found

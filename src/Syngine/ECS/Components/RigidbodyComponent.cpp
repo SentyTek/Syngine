@@ -33,6 +33,33 @@ RigidbodyComponent::RigidbodyComponent(GameObject* owner, Syngine::RigidbodyPara
     this->Init(params);
 }
 
+RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
+    this->m_owner = other.m_owner;
+    this->physicsManager = other.physicsManager;
+    this->transform = other.transform;
+    this->bodyID = other.bodyID;
+    this->mass = other.mass;
+    this->friction = other.friction;
+    this->restitution = other.restitution;
+    this->shape = other.shape;
+    this->shapeParameters = other.shapeParameters;
+}
+
+RigidbodyComponent& RigidbodyComponent::operator=(const RigidbodyComponent& other) {
+    if (this != &other) {
+        this->m_owner = other.m_owner;
+        this->physicsManager = other.physicsManager;
+        this->transform = other.transform;
+        this->bodyID = other.bodyID;
+        this->mass = other.mass;
+        this->friction = other.friction;
+        this->restitution = other.restitution;
+        this->shape = other.shape;
+        this->shapeParameters = other.shapeParameters;
+    }
+    return *this;
+}
+
 RigidbodyComponent::~RigidbodyComponent() {
     Destroy();
 }

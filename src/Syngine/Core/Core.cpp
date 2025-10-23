@@ -25,6 +25,7 @@
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/Input.h"
+#include "Syngine/Core/ZoneManager.h"
 
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -38,16 +39,8 @@
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Utils/Version.h"
 
-#include "SDL3/SDL_events.h"
-#include "SDL3/SDL_keycode.h"
-#include "SDL3/SDL_mouse.h"
-#include "SDL3/SDL_timer.h"
-#include "SDL3/SDL_scancode.h"
-#include "SDL3/SDL_video.h"
+#include <SDL3/SDL.h>
 
-#include "bx/bx.h"
-#include "bx/constants.h"
-#include "bx/math.h"
 #include "bgfx/defines.h"
 
 #include <filesystem>
@@ -130,6 +123,11 @@ bool Core::Initialize() {
         m_app->physicsManager = std::make_unique<Phys>();
         if (!m_app->physicsManager) {
             Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
+        }
+
+        m_app->zoneManager = std::make_unique<ZoneManager>();
+        if (!m_app->zoneManager) {
+            Logger::Error("Failed to create ZoneManager. Check the log for more details.");
         }
 
         m_app->physicsManager->_Init();
@@ -268,16 +266,18 @@ bool Core::Update() {
             pc->Update(keystate, deltaTime);
         }
 
-        auto rigidbodies =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_RIGIDBODY);
-        for (auto go : rigidbodies) {
+        for (auto go :
+             Registry::GetGameObjectsWithComponent(SYN_COMPONENT_RIGIDBODY)) {
             if (!go) continue;
             RigidbodyComponent* rb = go->GetComponent<RigidbodyComponent>();
             if (!rb) continue;
             rb->Update(m_internal.DEFAULT_PHYSICS_TIMESTEP);
         }
 
-        // Player mode: update player camera
+        // Update zones
+        m_app->zoneManager->_UpdateZones();
+
+        // Post physics update (e.g. for player camera)
         for (auto go : players) {
             if (!go) continue;
             PlayerComponent* pc = go->GetComponent<PlayerComponent>();

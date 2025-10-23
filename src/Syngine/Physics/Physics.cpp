@@ -151,9 +151,9 @@ void Phys::_DrawDebug(int                 width,
     }
 }
 
-void Phys::_DrawOtherFrustum(const float* view, const float* proj) {
+void Phys::_DrawFrustum(const float* view, const float* proj) {
     if (mDebugRenderer) {
-        mDebugRenderer->DrawOtherFrustum(view, proj);
+        mDebugRenderer->DrawFrustum(view, proj);
     }
 }
 

@@ -8,15 +8,15 @@
 
 #pragma once
 #include "Jolt/Core/Core.h"
-#include "Syngine/Core/Input.h"
+
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/Renderer.h"
-#include "Syngine/ECS/GameObject.h"
 #include "Syngine/Physics/Physics.h"
 
 namespace Syngine {
-// Forward declare Window
+// Forward declare
+class ZoneManager;
 class Window;
 
 /// @brief Struct to hold hardware specifications
@@ -70,6 +70,7 @@ struct App {
     std::unique_ptr<Renderer>       renderer;  //* Pointer to the render system
     std::unique_ptr<SynModelLoader> synModels; //* Pointer to the model loader
     std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
+    std::unique_ptr<ZoneManager> zoneManager; //* Pointer to the zone manager
     DebugModes debug;   //* Debug modes flags
 };
 

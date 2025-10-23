@@ -199,6 +199,10 @@ namespace Syngine {
         /// @internal
         void _Update(float deltaTime, int collisionSteps);
 
+        /// @brief Get the debug renderer
+        /// @return Pointer to the debug renderer
+        DebugRender* _GetDebugRenderer() { return mDebugRenderer; }
+
         /// @brief Draw debug information
         /// @param width Width of the viewport
         /// @param height Height of the viewport
@@ -335,7 +339,7 @@ namespace Syngine {
                                ObjectLayer layer,
                                float       mass = 0.0f);
 
-        void _DrawOtherFrustum(const float* view, const float* proj);
+        void _DrawFrustum(const float* view, const float* proj);
 
         void _DrawLine(const float* from, const float* to, JPH::ColorArg color);
 

@@ -8,6 +8,7 @@
 
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Registry.h"
+#include "Syngine/Core/ZoneManager.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 
@@ -172,6 +173,11 @@ void Registry::_NotifyComponentAdded(GameObject*         gameobject,
                 m_Gizmos.push_back(gameobject);
                 Syngine::Core::_GetApp()->renderer->_RegisterGizmo("camera_render");
             }
+            break;
+        case Syngine::SYN_COMPONENT_ZONE:
+            Core::_GetApp()->zoneManager->_RegisterZone(
+                gameobject->GetComponent<ZoneComponent>());
+            break;
         default:
             break; // No action for other component types
     }
@@ -201,6 +207,11 @@ void Registry::_NotifyComponentRemoved(GameObject*         gameobject,
             break;
         case Syngine::SYN_COMPONENT_CAMERA:
             removeFrom(m_Gizmos);
+            break;
+        case Syngine::SYN_COMPONENT_ZONE:
+            Core::_GetApp()->zoneManager->_UnregisterZone(
+                gameobject->GetComponent<ZoneComponent>());
+            break;
         default:
             break; // No action for other component types
     }

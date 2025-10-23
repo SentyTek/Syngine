@@ -56,8 +56,10 @@ class PlayerComponent : public Syngine::Component {
     /// @note This should only be called by GameObject::AddComponent<T>()
     /// @since v0.0.1
     /// @internal
-    PlayerComponent(GameObject*               owner,
-                    Syngine::CameraComponent* camera);
+    PlayerComponent(GameObject* owner, Syngine::CameraComponent* camera);
+
+    // No assignment operator because the copy is bad enough
+    PlayerComponent(const PlayerComponent& other);
     
     ~PlayerComponent();
 
@@ -66,6 +68,12 @@ class PlayerComponent : public Syngine::Component {
     /// @threadsafety read-only
     /// @since v0.0.1
     Syngine::Components GetComponentType() override;
+
+    /// @brief Clone the PlayerComponent
+    /// @return A unique pointer to the cloned PlayerComponent
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<PlayerComponent>(*this);
+    }
 
     /// @brief Initializes the player component with camera, window, and physics
     /// manager.

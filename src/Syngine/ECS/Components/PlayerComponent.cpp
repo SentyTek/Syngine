@@ -41,6 +41,65 @@ PlayerComponent::PlayerComponent(GameObject*               owner,
     this->Init(camera);
 }
 
+// I don't like this.
+// I do not like it one bit.
+// I do not like it, Sam-I-Am.
+PlayerComponent::PlayerComponent(const PlayerComponent& other) {
+    this->m_owner = other.m_owner;
+    this->m_camera = other.m_camera;
+    this->m_window = other.m_window;
+    this->m_physicsManager = other.m_physicsManager;
+    this->m_transform = other.m_transform;
+    this->m_character = nullptr; // Character should not be copied
+    this->m_playerState = other.m_playerState;
+    this->m_prevPlayerState = other.m_prevPlayerState;
+    this->m_simulate = other.m_simulate;
+    this->m_currentYaw = other.m_currentYaw;
+    this->m_currentPitch = other.m_currentPitch;
+    this->m_deltaTime = other.m_deltaTime;
+    this->m_targetMoveSpeed = other.m_targetMoveSpeed;
+    this->m_targetEyeHeight = other.m_targetEyeHeight;
+    this->m_targetFov = other.m_targetFov;
+
+    // Copy configuration parameters
+    this->moveSpeed = other.moveSpeed;
+    this->sprintMult = other.sprintMult;
+    this->crouchSpeed = other.crouchSpeed;
+    this->enableSprinting = other.enableSprinting;
+    this->enableCrouching = other.enableCrouching;
+    this->enableSliding = other.enableSliding;
+    this->standHeight = other.standHeight;
+    this->crouchHeight = other.crouchHeight;
+    this->playerRadius = other.playerRadius;
+    this->mouseSens = other.mouseSens;
+    this->maxPitchAngle = other.maxPitchAngle;
+
+    // Re-initialize the character
+    if (this->m_transform) {
+        JPH::Ref<JPH::CharacterSettings> settings = new JPH::CharacterSettings();
+        settings->mMaxSlopeAngle                  = bx::kPi / 4.0f; // 45 degrees
+        settings->mLayer = Syngine::Layers::MOVING; // Set to the moving layer
+        settings->mShape =
+            new JPH::CapsuleShape(standHeight, playerRadius); // Half (quarter?) height and radius
+        settings->mFriction = 0.45f;
+        settings->mMass     = 80.0f;
+
+        JPH::RVec3 initialPosition(m_transform->position[0],
+                                   m_transform->position[1],
+                                   m_transform->position[2]);
+        this->m_character =
+            new JPH::Character(settings,
+                               initialPosition,
+                               JPH::Quat::sIdentity(),
+                               0,
+                               &this->m_physicsManager->_GetPhysicsSystem());
+        this->m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
+        this->m_camera->SetPosition(m_transform->position[0],
+                                    m_transform->position[1],
+                                    m_transform->position[2]);
+    }
+}
+
 void PlayerComponent::Init(Syngine::CameraComponent* camera) {
     m_transform   = m_owner->GetComponent<TransformComponent>();
 

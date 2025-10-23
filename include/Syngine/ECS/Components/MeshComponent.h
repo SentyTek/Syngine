@@ -32,6 +32,9 @@ class MeshComponent : public Syngine::Component {
                   const std::string& path         = "",
                   bool               loadTextures = true);
 
+    MeshComponent(const MeshComponent& other);
+    MeshComponent& operator=(const MeshComponent& other);
+    
     ~MeshComponent();
       
     /// @brief Get the type of this component
@@ -39,6 +42,12 @@ class MeshComponent : public Syngine::Component {
     /// @threadsafety read-only
     /// @since v0.0.1
     Components GetComponentType() override;
+
+      /// @brief Clone the MeshComponent
+      /// @return A unique pointer to the cloned MeshComponent
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<MeshComponent>(*this);
+    }
 
     /// @brief Initialize the mesh component
     /// @param path Path to the model file
