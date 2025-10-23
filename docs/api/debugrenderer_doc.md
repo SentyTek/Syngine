@@ -20,6 +20,9 @@
 - [CreateTriangleBatch](#synginecreatetrianglebatch)
 - [CreateTriangleBatch](#synginecreatetrianglebatch)
 - [DrawFrustum](#synginedrawfrustum)
+- [DrawFrustum](#synginedrawfrustum)
+- [DrawBox](#synginedrawbox)
+- [DrawSphere](#synginedrawsphere)
 - [RenderLines](#synginerenderlines)
 - [ClearLines](#syngineclearlines)
 
@@ -172,7 +175,7 @@ Signature:
 #### **`Syngine::DrawFrustum`**
 
 
- Draw a frustum
+ Draw a frustum from a camera object
 
 #### This function is internal use only and not intended for public use!
 
@@ -188,6 +191,79 @@ Signature:
 **Parameters:**
 
 - `camera`: Camera to draw the frustum for
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::DrawFrustum`**
+
+
+ Draw a frustum from given view and projection matrices
+
+#### This function is internal use only and not intended for public use!
+
+
+**Preconditions:** View and projection matrices must be valid
+
+Signature:
+
+```cpp
+ void DrawFrustum(const float* view, const float* proj);
+```
+
+**Parameters:**
+
+- `view`: View matrix
+- `proj`: Projection matrix
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::DrawBox`**
+
+
+ Draw a box given min and max points
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ void DrawBox(const float* min, const float* max, JPH::ColorArg color);
+```
+
+**Parameters:**
+
+- `min`: Minimum point of the box
+- `max`: Maximum point of the box
+- `color`: Color of the box
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::DrawSphere`**
+
+
+ Draw a sphere given center and radius
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ void DrawSphere(JPH::RVec3Arg center, float radius, JPH::ColorArg color);
+```
+
+**Parameters:**
+
+- `center`: Center of the sphere
+- `radius`: Radius of the sphere
+- `color`: Color of the sphere
 
 **This function has been available since:** v0.0.1
 

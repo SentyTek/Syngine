@@ -166,6 +166,7 @@ struct App
 | `std::unique_ptr<Renderer>` | `renderer` | Pointer to the render system |
 | `std::unique_ptr<SynModelLoader>` | `synModels` | Pointer to the model loader |
 | `std::unique_ptr<Phys>` | `physicsManager` | Pointer to the physics manager |
+| `std::unique_ptr<ZoneManager>` | `zoneManager` | Pointer to the zone manager |
 | `DebugModes` | `debug` | Debug modes flags |
 
 **This function has been available since:** v0.0.1

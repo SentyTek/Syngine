@@ -32,6 +32,7 @@ We have several pages of documentation available. Note the API reference is auto
 - [Input](api/input_doc.md)
 - [Logger](api/logger_doc.md)
 - [Registry](api/registry_doc.md)
+- [Zonemanager](api/zonemanager_doc.md)
 
 #### ECS
 
@@ -47,6 +48,7 @@ We have several pages of documentation available. Note the API reference is auto
 - [Playercomponent](api/playercomponent_doc.md)
 - [Rigidbodycomponent](api/rigidbodycomponent_doc.md)
 - [Transformcomponent](api/transformcomponent_doc.md)
+- [Zonecomponent](api/zonecomponent_doc.md)
 
 #### Graphics
 

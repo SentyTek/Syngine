@@ -17,6 +17,7 @@
 - [_Init](#phys_init)
 - [_Shutdown](#phys_shutdown)
 - [_Update](#phys_update)
+- [_GetDebugRenderer](#phys_getdebugrenderer)
 - [_DrawDebug](#phys_drawdebug)
 - [_GetBodyInterface](#phys_getbodyinterface)
 - [_GetPhysicsSystem](#phys_getphysicssystem)
@@ -108,6 +109,21 @@ Signature:
 - `collisionSteps`: The number of collision detection steps to perform
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`Phys::_GetDebugRenderer`**
+
+
+ Get the debug renderer
+
+Signature:
+
+```cpp
+ DebugRender* _GetDebugRenderer() ;
+```
+
+**Returns:** Pointer to the debug renderer
 
 ---
 

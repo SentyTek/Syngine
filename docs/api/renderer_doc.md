@@ -654,6 +654,8 @@ Signature:
 | --- | --- | --- | 
 | `int` | `height` | Height of the game window in pixels |
 | `SDL_Window*` | `win` | SDL window handle |
+| `DebugRender*` | `m_drender` | Debug renderer instance |
+| `bool` | `m_isFirstFrame` | Whether this is the first frame being rendered |
 
 ---
 

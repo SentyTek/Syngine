@@ -19,6 +19,12 @@
 - [_SetID](#gameobject_setid)
 - [IsActive](#gameobjectisactive)
 - [SetActive](#gameobjectsetactive)
+- [GetTags](#gameobjectgettags)
+- [AddTag](#gameobjectaddtag)
+- [RemoveTag](#gameobjectremovetag)
+- [HasTag](#gameobjecthastag)
+- [ClearTags](#gameobjectcleartags)
+- [GetComponentCount](#gameobjectgetcomponentcount)
 - [RemoveComponent](#gameobjectremovecomponent)
 - [HasComponent](#gameobjecthascomponent)
 - [GetComponent](#gameobjectgetcomponent)
@@ -37,7 +43,7 @@
 Signature:
 
 ```cpp
- GameObject(string name, string type = "default");
+ GameObject(string name, string type = "default", string initialTag = "");
 ```
 
 **Parameters:**
@@ -135,6 +141,126 @@ Signature:
 
 ---
 
+#### **`GameObject::GetTags`**
+
+
+ Get the tags of the GameObject
+
+Signature:
+
+```cpp
+ inline std::vector<std::string> GetTags() const noexcept ;
+```
+
+**Returns:** Vector of tags of the GameObject
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::AddTag`**
+
+
+ Add a tag to the GameObject
+
+Signature:
+
+```cpp
+ void AddTag(const std::string& tag);
+```
+
+**Parameters:**
+
+- `tag`: Tag to add
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::RemoveTag`**
+
+
+ Remove a tag from the GameObject
+
+Signature:
+
+```cpp
+ void RemoveTag(const std::string& tag);
+```
+
+**Parameters:**
+
+- `tag`: Tag to remove
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::HasTag`**
+
+
+ Check if the GameObject has a specific tag
+
+Signature:
+
+```cpp
+ bool HasTag(const std::string& tag) const;
+```
+
+**Parameters:**
+
+- `tag`: Tag to check
+
+**Returns:** true if the tag exists, false otherwise
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::ClearTags`**
+
+
+ Clear all tags from the GameObject
+
+Signature:
+
+```cpp
+ void ClearTags();
+```
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::GetComponentCount`**
+
+
+ Get the number of components attached to the GameObject
+
+Signature:
+
+```cpp
+ size_t GetComponentCount() const noexcept;
+```
+
+**Returns:** Number of components attached to the GameObject
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
 #### **`GameObject::RemoveComponent`**
 
 
@@ -189,7 +315,7 @@ Signature:
 Signature:
 
 ```cpp
- template <typename T> T* GetComponent();
+ template <typename T> T* GetComponent() const;
 ```
 
 **Parameters:**
@@ -233,8 +359,9 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `string` | `type` | Type of the GameObject, used for categorization and |
+| `string` | `type` | Type of the GameObject, used for shaders. |
 | `string` | `gizmo` | Gizmo type for rendering in the editor, e.g., |
+| `std::vector<std::string>` | `tags` | Tags for grouping and identifying GameObjects |
 
 ---
 

@@ -17,6 +17,7 @@
 - [PhysicsShapes](#synginephysicsshapes)
 - [shape](#syngineshape)
 - [GetComponentType](#synginegetcomponenttype)
+- [Clone](#syngineclone)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [Destroy](#synginedestroy)
@@ -108,6 +109,21 @@ Signature:
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::Clone`**
+
+
+ Clone the RigidbodyComponent
+
+Signature:
+
+```cpp
+ std::unique_ptr<Component> Clone() const override { return std::make_unique<RigidbodyComponent>(*this);
+```
+
+**Returns:** A unique pointer to the cloned RigidbodyComponent
 
 ---
 

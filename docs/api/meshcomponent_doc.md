@@ -16,6 +16,7 @@
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
 - [GetComponentType](#synginegetcomponenttype)
+- [Clone](#syngineclone)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [LoadMesh](#syngineloadmesh)
@@ -69,6 +70,21 @@ Signature:
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::Clone`**
+
+
+ Clone the MeshComponent
+
+Signature:
+
+```cpp
+ std::unique_ptr<Component> Clone() const override { return std::make_unique<MeshComponent>(*this);
+```
+
+**Returns:** A unique pointer to the cloned MeshComponent
 
 ---
 

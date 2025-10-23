@@ -16,6 +16,7 @@
 - [Constructor](#class-constructor)
 - [yaw](#syngineyaw)
 - [GetComponentType](#synginegetcomponenttype)
+- [Clone](#syngineclone)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [SetPosition](#synginesetposition)
@@ -102,6 +103,21 @@ Signature:
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::Clone`**
+
+
+ Clone the CameraComponent
+
+Signature:
+
+```cpp
+ std::unique_ptr<Component> Clone() const override {
+```
+
+**Returns:** A unique pointer to the cloned CameraComponent
 
 ---
 

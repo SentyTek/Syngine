@@ -15,6 +15,7 @@
 
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
+- [Clone](#syngineclone)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [GetComponentType](#synginegetcomponenttype)
@@ -54,6 +55,21 @@ Signature:
 
 ## Class & Related Members
 
+
+#### **`Syngine::Clone`**
+
+
+ Clone the TransformComponent
+
+Signature:
+
+```cpp
+ std::unique_ptr<Component> Clone() const override { return std::make_unique<TransformComponent>(*this);
+```
+
+**Returns:** A unique pointer to the cloned TransformComponent
+
+---
 
 #### **`Syngine::Init`**
 
