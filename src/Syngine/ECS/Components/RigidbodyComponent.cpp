@@ -68,10 +68,8 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
     transform->GetRotationQuaternion(
         curRot[0], curRot[1], curRot[2], curRot[3]);
 
-    float* position = curPos;
-    float* rotation = curRot;
-    JPH::Quat rotationQuat = JPH::Quat::sEulerAngles(JPH::Vec3(rotation[0], rotation[1], rotation[2]));
-    JPH::RVec3 posVec(position[0], position[1], position[2]);
+    JPH::Quat rotationQuat(curRot[0], curRot[1], curRot[2], curRot[3]);
+    JPH::RVec3 posVec(curPos[0], curPos[1], curPos[2]);
 
     switch (shape) {
         case PhysicsShapes::SPHERE: {
@@ -150,12 +148,12 @@ void RigidbodyComponent::Update(bool simulate) {
     if (simulate) {
         // Smoothly lerp the TransformComponent towards the physics body's
         // position and rotation over time
-        static const float lerpAlpha = 1.0f / 5.0f;
+        static const float lerpAlpha = 0.2f;
         // When physics drives the transform
         RVec3 physicsPos = bodyInterface.GetPosition(bodyID);
         Quat physicsRot = bodyInterface.GetRotation(bodyID);
 
-        float* curPos = transform->GetPosition();
+        float* curPos = transform->GetPosition(); // World position
         float curRot[4];
         transform->GetRotationQuaternion(
             curRot[0], curRot[1], curRot[2], curRot[3]);
@@ -164,12 +162,10 @@ void RigidbodyComponent::Update(bool simulate) {
         Quat currentRot(curRot[0], curRot[1], curRot[2], curRot[3]);
 
         // Lerp pos and slerp rot
-        Vec3 lerpedPos =
-            currentPos +
-            (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) -
-             currentPos) *
-                lerpAlpha;
-        Quat lerpedRot = currentRot.SLERP(physicsRot, lerpAlpha);
+        Vec3 lerpedPos = currentPos + (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) - currentPos) * lerpAlpha;
+
+        Quat targetRot = physicsRot.Conjugated();
+        Quat lerpedRot = currentRot.SLERP(targetRot, lerpAlpha);
 
         transform->SetWorldPosition(
             lerpedPos.GetX(), lerpedPos.GetY(), lerpedPos.GetZ());
