@@ -37,16 +37,16 @@ enum class PhysicsShapes {
 /// @since v0.0.1
 enum class ForceMode {
     FORCE, //* Add a continuous force to the rigidbody using its mass (F = m *
-           // a) (Newtons)
+           //* a) (Newtons)
     ACCELERATION, //* Add a continuous acceleration to the rigidbody, ignoring
-                  // its mass. Note: This is not well supported, and is
-                  // equivalent to FORCE if you did NOT manually set the mass
-                  // yourself.
+                  //* its mass. Note: This is not well supported, and is
+                  //* equivalent to FORCE if you did NOT manually set the mass
+                  //* yourself.
     IMPULSE,      //* Add an instant force impulse, using its mass (I = m * dv) (
-                  // Newton-seconds)
+                  //* Newton-seconds)
     VELOCITY_CHANGE //* Change velocity instantaneously, ignoring its mass. Note:
-                     // This is not well supported, and is equivalent to IMPULSE if
-                     // you did NOT manually set the mass yourself.
+                     //* This is not well supported, and is equivalent to IMPULSE if
+                     //* you did NOT manually set the mass yourself.
 };
 
 /// @brief Struct to hold parameters for the RigidbodyComponent.
