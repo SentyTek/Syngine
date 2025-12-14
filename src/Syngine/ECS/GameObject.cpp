@@ -10,8 +10,6 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 
-#include <type_traits>
-
 using namespace Syngine;
 
 GameObject::GameObject(string name, string type, string initialTag) {

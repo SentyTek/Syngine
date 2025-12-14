@@ -17,7 +17,14 @@ function(define_version)
         COMMAND git rev-parse --short HEAD
         OUTPUT_VARIABLE COMMIT
         OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE GIT_RESULT
+        ERROR_QUIET
     )
+    
+    # Use default if git command failed
+    if(NOT GIT_RESULT EQUAL 0)
+        set(COMMIT "000")
+    endif()
 
     # Combine
     set(VERSION_STRING "${YEAR}w${WEEK}.${COMMIT}")

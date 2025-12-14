@@ -452,7 +452,20 @@ size_t Renderer::AddProgram(const std::string& vsPath,
                             const std::string& fsPath,
                             const std::string& name,
                             Syngine::ViewID    viewId) {
-    if (!Renderer::IsReady()) Syngine::Logger::Fatal("Cannot add program before renderer is ready");
+    if (!Renderer::IsReady())
+        Syngine::Logger::Fatal("Cannot add program before renderer is ready");
+    if (name.empty()) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Program name cannot be empty");
+        return -1;
+    }
+
+    if (GetProgram(name).id != 0) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Program with name \"%s\" already exists",
+                              name.c_str());
+        return -1;
+    }
 
     bgfx::ShaderHandle vs = _LoadShader(vsPath.c_str());
     bgfx::ShaderHandle fs = _LoadShader(fsPath.c_str());
@@ -573,7 +586,9 @@ bool Renderer::ReloadProgram(Syngine::ViewID viewId, const std::string_view& nam
             bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
 
             if (!bgfx::isValid(newProgram)) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to reload program %s", name.data());
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                      "Failed to reload program %s",
+                                      name.data());
                 bgfx::destroy(vs);
                 bgfx::destroy(fs);
                 return false;
@@ -595,7 +610,9 @@ bool Renderer::ReloadAllPrograms() {
             bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
 
             if (!bgfx::isValid(newProgram)) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to reload program %s", prog.name.c_str());
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                      "Failed to reload program %s",
+                                      prog.name.c_str());
                 bgfx::destroy(vs);
                 bgfx::destroy(fs);
                 return false;
@@ -617,45 +634,67 @@ size_t Renderer::RegisterUniform(size_t             program,
                                  UniformType        type,
                                  uint16_t           num) {
     Program* prog = _GetProgram(program);
-    if (prog) {
-        Uniform u = {
-            .handle = bgfx::createUniform(
-                name.c_str(), static_cast<bgfx::UniformType::Enum>(type), num),
-                      .type = type,
-                      .name = name,
-                      .num  = num };
-
-        // Allocate memory based on uniform type
-        size_t size = 0;
-        switch (type) {
-        case UNIFORM_SAMPLER:
-            u.data = nullptr; // Samplers don't need data storage
-            break;
-        case UNIFORM_VEC4:
-            size = sizeof(float) * 4;
-            break;
-        case UNIFORM_MAT3:
-            size = sizeof(float) * 9;
-            break;
-        case UNIFORM_MAT4:
-            size = sizeof(float) * 16;
-            break;
-        default:
-            u.data = nullptr;
-            break;
-        }
-
-        if (size > 0) {
-            u.data = malloc(size * num);
-            memset(u.data, 0, size * num);
-        }
-
-        prog->uniforms.push_back(u);
-        // Store in uniform registry for fast lookup
-        m_uniformRegistry[u.handle.idx] = u;
-        return u.handle.idx;
+    if (!prog) {
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR,
+            "Cannot register uniform to invalid program id %zu",
+            program);
+        return 0;
     }
-    return 0;
+
+    if (name.empty()) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Uniform name cannot be empty");
+        return 0;
+    }
+
+    for (const auto& u : prog->uniforms) {
+        if (u.name == name) {
+            Syngine::Logger::LogF(
+                Syngine::LogLevel::ERR,
+                "Uniform with name \"%s\" already exists in program \"%s\"",
+                name.c_str(),
+                prog->name.c_str());
+            return u.handle.idx;
+        }
+    }
+
+    Uniform u = {
+        .handle = bgfx::createUniform(
+            name.c_str(), static_cast<bgfx::UniformType::Enum>(type), num),
+                    .type = type,
+                    .name = name,
+                    .num  = num };
+
+    // Allocate memory based on uniform type
+    size_t size = 0;
+    switch (type) {
+    case UNIFORM_SAMPLER:
+        u.data = nullptr; // Samplers don't need data storage
+        break;
+    case UNIFORM_VEC4:
+        size = sizeof(float) * 4;
+        break;
+    case UNIFORM_MAT3:
+        size = sizeof(float) * 9;
+        break;
+    case UNIFORM_MAT4:
+        size = sizeof(float) * 16;
+        break;
+    default:
+        u.data = nullptr;
+        break;
+    }
+
+    if (size > 0) {
+        u.data = malloc(size * num);
+        memset(u.data, 0, size * num);
+    }
+
+    prog->uniforms.push_back(u);
+    // Store in uniform registry for fast lookup
+    m_uniformRegistry[u.handle.idx] = u;
+    return u.handle.idx;
 }
 
 Uniform* Renderer::_GetUniform(size_t id) {
@@ -962,15 +1001,13 @@ void Renderer::_DrawForward(const Program& program, CameraComponent* camera) {
 }
 
 void Renderer::_DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug) {
-    Core::_GetApp()->physicsManager->_DrawDebug(
-        width,
-        height,
-        program.program,
-        Registry::GetGameObjectByName("player")
-            ->GetComponent<CameraComponent>()
-            ->GetCamera(),
-        camera->GetCamera(),
-        debug);
+    GameObject *p = Registry::GetGameObjectByName("player");
+    if (p) {
+        Core::_GetApp()->physicsManager->_DrawDebug(
+            width, height, program.program,
+            p->GetComponent<CameraComponent>()->GetCamera(), camera->GetCamera(),
+            debug);
+    }
 
     // Draw various debug overlays
     if (debug.Gizmos) {

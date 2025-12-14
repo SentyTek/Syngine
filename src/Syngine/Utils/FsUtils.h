@@ -62,8 +62,7 @@ static inline std::string _ResolveOSPath(const char* path)
 inline bool _CheckRequiredFolders() {
     const char* requiredFolders[] = {
         "shaders",
-        "meshes",
-        "default",
+        "default", // Should meshes be considered required?
     };
 
     for (const char* folder : requiredFolders) {
