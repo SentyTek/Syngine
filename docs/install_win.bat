@@ -51,8 +51,8 @@ echo endif^(^)
 echo.
 echo # set the output directory for built objects.
 echo # This makes sure that the dynamic library goes into the build directory automatically.
-echo set^(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$^<CONFIGURATION^>"^)
-echo set^(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$^<CONFIGURATION^>"^)
+echo set^(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"^)
+echo set^(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"^)
 echo.
 echo # Add engine first
 echo add_subdirectory^(engine^)
