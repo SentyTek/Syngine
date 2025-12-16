@@ -68,14 +68,14 @@ class MeshComponent : public Syngine::Component {
     /// @return 0 on success, non-zero code on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int LoadMesh(const std::string& path, bool loadTextures = true);
+    bool LoadMesh(const std::string& path, bool loadTextures = true);
 
     /// @brief Reload the mesh from the file
     /// @return 0 on success, non-zero on failure
     /// @note Mostly used for reloading the mesh after changes in the model file
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int ReloadMesh();
+    bool ReloadMesh();
 
     /// @brief Unload the mesh
     /// @return 0 on success, non-zero on failure

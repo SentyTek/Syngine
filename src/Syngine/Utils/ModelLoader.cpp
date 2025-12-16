@@ -91,7 +91,7 @@ bool AssimpLoader::_LoadModel(MeshData& out, const std::string& path, bool loadT
     }
     meshData.hasTextures = loadTextures;
     meshData.path        = resolvedPath;
-    meshData.id          = loadedMeshes.size();
+    meshData.id          = static_cast<int>(loadedMeshes.size());
 
     try {
         meshData.lastWriteTime = std::filesystem::last_write_time(resolvedPath);
@@ -213,9 +213,9 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
     //create buffers
     const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.vertices.size() * sizeof(Vertex)));
     memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
-    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout, BGFX_BUFFER_COMPUTE_READ);
+    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
 
-    mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
+    mem = bgfx::alloc(static_cast<uint32_t>(meshData.indices.size() * sizeof(uint32_t)));
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
@@ -360,7 +360,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
         meshData.materials.push_back(mat);
     }
 
-    meshData.numMaterials = meshData.materials.size();
+    meshData.numMaterials = static_cast<uint32_t>(meshData.materials.size());
 
     // and output
     meshData.vbh = vbh;
@@ -417,7 +417,7 @@ bool AssimpLoader::_ReloadModel(MeshData& out, int id) {
     mesh->numMaterials = temp.numMaterials;
     mesh->vbh          = temp.vbh;
     mesh->ibh          = temp.ibh;
-    mesh->id           = loadedMeshes.size(); // Update ID to the new index
+    mesh->id           = static_cast<int>(loadedMeshes.size()); // Update ID to the new index
 
     try {
         mesh->lastWriteTime = std::filesystem::last_write_time(mesh->path);

@@ -47,10 +47,11 @@ Syngine::Components MeshComponent::GetComponentType() {
 }
 
 void MeshComponent::Init(const std::string& path, bool loadTextures) {
-    this->LoadMesh(path, loadTextures);
+    if (!path.empty())
+        this->LoadMesh(path, loadTextures);
 }
 
-int MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
+bool MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
     // Load the mesh data from the file
     AssimpLoader loader;
     if (!loader._LoadModel(
@@ -58,12 +59,12 @@ int MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to load mesh from %s",
                               _ResolveOSPath(path.c_str()).c_str());
-        return 1; // Error loading mesh
+        return false; // Error loading mesh
     }
-    return 0; // Success
+    return true; // Success
 }
 
-int MeshComponent::UnloadMesh() {
+bool MeshComponent::UnloadMesh() {
     // Unload the mesh data
     if (bgfx::isValid(this->meshData.vbh)) {
         // bgfx::destroy(this->meshData.vbh);
@@ -88,14 +89,14 @@ int MeshComponent::UnloadMesh() {
         }
     }
     this->meshData.materials.clear();
-    return 0; // Success
+    return true; // Success
 }
 
-int MeshComponent::ReloadMesh() {
+bool MeshComponent::ReloadMesh() {
     // Reload the mesh data from the file
     if (this->meshData.path.empty()) {
         Syngine::Logger::Error("No mesh path set for reloading");
-        return 1; // Error: no path set
+        return false; // Error: no path set
     }
     AssimpLoader loader;
     if (!loader._ReloadModel(this->meshData, this->meshData.id)) {
