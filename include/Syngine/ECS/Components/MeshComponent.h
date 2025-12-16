@@ -84,7 +84,24 @@ class MeshComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    int UnloadMesh(); //TODO: Make this RAII in the destructor
+    bool UnloadMesh();
+
+    /// @brief Check if the mesh is loaded
+    /// @return true if the mesh is loaded, false otherwise
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    bool IsMeshLoaded() const {
+        return bgfx::isValid(this->meshData.vbh) &&
+               bgfx::isValid(this->meshData.ibh);
+    }
+
+    /// @brief Upload mesh data directly
+    /// @param vertices Vector of vertex data
+    /// @param indices Vector of index data
+    /// @return true on success, false on failure
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices);
 
     MeshData meshData; //* Mesh data for the GameObject
 };
