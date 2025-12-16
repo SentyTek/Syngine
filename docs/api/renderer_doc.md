@@ -203,6 +203,8 @@ struct RendererConfig
 
  Load a shader from vertex and fragment shader file paths and create a shader program
 
+**Note:** Path to each is literal, no automatic suffixes added. Compiler outputs .bin files, so be sure to add this suffix instead of .shader or .sc or whatever the src file is.
+
 **Preconditions:** Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
 
 Signature:

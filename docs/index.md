@@ -19,8 +19,6 @@ We have several pages of documentation available. Note the API reference is auto
 
 ## Table of Contents
 
-## Getting Started
-- [Creating your first Syngine game](start.md)
 
 - [Code Format Policy](policy.md)
 
