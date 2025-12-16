@@ -32,35 +32,35 @@ TransformComponent::TransformComponent(GameObject* owner) {
 
 TransformComponent::TransformComponent(const TransformComponent& other) {
     this->m_owner = other.m_owner;
-    this->position[0] = other.position[0];
-    this->position[1] = other.position[1];
-    this->position[2] = other.position[2];
+    this->m_position[0] = other.m_position[0];
+    this->m_position[1] = other.m_position[1];
+    this->m_position[2] = other.m_position[2];
 
-    this->rotation[0] = other.rotation[0];
-    this->rotation[1] = other.rotation[1];
-    this->rotation[2] = other.rotation[2];
-    this->rotation[3] = other.rotation[3];
+    this->m_rotation[0] = other.m_rotation[0];
+    this->m_rotation[1] = other.m_rotation[1];
+    this->m_rotation[2] = other.m_rotation[2];
+    this->m_rotation[3] = other.m_rotation[3];
 
-    this->scale[0] = other.scale[0];
-    this->scale[1] = other.scale[1];
-    this->scale[2] = other.scale[2];
+    this->m_scale[0] = other.m_scale[0];
+    this->m_scale[1] = other.m_scale[1];
+    this->m_scale[2] = other.m_scale[2];
 }
 
 TransformComponent& TransformComponent::operator=(const TransformComponent& other) {
     if (this != &other) {
         this->m_owner = other.m_owner;
-        this->position[0] = other.position[0];
-        this->position[1] = other.position[1];
-        this->position[2] = other.position[2];
+        this->m_position[0] = other.m_position[0];
+        this->m_position[1] = other.m_position[1];
+        this->m_position[2] = other.m_position[2];
 
-        this->rotation[0] = other.rotation[0];
-        this->rotation[1] = other.rotation[1];
-        this->rotation[2] = other.rotation[2];
-        this->rotation[3] = other.rotation[3];
+        this->m_rotation[0] = other.m_rotation[0];
+        this->m_rotation[1] = other.m_rotation[1];
+        this->m_rotation[2] = other.m_rotation[2];
+        this->m_rotation[3] = other.m_rotation[3];
 
-        this->scale[0] = other.scale[0];
-        this->scale[1] = other.scale[1];
-        this->scale[2] = other.scale[2];
+        this->m_scale[0] = other.m_scale[0];
+        this->m_scale[1] = other.m_scale[1];
+        this->m_scale[2] = other.m_scale[2];
     }
     return *this;
 }

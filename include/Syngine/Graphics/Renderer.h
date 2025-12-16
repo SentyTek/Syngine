@@ -107,6 +107,9 @@ class Renderer {
     /// @param viewId View ID for the shader program, defaults to VIEW_FORWARD
     /// @return The ID of the newly created program on success, -1 on failure
     /// @threadsafety not-safe
+    /// @note Path to each is literal, no automatic suffixes added. Compiler
+    /// outputs .bin files, so be sure to add this suffix instead of .shader or
+    /// .sc or whatever the src file is.
     /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
     /// @since v0.0.1
     static size_t AddProgram(const std::string& vsPath,

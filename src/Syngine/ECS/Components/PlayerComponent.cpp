@@ -84,9 +84,8 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
         settings->mFriction = 0.45f;
         settings->mMass     = 80.0f;
 
-        JPH::RVec3 initialPosition(m_transform->position[0],
-                                   m_transform->position[1],
-                                   m_transform->position[2]);
+        float* pos = m_transform->GetPosition();
+        JPH::RVec3 initialPosition(pos[0], pos[1], pos[2]);
         this->m_character =
             new JPH::Character(settings,
                                initialPosition,
@@ -94,9 +93,7 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
                                0,
                                &this->m_physicsManager->_GetPhysicsSystem());
         this->m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
-        this->m_camera->SetPosition(m_transform->position[0],
-                                    m_transform->position[1],
-                                    m_transform->position[2]);
+        this->m_camera->SetPosition(pos[0], pos[1], pos[2]);
     }
 }
 

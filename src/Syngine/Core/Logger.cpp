@@ -27,7 +27,7 @@
 #define DEBUG_BREAK() __debugbreak()
 #elif __APPLE__
 #include <csignal>
-#define DEBUG_BREAK() raise(SIGTRAP)
+#define DEBUG_BREAK() raise(SIGABRT)
 #else
 #define DEBUG_BREAK() __builtin_trap()
 #endif
@@ -47,9 +47,9 @@ std::string Logger::LogLevelToString(LogLevel level) noexcept {
     switch (level) {
         case LogLevel::INFO:  return "INFO";
         case LogLevel::WARN:  return "WARN";
-        case LogLevel::ERR:   return "ERR";
-        case LogLevel::FATAL: return "FATAL";
-        default:              return "UNKNOWN";
+        case LogLevel::ERR:   return "ERRR";
+        case LogLevel::FATAL: return "FATL";
+        default:              return "UNKN";
     }
 }
 
@@ -180,9 +180,9 @@ void Logger::Log(const std::string_view message, LogLevel level, bool toConsole)
             When done, resume execution. This will terminate the program.
             !!!
         */
-        if (Syngine::Core::_GetApp()->debug.Enabled) {
-            DEBUG_BREAK();
-        }
+#ifdef _DEBUG
+        DEBUG_BREAK();
+#endif
         
         exit(EXIT_FAILURE);
     }

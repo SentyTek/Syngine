@@ -15,6 +15,8 @@
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/AllComponents.h"
+#include "Syngine/Core/Core.h"
+#include "Syngine/Core/Logger.h"
 
 using namespace std;
 
@@ -166,6 +168,11 @@ T* GameObject::GetComponent() const {
 template <typename T, typename... Args>
 T* GameObject::AddComponent(Args&&... args) {
     auto type = T::componentType;
+    if (!Syngine::Core::_GetApp()) {
+        Syngine::Logger::Error(
+            "Cannot add component when Core is not initialized");
+        return nullptr;
+    }
 
     if (components.contains(type)) return nullptr;
 
