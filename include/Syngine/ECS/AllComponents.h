@@ -13,3 +13,4 @@
 #include "Syngine/ECS/Components/PlayerComponent.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/ECS/Components/ZoneComponent.h"
+#include "Syngine/ECS/Components/BillboardComponent.h"

@@ -239,8 +239,18 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     }
 
     size_t debugBillboardProg =
-        AddProgram("shaders/default_debug_billboard", "default_billboard", VIEW_BILL_DBG);
+        AddProgram("shaders/default_billboard", "default_billboard", VIEW_BILL_DBG);
     if (debugBillboardProg == (size_t)-1) {
+        Syngine::Logger::Error("Failed to create debug billboard program");
+        bgfx::shutdown();
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return false;
+    }
+
+    size_t billboardProg =
+        AddProgram("shaders/default_billboard", "billboard", VIEW_BILLBOARD);
+    if (billboardProg == (size_t)-1) {
         Syngine::Logger::Error("Failed to create debug billboard program");
         bgfx::shutdown();
         SDL_DestroyWindow(win);
@@ -260,14 +270,29 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     m_isReady = false;
 
     // Create default uniforms
-    m_defaultUniformIds.insert({ "u_billboard",
+    // Debug program uniforms
+    m_defaultUniformIds.insert({ "u_dbg_billboard",
                                  RegisterUniform(debugBillboardProg,
+                                                 "u_default_billboard",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "s_dbg_bill_albedo",
+          RegisterUniform(
+              debugBillboardProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
+
+    // Billboard program uniforms
+    m_defaultUniformIds.insert({ "u_billboard",
+                                 RegisterUniform(billboardProg,
                                                  "u_default_billboard",
                                                  UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert(
         { "s_bill_albedo",
           RegisterUniform(
-              debugBillboardProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
+              billboardProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert({ "u_billboard_mode",
+                                 RegisterUniform(billboardProg,
+                                                 "u_default_billboard_mode",
+                                                 UniformType::UNIFORM_VEC4) });
 
     // Vertex program uniforms
     m_defaultUniformIds.insert({ "u_baseColor",
@@ -1055,9 +1080,52 @@ void Renderer::_DrawDebug(const Program& program, CameraComponent* camera, Debug
 }
 
 void Renderer::_DrawBillboard(const Program& program) {
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                   BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_LEQUAL);
+    const uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
+                           BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LEQUAL |
+                           BGFX_STATE_MSAA;
 
+    // Draw regular billboards
+    std::vector<GameObject*> billboards =
+        Registry::GetGameObjectsWithComponent(SYN_COMPONENT_BILLBOARD);
+    for (auto go : billboards) {
+        auto* comp = go->GetComponent<BillboardComponent>();
+        if (!comp || !comp->isEnabled) continue;
+        
+        const float* pos = go->GetComponent<TransformComponent>()->GetPosition();
+        
+        // Pack center position and size into a vec4 and send it off
+        float billboardData[4] = { pos[0], pos[1], pos[2], comp->size };
+        SetUniform(m_defaultUniformIds["u_billboard"], billboardData);
+        
+        // In addition, send the mode and rot as a vec4
+        float* rot = comp->GetRot();
+        float  billboardExtra[4] = {
+            rot[0], rot[1], rot[2], static_cast<float>(comp->GetMode())
+        };
+        SetUniform(m_defaultUniformIds["u_billboard_mode"], billboardExtra);
+        
+        // Dummy model matrix for the billboard
+        float modelMtx[16];
+        bx::mtxIdentity(modelMtx);
+
+        bgfx::setState(state);
+        bgfx::setTransform(modelMtx);
+        bgfx::setVertexBuffer(0, m_billboardVbh);
+        bgfx::setIndexBuffer(m_billboardIbh);
+        bgfx::setTexture(
+                0,
+                _GetUniform(m_defaultUniformIds["s_bill_albedo"])->handle,
+                comp->_GetTexture());
+        bgfx::submit(program.viewId, program.program);
+    }
+}
+
+void Renderer::_DrawDbgBillboard(const Program& program) {
+    // Debug billboards (gizmos) are always drawn on top. Regular billboards (forward pass ig) are depth-tested normally.
+    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
+                    BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_ALWAYS;
+
+    // Draw all gizmos
     std::vector<GameObject*> gizmos = Registry::GetGizmos();
     for (auto go : gizmos) {
         auto it = m_gizmoRegistry.find(go->gizmo);
@@ -1070,18 +1138,23 @@ void Renderer::_DrawBillboard(const Program& program) {
 
             // Pack center position and size into a vec4 and send it off
             float billboardData[4] = { pos[0], pos[1], pos[2], gizmo.size };
-            SetUniform(m_defaultUniformIds["u_billboard"], billboardData);
+            SetUniform(m_defaultUniformIds["u_dbg_billboard"], billboardData);
+
+            // In addition, send the mode and rot as a vec4
+            float billboardExtra[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // No rotation or special mode for gizmos
+            SetUniform(m_defaultUniformIds["u_billboard_mode"], billboardExtra);
 
             // Dummy model matrix for the billboard
             float modelMtx[16];
             bx::mtxIdentity(modelMtx);
 
+            bgfx::setState(state);
             bgfx::setTransform(modelMtx);
             bgfx::setVertexBuffer(0, m_billboardVbh);
             bgfx::setIndexBuffer(m_billboardIbh);
             bgfx::setTexture(
                 0,
-                _GetUniform(m_defaultUniformIds["s_bill_albedo"])->handle,
+                _GetUniform(m_defaultUniformIds["s_dbg_bill_albedo"])->handle,
                 gizmo.texture); // Use the texture from the gizmo registry
             bgfx::submit(program.viewId, program.program);
         }
@@ -1222,7 +1295,10 @@ bool Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
             case VIEW_BILL_DBG:
-                if (debug.Enabled &&debug.Gizmos) _DrawBillboard(program);
+                if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
+                break;
+            case VIEW_BILLBOARD:
+                _DrawBillboard(program);
                 break;
             default:
                 break;

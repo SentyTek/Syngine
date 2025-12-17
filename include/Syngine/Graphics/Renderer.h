@@ -85,6 +85,7 @@ struct RendererConfig {
 /// @since v0.0.1
 class Renderer {
   public:
+    
     static int width; //* Width of the game window in pixels
     static int height; //* Height of the game window in pixels
 
@@ -245,32 +246,32 @@ class Renderer {
     /// @internal
     void _RegisterGizmo(const std::string& tag, float size = 1.0f);
   private:
-    
     /// @brief Struct to hold gizmo information
     /// @section Renderer
+    /// @internal
     struct Gizmo {
         bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; //* Texture handle for the gizmo
         float size = 1.0f; //* Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
     };
 
-    static std::string m_title;
-    static bool        m_isReady;
-    static RendererConfig m_config;
+    static std::string m_title; //* Title of the game window
+    static bool        m_isReady; //* Whether the renderer is initialized and ready
+    static RendererConfig m_config; //* Renderer configuration options
 
-    static std::map<std::string, Gizmo> m_gizmoRegistry;
-    static bgfx::VertexBufferHandle     m_billboardVbh;
-    static bgfx::IndexBufferHandle      m_billboardIbh;
+    static std::map<std::string, Gizmo> m_gizmoRegistry; //* Registry of gizmos
+    static bgfx::VertexBufferHandle     m_billboardVbh; //* Vertex buffer handle for billboards
+    static bgfx::IndexBufferHandle      m_billboardIbh; //* Index buffer handle for billboards
 
     static SDL_Window* win; //* SDL window handle
 
-    static bgfx::VertexBufferHandle dummy;
-    static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms;
+    static bgfx::VertexBufferHandle dummy; //* Dummy vertex buffer handle for rendering
+    static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms; //* Shader programs organized by view ID
 
-    static std::unordered_map<uint16_t, Uniform> m_uniformRegistry;
-    static std::unordered_map<std::string, uint16_t> m_defaultUniformIds;
+    static std::unordered_map<uint16_t, Uniform> m_uniformRegistry; //* Registry of shader uniforms
+    static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
 
-    static bgfx::TextureHandle m_shadowDepth;
-    static bgfx::FrameBufferHandle m_shadowFB;
+    static bgfx::TextureHandle m_shadowDepth; //* Shadow map depth texture handle
+    static bgfx::FrameBufferHandle m_shadowFB; //* Shadow map framebuffer handle
     static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
     static constexpr uint8_t       NUM_CASCADES    = 4;
 
@@ -306,9 +307,9 @@ class Renderer {
                                           float*           outCascadeSplits);
 
     static constexpr std::array<Syngine::ViewID, 10> _allViews = {
-        Syngine::VIEW_SHADOW,   Syngine::VIEW_SKY,       Syngine::VIEW_GBUFFER,
-        Syngine::VIEW_LIGHTING, Syngine::VIEW_FORWARD,   Syngine::VIEW_DEBUG,
-        Syngine::VIEW_BILL_DBG, Syngine::VIEW_BILLBOARD, Syngine::VIEW_UI,
+        Syngine::VIEW_SHADOW,   Syngine::VIEW_SKY,      Syngine::VIEW_GBUFFER,
+        Syngine::VIEW_LIGHTING, Syngine::VIEW_FORWARD,  Syngine::VIEW_BILLBOARD,
+        Syngine::VIEW_DEBUG,    Syngine::VIEW_BILL_DBG, Syngine::VIEW_UI,
         Syngine::VIEW_UI_DEBUG
     };
 
@@ -317,6 +318,7 @@ class Renderer {
     static void _DrawForward(const Program& program, CameraComponent* camera);
     static void _DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug);
     static void _DrawBillboard(const Program& program);
+    static void _DrawDbgBillboard(const Program& program);
     static void _DrawUIDebug(CameraComponent* camera);
 };
 

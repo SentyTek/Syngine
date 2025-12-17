@@ -7,8 +7,9 @@ void main() {
     // Sample the albedo texture
     vec4 base = texture2D(s_albedo, v_texcoord0);
 
+    // Alpha Test: Discard the fragment if its alpha is below a threshold.
+    // This allows for proper transparency handling in billboards.
     if (base.a < 0.1) {
-        // If the alpha is very low, discard the fragment
         discard;
     }
 
