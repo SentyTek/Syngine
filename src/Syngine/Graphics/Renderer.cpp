@@ -286,7 +286,11 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     m_defaultUniformIds.insert(
         { "u_default_shadowMap",
           RegisterUniform(
-              textureProg, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
+              defaultProg, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "u_default_useVertex",
+          RegisterUniform(
+              defaultProg, "u_useVertexColor", UniformType::UNIFORM_VEC4) });
 
     // Texture program uniforms
     m_defaultUniformIds.insert({ "u_texture_lightDir",
@@ -924,7 +928,14 @@ void Renderer::_DrawForward(const Program& program, CameraComponent* camera) {
         Material& mat = meshData.materials[0];
         // Default vertex color shader
         if (program.name == "default") {
-            SetUniform(m_defaultUniformIds["u_baseColor"], mat.baseColor);
+            if (mat.useVertexColor) {
+                float useVertex[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
+                SetUniform(m_defaultUniformIds["u_default_useVertex"], useVertex);
+            } else {
+                float useVertex[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                SetUniform(m_defaultUniformIds["u_default_useVertex"], useVertex);
+                SetUniform(m_defaultUniformIds["u_baseColor"], mat.baseColor);
+            }
         }
         // Default textured shader
         else if (program.name == "texture") {

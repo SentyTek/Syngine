@@ -165,6 +165,7 @@ bool MeshComponent::UploadMesh(std::vector<float> vertices,
     mat.baseColor[1] = 1.0f;
     mat.baseColor[2] = 1.0f;
     mat.baseColor[3] = 1.0f;
+    mat.useVertexColor = true;
     meshData.materials.push_back(mat);
     
     // checks
