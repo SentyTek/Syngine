@@ -96,12 +96,18 @@ class MeshComponent : public Syngine::Component {
     }
 
     /// @brief Upload mesh data directly
-    /// @param vertices Vector of vertex data
-    /// @param indices Vector of index data
+    /// @param vertices Vector of vertex data. Expected format per vertex:
+    /// [pos.x, pos.y, pos.z, normal.x, normal.y, normal.z, uv0.u, uv0.v,
+    /// color.r, color.g, color.b, color.a]
+    /// However, if you provide a baseColor, do NOT include color data in the
+    /// vertices.
+    /// @param indices Vector of index data.
+    /// @param baseColor Optional base color to apply to the entire mesh if
+    /// vertex colors are not provided. Format: [r, g, b, [a]] (0-255, a is optional)
     /// @return true on success, false on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices);
+    bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices, std::vector<uint8_t> baseColor = {});
 
     MeshData meshData; //* Mesh data for the GameObject
 };

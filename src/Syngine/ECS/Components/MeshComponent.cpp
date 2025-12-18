@@ -108,32 +108,61 @@ bool MeshComponent::ReloadMesh() {
     return 0; // Success
 }
 
-bool MeshComponent::UploadMesh(std::vector<float> vertices,
-                                std::vector<uint32_t> indices) {
+bool MeshComponent::UploadMesh(std::vector<float>    vertices,
+                               std::vector<uint32_t> indices,
+                               std::vector<uint8_t>  baseColor) {
     Syngine::MeshData meshData;
     meshData.hasTextures = false;
-    meshData.numVertices = static_cast<uint32_t>(vertices.size() / 12); // 12 floats per vertex (3 pos, 3 normal, 2 uv0, 4 color)
+
+    int vertexSize = baseColor.empty() ? 12 : 8; // if no baseColor provided, expect vertex colors
+
+    meshData.numVertices = static_cast<uint32_t>(vertices.size() / vertexSize); // 12 floats per vertex (3 pos, 3 normal, 2 uv0, 4 color)
     meshData.numIndices  = static_cast<uint32_t>(indices.size());
-    
+
     // set vertex data
-    meshData.vertices.resize(static_cast<uint32_t>(vertices.size() / 12));
-    
-    std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
-    for (size_t i = 0; i < vertices.size(); i += 12) {
-        Vertex vertex;
-        vertex.pos[0]   = vertices[i];
-        vertex.pos[1]   = vertices[i + 1];
-        vertex.pos[2]   = vertices[i + 2];
-        vertex.normal[0]= vertices[i + 3];
-        vertex.normal[1]= vertices[i + 4];
-        vertex.normal[2]= vertices[i + 5];
-        vertex.uv0[0]   = vertices[i + 6];
-        vertex.uv0[1]   = vertices[i + 7];
-        vertex.color[0] = vertices[i + 8];
-        vertex.color[1] = vertices[i + 9];
-        vertex.color[2] = vertices[i + 10];
-        vertex.color[3] = vertices[i + 11];
-        *vertexIt++    = vertex;
+    meshData.vertices.resize(static_cast<uint32_t>(vertices.size() / vertexSize));
+
+    // build vertices, apply baseColor if provided
+    if (!baseColor.empty()) {
+        if (baseColor.size() == 3) {
+            baseColor.push_back(255); // add alpha if missing
+        }
+        // apply base color to all vertices
+        std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
+        for (size_t i = 0; i < vertices.size(); i += 8) {
+            Vertex vertex;
+            vertex.pos[0]   = vertices[i];
+            vertex.pos[1]   = vertices[i + 1];
+            vertex.pos[2]   = vertices[i + 2];
+            vertex.normal[0]= vertices[i + 3];
+            vertex.normal[1]= vertices[i + 4];
+            vertex.normal[2]= vertices[i + 5];
+            vertex.uv0[0]   = vertices[i + 6];
+            vertex.uv0[1]   = vertices[i + 7];
+            vertex.color[0] = static_cast<float>(baseColor[0]) / 255.0f;
+            vertex.color[1] = static_cast<float>(baseColor[1]) / 255.0f;
+            vertex.color[2] = static_cast<float>(baseColor[2]) / 255.0f;
+            vertex.color[3] = static_cast<float>(baseColor[3]) / 255.0f;
+            *vertexIt++     = vertex;
+        }
+    } else {
+        std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
+        for (size_t i = 0; i < vertices.size(); i += 12) {
+            Vertex vertex;
+            vertex.pos[0]   = vertices[i];
+            vertex.pos[1]   = vertices[i + 1];
+            vertex.pos[2]   = vertices[i + 2];
+            vertex.normal[0]= vertices[i + 3];
+            vertex.normal[1]= vertices[i + 4];
+            vertex.normal[2]= vertices[i + 5];
+            vertex.uv0[0]   = vertices[i + 6];
+            vertex.uv0[1]   = vertices[i + 7];
+            vertex.color[0] = vertices[i + 8];
+            vertex.color[1] = vertices[i + 9];
+            vertex.color[2] = vertices[i + 10];
+            vertex.color[3] = vertices[i + 11];
+            *vertexIt++     = vertex;
+        }
     }
     meshData.indices = indices;
     
