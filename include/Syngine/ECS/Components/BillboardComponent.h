@@ -41,7 +41,6 @@ class BillboardComponent : public Syngine::Component {
     
     float size = 1.0f; //* Size of the billboard
     bool  receiveShadows = true; //* Whether the billboard receives shadows
-    bool  castShadows    = true; //* Whether the billboard casts shadows
     bool  receiveSunLight = true; //* Whether the billboard receives sunlight
     
     static constexpr Syngine::Components componentType =

@@ -901,12 +901,9 @@ void Renderer::_DrawShadows(const Program& program, CameraComponent* camera, uin
 
         auto* meshComp = gameObject->GetComponent<MeshComponent>();
         MeshData meshData = meshComp->meshData;
-        auto*    billComp = gameObject->GetComponent<BillboardComponent>();
 
-        if (billComp && billComp->castShadows) goto draw_billboard;
         if (!meshData.valid || !meshComp->isEnabled || !meshComp->castShadows) continue;
 
-        draw_billboard:
         // Get the transform for this object
         float modelMtx[16];
         gameObject->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
