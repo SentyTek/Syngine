@@ -271,6 +271,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
 
     // Create default uniforms
     // Debug program uniforms
+    {
     m_defaultUniformIds.insert({ "u_dbg_billboard",
                                  RegisterUniform(debugBillboardProg,
                                                  "u_default_billboard",
@@ -293,6 +294,14 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
                                  RegisterUniform(billboardProg,
                                                  "u_default_billboard_mode",
                                                  UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_billboard_lighting",
+                                 RegisterUniform(billboardProg,
+                                                 "u_billboard_lighting",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "s_billboard_shadowMap",
+          RegisterUniform(
+              billboardProg, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
 
     // Vertex program uniforms
     m_defaultUniformIds.insert({ "u_baseColor",
@@ -382,6 +391,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
                                  RegisterUniform(defaultProg,
                                                  "u_shadowParams",
                                                  UniformType::UNIFORM_VEC4) });
+    }
 
     // Initial sun direction in degrees (yaw, pitch, roll)
     // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive = up).
@@ -889,9 +899,14 @@ void Renderer::_DrawShadows(const Program& program, CameraComponent* camera, uin
     for (auto& gameObject : gameObjects) {
         if (!gameObject) continue;
 
-        MeshData meshData = gameObject->GetComponent<MeshComponent>()->meshData;
-        if (!meshData.valid || !gameObject->GetComponent<MeshComponent>()->isEnabled) continue;
+        auto* meshComp = gameObject->GetComponent<MeshComponent>();
+        MeshData meshData = meshComp->meshData;
+        auto*    billComp = gameObject->GetComponent<BillboardComponent>();
 
+        if (billComp && billComp->castShadows) goto draw_billboard;
+        if (!meshData.valid || !meshComp->isEnabled || !meshComp->castShadows) continue;
+
+        draw_billboard:
         // Get the transform for this object
         float modelMtx[16];
         gameObject->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
@@ -944,10 +959,11 @@ void Renderer::_DrawForward(const Program& program, CameraComponent* camera) {
 
     const uint64_t samplerFlags =
                 BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
-    
+
     for (auto& gameObject : objectsWithProgram) {
-        MeshData meshData = gameObject->GetComponent<MeshComponent>()->meshData;
-        if (!meshData.valid || !gameObject->GetComponent<MeshComponent>()->isEnabled) continue;
+        auto* meshComp = gameObject->GetComponent<MeshComponent>();
+        MeshData meshData = meshComp->meshData;
+        if (!meshData.valid || !meshComp->isEnabled) continue;
         
         bgfx::setState(renderState);
         Material& mat = meshData.materials[0];
@@ -997,7 +1013,7 @@ void Renderer::_DrawForward(const Program& program, CameraComponent* camera) {
             }
         }
 
-        if (m_config.useShadows) {
+        if (m_config.useShadows && meshComp->receiveShadows) {
             // Set shadow map for the texture program
             const uint64_t depthSampler =
                 BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
@@ -1103,6 +1119,12 @@ void Renderer::_DrawBillboard(const Program& program) {
             rot[0], rot[1], rot[2], static_cast<float>(comp->GetMode())
         };
         SetUniform(m_defaultUniformIds["u_billboard_mode"], billboardExtra);
+
+        float lightingFlags[4] = { comp->receiveSunLight ? 1.0f : 0.0f,
+                                   comp->receiveShadows ? 1.0f : 0.0f,
+                                   0.0f,
+                                   0.0f };
+        SetUniform(m_defaultUniformIds["u_billboard_lighting"], lightingFlags);
         
         // Dummy model matrix for the billboard
         float modelMtx[16];
@@ -1112,6 +1134,19 @@ void Renderer::_DrawBillboard(const Program& program) {
         bgfx::setTransform(modelMtx);
         bgfx::setVertexBuffer(0, m_billboardVbh);
         bgfx::setIndexBuffer(m_billboardIbh);
+
+        // Set shadow if applicable
+        if (m_config.useShadows && comp->receiveShadows) {
+            const uint64_t depthSampler =
+                BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
+            bgfx::setTexture(
+                3,
+                _GetUniform(m_defaultUniformIds["s_billboard_shadowMap"])->handle,
+                m_shadowDepth,
+                depthSampler);
+        }
+
         bgfx::setTexture(
                 0,
                 _GetUniform(m_defaultUniformIds["s_bill_albedo"])->handle,

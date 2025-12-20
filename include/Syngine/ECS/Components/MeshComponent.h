@@ -19,6 +19,10 @@ namespace Syngine {
 */
 class MeshComponent : public Syngine::Component {
   public:
+    bool receiveShadows = true; //* Whether the mesh receives shadows
+    bool castShadows    = true; //* Whether the mesh casts shadows
+    bool receiveSunLight = true; //* Whether the mesh receives sunlight
+
     static constexpr Syngine::Components componentType =
         SYN_COMPONENT_MESH; //* Mesh component type
 

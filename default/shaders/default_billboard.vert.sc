@@ -1,5 +1,5 @@
 $input a_position, a_texcoord0
-$output v_texcoord0
+$output v_texcoord0, v_worldPos
 #include <bgfx_shader.sh>
 
 uniform vec4 u_default_billboard;      // xyz = center, w = size
@@ -80,6 +80,7 @@ void main() {
     
     // Apply billboard transformation
     vec3 worldPos = center + offset;
+    v_worldPos = worldPos;
 
     gl_Position = mul(u_viewProj, vec4(worldPos, 1.0));
     v_texcoord0 = a_texcoord0;
