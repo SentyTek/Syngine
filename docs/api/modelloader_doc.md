@@ -81,7 +81,8 @@ struct MeshData
 | `float` | `heightScale` | Matches blender displacement |
 | `float` | `mixFactor` | Mix between detail and macro maps |
 | `float` | `ambient` | Ambient floor |
-| `float` | `baseColor[4]` | = {1.0f, 1.0f, 1.0f, 1.0f}; //* RGBA base color RGBA base color |
+| `float` | `baseColor[4]` | = { 1.0f, 1.0f, 1.0f, 1.0f }; //* RGBA base color RGBA base color |
+| `bool` | `useVertexColor` | Whether to use vertex color or base color |
 | `std::vector<Vertex>` | `vertices` | Vertices of the mesh |
 | `std::vector<uint32_t>` | `indices` | Indices of the mesh |
 | `std::vector<Material>` | `materials` | Materials of the mesh |

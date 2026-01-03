@@ -22,6 +22,8 @@
 - [LoadMesh](#syngineloadmesh)
 - [ReloadMesh](#synginereloadmesh)
 - [UnloadMesh](#syngineunloadmesh)
+- [IsMeshLoaded](#syngineismeshloaded)
+- [UploadMesh](#syngineuploadmesh)
 
 ---
 
@@ -137,7 +139,7 @@ Signature:
 Signature:
 
 ```cpp
- int LoadMesh(const std::string& path, bool loadTextures = true);
+ bool LoadMesh(const std::string& path, bool loadTextures = true);
 ```
 
 **Parameters:**
@@ -163,7 +165,7 @@ Signature:
 Signature:
 
 ```cpp
- int ReloadMesh();
+ bool ReloadMesh();
 ```
 
 **Returns:** 0 on success, non-zero on failure
@@ -187,10 +189,54 @@ Signature:
 Signature:
 
 ```cpp
- int UnloadMesh(); //TODO: Make this RAII in the destructor
+ bool UnloadMesh();
 ```
 
 **Returns:** 0 on success, non-zero on failure
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::IsMeshLoaded`**
+
+
+ Check if the mesh is loaded
+
+Signature:
+
+```cpp
+ bool IsMeshLoaded() const { return bgfx::isValid(this->meshData.vbh) &&
+```
+
+**Returns:** true if the mesh is loaded, false otherwise
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::UploadMesh`**
+
+
+ Upload mesh data directly
+
+Signature:
+
+```cpp
+ bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices, std::vector<uint8_t> baseColor = {});
+```
+
+**Parameters:**
+
+- `vertices`: Vector of vertex data. Expected format per vertex: [pos.x, pos.y, pos.z, normal.x, normal.y, normal.z, uv0.u, uv0.v, color.r, color.g, color.b, color.a] However, if you provide a baseColor, do NOT include color data in the vertices.
+- `indices`: Vector of index data.
+- `baseColor`: Optional base color to apply to the entire mesh if vertex colors are not provided. Format: [r, g, b, [a]] (0-255, a is optional)
+
+**Returns:** true on success, false on failure
 
 **Thread Safety:** not-safe
 
@@ -203,6 +249,9 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
+| `bool` | `receiveShadows` | Whether the mesh receives shadows |
+| `bool` | `castShadows` | Whether the mesh casts shadows |
+| `bool` | `receiveSunLight` | Whether the mesh receives sunlight |
 | `MeshData` | `meshData` | Mesh data for the GameObject |
 
 ---

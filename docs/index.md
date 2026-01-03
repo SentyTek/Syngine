@@ -43,6 +43,7 @@ We have several pages of documentation available. Note the API reference is auto
 #### ECS/Components
 
 
+- [Billboardcomponent](api/billboardcomponent_doc.md)
 - [Cameracomponent](api/cameracomponent_doc.md)
 - [Meshcomponent](api/meshcomponent_doc.md)
 - [Playercomponent](api/playercomponent_doc.md)

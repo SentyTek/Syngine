@@ -34,9 +34,10 @@
 - [SetUniform](#renderersetuniform)
 - [GetSunDirection](#renderergetsundirection)
 - [SetSunDirection](#renderersetsundirection)
+- [SetGizmoSize](#renderersetgizmosize)
+- [GetGizmoSize](#renderergetgizmosize)
 - [_RenderFrame](#renderer_renderframe)
 - [_RegisterGizmo](#renderer_registergizmo)
-- [](#renderer)
 - [_CreateRenderer](#renderer_createrenderer)
 - [_RenderGizmos](#renderer_rendergizmos)
 
@@ -522,6 +523,42 @@ Signature:
 
 ---
 
+#### **`Renderer::SetGizmoSize`**
+
+
+ Set the default gizmo size
+
+Signature:
+
+```cpp
+ static void SetGizmoSize(float size) ;
+```
+
+**Parameters:**
+
+- `size`: Size of the gizmo
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Renderer::GetGizmoSize`**
+
+
+ Get the default gizmo size
+
+Signature:
+
+```cpp
+ static float GetGizmoSize() ;
+```
+
+**Returns:** Size of the gizmo
+
+**This function has been available since:** v0.0.1
+
+---
+
 #### **`Renderer::_RenderFrame`**
 
 
@@ -563,7 +600,7 @@ Signature:
 Signature:
 
 ```cpp
- void _RegisterGizmo(const std::string& tag, float size = 1.0f);
+ void _RegisterGizmo(const std::string& tag);
 ```
 
 **Parameters:**
@@ -574,26 +611,6 @@ Signature:
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
-
----
-
-#### **`Renderer::`**
-
-
- Struct to hold gizmo information
-
-Signature:
-
-```cpp
- };
-```
-
-**Members:**
-
-| Type | Name | Description |
-| --- | --- | --- | 
-| `bgfx::TextureHandle` | `texture` | Texture handle for the gizmo |
-| `float` | `size` | Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space |
 
 ---
 
@@ -654,8 +671,22 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
+| `int` | `width` | Width of the game window in pixels |
 | `int` | `height` | Height of the game window in pixels |
+| `std::string` | `m_title` | Title of the game window |
+| `bool` | `m_isReady` | Whether the renderer is initialized and ready |
+| `RendererConfig` | `m_config` | Renderer configuration options |
+| `static` | `std` | Registry of gizmos |
+| `float` | `m_gizmoSize` | Default size for gizmos |
+| `bgfx::VertexBufferHandle` | `m_billboardVbh` | Vertex buffer handle for billboards |
+| `bgfx::IndexBufferHandle` | `m_billboardIbh` | Index buffer handle for billboards |
 | `SDL_Window*` | `win` | SDL window handle |
+| `bgfx::VertexBufferHandle` | `dummy` | Dummy vertex buffer handle for rendering |
+| `static` | `std` | Shader programs organized by view ID |
+| `static` | `std` | Registry of shader uniforms |
+| `static` | `std` | Default uniform IDs |
+| `bgfx::TextureHandle` | `m_shadowDepth` | Shadow map depth texture handle |
+| `bgfx::FrameBufferHandle` | `m_shadowFB` | Shadow map framebuffer handle |
 | `DebugRender*` | `m_drender` | Debug renderer instance |
 | `bool` | `m_isFirstFrame` | Whether this is the first frame being rendered |
 
