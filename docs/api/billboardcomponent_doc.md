@@ -75,7 +75,7 @@ enum class BillboardMode
 | Name | Description |
 | --- | --- | 
 | `CAMERA_ALIGNED` | Always faces the camera |
-| `AXIS_Z_ALIGNED` | Rotates around Z axis only |
+| `AXIS_Y_ALIGNED` | Rotates around Y (vertical) axis only |
 | `FIXED` | No rotation, fixed orientation |
 
 **This function has been available since:** v0.0.1
