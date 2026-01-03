@@ -19,7 +19,7 @@ namespace Syngine {
 /// @since v0.0.1
 enum class BillboardMode {
     CAMERA_ALIGNED = 0, //* Always faces the camera
-    AXIS_Z_ALIGNED = 1, //* Rotates around Z axis only
+    AXIS_Y_ALIGNED = 1, //* Rotates around Y (vertical) axis only
     FIXED          = 2  //* No rotation, fixed orientation
 };
 
