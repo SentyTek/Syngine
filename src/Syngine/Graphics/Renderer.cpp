@@ -285,6 +285,14 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
         { "s_dbg_bill_albedo",
           RegisterUniform(
               debugBillboardProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert({ "u_dbg_billboard_mode",
+                                 RegisterUniform(debugBillboardProg,
+                                                 "u_default_billboard_mode",
+                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert({ "u_dbg_billboard_lighting",
+                                 RegisterUniform(debugBillboardProg,
+                                                 "u_billboard_lighting",
+                                                 UniformType::UNIFORM_VEC4) });
 
     // Billboard program uniforms
     m_defaultUniformIds.insert({ "u_billboard",
@@ -1179,7 +1187,10 @@ void Renderer::_DrawDbgBillboard(const Program& program) {
 
             // In addition, send the mode and rot as a vec4
             float billboardExtra[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // No rotation or special mode for gizmos
-            SetUniform(m_defaultUniformIds["u_billboard_mode"], billboardExtra);
+            SetUniform(m_defaultUniformIds["u_dbg_billboard_mode"], billboardExtra);
+
+            float lightingFlags[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // No lighting for gizmos
+            SetUniform(m_defaultUniformIds["u_dbg_billboard_lighting"], lightingFlags);
 
             // Dummy model matrix for the billboard
             float modelMtx[16];
