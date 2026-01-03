@@ -294,7 +294,7 @@ void DebugRender::RenderLines(const float*        view,
 
     bgfx::TransientVertexBuffer tvb;
     bgfx::allocTransientVertexBuffer(
-        &tvb, debugLines.size() * 2, DebugVertexLayout);
+        &tvb, static_cast<uint32_t>(debugLines.size() * 2), DebugVertexLayout);
 
     DebugVertex* vertex = (DebugVertex*)tvb.data;
     for (size_t i = 0; i < debugLines.size(); ++i) {

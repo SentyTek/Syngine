@@ -190,7 +190,7 @@ class Core {
             oneSecond += deltaTime;
 
             if (oneSecond >= 1.0f) {
-                lastFPS      = frameCount;
+                lastFPS      = frameDisplay;
                 lastTPS      = physCounter;
                 frameDisplay = 0;
                 oneSecond    = 0.0f;

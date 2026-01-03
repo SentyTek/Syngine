@@ -47,10 +47,11 @@ Syngine::Components MeshComponent::GetComponentType() {
 }
 
 void MeshComponent::Init(const std::string& path, bool loadTextures) {
-    this->LoadMesh(path, loadTextures);
+    if (!path.empty())
+        this->LoadMesh(path, loadTextures);
 }
 
-int MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
+bool MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
     // Load the mesh data from the file
     AssimpLoader loader;
     if (!loader._LoadModel(
@@ -58,12 +59,12 @@ int MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to load mesh from %s",
                               _ResolveOSPath(path.c_str()).c_str());
-        return 1; // Error loading mesh
+        return false; // Error loading mesh
     }
-    return 0; // Success
+    return true; // Success
 }
 
-int MeshComponent::UnloadMesh() {
+bool MeshComponent::UnloadMesh() {
     // Unload the mesh data
     if (bgfx::isValid(this->meshData.vbh)) {
         // bgfx::destroy(this->meshData.vbh);
@@ -88,14 +89,14 @@ int MeshComponent::UnloadMesh() {
         }
     }
     this->meshData.materials.clear();
-    return 0; // Success
+    return true; // Success
 }
 
-int MeshComponent::ReloadMesh() {
+bool MeshComponent::ReloadMesh() {
     // Reload the mesh data from the file
     if (this->meshData.path.empty()) {
         Syngine::Logger::Error("No mesh path set for reloading");
-        return 1; // Error: no path set
+        return false; // Error: no path set
     }
     AssimpLoader loader;
     if (!loader._ReloadModel(this->meshData, this->meshData.id)) {
@@ -105,6 +106,109 @@ int MeshComponent::ReloadMesh() {
         return 1; // Error reloading mesh
     }
     return 0; // Success
+}
+
+bool MeshComponent::UploadMesh(std::vector<float>    vertices,
+                               std::vector<uint32_t> indices,
+                               std::vector<uint8_t>  baseColor) {
+    Syngine::MeshData meshData;
+    meshData.hasTextures = false;
+
+    int vertexSize = baseColor.empty() ? 12 : 8; // if no baseColor provided, expect vertex colors
+
+    meshData.numVertices = static_cast<uint32_t>(vertices.size() / vertexSize); // 12 floats per vertex (3 pos, 3 normal, 2 uv0, 4 color)
+    meshData.numIndices  = static_cast<uint32_t>(indices.size());
+
+    // set vertex data
+    meshData.vertices.resize(static_cast<uint32_t>(vertices.size() / vertexSize));
+
+    // build vertices, apply baseColor if provided
+    if (!baseColor.empty()) {
+        if (baseColor.size() == 3) {
+            baseColor.push_back(255); // add alpha if missing
+        }
+        // apply base color to all vertices
+        std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
+        for (size_t i = 0; i < vertices.size(); i += 8) {
+            Vertex vertex;
+            vertex.pos[0]   = vertices[i];
+            vertex.pos[1]   = vertices[i + 1];
+            vertex.pos[2]   = vertices[i + 2];
+            vertex.normal[0]= vertices[i + 3];
+            vertex.normal[1]= vertices[i + 4];
+            vertex.normal[2]= vertices[i + 5];
+            vertex.uv0[0]   = vertices[i + 6];
+            vertex.uv0[1]   = vertices[i + 7];
+            vertex.color[0] = static_cast<float>(baseColor[0]) / 255.0f;
+            vertex.color[1] = static_cast<float>(baseColor[1]) / 255.0f;
+            vertex.color[2] = static_cast<float>(baseColor[2]) / 255.0f;
+            vertex.color[3] = static_cast<float>(baseColor[3]) / 255.0f;
+            *vertexIt++     = vertex;
+        }
+    } else {
+        std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
+        for (size_t i = 0; i < vertices.size(); i += 12) {
+            Vertex vertex;
+            vertex.pos[0]   = vertices[i];
+            vertex.pos[1]   = vertices[i + 1];
+            vertex.pos[2]   = vertices[i + 2];
+            vertex.normal[0]= vertices[i + 3];
+            vertex.normal[1]= vertices[i + 4];
+            vertex.normal[2]= vertices[i + 5];
+            vertex.uv0[0]   = vertices[i + 6];
+            vertex.uv0[1]   = vertices[i + 7];
+            vertex.color[0] = vertices[i + 8];
+            vertex.color[1] = vertices[i + 9];
+            vertex.color[2] = vertices[i + 10];
+            vertex.color[3] = vertices[i + 11];
+            *vertexIt++     = vertex;
+        }
+    }
+    meshData.indices = indices;
+    
+    //create bgfx vertex layout
+    bgfx::VertexLayout layout;
+    layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
+        .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float) // macro UV
+        .add(bgfx::Attrib::TexCoord1, 2, bgfx::AttribType::Float) // detail UV
+        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
+        .end(); // stride = 72 bytes
+    
+    // create buffers
+    const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.numVertices * sizeof(Vertex)));
+    memcpy(mem->data, meshData.vertices.data(), meshData.numVertices * sizeof(Vertex));
+    bgfx::VertexBufferHandle vbh =
+    bgfx::createVertexBuffer(mem, layout);
+    
+    mem = bgfx::alloc(meshData.numIndices * sizeof(uint32_t));
+    memcpy(mem->data, meshData.indices.data(), meshData.numIndices * sizeof(uint32_t));
+    bgfx::IndexBufferHandle ibh =
+        bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
+
+    // Add dummy material
+    Material mat;
+    mat.baseColor[0] = 1.0f;
+    mat.baseColor[1] = 1.0f;
+    mat.baseColor[2] = 1.0f;
+    mat.baseColor[3] = 1.0f;
+    mat.useVertexColor = true;
+    meshData.materials.push_back(mat);
+    
+    // checks
+    if (!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create vertex/index buffer");
+        return false;
+    }
+    
+    // assign to meshData
+    meshData.valid     = true;
+    this->meshData = meshData;
+    this->meshData.vbh = vbh;
+    this->meshData.ibh = ibh;
+    return true;
 }
 
 } // namespace Syngine

@@ -395,30 +395,30 @@ void RigidbodyComponent::_MatrixToQuat(float* outQuat, const float* mtx) {
     float s;
 
     if (trace > 0.0f) {
-        s = 0.5 / std::sqrt(trace + 1.0f);
-        outQuat[3] = 0.25 / s;              // w
+        s = 0.5f / std::sqrt(trace + 1.0f);
+        outQuat[3] = 0.25f / s;              // w
         outQuat[0] = (mtx[6] - mtx[9]) * s; // x
         outQuat[1] = (mtx[8] - mtx[2]) * s; // y
         outQuat[2] = (mtx[1] - mtx[4]) * s; // z
     } else {
         if (mtx[0] > mtx[5] && mtx[0] > mtx[10]) {
-            s = 2.0 * std::sqrt(1.0 + mtx[0] - mtx[5] - mtx[10]);
+            s = 2.0f * std::sqrt(1.0f + mtx[0] - mtx[5] - mtx[10]);
             outQuat[3] = (mtx[6] - mtx[9]) / s; // w
-            outQuat[0] = 0.25 * s;              // x
+            outQuat[0] = 0.25f * s;              // x
             outQuat[1] = (mtx[1] + mtx[4]) / s; // y
             outQuat[2] = (mtx[8] + mtx[2]) / s; // z
         } else if (mtx[5] > mtx[10]) {
-            s = 2.0 * std::sqrt(1.0 + mtx[5] - mtx[0] - mtx[10]);
+            s = 2.0f * std::sqrt(1.0f + mtx[5] - mtx[0] - mtx[10]);
             outQuat[3] = (mtx[8] - mtx[2]) / s; // w
             outQuat[0] = (mtx[1] + mtx[4]) / s; // x
-            outQuat[1] = 0.25 * s;              // y
+            outQuat[1] = 0.25f * s;              // y
             outQuat[2] = (mtx[6] + mtx[9]) / s; // z
         } else {
-            s = 2.0 * std::sqrt(1.0 + mtx[10] - mtx[0] - mtx[5]);
+            s = 2.0f * std::sqrt(1.0f + mtx[10] - mtx[0] - mtx[5]);
             outQuat[3] = (mtx[1] - mtx[4]) / s; // w
             outQuat[0] = (mtx[8] + mtx[2]) / s; // x
             outQuat[1] = (mtx[6] + mtx[9]) / s; // y
-            outQuat[2] = 0.25 * s;              // z
+            outQuat[2] = 0.25f * s;              // z
         }
     }
 }

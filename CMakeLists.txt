@@ -84,6 +84,7 @@ add_library(Syngine STATIC
     src/Syngine/ECS/Components/PlayerComponent.cpp
     src/Syngine/ECS/Components/CameraComponent.cpp
     src/Syngine/ECS/Components/ZoneComponent.cpp
+    src/Syngine/ECS/Components/BillboardComponent.cpp
 )
 
 # Apple needs OBJC++ files for Metal support

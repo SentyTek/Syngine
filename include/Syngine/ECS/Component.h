@@ -37,6 +37,7 @@ enum Components {
     SYN_COMPONENT_TERRAIN       = 65536,  //* Terrain
     SYN_COMPONENT_ZONE          = 131072, //* Trigger zone or area
     SYN_COMPONENT_CUSTOM        = 262144, //* Custom component (user-defined)
+    SYN_COMPONENT_BILLBOARD     = 524288  //* Billboard component
 };
 
 /**

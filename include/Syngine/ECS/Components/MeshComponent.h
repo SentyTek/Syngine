@@ -19,6 +19,10 @@ namespace Syngine {
 */
 class MeshComponent : public Syngine::Component {
   public:
+    bool receiveShadows = true; //* Whether the mesh receives shadows
+    bool castShadows    = true; //* Whether the mesh casts shadows
+    bool receiveSunLight = true; //* Whether the mesh receives sunlight
+
     static constexpr Syngine::Components componentType =
         SYN_COMPONENT_MESH; //* Mesh component type
 
@@ -68,14 +72,14 @@ class MeshComponent : public Syngine::Component {
     /// @return 0 on success, non-zero code on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int LoadMesh(const std::string& path, bool loadTextures = true);
+    bool LoadMesh(const std::string& path, bool loadTextures = true);
 
     /// @brief Reload the mesh from the file
     /// @return 0 on success, non-zero on failure
     /// @note Mostly used for reloading the mesh after changes in the model file
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int ReloadMesh();
+    bool ReloadMesh();
 
     /// @brief Unload the mesh
     /// @return 0 on success, non-zero on failure
@@ -84,7 +88,30 @@ class MeshComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    int UnloadMesh(); //TODO: Make this RAII in the destructor
+    bool UnloadMesh();
+
+    /// @brief Check if the mesh is loaded
+    /// @return true if the mesh is loaded, false otherwise
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    bool IsMeshLoaded() const {
+        return bgfx::isValid(this->meshData.vbh) &&
+               bgfx::isValid(this->meshData.ibh);
+    }
+
+    /// @brief Upload mesh data directly
+    /// @param vertices Vector of vertex data. Expected format per vertex:
+    /// [pos.x, pos.y, pos.z, normal.x, normal.y, normal.z, uv0.u, uv0.v,
+    /// color.r, color.g, color.b, color.a]
+    /// However, if you provide a baseColor, do NOT include color data in the
+    /// vertices.
+    /// @param indices Vector of index data.
+    /// @param baseColor Optional base color to apply to the entire mesh if
+    /// vertex colors are not provided. Format: [r, g, b, [a]] (0-255, a is optional)
+    /// @return true on success, false on failure
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices, std::vector<uint8_t> baseColor = {});
 
     MeshData meshData; //* Mesh data for the GameObject
 };
