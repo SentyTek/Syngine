@@ -12,7 +12,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <map>
 #include <array>
 
 #include <SDL3/SDL.h>
@@ -21,7 +20,8 @@
 namespace Syngine {
 class DebugRender; // Forward declaration
 class CameraComponent; // Forward declaration
-struct DebugModes; // Forward declaration
+struct DebugModes;     // Forward declaration
+class BillboardComponent; // Forward declaration
 
 /// @brief Collection of view IDs for rendering. Rendered in the order they are
 /// defined here.
@@ -227,6 +227,16 @@ class Renderer {
     /// @since v0.0.1
     static void SetSunDirection(const float* lightDir);
 
+    /// @brief Set the default gizmo size
+    /// @param size Size of the gizmo
+    /// @since v0.0.1
+    static void SetGizmoSize(float size) { m_gizmoSize = size; }
+
+    /// @brief Get the default gizmo size
+    /// @return Size of the gizmo
+    /// @since v0.0.1
+    static float GetGizmoSize() { return m_gizmoSize; }
+
     /// @brief Render a frame
     /// @param lightDir Direction of the light for lighting calculations
     /// @param camera Pointer to the camera component for rendering
@@ -244,21 +254,15 @@ class Renderer {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    void _RegisterGizmo(const std::string& tag, float size = 1.0f);
+    void _RegisterGizmo(const std::string& tag);
   private:
-    /// @brief Struct to hold gizmo information
-    /// @section Renderer
-    /// @internal
-    struct Gizmo {
-        bgfx::TextureHandle texture = BGFX_INVALID_HANDLE; //* Texture handle for the gizmo
-        float size = 1.0f; //* Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space
-    };
 
     static std::string m_title; //* Title of the game window
     static bool        m_isReady; //* Whether the renderer is initialized and ready
     static RendererConfig m_config; //* Renderer configuration options
 
-    static std::map<std::string, Gizmo> m_gizmoRegistry; //* Registry of gizmos
+    static std::unordered_map<std::string, Syngine::BillboardComponent*> m_gizmoRegistry; //* Registry of gizmos
+    static float m_gizmoSize;      //* Default size for gizmos
     static bgfx::VertexBufferHandle     m_billboardVbh; //* Vertex buffer handle for billboards
     static bgfx::IndexBufferHandle      m_billboardIbh; //* Index buffer handle for billboards
 

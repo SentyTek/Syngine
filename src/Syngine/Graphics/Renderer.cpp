@@ -12,6 +12,7 @@
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/ZoneManager.h"
 #include "Syngine/Graphics/Renderer.h"
+#include "Syngine/ECS/Components/BillboardComponent.h"
 #include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/Graphics/Shaders.h"
 #include "Syngine/Graphics/TextureHelpers.h"
@@ -47,12 +48,14 @@
 
 namespace Syngine {
 
+// I present to you an absurd amount of static member definitions.
 std::string Renderer::m_title;
 bool        Renderer::m_isReady = false;
 
 SDL_Window* Renderer::win = nullptr;
 
-std::map<std::string, Renderer::Gizmo> Renderer::m_gizmoRegistry;
+float Renderer::m_gizmoSize = 1.0f;
+std::unordered_map<std::string, Syngine::BillboardComponent*> Renderer::m_gizmoRegistry;
 bgfx::VertexBufferHandle     Renderer::m_billboardVbh = BGFX_INVALID_HANDLE;
 bgfx::IndexBufferHandle      Renderer::m_billboardIbh = BGFX_INVALID_HANDLE;
 
@@ -124,10 +127,12 @@ Renderer::~Renderer() {
     // stores uniforms)
 
     // Clear gizmos
-    for (auto& gizmo : m_gizmoRegistry) {
-        if (bgfx::isValid(gizmo.second.texture)) {
-            bgfx::destroy(gizmo.second.texture);
+    for (auto& [tag, gizmo] : m_gizmoRegistry) {
+        bgfx::TextureHandle tex = gizmo->_GetTexture();
+        if (bgfx::isValid(tex)) {
+            bgfx::destroy(tex);
         }
+        delete gizmo;
     }
     m_gizmoRegistry.clear();
 
@@ -775,17 +780,17 @@ void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
     }
 }
 
-void Renderer::_RegisterGizmo(const std::string& tag, float size) {
-    if (this->m_gizmoRegistry.find(tag) != this->m_gizmoRegistry.end())
-        return; // Gizmo already registered
-
-    std::string resolvedPath = Syngine::_ResolveOSPath((std::string("default/gizmos/") + tag + ".png").c_str());
-    const char* path = resolvedPath.c_str();
-    bgfx::TextureHandle texture = Syngine::LoadTextureFromFile(path);
-    
-    if (bgfx::isValid(texture)) {
-        m_gizmoRegistry[tag] = { texture, size };
+void Renderer::_RegisterGizmo(const std::string& tag) {
+    for (auto& [existingTag, gizmo] : m_gizmoRegistry) {
+        if (existingTag == tag) {
+            // Gizmo already registered
+            return;
+        }
     }
+
+    Syngine::BillboardComponent* gizmo = new Syngine::BillboardComponent(nullptr, "default/gizmos/" + tag + ".png", BillboardMode::CAMERA_ALIGNED, m_gizmoSize);
+
+    m_gizmoRegistry[tag] = gizmo;
 }
 
 void Renderer::GetSunDirection(float* outDir) {
@@ -1165,11 +1170,11 @@ void Renderer::_DrawDbgBillboard(const Program& program) {
             auto* comp = go->GetComponent<Syngine::CameraComponent>();
             if (!comp) continue;
 
-            const Gizmo& gizmo = it->second;
+            const BillboardComponent* gizmo = it->second;
             const float* pos   = comp->GetPosition();
 
             // Pack center position and size into a vec4 and send it off
-            float billboardData[4] = { pos[0], pos[1], pos[2], gizmo.size };
+            float billboardData[4] = { pos[0], pos[1], pos[2], gizmo->size };
             SetUniform(m_defaultUniformIds["u_dbg_billboard"], billboardData);
 
             // In addition, send the mode and rot as a vec4
@@ -1187,7 +1192,7 @@ void Renderer::_DrawDbgBillboard(const Program& program) {
             bgfx::setTexture(
                 0,
                 _GetUniform(m_defaultUniformIds["s_dbg_bill_albedo"])->handle,
-                gizmo.texture); // Use the texture from the gizmo registry
+                gizmo->_GetTexture()); // Use the texture from the gizmo registry
             bgfx::submit(program.viewId, program.program);
         }
     }
