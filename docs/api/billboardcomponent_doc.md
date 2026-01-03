@@ -14,6 +14,7 @@
 
 
 - [Member Variables](#member-variables)
+- [Constructor](#class-constructor)
 - [BillboardMode](#synginebillboardmode)
 - [GetComponentType](#synginegetcomponenttype)
 - [Init](#syngineinit)
@@ -27,6 +28,36 @@
 - [GetMode](#synginegetmode)
 
 ---
+
+## Class Constructor
+
+
+#### **`Syngine::BillboardComponent`**
+
+
+ Construct a new Billboard Component object
+
+**Note:** The texturePath should be a valid path to a texture file, relative to the game's assets directory. owner GO handled by the ECS.
+
+Signature:
+
+```cpp
+ BillboardComponent(GameObject* owner, std::string texturePath,
+```
+
+**Parameters:**
+
+- `owner`: Pointer to the owner GameObject
+- `texturePath`: Path to the billboard texture
+- `mode`: Billboard rendering mode
+- `size`: Size of the billboard
+
+**This function has been available since:** v0.0.1
+
+---
+
+## Class & Related Members
+
 
 #### **`Syngine::BillboardMode`**
 
