@@ -46,10 +46,19 @@ class BillboardComponent : public Syngine::Component {
     static constexpr Syngine::Components componentType =
         SYN_COMPONENT_BILLBOARD; //* Billboard component type
 
+    /// @brief Construct a new Billboard Component object
+    /// @param owner Pointer to the owner GameObject
+    /// @param texturePath Path to the billboard texture
+    /// @param mode Billboard rendering mode
+    /// @param size Size of the billboard
+    /// @since v0.0.1
+    /// @note The texturePath should be a valid path to a texture file, relative
+    /// to the game's assets directory. owner GO handled by the ECS.
     BillboardComponent(GameObject*   owner,
                        std::string   texturePath,
                        BillboardMode mode = BillboardMode::CAMERA_ALIGNED,
                        float         size = 1.0f);
+    
     BillboardComponent(const BillboardComponent& other);
     BillboardComponent& operator=(const BillboardComponent& other);
 
