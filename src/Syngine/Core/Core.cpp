@@ -213,10 +213,7 @@ bool Core::HandleEvents() {
 
             m_app->renderer->width  = w;
             m_app->renderer->height = h;
-            bgfx::reset(
-                w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
-            bgfx::setViewRect(
-                0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
+            RenderCore::_SetResolution(w, h);
             break;
         }
         }

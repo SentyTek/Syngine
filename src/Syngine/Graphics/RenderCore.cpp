@@ -15,6 +15,7 @@
 #include "Syngine/Utils/Version.h"
 #include "Syngine/Core/Logger.h"
 #include "bgfx/bgfx.h"
+#include "bgfx/defines.h"
 
 namespace Syngine {
 
