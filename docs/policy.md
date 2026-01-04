@@ -5,7 +5,7 @@
 The update policy is fairly easy. Document your code as best you can, undocumented code might not get accepted!
 The API documentation and glossary are generated automatically by a custom Lua generator using custom SynDoc code formatting found below. Adhere to this format and check if your changes or additions get reflected accurately in the Documentation by running the Lua generator yourself before creating a Pull Request.
 
-In addition, the repository comes with `.clang-format` and `.editor-format` files preconfigured with the recommended code formatting guidelines for Syngine, which your code editor can use and autoformat. These should make it easy to write clean and complete documentation as you go along writing code.
+In addition, the Bakerman test game repository comes with `.clang-format` and `.editor-format` files preconfigured with the recommended code formatting guidelines for Syngine, which your code editor can use and autoformat. These should make it easy to write clean and complete documentation as you go along writing code.
 
 All functions designed for internal engine use only should be marked with `_functionname`. We use PascalCase for function names and camelCase for variable names, generally using CAPITAL_SNAKE_CASE for macros and enum cases.
 
@@ -21,8 +21,10 @@ We use top-of-file comments on all header and source files which look like this:
 ```
 You can copy-and-paste that comment into any new header and source files you create. Our SyngineTests package will also ensure this top-of-file comment is added.
 
+Any internal or private function should be prefixed with an underscore (`void _InternalClassHelper()` for example). Class member variables should be prefixed with `m_` (`m_carSpeed` for example). Class names are PascalCase, variable names are camelCase, constants and enum members are UPPER_SNAKE_CASE.
+
 ## Code documentation format
-SynDoc Format v1
+SynDoc Format v1 (Inspired by Doxygen)
 
 Core tags:
 - `@brief` Short description, used in summaries (`@brief Creates an explosion particle effect`)
@@ -76,18 +78,6 @@ enum States = {
     EXPLODING = 1, //* When exploding!
 }
 ```
-Multiline or block comments are also supported like so:
-```cpp
-/**
- * @brief An enum to hold the state
- * @section PlayerComponent
- */
-enum States = {
-    RUNNING   = 0, //* When running!
-    EXPLODING = 1, //* When exploding!
-}
-```
-Note the use of `/**` and ` */`, along with ` * @brief` bullet points. (space-asterisk-space-at symbol)
 
 Classes can be documented like this, similarly to everything else:
 ```cpp
