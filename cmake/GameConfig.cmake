@@ -2,7 +2,7 @@
 # │ Syngine                              │
 # │ Created 2025-08-05                   │
 # ├──────────────────────────────────────┤
-# │ Copyright (c) SentyTek 2025-2025     │
+# │ Copyright (c) SentyTek 2025-2026     │
 # │ Placeholder License                  │
 # ╰──────────────────────────────────────╯
 # Adds several functions to compile shaders, add assets, and configure the game target (root/engine/cmake/GameConfig.cmake)

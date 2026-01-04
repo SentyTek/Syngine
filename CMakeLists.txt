@@ -2,7 +2,7 @@
 # │ Syngine                              │
 # │ Created YYYY-MM-DD                   │
 # ├──────────────────────────────────────┤
-# │ Copyright (c) SentyTek 2025-2025     │
+# │ Copyright (c) SentyTek 2025-2026     │
 # │ Placeholder License                  │
 # ╰──────────────────────────────────────╯
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
@@ -68,6 +68,7 @@ add_library(Syngine STATIC
     src/Syngine/Graphics/Windowing.cpp
     src/Syngine/Graphics/DebugRenderer.cpp
     src/Syngine/Graphics/TextureHelpers.cpp
+    src/Syngine/Graphics/RenderCore.cpp
 
     # Utils
     src/Syngine/Utils/ModelLoader.cpp

@@ -2,7 +2,7 @@
 // │ Syngine                              │
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
@@ -14,9 +14,8 @@
 
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/AllComponents.h"
-#include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
+#include "Syngine/Core/Core.h"
 
 using namespace std;
 
@@ -163,17 +162,12 @@ T* GameObject::GetComponent() const {
     }
     
     return dynamic_cast<T*>(it->second.get());
-}
+};
+
 
 template <typename T, typename... Args>
 T* GameObject::AddComponent(Args&&... args) {
     auto type = T::componentType;
-    if (!Syngine::Core::_GetApp()) {
-        Syngine::Logger::Error(
-            "Cannot add component when Core is not initialized");
-        return nullptr;
-    }
-
     if (components.contains(type)) return nullptr;
 
     // Forward the arguments to the component constructor

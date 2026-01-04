@@ -2,7 +2,7 @@
 # │ Syngine                              │
 # │ Created 2025-06-05                   │
 # ├──────────────────────────────────────┤
-# │ Copyright (c) SentyTek 2025-2025     │
+# │ Copyright (c) SentyTek 2025-2026     │
 # │ Placeholder License                  │
 # ╰──────────────────────────────────────╯
 # Configure for active languages, prioritizing CXX

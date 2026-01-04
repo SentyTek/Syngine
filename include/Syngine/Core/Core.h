@@ -2,17 +2,23 @@
 // │ Syngine                              │
 // │ Created 2025-04-22                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
 #pragma once
 #include "Jolt/Core/Core.h"
 
+#include "Syngine/Core/Registry.h"
+#include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
+#include "Syngine/ECS/Components/PlayerComponent.h"
+#include "Syngine/ECS/Components/RigidbodyComponent.h"
+#include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/Physics/Physics.h"
+#include <memory>
 
 namespace Syngine {
 // Forward declare
@@ -61,19 +67,6 @@ struct DebugModes {
     bool CSMBounds = false; //* Cascading Shadow Map zone bounds.
 };
 
-/// @brief Struct to hold application state
-/// @section Core
-/// @since v0.0.1
-struct App {
-    EngineConfig                    config;    //* Engine configuration
-    std::unique_ptr<Window>         window;    //* Pointer to the window
-    std::unique_ptr<Renderer>       renderer;  //* Pointer to the render system
-    std::unique_ptr<SynModelLoader> synModels; //* Pointer to the model loader
-    std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
-    std::unique_ptr<ZoneManager> zoneManager; //* Pointer to the zone manager
-    DebugModes debug;   //* Debug modes flags
-};
-
 /// @brief Core class to manage the application
 /// @section Core
 /// @since v0.0.1
@@ -99,18 +92,6 @@ class Core {
     /// @return Pointer to the global Core instance
     /// @since v0.0.1
     static Core* Get();
-
-    /// @brief Get the global App instance
-    /// @return Pointer to the global App instance
-    /// @since v0.0.1
-    /// @internal
-    static App* _GetApp();
-
-    /// @brief Get the global game config
-    /// @return Pointer to the global game config
-    /// @since v0.0.1
-    /// @internal
-    static EngineConfig* _GetConfig();
 
     /// @brief Check if the application is running
     /// @return True if the application is running, false otherwise
@@ -141,15 +122,23 @@ class Core {
     /// @return Hardware specifications of the system
     /// @pre Renderer must be initialized (Core::Initialize() called or
     /// Renderer::IsReady() == true)
+    /// @since v0.0.1
     Syngine::HardwareSpecs GetSystemSpecifications();
 
     /// @brief Set the simulation state
     /// @param simulate True to enable simulation, false to disable
+    /// @since v0.0.1
     void SetSimulationState(bool simulate);
 
     /// @brief Get the simulation state
     /// @return True if simulation is enabled, false otherwise
+    /// @since v0.0.1
     bool GetSimulationState();
+
+    /// @brief Check if the Core is initialized
+    /// @return True if initialized, false otherwise
+    /// @since v0.0.1
+    static bool IsInitialized() noexcept { return m_instance != nullptr; };
 
   private:
     struct _internal {
@@ -174,6 +163,31 @@ class Core {
         bool simulate   = false; // Toggles the physics simulation
         bool mouseState = false;
     };
+
+    /// @brief Struct to hold application state
+    /// @section Core
+    /// @since v0.0.1
+    struct App {
+        EngineConfig                    config;         //* Engine configuration
+        std::unique_ptr<Window>         window;         //* Pointer to the window
+        std::unique_ptr<Renderer>       renderer;       //* Pointer to the render system
+        std::unique_ptr<SynModelLoader> synModels;      //* Pointer to the model loader
+        std::unique_ptr<Phys>           physicsManager; //* Pointer to the physics manager
+        std::unique_ptr<ZoneManager>    zoneManager;    //* Pointer to the zone manager
+        DebugModes                      debug;          //* Debug modes flags
+    };
+
+    /// @brief Get the global App instance
+    /// @return Pointer to the global App instance
+    /// @since v0.0.1
+    /// @internal
+    static App* _GetApp();
+
+    /// @brief Get the global game config
+    /// @return Pointer to the global game config
+    /// @since v0.0.1
+    /// @internal
+    static EngineConfig* _GetConfig();
 
     /// @brief Frame counter for FPS and TPS tracking
     /// @internal
@@ -222,6 +236,13 @@ class Core {
 
     /// @deprecated In favor of the new input system
     void _HandleKeyEvent(const SDL_Event& event);
+
+    friend class Renderer;
+    friend class RenderCore;
+    friend class GameObject;
+    friend class RigidbodyComponent;
+    friend class PlayerComponent;
+    friend class Registry;
 };
 
 } // namespace Syngine

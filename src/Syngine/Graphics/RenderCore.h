@@ -1,0 +1,104 @@
+// ╒═══════════════════════ RenderCore.h ═╕
+// │ Syngine                              │
+// │ Created 2026-01-02                   │
+// ├──────────────────────────────────────┤
+// │ Copyright (c) SentyTek 2025-2026     │
+// │ Placeholder License                  │
+// ╰──────────────────────────────────────╯
+
+#pragma once
+#include "Syngine/Graphics/Renderer.h"
+#include "Syngine/ECS/AllComponents.h"
+
+#include <cstdint>
+#include <unordered_map>
+#include <string>
+#include <array>
+
+#include <bgfx/bgfx.h>
+
+namespace Syngine {
+
+class RenderCore {
+  public:
+    /// @brief Render a single frame. Calls several internal rendering functions.
+    /// @param camera Pointer to the camera component for rendering
+    /// @param debug Debug modes for rendering
+    /// @return true on success, false on failure
+    /// @internal
+    static bool _RenderFrame(CameraComponent* camera, DebugModes debug);
+
+    /// @brief Initialize the RenderCore system
+    /// @param config Renderer configuration options
+    /// @return true on success, false on failure
+    /// @internal
+    static bool _Initialize(const RendererConfig& config);
+
+    /// @brief Shutdown the RenderCore system
+    /// @internal
+    static void _Shutdown();
+
+    /// @brief Set the resolution of the renderer
+    /// @param width Width in pixels
+    /// @param height Height in pixels
+    /// @internal
+    static void _SetResolution(int width, int height);
+
+    /// @brief Get default uniform data by name
+    /// @param name Name of the uniform
+    /// @return Pointer to the Uniform struct, or nullptr if not found
+    /// @internal
+    static Uniform* _GetDefaultUniform(const std::string& name);
+
+  private:
+    static void _CalculateCascadeMatrices(CameraComponent* camera,
+                                          float*           outLightView,
+                                          float*           outLightProj,
+                                          float*           outCascadeSplits);
+
+    static constexpr std::array<Syngine::ViewID, 10> _allViews = {
+        Syngine::VIEW_SHADOW,   Syngine::VIEW_SKY,      Syngine::VIEW_GBUFFER,
+        Syngine::VIEW_LIGHTING, Syngine::VIEW_FORWARD,  Syngine::VIEW_BILLBOARD,
+        Syngine::VIEW_DEBUG,    Syngine::VIEW_BILL_DBG, Syngine::VIEW_UI,
+        Syngine::VIEW_UI_DEBUG
+    };
+
+    static void _DrawShadows(const Program&   program,
+                             CameraComponent* camera,
+                             uint8_t          cascade);
+    static void _DrawSky(const Program& program);
+    static void _DrawForward(const Program& program, CameraComponent* camera);
+    static void _DrawDebug(const Program&   program,
+                           CameraComponent* camera,
+                           DebugModes       debug);
+    static void _DrawBillboard(const Program& program);
+    static void _DrawDbgBillboard(const Program& program);
+    static void _DrawUIDebug(CameraComponent* camera);
+
+    // Static members
+    static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
+
+    static bgfx::TextureHandle m_shadowDepth; //* Shadow map depth texture handle
+    static bgfx::FrameBufferHandle m_shadowFB; //* Shadow map framebuffer handle
+    static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
+    static constexpr uint8_t       NUM_CASCADES    = 4;
+
+    static RendererConfig m_config; //* Render configuration
+
+    static bgfx::VertexBufferHandle
+        m_billboardVbh; //* Vertex buffer handle for billboards
+    static bgfx::IndexBufferHandle
+        m_billboardIbh; //* Index buffer handle for billboards
+
+    static SDL_Window* win; //* SDL window handle
+
+    static bgfx::VertexBufferHandle
+        dummy; //* Dummy vertex buffer handle for rendering
+
+    static DebugRender* m_drender; //* Debug renderer instance
+
+    static bool
+        m_isFirstFrame; //* Whether this is the first frame being rendered
+};
+
+} // namespace Syngine

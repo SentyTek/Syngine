@@ -2,7 +2,7 @@
 // │ Syngine                              │
 // │ Created 2025-04-22                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
@@ -29,6 +29,7 @@
 
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
+#include "Syngine/Graphics/RenderCore.h"
 
 #include "Syngine/Physics/Physics.h"
 
@@ -49,7 +50,7 @@
 using namespace Syngine;
 
 Syngine::Core*      Syngine::Core::m_instance = nullptr;
-Syngine::App*       Syngine::Core::m_app      = nullptr;
+Syngine::Core::App* Syngine::Core::m_app      = nullptr;
 Core::_internal     Syngine::Core::m_internal;
 Core::_FrameCounter Syngine::Core::m_frameCounter;
 
@@ -182,7 +183,7 @@ bool Core::Initialize() {
 }
 
 Syngine::Core* Syngine::Core::Get() { return m_instance; }
-Syngine::App*  Syngine::Core::_GetApp() {
+Syngine::Core::App*  Syngine::Core::_GetApp() {
     return m_instance ? m_instance->m_app : nullptr;
 }
 

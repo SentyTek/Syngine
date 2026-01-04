@@ -2,7 +2,7 @@
 // │ Syngine                              │
 // │ Created 2025-05-06                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
@@ -12,7 +12,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <array>
 
 #include <SDL3/SDL.h>
 #include <bgfx/bgfx.h>
@@ -237,16 +236,6 @@ class Renderer {
     /// @since v0.0.1
     static float GetGizmoSize() { return m_gizmoSize; }
 
-    /// @brief Render a frame
-    /// @param lightDir Direction of the light for lighting calculations
-    /// @param camera Pointer to the camera component for rendering
-    /// @param debug Whether to render debug information
-    /// @return If it rendered successfully
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    /// @internal
-    bool _RenderFrame(CameraComponent* camera, DebugModes debug);
-
     /// @brief Register a gizmo with a tag and optional size
     /// @param tag Name of the gizmo
     /// @param size Size of the gizmo
@@ -255,29 +244,22 @@ class Renderer {
     /// @since v0.0.1
     /// @internal
     void _RegisterGizmo(const std::string& tag);
+
+    /// @brief Get a uniform by ID
+    /// @param id ID of the uniform (Returned by RegisterUniform)
+    /// @return Pointer to the Uniform struct, or nullptr if not found
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    static Uniform* GetUniform(size_t id);
   private:
 
     static std::string m_title; //* Title of the game window
-    static bool        m_isReady; //* Whether the renderer is initialized and ready
-    static RendererConfig m_config; //* Renderer configuration options
+    static bool m_isReady; //* Whether the renderer is initialized and ready
+    static std::unordered_map<uint16_t, Uniform> m_uniformRegistry; //* Registry of shader uniforms
 
     static std::unordered_map<std::string, Syngine::BillboardComponent*> m_gizmoRegistry; //* Registry of gizmos
     static float m_gizmoSize;      //* Default size for gizmos
-    static bgfx::VertexBufferHandle     m_billboardVbh; //* Vertex buffer handle for billboards
-    static bgfx::IndexBufferHandle      m_billboardIbh; //* Index buffer handle for billboards
-
-    static SDL_Window* win; //* SDL window handle
-
-    static bgfx::VertexBufferHandle dummy; //* Dummy vertex buffer handle for rendering
     static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms; //* Shader programs organized by view ID
-
-    static std::unordered_map<uint16_t, Uniform> m_uniformRegistry; //* Registry of shader uniforms
-    static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
-
-    static bgfx::TextureHandle m_shadowDepth; //* Shadow map depth texture handle
-    static bgfx::FrameBufferHandle m_shadowFB; //* Shadow map framebuffer handle
-    static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
-    static constexpr uint8_t       NUM_CASCADES    = 4;
 
     /// @brief Initialize the graphics system
     /// @return true on success, false on failure
@@ -302,28 +284,18 @@ class Renderer {
     /// @internal
     void _RenderGizmos(CameraComponent* camera);
 
-    static Uniform* _GetUniform(size_t id);
+    /// @brief Internal helper for GetProgram.
+    /// @param id ID of the shader program
+    /// @return Pointer to the Program struct, or nullptr if not found
+    /// @threadsafety read-only
+    /// @internal
     static Program* _GetProgram(size_t id);
 
-    static void _CalculateCascadeMatrices(CameraComponent* camera,
-                                          float*           outLightView,
-                                          float*           outLightProj,
-                                          float*           outCascadeSplits);
+    // Wrapper to call RenderCore's _RenderFrame
+    static void _RenderFrame(CameraComponent* camera, DebugModes debug);
 
-    static constexpr std::array<Syngine::ViewID, 10> _allViews = {
-        Syngine::VIEW_SHADOW,   Syngine::VIEW_SKY,      Syngine::VIEW_GBUFFER,
-        Syngine::VIEW_LIGHTING, Syngine::VIEW_FORWARD,  Syngine::VIEW_BILLBOARD,
-        Syngine::VIEW_DEBUG,    Syngine::VIEW_BILL_DBG, Syngine::VIEW_UI,
-        Syngine::VIEW_UI_DEBUG
-    };
-
-    static void _DrawShadows(const Program& program, CameraComponent* camera, uint8_t cascade);
-    static void _DrawSky(const Program& program);
-    static void _DrawForward(const Program& program, CameraComponent* camera);
-    static void _DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug);
-    static void _DrawBillboard(const Program& program);
-    static void _DrawDbgBillboard(const Program& program);
-    static void _DrawUIDebug(CameraComponent* camera);
+    friend class Core;
+    friend class RenderCore;
 };
 
 } // namespace Syngine

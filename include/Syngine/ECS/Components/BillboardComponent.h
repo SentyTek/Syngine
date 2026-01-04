@@ -2,13 +2,15 @@
 // │ Syngine                              │
 // │ Created 2025-12-16                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
 #pragma once
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
+
+#include <bgfx/bgfx.h>
 
 #include <string>
 
