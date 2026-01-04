@@ -6,6 +6,17 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <dbghelp.h>
+#pragma comment(lib, "dbghelp.lib")
+#elif defined(__linux__) || defined(__APPLE__)
+#include <execinfo.h>
+#include <unistd.h>
+#include <cxxabi.h>
+#endif
+
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Utils/FsUtils.h"
@@ -33,6 +44,179 @@
 #endif
 
 namespace Syngine {
+
+void Logger::SetupCrashHandler() {
+    // Setup common signal handlers
+    signal(SIGSEGV, CrashHandler);
+    signal(SIGABRT, CrashHandler);
+    signal(SIGFPE, CrashHandler);
+    signal(SIGILL, CrashHandler);
+    signal(SIGTERM, CrashHandler);
+
+#ifdef _WIN32
+    // Setup Windows exception handler
+    SetUnhandledExceptionFilter(WindowsExceptionHandler);
+
+    SymInitialize(GetCurrentProcess(), NULL, TRUE);
+    SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS);
+#endif
+
+    Logger::Info("Crash handler initialized");
+}
+
+void Logger::CrashHandler(int signal) {
+    const char* signalName = "Unknown";
+    switch (signal) {
+        case SIGSEGV: signalName = "SIGSEGV (Segmentation Fault)"; break;
+        case SIGABRT: signalName = "SIGABRT (Abort)"; break;
+        case SIGFPE:  signalName = "SIGFPE (Floating Point Exception)";  break;
+        case SIGILL:  signalName = "SIGILL (Illegal Instruction)";  break;
+        case SIGTERM: signalName = "SIGTERM (Termination)"; break;
+        default:      signalName = "Unknown (Signal)"; break;
+    }
+
+    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR);
+    Logger::Log("Signal: " + std::string(signalName), LogLevel::ERR);
+    Logger::Log("Generating stack trace...", LogLevel::ERR);
+
+    PrintStackTrace();
+
+    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR);
+    Logger::Log(appName + " has crashed. Press OK to exit. This should be "
+                          "reported to the developers.",
+                LogLevel::FATAL);
+}
+
+#ifdef _WIN32
+LONG WINAPI Logger::WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
+    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR);
+    Logger::Log("Exception Code: " + std::to_string(ExceptionInfo->ExceptionRecord->ExceptionCode), LogLevel::ERR);
+    Logger::Log("Generating stack trace...", LogLevel::ERR);
+
+    PrintStackTrace();
+
+    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR);
+    Logger::Log(appName + " has crashed. Press OK to exit. This should be "
+                          "reported to the developers.",
+                LogLevel::FATAL);
+
+    return EXCEPTION_EXECUTE_HANDLER;
+}
+#endif
+
+void Logger::PrintStackTrace() {
+#ifdef _WIN32
+    // Windows stack trace provided by dbghelp
+    HANDLE process = GetCurrentProcess();
+    HANDLE thread  = GetCurrentThread();
+
+    CONTEXT context;
+    memset(&context, 0, sizeof(CONTEXT));
+    context.ContextFlags = CONTEXT_FULL;
+    RtlCaptureContext(&context);
+
+    STACKFRAME64 stackFrame;
+    memset(&stackFrame, 0, sizeof(STACKFRAME64));
+
+    DWORD imageType;
+#ifdef _M_IX86
+    imageType = IMAGE_FILE_MACHINE_I386;
+    stackFrame.AddrPC.Offset = context.Eip;
+    stackFrame.AddrPC.Mode = AddrModeFlat;
+    stackFrame.AddrFrame.Offset = context.Ebp;
+    stackFrame.AddrFrame.Mode = AddrModeFlat;
+    stackFrame.AddrStack.Offset = context.Esp;
+    stackFrame.AddrStack.Mode = AddrModeFlat;
+#elif _M_X64
+    imageType = IMAGE_FILE_MACHINE_AMD64;
+    stackFrame.AddrPC.Offset = context.Rip;
+    stackFrame.AddrPC.Mode = AddrModeFlat;
+    stackFrame.AddrFrame.Offset = context.Rsp;
+    stackFrame.AddrFrame.Mode = AddrModeFlat;
+    stackFrame.AddrStack.Offset = context.Rsp;
+    stackFrame.AddrStack.Mode = AddrModeFlat;
+#endif
+
+    char symbolBuffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+    PSYMBOL_INFO symbol = (PSYMBOL_INFO)symbolBuffer;
+    symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+    symbol->MaxNameLen   = MAX_SYM_NAME;
+
+    IMAGEHLP_LINE64 line;
+    line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+
+    int frameNum = 0;
+    while (StackWalk64(imageType,
+                       process,
+                       thread,
+                       &stackFrame,
+                       &context,
+                       NULL,
+                       SymFunctionTableAccess64,
+                       SymGetModuleBase64,
+                       NULL)) {
+        if (frameNum > 50) break; // Prevent infinite loops
+
+        DWORD64 address = stackFrame.AddrPC.Offset;
+        char    addrStr[32];
+        sprintf(addrStr, "0x%016llX", address);
+        std::string frameInfo = "Frame " + std::to_string(frameNum) + ": " + addrStr;
+
+        if (SymFromAddr(process, address, NULL, symbol)) {
+            frameInfo += " - " + std::string(symbol->Name);
+
+            DWORD displacement;
+            if (SymGetLineFromAddr64(process, address, &displacement, &line)) {
+                frameInfo += " (" + std::string(line.FileName) + ":" +
+                             std::to_string(line.LineNumber) + ")";
+            }
+        }
+
+        Logger::Log(frameInfo, LogLevel::ERR);
+        frameNum++;
+    }
+#elif defined(__linux__) || defined(__APPLE__)
+    // Linux/Mac stack trace using backtrace()
+    void* array[50];
+    size_t size = backtrace(array, 50);
+    char** symbols = backtrace_symbols(array, size);
+
+    if (symbols == NULL) {
+        Logger::Log("Failed to obtain stack trace symbols.", LogLevel::ERR);
+        return;
+    }
+
+    for (size_t i = 0; i < size; i++) {
+        std::string frameInfo = "Frame " + std::to_string(i) + ": ";
+
+        // Try to demangle C++ symbols
+        char* demangled = nullptr;
+        char* mangledStart = strchr(symbols[i], '(');
+        char* mangledEnd   = strchr(symbols[i], '+');
+
+        if (mangledStart && mangledEnd && mangledEnd > mangledStart) {
+            *mangledEnd = '\0';
+            int status;
+            demangled = abi::__cxa_demangle(mangledStart + 1, 0, 0, &status);
+            if (status == 0 && demangled) {
+                frameInfo += std::string(demangled);
+            } else {
+                frameInfo += std::string(mangledStart + 1);
+            }
+            free(demangled);
+            *mangledEnd = '+';
+        } else {
+            frameInfo += symbols[i];
+        }
+
+        Logger::Log(frameInfo, LogLevel::ERR);
+    }
+
+    free(symbols);
+#else
+    Logger::Log("Stack trace not supported on this platform.", LogLevel::ERR);
+#endif
+}
 
 std::string Logger::GetTimestamp() {
     auto now = std::chrono::system_clock::now();
@@ -103,6 +287,8 @@ void Logger::Init(const std::string& appname,
             return;
         }
     }
+
+    SetupCrashHandler();
 
     Logger::Log("Logger initialized for " + appName);
     Logger::Log("Log file located at: " + fullLogPath.string());

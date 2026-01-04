@@ -15,6 +15,7 @@
 
 #include <thread> //for hardware_concurrency
 
+#include "Jolt/Jolt.h"
 #include "Jolt/Core/Factory.h"
 #include "Jolt/Core/TempAllocator.h"
 #include "Jolt/Geometry/IndexedTriangle.h"
@@ -30,10 +31,9 @@
 #include "Jolt/Physics/Collision/Shape/CylinderShape.h"
 #include "Jolt/Physics/PhysicsSettings.h"
 #include "Jolt/RegisterTypes.h"
-#include <Jolt/Core/JobSystemSingleThreaded.h> //for single threaded fallback
-#include <Jolt/Core/Memory.h>
-#include <Jolt/Core/StreamWrapper.h>
-#include <Jolt/Core/IssueReporting.h>
+#include "Jolt/Core/Memory.h"
+#include "Jolt/Core/StreamWrapper.h"
+#include "Jolt/Core/IssueReporting.h"
 #include "SDL3/SDL_log.h"
 
 using namespace JPH;
