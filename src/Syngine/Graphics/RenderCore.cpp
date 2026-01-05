@@ -13,6 +13,7 @@
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Utils/Version.h"
+#include "Syngine/Utils/Profiler.h"
 #include "Syngine/Core/Logger.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
@@ -409,7 +410,7 @@ void RenderCore::_Shutdown() {
 }
 
 void RenderCore::_SetResolution(int width, int height) {
-    bgfx::reset(uint32_t(width), uint32_t(height), BGFX_RESET_VSYNC);
+    bgfx::reset(uint32_t(width), uint32_t(height), m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
     bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
 }
 
@@ -501,7 +502,8 @@ void RenderCore::_DrawShadows(const Program& program, CameraComponent* camera, u
     }
 
     std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
-
+    
+    bgfx::setState(renderState);
     for (auto& gameObject : gameObjects) {
         if (!gameObject) continue;
 
@@ -514,8 +516,7 @@ void RenderCore::_DrawShadows(const Program& program, CameraComponent* camera, u
         float modelMtx[16];
         gameObject->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
         bgfx::setTransform(modelMtx);
-
-        bgfx::setState(renderState);
+        
         bgfx::setVertexBuffer(0, meshData.vbh);
         bgfx::setIndexBuffer(meshData.ibh);
 
@@ -657,7 +658,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
 
 void RenderCore::_DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug) {
     GameObject *p = Registry::GetGameObjectByName("player");
-    if (p) {
+    if (p && Core::IsPhysicsEnabled()) {
         Core::_GetApp()->physicsManager->_DrawDebug(
             Renderer::width, Renderer::height, program.program,
             p->GetComponent<CameraComponent>()->GetCamera(), camera->GetCamera(),

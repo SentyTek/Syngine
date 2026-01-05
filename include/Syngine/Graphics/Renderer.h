@@ -77,6 +77,7 @@ struct Program {
 struct RendererConfig {
     bool useShadows = true; //* Whether to use shadow mapping
     float shadowDist = 500.0f; //* Distance for shadow rendering
+    bool vsync = true; //* Whether to enable vertical sync
 };
 
 /// @brief Renderer class to manage rendering and shader programs
@@ -96,7 +97,7 @@ class Renderer {
     /// fails or missing files)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    Renderer(int width, int height, const RendererConfig& config = RendererConfig());
+    Renderer(int width, int height, const RendererConfig& config);
     ~Renderer();
 
     /// @brief Load a shader from vertex and fragment shader file paths and

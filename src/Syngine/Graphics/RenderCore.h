@@ -51,6 +51,7 @@ class RenderCore {
     static Uniform* _GetDefaultUniform(const std::string& name);
 
   private:
+    // Called by _DrawShadows when CSM debug is enabled
     static void _CalculateCascadeMatrices(CameraComponent* camera,
                                           float*           outLightView,
                                           float*           outLightProj,
@@ -62,6 +63,8 @@ class RenderCore {
         Syngine::VIEW_DEBUG,    Syngine::VIEW_BILL_DBG, Syngine::VIEW_UI,
         Syngine::VIEW_UI_DEBUG
     };
+
+    static bool _PrepareRenderViews(CameraComponent* camera);
 
     static void _DrawShadows(const Program&   program,
                              CameraComponent* camera,

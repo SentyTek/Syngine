@@ -29,12 +29,17 @@
 #include <vector>
 
 namespace Syngine {
-RigidbodyComponent::RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params) {
+RigidbodyComponent::RigidbodyComponent(GameObject*                  owner,
+                                       Syngine::RigidbodyParameters params) {
+    if (!Core::IsPhysicsEnabled()) return;
+    
     this->m_owner = owner;
     this->Init(params);
 }
 
 RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
+    if (!Core::IsPhysicsEnabled()) return;
+    
     this->m_owner = other.m_owner;
     this->physicsManager = other.physicsManager;
     this->transform = other.transform;
@@ -46,7 +51,10 @@ RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
     this->shapeParameters = other.shapeParameters;
 }
 
-RigidbodyComponent& RigidbodyComponent::operator=(const RigidbodyComponent& other) {
+RigidbodyComponent&
+RigidbodyComponent::operator=(const RigidbodyComponent& other) {
+    if (!Core::IsPhysicsEnabled()) return *this;
+    
     if (this != &other) {
         this->m_owner = other.m_owner;
         this->physicsManager = other.physicsManager;

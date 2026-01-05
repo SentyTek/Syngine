@@ -54,7 +54,7 @@ struct EngineConfig {
     std::string windowTitle;  //* Title of the game window
     int         windowWidth;  //* Width of the game window in pixels
     int         windowHeight; //* Height of the game window in pixels
-    bool        vsync; //* Whether vertical sync is enabled
+    bool        usePhysics = true; //* Whether to initialize the physics system
 };
 
 /// @brief the various debug modes possible
@@ -73,7 +73,7 @@ struct DebugModes {
 class Core {
   public:
     /// @brief Constructor for the Core class
-    /// @param config Engine configuration options
+    /// @param config Engine configuration (Syngine::EngineConfig)
     /// @throws std::runtime_error if initialization fails (e.g., SDL_Init()
     /// fails or missing files)
     /// @since v0.0.1
@@ -84,9 +84,10 @@ class Core {
 
     /// @brief Initialize the core system. Creates a window, renderer, and other
     /// subsystems.
+    /// @param rendererConfig Renderer configuration options (Syngine::RendererConfig)
     /// @return True on success, false on failure
     /// @since v0.0.1
-    static bool Initialize();
+    static bool Initialize(const RendererConfig rendererConfig);
 
     /// @brief Get the global Core instance
     /// @return Pointer to the global Core instance
@@ -139,6 +140,14 @@ class Core {
     /// @return True if initialized, false otherwise
     /// @since v0.0.1
     static bool IsInitialized() noexcept { return m_instance != nullptr; };
+
+    /// @brief Check if physics is enabled in the engine config
+    /// @return True if physics is enabled, false otherwise
+    /// @since v0.0.1
+    static bool IsPhysicsEnabled() {
+        return m_instance && m_instance->m_app &&
+            m_instance->m_app->config.usePhysics;
+    }
 
   private:
     struct _internal {

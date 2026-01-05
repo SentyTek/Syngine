@@ -96,7 +96,7 @@ Core::~Core() {
     m_app = nullptr;
 }
 
-bool Core::Initialize() {
+bool Core::Initialize(const RendererConfig rendererConfig) {
     if (!m_app) {
         Syngine::Logger::Fatal("Core not initialized properly. App is null.");
         return false;
@@ -108,8 +108,9 @@ bool Core::Initialize() {
             Logger::Error("Failed to create window. Check the log for more details.");
         }
 
-        m_app->renderer = std::make_unique<Renderer>(
-            m_app->config.windowWidth, m_app->config.windowHeight);
+        m_app->renderer = std::make_unique<Renderer>(m_app->config.windowWidth,
+                                                     m_app->config.windowHeight,
+                                                     rendererConfig);
         if (!m_app->renderer) {
             Logger::Error("Failed to create renderer. Check the log for more details.");
         }
@@ -121,9 +122,13 @@ bool Core::Initialize() {
             Logger::Error("Failed to create AssimpLoader. Check the log for more details.");
         }
 
-        m_app->physicsManager = std::make_unique<Phys>();
-        if (!m_app->physicsManager) {
-            Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
+        if (m_app->config.usePhysics) {
+            m_app->physicsManager = std::make_unique<Phys>();
+            if (!m_app->physicsManager) {
+                Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
+            }
+        } else {
+            m_app->physicsManager = nullptr;
         }
 
         m_app->zoneManager = std::make_unique<ZoneManager>();
@@ -131,7 +136,9 @@ bool Core::Initialize() {
             Logger::Error("Failed to create ZoneManager. Check the log for more details.");
         }
 
-        m_app->physicsManager->_Init();
+        if (m_app->config.usePhysics && m_app->physicsManager) {
+            m_app->physicsManager->_Init();
+        }
     } catch(const std::exception& e) {
         Syngine::Logger::LogF(
             LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
@@ -469,7 +476,7 @@ void Core::_ReloadChangedAssets() {
         MeshComponent* mc = go->GetComponent<MeshComponent>();
         if (!mc) continue;
         MeshData& mesh = mc->meshData;
-        if (!mesh.valid) continue;
+        if (!mesh.valid || mesh.path.empty()) continue;
         if (mesh.lastWriteTime != std::filesystem::last_write_time(mesh.path)) {
             mc->ReloadMesh();
         }
