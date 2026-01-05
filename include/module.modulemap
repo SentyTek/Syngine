@@ -28,6 +28,7 @@ module Syngine {
 	
 	// Syngine/Utils
 	header "Syngine/Utils/Helpers.h"
+	header "Syngine/Units/Profiler.h"
 	header "Syngine/Utils/ModelLoader.h"
 	
 	// Export everything listed above in the module

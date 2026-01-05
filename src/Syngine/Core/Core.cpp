@@ -39,6 +39,7 @@
 
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Utils/Version.h"
+#include "Syngine/Utils/Profiler.h"
 
 #include <SDL3/SDL.h>
 
@@ -205,6 +206,7 @@ void Core::SetSimulationState(bool simulate) { m_internal.simulate = simulate; }
 bool Core::GetSimulationState() { return m_internal.simulate; }
 
 bool Core::HandleEvents() {
+    SYN_PROFILE_FUNCTION();
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -243,6 +245,7 @@ bool Core::HandleEvents() {
 }
 
 bool Core::Update() {
+    SYN_PROFILE_FUNCTION();
     m_internal.last = m_internal.now;
     m_internal.now  = SDL_GetPerformanceCounter();
     deltaTime       = (m_internal.now - m_internal.last) /
@@ -298,6 +301,7 @@ bool Core::Update() {
 }
 
 bool Core::Render(CameraComponent* camera) {
+    SYN_PROFILE_FUNCTION();
     // Render the application
     if (Renderer::IsReady()) {
         m_frameCounter.frameCount++;

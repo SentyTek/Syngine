@@ -18,6 +18,7 @@
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/Physics/Physics.h"
+#include "Syngine/Utils/Profiler.h"
 #include <memory>
 
 namespace Syngine {
@@ -252,6 +253,7 @@ class Core {
     friend class RigidbodyComponent;
     friend class PlayerComponent;
     friend class Registry;
+    friend class Syngine::Profiler;
 };
 
 } // namespace Syngine

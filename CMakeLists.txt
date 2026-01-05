@@ -73,6 +73,7 @@ add_library(Syngine STATIC
     # Utils
     src/Syngine/Utils/ModelLoader.cpp
     src/Syngine/Utils/FsUtils.cpp
+    src/Syngine/Utils/Profiler.cpp
 
     # Physics
     src/Syngine/Physics/Physics.cpp

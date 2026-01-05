@@ -488,7 +488,10 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
 --- Drawing functions ---
 */
 
-void RenderCore::_DrawShadows(const Program& program, CameraComponent* camera, uint8_t cascade) {
+void RenderCore::_DrawShadows(const Program&   program,
+                              CameraComponent* camera,
+                              uint8_t          cascade) {
+    SYN_PROFILE_FUNCTION();
     const uint64_t renderState =
         BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
 
@@ -526,6 +529,7 @@ void RenderCore::_DrawShadows(const Program& program, CameraComponent* camera, u
 }
 
 void RenderCore::_DrawSky(const Program& program) {
+    SYN_PROFILE_FUNCTION();
     bgfx::setViewClear(program.viewId,
                        BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
                        0x000000ff,
@@ -544,6 +548,7 @@ void RenderCore::_DrawSky(const Program& program) {
 }
 
 void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
+    SYN_PROFILE_FUNCTION();
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
                                  BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
 
@@ -656,7 +661,10 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
     }
 }
 
-void RenderCore::_DrawDebug(const Program& program, CameraComponent* camera, DebugModes debug) {
+void RenderCore::_DrawDebug(const Program&   program,
+                            CameraComponent* camera,
+                            DebugModes       debug) {
+    SYN_PROFILE_FUNCTION();
     GameObject *p = Registry::GetGameObjectByName("player");
     if (p && Core::IsPhysicsEnabled()) {
         Core::_GetApp()->physicsManager->_DrawDebug(
@@ -700,6 +708,7 @@ void RenderCore::_DrawDebug(const Program& program, CameraComponent* camera, Deb
 }
 
 void RenderCore::_DrawBillboard(const Program& program) {
+    SYN_PROFILE_FUNCTION();
     const uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                            BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LEQUAL |
                            BGFX_STATE_MSAA;
@@ -760,6 +769,7 @@ void RenderCore::_DrawBillboard(const Program& program) {
 }
 
 void RenderCore::_DrawDbgBillboard(const Program& program) {
+    SYN_PROFILE_FUNCTION();
     // Debug billboards (gizmos) are always drawn on top. Regular billboards (forward pass ig) are depth-tested normally.
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                     BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_ALWAYS;
@@ -803,6 +813,7 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
 }
 
 void RenderCore::_DrawUIDebug(CameraComponent* camera) {
+    SYN_PROFILE_FUNCTION();
     bgfx::setDebug(BGFX_DEBUG_TEXT);
     bgfx::dbgTextClear();
 
@@ -817,12 +828,8 @@ void RenderCore::_DrawUIDebug(CameraComponent* camera) {
         1, maxRows - 1, 0x0C, "FOR INTERNAL USE ONLY - NOT FOR PUBLIC RELEASE");
 }
 
-bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
-    if (m_isFirstFrame) {
-        m_isFirstFrame = false;
-        m_drender = Core::_GetApp()->physicsManager->_GetDebugRenderer();
-    }
-
+bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
+    SYN_PROFILE_FUNCTION();
     // Prepare camera and light information
     if (!camera) {
         Syngine::Logger::Fatal("No camera provided to render frame");
@@ -908,6 +915,18 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         }
         }
     }
+    return true;
+}
+
+bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
+    SYN_PROFILE_FUNCTION();
+    if (m_isFirstFrame) {
+        m_isFirstFrame = false;
+        if (Core::IsPhysicsEnabled()) 
+            m_drender = Core::_GetApp()->physicsManager->_GetDebugRenderer();
+    }
+
+    if (!_PrepareRenderViews(camera)) return false;
     
     // Main render loop
     for (auto view : _allViews) {
