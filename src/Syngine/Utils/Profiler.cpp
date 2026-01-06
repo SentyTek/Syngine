@@ -22,6 +22,9 @@ thread_local std::vector<SpanEvent>   Profiler::m_threadData;
 thread_local std::vector<SpanEvent>   Profiler::m_lastFrameData;
 thread_local uint8_t                  Profiler::m_currentDepth = 0;
 
+std::vector<TimerEvent> Profiler::m_timers;
+int Profiler::m_nextTimerID = 0;
+
 void Profiler::ProfilerUI::SaveCapture(const std::string& filepath) {
     std::filesystem::path realPath = Syngine::_GetAppdataPath(Core::_GetApp()->config.windowTitle) / filepath;
     std::ofstream out(realPath);
@@ -78,6 +81,49 @@ void Profiler::Reset() {
     m_threadData.clear();
     m_nameStack.clear();
     m_currentDepth = 0;
+
+    m_threadData.reserve(4096); // Pre-allocate for performance
+}
+
+const std::vector<SpanEvent>& Profiler::GetThreadData() { return m_threadData; }
+
+int Profiler::StartTimer(const char* name) {
+    SpanEvent startEvent;
+    startEvent.name = name;
+    startEvent.threadID = static_cast<uint32_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+    startEvent.timestamp = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now().time_since_epoch()
+        ).count()
+    );
+    startEvent.type = static_cast<uint8_t>(EventType::EVENT_START);
+    startEvent.depth = 0; // Timers are independent of call stack depth
+
+    TimerEvent timerEvent;
+    timerEvent.startEvent = startEvent;
+
+    m_timers.push_back(timerEvent);
+    return m_nextTimerID++;
+}
+
+void Profiler::EndTimer(int timerID) {
+    if (timerID < 0 || timerID >= m_nextTimerID) {
+        // Invalid timer ID
+        return;
+    }
+
+    SpanEvent endEvent;
+    endEvent.name = m_timers[timerID].startEvent.name;
+    endEvent.threadID = static_cast<uint32_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+    endEvent.timestamp = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::microseconds>(
+            std::chrono::high_resolution_clock::now().time_since_epoch()
+        ).count()
+    );
+    endEvent.type = static_cast<uint8_t>(EventType::EVENT_END);
+    endEvent.depth = 0; // Timers are independent of call stack depth
+
+    m_timers[timerID].endEvent = endEvent;
 }
 
 } // namespace Syngine
