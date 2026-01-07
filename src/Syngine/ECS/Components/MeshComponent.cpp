@@ -12,6 +12,7 @@
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/GameObject.h"
+#include "Syngine/Utils/Profiler.h"
 
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
@@ -212,8 +213,19 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
     return true;
 }
 
-const MeshAABB MeshComponent::GetAABB() const {
-    static MeshAABB boundingBox = MeshAABB();
+MeshAABB& MeshComponent::GetAABB() {
+    SYN_PROFILE_FUNCTION();
+    uint64_t currentTransformVersion = 0;
+    if (this->m_owner && this->m_owner->HasComponent(SYN_COMPONENT_TRANSFORM)) {
+        TransformComponent* transform = this->m_owner->GetComponent<TransformComponent>();
+        currentTransformVersion = transform->GetVersion();
+    }
+
+    if (!m_aabbDirty && m_cachedTransformVersion == currentTransformVersion) {
+        return m_aabb;
+    }
+
+    MeshAABB& boundingBox = m_aabb;
 
     if (this->meshData.vertices.empty()) {
         return boundingBox; // Return default AABB if no vertices
@@ -274,7 +286,11 @@ const MeshAABB MeshComponent::GetAABB() const {
             result.halfExtents[i] = (max[i] - min[i]) / 2.0f;
         }
     }
-    return result;
+
+    m_aabbDirty = false;
+    m_cachedTransformVersion = currentTransformVersion;
+    m_aabb = result;
+    return m_aabb;
 }
 
 } // namespace Syngine

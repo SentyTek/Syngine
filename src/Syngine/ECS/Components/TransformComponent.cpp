@@ -133,6 +133,7 @@ void TransformComponent::_QuatMultiply(const float* q1, const float* q2, float* 
 // --- Dirty flag helpers
 void TransformComponent::_MarkLocalDirty() {
     m_dirtyLocal = true;
+    ++m_version;
     _MarkWorldDirty();
 }
 void TransformComponent::_MarkWorldDirty() {

@@ -65,6 +65,8 @@ class RenderCore {
     };
 
     static bool _PrepareRenderViews(CameraComponent* camera);
+    static CameraComponent::Frustum _GetCascadeFrustum(uint8_t          cascade,
+                                                      CameraComponent* camera);
 
     static void _DrawShadows(const Program&   program,
                              CameraComponent* camera,
@@ -102,6 +104,21 @@ class RenderCore {
 
     static bool
         m_isFirstFrame; //* Whether this is the first frame being rendered
+
+    /// @brief Struct to hold counts of drawn objects per rendering pass
+    struct DrawnObjectCount {
+        uint32_t shadows = 0;
+        uint32_t sky    = 0;
+        uint32_t forward = 0;
+        uint32_t debug   = 0;
+        uint32_t billboard = 0;
+        uint32_t ui        = 0;
+    };
+
+    static DrawnObjectCount
+        m_drawnCounts; //* Counts of drawn objects per rendering pass
+
+    friend class Core;
 };
 
 } // namespace Syngine

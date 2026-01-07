@@ -131,7 +131,14 @@ class MeshComponent : public Syngine::Component {
     /// @return Reference to the MeshAABB structure
     /// @threadsafety read-only
     /// @since v0.0.1
-    const MeshAABB GetAABB() const;
+    MeshAABB& GetAABB();
+
+  private:
+    mutable MeshAABB m_aabb; //* Axis-aligned bounding box of the mesh
+    mutable bool     m_aabbDirty =
+        true; //* Whether the AABB needs to be recalculated
+    mutable uint64_t m_cachedTransformVersion =
+        0; //* Cached version of the transform when AABB was last calculated
 };
 
 } // namespace Syngine

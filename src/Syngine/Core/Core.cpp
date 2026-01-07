@@ -29,7 +29,7 @@
 
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
-#include "Syngine/Graphics/RenderCore.h"
+#include "Syngine/Graphics/RenderCore.h" 
 
 #include "Syngine/Physics/Physics.h"
 
@@ -57,6 +57,7 @@ Core::_FrameCounter Syngine::Core::m_frameCounter;
 
 float Syngine::Core::deltaTime     = 0.0f;
 bool  Syngine::Core::m_shouldClose = false;
+Core::FrameCounts Syngine::Core::m_frameCounts;
 
 Core::Core(const EngineConfig config) {
     if (m_instance) {
@@ -277,6 +278,7 @@ bool Core::Update() {
     m_internal.now  = SDL_GetPerformanceCounter();
     deltaTime       = (m_internal.now - m_internal.last) /
                 (float)SDL_GetPerformanceFrequency();
+    m_frameCounts.updates++;
 
     // Simulate physics
     if (m_app->physicsManager && m_internal.simulate) {
@@ -335,6 +337,12 @@ bool Core::Render(CameraComponent* camera) {
         m_frameCounter.frameDisplay++;
 
         m_app->renderer->_RenderFrame(camera, m_app->debug);
+        m_frameCounts.drawnObjects.debug = RenderCore::m_drawnCounts.debug;
+        m_frameCounts.drawnObjects.sky   = RenderCore::m_drawnCounts.sky;
+        m_frameCounts.drawnObjects.forward = RenderCore::m_drawnCounts.forward;
+        m_frameCounts.drawnObjects.shadows = RenderCore::m_drawnCounts.shadows;
+        m_frameCounts.drawnObjects.billboard =
+            RenderCore::m_drawnCounts.billboard;
     }
     return true;
 }

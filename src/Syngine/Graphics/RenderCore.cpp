@@ -39,6 +39,7 @@ bgfx::IndexBufferHandle  RenderCore::m_billboardIbh = BGFX_INVALID_HANDLE;
 
 std::unordered_map<uint16_t, Uniform> Renderer::m_uniformRegistry;
 std::unordered_map<uint16_t, std::vector<Program>> Renderer::viewPrograms;
+RenderCore::DrawnObjectCount RenderCore::m_drawnCounts;
 
 bool RenderCore::_Initialize(const RendererConfig& config) {
     m_config = config;
@@ -462,6 +463,64 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
 --- Drawing functions ---
 */
 
+CameraComponent::Frustum RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
+    CameraComponent::Frustum cascadeFrustum;
+    float lightView[16 * NUM_CASCADES], lightProj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
+    _CalculateCascadeMatrices(camera, lightView, lightProj, outCascadeSplits);
+    
+    // Get the view-projection matrix for this cascade
+    float* cascadeView = &lightView[cascade * 16];
+    float* cascadeProj = &lightProj[cascade * 16];
+    float cascadeViewProj[16];
+    bx::mtxMul(cascadeViewProj, cascadeView, cascadeProj);
+    
+    // Extract frustum planes from view-projection matrix
+    // For orthographic projection, we extract planes differently than perspective
+    
+    // Left plane: row4 + row1
+    cascadeFrustum.left.normal[0] = cascadeViewProj[3] + cascadeViewProj[0];
+    cascadeFrustum.left.normal[1] = cascadeViewProj[7] + cascadeViewProj[4];
+    cascadeFrustum.left.normal[2] = cascadeViewProj[11] + cascadeViewProj[8];
+    cascadeFrustum.left.distance = cascadeViewProj[15] + cascadeViewProj[12];
+    CameraComponent::_normalizePlane(cascadeFrustum.left);
+    
+    // Right plane: row4 - row1
+    cascadeFrustum.right.normal[0] = cascadeViewProj[3] - cascadeViewProj[0];
+    cascadeFrustum.right.normal[1] = cascadeViewProj[7] - cascadeViewProj[4];
+    cascadeFrustum.right.normal[2] = cascadeViewProj[11] - cascadeViewProj[8];
+    cascadeFrustum.right.distance = cascadeViewProj[15] - cascadeViewProj[12];
+    CameraComponent::_normalizePlane(cascadeFrustum.right);
+    
+    // Bottom plane: row4 + row2
+    cascadeFrustum.bottom.normal[0] = cascadeViewProj[3] + cascadeViewProj[1];
+    cascadeFrustum.bottom.normal[1] = cascadeViewProj[7] + cascadeViewProj[5];
+    cascadeFrustum.bottom.normal[2] = cascadeViewProj[11] + cascadeViewProj[9];
+    cascadeFrustum.bottom.distance = cascadeViewProj[15] + cascadeViewProj[13];
+    CameraComponent::_normalizePlane(cascadeFrustum.bottom);
+    
+    // Top plane: row4 - row2
+    cascadeFrustum.top.normal[0] = cascadeViewProj[3] - cascadeViewProj[1];
+    cascadeFrustum.top.normal[1] = cascadeViewProj[7] - cascadeViewProj[5];
+    cascadeFrustum.top.normal[2] = cascadeViewProj[11] - cascadeViewProj[9];
+    cascadeFrustum.top.distance = cascadeViewProj[15] - cascadeViewProj[13];
+    CameraComponent::_normalizePlane(cascadeFrustum.top);
+    
+    // Near plane: row4 + row3
+    cascadeFrustum.n.normal[0] = cascadeViewProj[3] + cascadeViewProj[2];
+    cascadeFrustum.n.normal[1] = cascadeViewProj[7] + cascadeViewProj[6];
+    cascadeFrustum.n.normal[2] = cascadeViewProj[11] + cascadeViewProj[10];
+    cascadeFrustum.n.distance = cascadeViewProj[15] + cascadeViewProj[14];
+    CameraComponent::_normalizePlane(cascadeFrustum.n);
+    
+    // Far plane: row4 - row3
+    cascadeFrustum.f.normal[0] = cascadeViewProj[3] - cascadeViewProj[2];
+    cascadeFrustum.f.normal[1] = cascadeViewProj[7] - cascadeViewProj[6];
+    cascadeFrustum.f.normal[2] = cascadeViewProj[11] - cascadeViewProj[10];
+    cascadeFrustum.f.distance = cascadeViewProj[15] - cascadeViewProj[14];
+    CameraComponent::_normalizePlane(cascadeFrustum.f);
+    return cascadeFrustum;
+}
+
 void RenderCore::_DrawShadows(const Program&   program,
                               CameraComponent* camera,
                               uint8_t          cascade) {
@@ -480,26 +539,47 @@ void RenderCore::_DrawShadows(const Program&   program,
     }
 
     std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
-    
-    bgfx::setState(renderState);
+    {
+        SYN_PROFILE_SCOPE("Set Shadow View");
+        bgfx::setState(renderState);
+    }
+    {
+        SYN_PROFILE_SCOPE("Draw Shadow Cascade");
     for (auto& gameObject : gameObjects) {
         if (!gameObject) continue;
 
         auto* meshComp = gameObject->GetComponent<MeshComponent>();
         MeshData meshData = meshComp->meshData;
 
-        if (!meshData.valid || !meshComp->isEnabled || !meshComp->castShadows) continue;
+        if (!meshData.valid || !meshComp->isEnabled || !meshComp->castShadows)
+            continue;
+
+        MeshAABB aabb = meshComp->GetAABB();
+        bx::Vec3 min = { aabb.min[0], aabb.min[1], aabb.min[2] };
+        bx::Vec3 max = { aabb.max[0], aabb.max[1], aabb.max[2] };
+        if (!camera->_aabbInsideFrustum(_GetCascadeFrustum(cascade, camera), min, max)) continue;
 
         // Get the transform for this object
+        {
+            SYN_PROFILE_SCOPE("Set transform");
         float modelMtx[16];
         gameObject->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
         bgfx::setTransform(modelMtx);
-        
+        }
+
+        {
+            SYN_PROFILE_SCOPE("Set buffers");
         bgfx::setVertexBuffer(0, meshData.vbh);
         bgfx::setIndexBuffer(meshData.ibh);
+        }
 
+        {
+            SYN_PROFILE_SCOPE("Submit shadow");
         // Shadow shaders are simple, just output depth
         bgfx::submit(program.viewId + cascade, program.program);
+        m_drawnCounts.shadows++;
+        }
+    }
     }
 }
 
@@ -541,10 +621,6 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         }
     }
 
-    std::vector<GameObject*> objectsInFrustum;
-    // Calculate view frustum for culling
-    camera->GetCamera().
-
     const uint64_t samplerFlags =
                 BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
 
@@ -552,6 +628,11 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         auto* meshComp = gameObject->GetComponent<MeshComponent>();
         MeshData meshData = meshComp->meshData;
         if (!meshData.valid || !meshComp->isEnabled) continue;
+
+        MeshAABB aabb = meshComp->GetAABB();
+        bx::Vec3 min = { aabb.min[0], aabb.min[1], aabb.min[2] };
+        bx::Vec3 max = { aabb.max[0], aabb.max[1], aabb.max[2] };
+        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) continue;
         
         bgfx::setState(renderState);
         Material& mat = meshData.materials[0];
@@ -637,6 +718,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         Renderer::SetUniform(m_defaultUniformIds[type + "_normalMatrix"], normal3x3);
 
         bgfx::submit(program.viewId, program.program);
+        m_drawnCounts.forward++;
     }
 }
 
@@ -753,6 +835,7 @@ void RenderCore::_DrawBillboard(const Program& program) {
                 Renderer::GetUniform(m_defaultUniformIds["s_bill_albedo"])->handle,
                 comp->_GetTexture());
         bgfx::submit(program.viewId, program.program);
+        m_drawnCounts.billboard++;
     }
 }
 
@@ -903,6 +986,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
         }
         }
     }
+    m_drawnCounts = DrawnObjectCount(); // Reset counts for this frame
     return true;
 }
 
