@@ -77,7 +77,8 @@ struct Program {
 struct RendererConfig {
     bool useShadows = true; //* Whether to use shadow mapping
     float shadowDist = 500.0f; //* Distance for shadow rendering
-    bool vsync = true; //* Whether to enable vertical sync
+    bool  vsync      = true;   //* Whether to enable vertical sync
+    bool usePseudoCamera = false; //* (only if DebugModes.Enabled == true) Pseudo camera is a separate camera that all rendering will use, but the main camera will still be the one drawn to the screen
 };
 
 /// @brief Renderer class to manage rendering and shader programs
@@ -252,6 +253,13 @@ class Renderer {
     /// @threadsafety read-only
     /// @since v0.0.1
     static Uniform* GetUniform(size_t id);
+
+    /// @brief Set which CameraComponent to use as the pseudo camera for
+    /// rendering
+    /// @param camera Pointer to the CameraComponent to use as the pseudo camera
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void SetPseudoCamera(CameraComponent* camera);
   private:
 
     static std::string m_title; //* Title of the game window
@@ -261,6 +269,8 @@ class Renderer {
     static std::unordered_map<std::string, Syngine::BillboardComponent*> m_gizmoRegistry; //* Registry of gizmos
     static float m_gizmoSize;      //* Default size for gizmos
     static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms; //* Shader programs organized by view ID
+
+    static CameraComponent* m_pseudoCamera; //* Pseudo camera for rendering when enabled in debug mode
 
     /// @brief Initialize the graphics system
     /// @return true on success, false on failure

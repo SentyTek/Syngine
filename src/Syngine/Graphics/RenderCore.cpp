@@ -9,6 +9,7 @@
 #include "Syngine/Graphics/RenderCore.h"
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/ZoneManager.h"
+#include "Syngine/ECS/GameObject.h"
 #include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/Graphics/Windowing.h"
@@ -17,6 +18,7 @@
 #include "Syngine/Core/Logger.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
+#include <vector>
 
 namespace Syngine {
 
@@ -468,6 +470,7 @@ void RenderCore::_DrawShadows(const Program&   program,
         BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
 
     if (Core::_GetApp()->debug.CSMBounds) {
+        if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
         float view[16 * NUM_CASCADES], proj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
         _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
         for (int i = 0; i < NUM_CASCADES; ++i) {
@@ -537,6 +540,10 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
             objectsWithProgram.push_back(gameObject);
         }
     }
+
+    std::vector<GameObject*> objectsInFrustum;
+    // Calculate view frustum for culling
+    camera->GetCamera().
 
     const uint64_t samplerFlags =
                 BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
@@ -675,6 +682,15 @@ void RenderCore::_DrawDebug(const Program&   program,
                     break;
                 }
             }
+        }
+    }
+
+    if (debug.DrawBoundingBoxes) {
+        std::vector<GameObject*> meshObjects =
+            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH);
+        for (auto go : meshObjects) {
+            MeshAABB aabb = go->GetComponent<MeshComponent>()->GetAABB();
+            m_drender->DrawBox(aabb.min, aabb.max, JPH::Color::sGreen);
         }
     }
 }

@@ -156,22 +156,49 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     "Debug",
                                     KeyBinding(Keycode::F1),
                                     { .onPressed = Core::_ToggleDebugEnabled });*/
-        InputAction::RegisterAction(
-            "syngine.debugWireframes",
-            "Toggle debug wireframes",
-            "Debug",
-            KeyBinding(Keycode::F1),
-            { .onPressed = Core::_ToggleDebugWireframes });
+        InputAction::RegisterAction("syngine.debugWireframes",
+                                    "Toggle debug wireframes",
+                                    "Debug",
+                                    KeyBinding(Keycode::F1),
+                                    { .onPressed = []() {
+                                        Syngine::DebugModes m =
+                                            Core::GetDebugMode();
+                                        m.PhysWireframes = !m.PhysWireframes;
+                                        Core::SetDebugMode(m);
+                                    } });
+
         InputAction::RegisterAction("syngine.debugGizmos",
                                     "Toggle debug gizmos",
                                     "Debug",
                                     KeyBinding(Keycode::F2),
-                                    { .onPressed = Core::_ToggleDebugGizmos });
+                                    { .onPressed = []() {
+                                        Syngine::DebugModes m =
+                                            Core::GetDebugMode();
+                                        m.Gizmos = !m.Gizmos;
+                                        Core::SetDebugMode(m);
+                                    } });
+
         InputAction::RegisterAction("syngine.debugShadows",
                                     "Toggle debug shadows",
                                     "Debug",
                                     KeyBinding(Keycode::F3),
-                                    { .onPressed = Core::_ToggleDebugShadows });
+                                    { .onPressed = []() {
+                                        Syngine::DebugModes m =
+                                            Core::GetDebugMode();
+                                        m.CSMBounds = !m.CSMBounds;
+                                        Core::SetDebugMode(m);
+                                    } });
+
+        InputAction::RegisterAction("syngine.debugBoundingBoxes",
+                                    "Toggle debug bounding boxes",
+                                    "Debug",
+                                    KeyBinding(Keycode::F4),
+                                    { .onPressed = []() {
+                                        Syngine::DebugModes m =
+                                            Core::GetDebugMode();
+                                        m.DrawBoundingBoxes = !m.DrawBoundingBoxes;
+                                        Core::SetDebugMode(m);
+                                    } });
 
         InputAction::RegisterAction(
             "syngine.reloadAssets",
@@ -457,22 +484,6 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
         specs.supports3DTextures = false;
     }
     return specs;
-}
-
-// copied the internals of _HandleKeyEvents into these two functions to make
-// it a bit nicer to call with the new keybind system
-void Core::_ToggleDebugEnabled() {
-    m_app->debug.Enabled = !m_app->debug.Enabled;
-}
-
-void Core::_ToggleDebugWireframes() {
-    m_app->debug.PhysWireframes = !m_app->debug.PhysWireframes;
-}
-
-void Core::_ToggleDebugGizmos() { m_app->debug.Gizmos = !m_app->debug.Gizmos; }
-
-void Core::_ToggleDebugShadows() {
-    m_app->debug.CSMBounds = !m_app->debug.CSMBounds;
 }
 
 void Core::_ReloadChangedAssets() {

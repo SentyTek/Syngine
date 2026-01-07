@@ -52,9 +52,9 @@ struct HardwareSpecs {
 /// @section Core
 /// @since v0.0.1
 struct EngineConfig {
-    std::string windowTitle;  //* Title of the game window
-    int         windowWidth;  //* Width of the game window in pixels
-    int         windowHeight; //* Height of the game window in pixels
+    std::string windowTitle = "SyngineGame";  //* Title of the game window
+    int         windowWidth = 800;  //* Width of the game window in pixels
+    int         windowHeight = 600; //* Height of the game window in pixels
     bool        usePhysics = true; //* Whether to initialize the physics system
 };
 
@@ -63,9 +63,10 @@ struct EngineConfig {
 /// @since v0.0.1
 struct DebugModes {
     bool Enabled = true; //* Global debug toggle
-    bool PhysWireframes = true; //* Whether to draw physics wireframes
+    bool PhysWireframes = false; //* Whether to draw physics wireframes
     bool Gizmos = true; //* Gizmos such as cameras, lights, and audio sources
     bool CSMBounds = false; //* Cascading Shadow Map zone bounds.
+    bool DrawBoundingBoxes = false; //* Whether to draw mesh bounding boxes
 };
 
 /// @brief Core class to manage the application
@@ -150,6 +151,28 @@ class Core {
             m_instance->m_app->config.usePhysics;
     }
 
+    /// @brief Set the current debug modes
+    /// @param mode DebugModes struct with desired debug settings
+    /// @return True on success, false otherwise
+    /// @since v0.0.1
+    static bool SetDebugMode(DebugModes mode) {
+        if (m_instance && m_instance->m_app) {
+            m_instance->m_app->debug = mode;
+            return true;
+        }
+        return false;
+    }
+
+    /// @brief Get the current debug modes
+    /// @return Current DebugModes struct
+    /// @since v0.0.1
+    static DebugModes GetDebugMode() {
+        if (m_instance && m_instance->m_app) {
+            return m_instance->m_app->debug;
+        }
+        return DebugModes();
+    }
+
   private:
     struct _internal {
         // Mouse sensitivity
@@ -231,10 +254,6 @@ class Core {
     };
 
     // Debug keybind actions
-    static void _ToggleDebugEnabled();
-    static void _ToggleDebugWireframes();
-    static void _ToggleDebugGizmos();
-    static void _ToggleDebugShadows();
     static void _ReloadChangedAssets();
     static void _ReloadShaders();
 

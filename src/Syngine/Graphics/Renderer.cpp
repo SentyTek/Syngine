@@ -50,6 +50,8 @@ static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms;
 int                          Renderer::width        = 0;
 int                          Renderer::height       = 0;
 
+CameraComponent*             Renderer::m_pseudoCamera = nullptr;
+
 Renderer::Renderer(int width, int height, const RendererConfig& config) {
     Renderer::width = width;
     Renderer::height = height;
@@ -460,6 +462,10 @@ void Renderer::SetSunDirection(const float* lightDir) {
 
 void Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     RenderCore::_RenderFrame(camera, debug);
+}
+
+void Renderer::SetPseudoCamera(CameraComponent* camera) {
+    m_pseudoCamera = camera;
 }
 
 } // namespace Syngine
