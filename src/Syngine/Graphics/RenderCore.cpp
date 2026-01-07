@@ -142,17 +142,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         SDL_Quit();
         return false;
     }
-
-    size_t debugBillboardProg =
-        Renderer::AddProgram("shaders/default_billboard", "default_billboard", VIEW_BILL_DBG);
-    if (debugBillboardProg == (size_t)-1) {
-        Syngine::Logger::Error("Failed to create debug billboard program");
-        bgfx::shutdown();
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return false;
-    }
-
+    
     size_t billboardProg =
         Renderer::AddProgram("shaders/default_billboard", "billboard", VIEW_BILLBOARD);
     if (billboardProg == (size_t)-1) {
@@ -175,25 +165,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     Renderer::m_isReady = false;
 
     // Create default uniforms
-    // Debug program uniforms
     {
-    m_defaultUniformIds.insert({ "u_dbg_billboard",
-                                 Renderer::RegisterUniform(debugBillboardProg,
-                                                 "u_default_billboard",
-                                                 UniformType::UNIFORM_VEC4) });
-    m_defaultUniformIds.insert(
-        { "s_dbg_bill_albedo",
-          Renderer::RegisterUniform(
-              debugBillboardProg, "s_albedo", UniformType::UNIFORM_SAMPLER) });
-    m_defaultUniformIds.insert({ "u_dbg_billboard_mode",
-                                 Renderer::RegisterUniform(debugBillboardProg,
-                                                 "u_default_billboard_mode",
-                                                 UniformType::UNIFORM_VEC4) });
-    m_defaultUniformIds.insert({ "u_dbg_billboard_lighting",
-                                 Renderer::RegisterUniform(debugBillboardProg,
-                                                 "u_billboard_lighting",
-                                                 UniformType::UNIFORM_VEC4) });
-
     // Billboard program uniforms
     m_defaultUniformIds.insert({ "u_billboard",
                                  Renderer::RegisterUniform(billboardProg,
@@ -787,13 +759,13 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
 
             // Pack center position and size into a vec4 and send it off
             float billboardData[4] = { pos[0], pos[1], pos[2], gizmo->size };
-            Renderer::SetUniform(m_defaultUniformIds["u_dbg_billboard"], billboardData);
+            Renderer::SetUniform(m_defaultUniformIds["u_billboard"], billboardData);
 
             // In addition, send the mode and rot as a vec4
             float billboardExtra[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // No rotation or special mode for gizmos
-            Renderer::SetUniform(m_defaultUniformIds["u_dbg_billboard_mode"], billboardExtra);
+            Renderer::SetUniform(m_defaultUniformIds["u_billboard_mode"], billboardExtra);
             float lightingFlags[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // No lighting for gizmos
-            Renderer::SetUniform(m_defaultUniformIds["u_dbg_billboard_lighting"], lightingFlags);
+            Renderer::SetUniform(m_defaultUniformIds["u_billboard_lighting"], lightingFlags);
 
             // Dummy model matrix for the billboard
             float modelMtx[16];
@@ -805,7 +777,7 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
             bgfx::setIndexBuffer(m_billboardIbh);
             bgfx::setTexture(
                 0,
-                Renderer::GetUniform(m_defaultUniformIds["s_dbg_bill_albedo"])->handle,
+                Renderer::GetUniform(m_defaultUniformIds["s_bill_albedo"])->handle,
                 gizmo->_GetTexture()); // Use the texture from the gizmo registry
             bgfx::submit(program.viewId, program.program);
         }
@@ -955,9 +927,8 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
             case VIEW_BILL_DBG:
-                if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
-                break;
             case VIEW_BILLBOARD:
+                if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
                 _DrawBillboard(program);
                 break;
             default:
