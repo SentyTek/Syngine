@@ -10,13 +10,13 @@
 #include "Jolt/Core/Core.h"
 
 #include "Syngine/Core/Registry.h"
+#include "Syngine/Graphics/Renderer.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/ECS/Components/PlayerComponent.h"
 #include "Syngine/ECS/Components/RigidbodyComponent.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/ModelLoader.h"
-#include "Syngine/Graphics/Renderer.h"
 #include "Syngine/Physics/Physics.h"
 #include "Syngine/Utils/Profiler.h"
 #include <memory>
@@ -222,6 +222,20 @@ class Core {
     /// @internal
     static EngineConfig* _GetConfig();
 
+    struct FrameCounts {
+        struct DrawnObjectCount {
+            uint32_t shadows = 0;
+            uint32_t sky    = 0;
+            uint32_t forward = 0;
+            uint32_t debug   = 0;
+            uint32_t billboard = 0;
+            uint32_t ui        = 0;
+        } drawnObjects;
+        uint32_t updates = 0;
+    };
+
+    static FrameCounts m_frameCounts;
+
     /// @brief Frame counter for FPS and TPS tracking
     /// @internal
     /// @since v0.0.1
@@ -243,12 +257,21 @@ class Core {
                 oneSecond    = 0.0f;
                 physCounter  = 0;
 
-                SDL_Log("Frame: %d, GameObjects: %zu, Sim: %s, FPS/TPS: %d/%d",
+                SDL_Log("Frame: %d, GameObjects: %zu, Sim: %s, FPS/TPS: %d/%d, "
+                        "Updates: %d, Drawn Objects - Shadows: %d, Forward: "
+                        "%d, Billboards: %d",
                         frameCount,
                         gameObjectCount,
                         simulate ? "ON" : "OFF",
                         lastFPS,
-                        lastTPS);
+                        lastTPS,
+                        m_frameCounts.updates,
+                        m_frameCounts.drawnObjects.shadows,
+                        m_frameCounts.drawnObjects.forward,
+                        m_frameCounts.drawnObjects.billboard);
+
+                m_frameCounts.updates = 0;
+                m_frameCounts.drawnObjects = FrameCounts::DrawnObjectCount();
             }
         }
     };
@@ -272,7 +295,9 @@ class Core {
     friend class RigidbodyComponent;
     friend class PlayerComponent;
     friend class Registry;
+#ifndef SYN_DEBUG_GRAPHICS
     friend class Syngine::Profiler;
+#endif
 };
 
 } // namespace Syngine

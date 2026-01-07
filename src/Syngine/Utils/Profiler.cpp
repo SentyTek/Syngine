@@ -6,6 +6,7 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
+#ifndef SYN_DEBUG_GRAPHICS
 #include "Syngine/Utils/Profiler.h"
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Core/Core.h"
@@ -127,3 +128,4 @@ void Profiler::EndTimer(int timerID) {
 }
 
 } // namespace Syngine
+#endif

@@ -8,6 +8,10 @@
 
 #pragma once
 
+#ifdef SYN_DEBUG_GRAPHICS
+#define SYN_PROFILE_SCOPE(name)
+#define SYN_PROFILE_FUNCTION()
+#else
 #include <cstdint>
 #include <vector>
 #include <string>
@@ -118,3 +122,4 @@ class Profiler {
 };
 
 } // namespace Syngine
+#endif
