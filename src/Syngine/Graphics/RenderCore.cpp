@@ -9,6 +9,7 @@
 #include "Syngine/Graphics/RenderCore.h"
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/ZoneManager.h"
+#include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -32,6 +33,7 @@ SDL_Window*    RenderCore::win = nullptr;
 
 DebugRender* RenderCore::m_drender = nullptr;
 bool         RenderCore::m_isFirstFrame = true;
+float RenderCore::m_cascadeSizes[RenderCore::NUM_CASCADES] = { 10, 40, 0, 0 };
 
 bgfx::VertexBufferHandle RenderCore::dummy = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_billboardVbh = BGFX_INVALID_HANDLE;
@@ -39,7 +41,9 @@ bgfx::IndexBufferHandle  RenderCore::m_billboardIbh = BGFX_INVALID_HANDLE;
 
 std::unordered_map<uint16_t, Uniform> Renderer::m_uniformRegistry;
 std::unordered_map<uint16_t, std::vector<Program>> Renderer::viewPrograms;
-RenderCore::DrawnObjectCount RenderCore::m_drawnCounts;
+RenderCore::DrawnObjectCount                       RenderCore::m_drawnCounts;
+float RenderCore::m_maxSmallObjDistance =
+    50.0f; //* Small objects get culled beyond this distance
 
 bool RenderCore::_Initialize(const RendererConfig& config) {
     m_config = config;
@@ -348,6 +352,9 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
             bgfx::destroy(RenderCore::m_shadowDepth);
             return false;
         }
+
+        m_cascadeSizes[2] = round(m_config.shadowDist / 3.0f);
+        m_cascadeSizes[3] = round(m_config.shadowDist);
     }
 
     Window::_SetContextCreated(true);
@@ -397,6 +404,10 @@ Uniform* RenderCore::_GetDefaultUniform(const std::string& name) {
     return nullptr;
 }
 
+/*
+--- Drawing helpers ---
+*/
+
 void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
                                          float*           outLightView,
                                          float*           outLightProj,
@@ -407,28 +418,23 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
     
     const float* camPos = camera->GetPosition();
 
-    // Currently using fixed cascade sizes based on shadow distance
-    float cascadeSizes[NUM_CASCADES] = {
-        10, 50, round(m_config.shadowDist / 3), round(m_config.shadowDist)
-    };
-
     float cascadeDistances[NUM_CASCADES];
     float lightViewProj[NUM_CASCADES * 16];
     
     for (uint32_t i = 0; i < NUM_CASCADES; i++) {
-        float size = cascadeSizes[i];
+        float size = m_cascadeSizes[i];
 
         // How far light is from camera
         // Light is always targeting camera, will be some distance away
         float lightDistance = 100.0f;
         
         bx::Vec3 lightPos = {
-            camPos[0] + lightDir[0] * lightDistance,
-            camPos[1] + lightDir[1] * lightDistance,
-            camPos[2] + lightDir[2] * lightDistance
+            round(camPos[0]) + lightDir[0] * lightDistance,
+            round(camPos[1]) + lightDir[1] * lightDistance,
+            round(camPos[2]) + lightDir[2] * lightDistance
         };
         
-        bx::Vec3 target = {camPos[0], camPos[1], camPos[2]};
+        bx::Vec3 target = {round(camPos[0]), round(camPos[1]), round(camPos[2])};
         bx::Vec3 up     = { 0.0f, 1.0f, 0.0f };
 
         if (Core::_GetApp()->debug.CSMBounds) { 
@@ -450,7 +456,7 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
                      lightNear, lightFar,
                      0.0f, bgfx::getCaps()->homogeneousDepth);
 
-        cascadeDistances[i] = cascadeSizes[i] / 2.0f;
+        cascadeDistances[i] = m_cascadeSizes[i] / 2.0f;
         outCascadeSplits[i] = cascadeDistances[i];
         bx::mtxMul(&lightViewProj[i * 16], &outLightView[i * 16], &outLightProj[i * 16]);
     }
@@ -458,10 +464,6 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
     Renderer::SetUniform(m_defaultUniformIds["u_default_csmLightViewProj"], lightViewProj, NUM_CASCADES);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_csmLightViewProj"], lightViewProj, NUM_CASCADES);
 }
-
-/*
---- Drawing functions ---
-*/
 
 CameraComponent::Frustum RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
     CameraComponent::Frustum cascadeFrustum;
@@ -521,6 +523,99 @@ CameraComponent::Frustum RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraC
     return cascadeFrustum;
 }
 
+float RenderCore::_CalculateScreenSize(const MeshAABB& aabb,
+                                       const float*    cameraPos,
+                                       const Camera&   camera,
+                                       float           distance) {
+    // Very close == huge on screen
+    if (distance <= 0.01f) return 1000.0f;
+
+    float maxExtent =
+        std::max(
+            { aabb.halfExtents[0], aabb.halfExtents[1], aabb.halfExtents[2] }) *
+        2.0f;
+
+    // Project to screen size
+    // Screen size = (objSize / dist) * (screenHeight / (2 * tan(fov/2)))
+    float fovRad = camera.fov * (3.14159265f / 180.0f);
+    float projectedSize = (maxExtent / distance) *
+                          (Renderer::height / (2.0f * tanf(fovRad / 2.0f)));
+    return projectedSize;
+}
+
+bool RenderCore::_ShouldCullBySize(GameObject* go, CameraComponent* camera) {
+    auto* meshComp = go->GetComponent<MeshComponent>();
+    if (!meshComp || !meshComp->isEnabled) return false;
+
+    MeshAABB aabb = meshComp->GetAABB();
+    const float* camPos = camera->GetPosition();
+    Camera       cam    = camera->GetCamera();
+
+    // Calculate distance to object
+    float dx = aabb.center[0] - camPos[0];
+    float dy = aabb.center[1] - camPos[1];
+    float dz = aabb.center[2] - camPos[2];
+    float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+
+    // Don't cull close objects
+    if (distance < 20.0f) return false;
+    if (distance > m_maxSmallObjDistance) {
+        float screenSize = _CalculateScreenSize(aabb, camPos, cam, distance);
+        return screenSize < 4.0f; // Cull if smaller than 4 pixels
+    }
+    return false;
+}
+
+bool RenderCore::_ShouldCullBySizeShadow(GameObject* go, CameraComponent* camera, uint8_t cascade) {
+    auto* meshComp = go->GetComponent<MeshComponent>();
+    if (!meshComp || !meshComp->isEnabled) return false;
+
+    MeshAABB aabb = meshComp->GetAABB();
+    
+    // Get light position for this cascade
+    float lightDir[3];
+    Renderer::GetSunDirection(lightDir);
+    const float* camPos = camera->GetPosition();
+    float lightDistance = 100.0f; // Same as in _CalculateCascadeMatrices
+    
+    float lightPos[3] = {
+        camPos[0] + lightDir[0] * lightDistance,
+        camPos[1] + lightDir[1] * lightDistance,
+        camPos[2] + lightDir[2] * lightDistance
+    };
+
+    // Calculate distance from light to object
+    float dx = aabb.center[0] - lightPos[0];
+    float dy = aabb.center[1] - lightPos[1];
+    float dz = aabb.center[2] - lightPos[2];
+    float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+
+    float cdx = aabb.center[0] - camPos[0];
+    float cdy = aabb.center[1] - camPos[1];
+    float cdz = aabb.center[2] - camPos[2];
+    float camDistance = sqrtf(cdx * cdx + cdy * cdy + cdz * cdz);
+
+    // Don't cull very close objects to light, nor close to the camera
+    if (distance < 10.0f || camDistance < 20.0f) return false;
+    
+    // For orthographic projection, objects far from light contribute less to shadows
+    // Get object size
+    float maxExtent = std::max({
+        aabb.halfExtents[0], aabb.halfExtents[1], aabb.halfExtents[2]
+    }) * 2.0f;
+    
+    // For ortho shadows, cull based on shadow contribution
+    // Objects that are very small relative to the cascade size won't contribute meaningful shadows
+    float cascadeSize = m_cascadeSizes[cascade];
+    
+    // If object is smaller than 1.5% of cascade size, cull it
+    return maxExtent < (cascadeSize * 0.015f);
+}
+
+/*
+--- Drawing functions ---
+*/
+
 void RenderCore::_DrawShadows(const Program&   program,
                               CameraComponent* camera,
                               uint8_t          cascade) {
@@ -554,10 +649,19 @@ void RenderCore::_DrawShadows(const Program&   program,
         if (!meshData.valid || !meshComp->isEnabled || !meshComp->castShadows)
             continue;
 
+        // Size-based shadow culling from light's perspective
+        if (_ShouldCullBySizeShadow(gameObject, camera, cascade)) {
+            m_drawnCounts.culledShadowSize++;
+            continue;
+        }
+
         MeshAABB aabb = meshComp->GetAABB();
         bx::Vec3 min = { aabb.min[0], aabb.min[1], aabb.min[2] };
         bx::Vec3 max = { aabb.max[0], aabb.max[1], aabb.max[2] };
-        if (!camera->_aabbInsideFrustum(_GetCascadeFrustum(cascade, camera), min, max)) continue;
+        if (!camera->_aabbInsideFrustum(_GetCascadeFrustum(cascade, camera), min, max)) {
+            m_drawnCounts.culledShadowFrustum++;
+            continue;
+        }
 
         // Get the transform for this object
         {
@@ -629,10 +733,18 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         MeshData meshData = meshComp->meshData;
         if (!meshData.valid || !meshComp->isEnabled) continue;
 
+        if (_ShouldCullBySize(gameObject, camera)) {
+            m_drawnCounts.culledSize++;
+            continue;
+        } 
+
         MeshAABB aabb = meshComp->GetAABB();
         bx::Vec3 min = { aabb.min[0], aabb.min[1], aabb.min[2] };
         bx::Vec3 max = { aabb.max[0], aabb.max[1], aabb.max[2] };
-        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) continue;
+        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
+            m_drawnCounts.culledFrustum++;
+            continue;
+        }
         
         bgfx::setState(renderState);
         Material& mat = meshData.materials[0];

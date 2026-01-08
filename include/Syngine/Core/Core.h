@@ -19,6 +19,7 @@
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Physics/Physics.h"
 #include "Syngine/Utils/Profiler.h"
+#include <cstdint>
 #include <memory>
 
 namespace Syngine {
@@ -230,6 +231,8 @@ class Core {
             uint32_t debug   = 0;
             uint32_t billboard = 0;
             uint32_t ui        = 0;
+            uint32_t culledFrustum = 0;
+            uint32_t culledSize    = 0;
         } drawnObjects;
         uint32_t updates = 0;
     };
@@ -259,7 +262,7 @@ class Core {
 
                 SDL_Log("Frame: %d, GameObjects: %zu, Sim: %s, FPS/TPS: %d/%d, "
                         "Updates: %d, Drawn Objects - Shadows: %d, Forward: "
-                        "%d, Billboards: %d",
+                        "%d, Billboards: %d - Culled (Frustum/Size): %d/%d",
                         frameCount,
                         gameObjectCount,
                         simulate ? "ON" : "OFF",
@@ -268,7 +271,9 @@ class Core {
                         m_frameCounts.updates,
                         m_frameCounts.drawnObjects.shadows,
                         m_frameCounts.drawnObjects.forward,
-                        m_frameCounts.drawnObjects.billboard);
+                        m_frameCounts.drawnObjects.billboard,
+                        m_frameCounts.drawnObjects.culledFrustum,
+                        m_frameCounts.drawnObjects.culledSize);
 
                 m_frameCounts.updates = 0;
                 m_frameCounts.drawnObjects = FrameCounts::DrawnObjectCount();

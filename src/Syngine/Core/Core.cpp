@@ -343,6 +343,9 @@ bool Core::Render(CameraComponent* camera) {
         m_frameCounts.drawnObjects.shadows = RenderCore::m_drawnCounts.shadows;
         m_frameCounts.drawnObjects.billboard =
             RenderCore::m_drawnCounts.billboard;
+        m_frameCounts.drawnObjects.ui = RenderCore::m_drawnCounts.ui;
+        m_frameCounts.drawnObjects.culledFrustum = RenderCore::m_drawnCounts.culledFrustum;
+        m_frameCounts.drawnObjects.culledSize = RenderCore::m_drawnCounts.culledSize;
     }
     return true;
 }

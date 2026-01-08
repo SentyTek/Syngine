@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/ECS/AllComponents.h"
 
@@ -80,6 +81,16 @@ class RenderCore {
     static void _DrawDbgBillboard(const Program& program);
     static void _DrawUIDebug(CameraComponent* camera);
 
+    static float m_maxSmallObjDistance; //* Small objects get culled beyond this distance
+    static float _CalculateScreenSize(const MeshAABB& aabb,
+                                      const float*    cameraPos,
+                                      const Camera&   camera,
+                                      float           distance);
+    static bool  _ShouldCullBySize(GameObject* go, CameraComponent* camera);
+    static bool  _ShouldCullBySizeShadow(GameObject*      go,
+                                         CameraComponent* camera,
+                                         uint8_t          cascade);
+
     // Static members
     static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
 
@@ -87,6 +98,7 @@ class RenderCore {
     static bgfx::FrameBufferHandle m_shadowFB; //* Shadow map framebuffer handle
     static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
     static constexpr uint8_t       NUM_CASCADES    = 4;
+    static float m_cascadeSizes[NUM_CASCADES];
 
     static RendererConfig m_config; //* Render configuration
 
@@ -113,6 +125,10 @@ class RenderCore {
         uint32_t debug   = 0;
         uint32_t billboard = 0;
         uint32_t ui        = 0;
+        uint32_t culledFrustum = 0;
+        uint32_t culledSize    = 0;
+        uint32_t culledShadowFrustum = 0;
+        uint32_t culledShadowSize    = 0;
     };
 
     static DrawnObjectCount
