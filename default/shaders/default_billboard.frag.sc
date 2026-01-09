@@ -33,7 +33,7 @@ void main() {
             // Calculate view depth (distance from camera)
             float viewDepth = length(v_worldPos - u_viewPos.xyz);
             vec3 fakeNormal = vec3(0.0, 1.0, 0.0); // Assume upward facing normal
-            float shadowFactor = getShadowFactor(v_worldPos, fakeNormal, u_lightDir, viewDepth);
+            float shadowFactor = getShadowFactor(v_worldPos, vec3(0.0, 1.0, 0.0), fakeNormal, u_lightDir, viewDepth);
             lightFactor *= shadowFactor;
         }
         

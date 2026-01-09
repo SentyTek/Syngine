@@ -98,7 +98,8 @@ class RenderCore {
     static bgfx::FrameBufferHandle m_shadowFB; //* Shadow map framebuffer handle
     static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
     static constexpr uint8_t       NUM_CASCADES    = 4;
-    static float m_cascadeSizes[NUM_CASCADES];
+    static float                   m_cascadeSizes[NUM_CASCADES];
+    static float                   m_cascadeTexelSizes[NUM_CASCADES];
 
     static RendererConfig m_config; //* Render configuration
 

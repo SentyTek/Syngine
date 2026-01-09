@@ -4,7 +4,7 @@ $input v_worldPos, v_worldNormal, v_viewDepth, v_vertexColor
 
 uniform vec4 u_lightDir;        // World space direction *from* the light source
 uniform vec4 u_baseColor;       // Base color of the material
-uniform vec4 u_useVertexColor; // Flag to use vertex color
+uniform vec4 u_useVertexColor;  // Flag to use vertex color
 
 void main() {
     vec3 normal = normalize(v_worldNormal);
@@ -18,7 +18,7 @@ void main() {
         diffuseIntensity = 0.0;
     }
     
-    float shadowFactor = getShadowFactor(v_worldPos, normal, u_lightDir, v_viewDepth);
+    float shadowFactor = getShadowFactor(v_worldPos, vec3(0.0, 1.0, 0.0), normal, u_lightDir, v_viewDepth);
     float ambientIntensity = 0.20;
 
     vec3 color = col.xyz * (ambientIntensity + diffuseIntensity * shadowFactor);

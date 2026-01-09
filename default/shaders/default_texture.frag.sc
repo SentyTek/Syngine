@@ -8,17 +8,21 @@ SAMPLER2D(s_normalMap, 1);
 SAMPLER2D(s_heightMap, 2);
 
 //lighting + material params
-uniform vec4 u_lightDir;        //worldspace sun dir
-uniform vec4 u_floats;          //[x = heightmap scale, y = mix factor, z = ambient, w = detail tile scale]
+uniform vec4 u_lightDir; //worldspace sun dir
+uniform vec4 u_floats;   //[x = heightmap scale, y = mix factor, z = ambient, w = detail tile scale]
+uniform vec4 u_skyColor; //hemisphere ambient sky color
+uniform vec4 u_sunColor; //sunlight color
+uniform vec4 u_horizonColor; // same as u_scatterColor in sky shader (horizon scatter color)
+
+vec3 fresnelSchlick(float cosTheta, vec3 F0) {
+    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+}
 
 void main() {
-    float SUN_ELEV_TWILIGHT_START = -0.1;
-    float SUN_ELEV_DEEP_TWILIGHT_END = -0.3;
-
     vec3 lightDirToSun = normalize(u_lightDir.xyz);
     float sunElevation = lightDirToSun.y;
 
-    //macro normal from heightmap
+    // Normal mapping from heightmap (macro)
     float du    = 1.0/float(textureSize(s_heightMap, 0).x); //one texel in UV
     float hl    = texture2D(s_heightMap, v_uvMacro + vec2(-du, 0.0)).r;
     float hr    = texture2D(s_heightMap, v_uvMacro + vec2(du, 0.0)).r;
@@ -28,35 +32,60 @@ void main() {
     vec3 dPdv   = vec3(0, du, (hu - hd) * u_floats.x);
     vec3 Nmacro = normalize(cross(dPdu, dPdv));
 
-    //micro normal from normal map
-    vec3 nmap   = texture2D(s_normalMap, v_uvDetail).xyz*2.0 - 1.0;
-    float normalStrength = 1.0;
-    nmap.xy     = mix(vec2(0.0, 0.0), nmap.xy, normalStrength);
-    nmap        = normalize(nmap);
-    vec3 T      = normalize(v_tangent.xyz);
-    vec3 v_normalNormed = normalize(v_normal);
-    vec3 B      = cross(v_normalNormed, T) * v_tangent.w;
-    vec3 Nmicro = normalize(T*nmap.x + B*nmap.y + v_normalNormed*nmap.z);
+    // Normal mapping from normal map (micro)
+    vec3 nmap = texture2D(s_normalMap, v_uvDetail).xyz * 2.0 - 1.0;
+    vec3 T     = normalize(v_tangent.xyz);
+    vec3 vN = normalize(v_normal);
+    vec3 B = cross(vN, T) * v_tangent.w; // Calculate bitangent
+    vec3 Nmicro = normalize(T*nmap.x + B*nmap.y + vN*nmap.z);
+    vec3 N = normalize( mix(Nmacro, Nmicro, u_floats.y) );
 
-    //blend
-    vec3 N      = normalize( mix(Nmacro, Nmicro, u_floats.y) );
+    // Hemisphere ambient (http://richardssoftware.net/home/Post/58)
+    // Instead of flat ambient, mix sky and ground colors based on normal Y
+    float hemiMix = N.y * 0.5 + 0.5;
+    vec3 skyColor = u_skyColor.xyz;
+    vec4 albedo = texture2D(s_albedo, v_uvDetail);
+    vec3 ambient = mix(albedo.rgb, skyColor, hemiMix) * u_floats.z;
 
-    // use less detailed normal for shadows to reduce acne
-    vec3 shadowNormal = normalize( mix(Nmacro, Nmicro, u_floats.y * 0.3) );
+    // Lighting is direct sun
+    float NdotL = max(dot(N, lightDirToSun), 0.0);
 
-    //sun based lighting
-    float NdotL             = max(dot(N, lightDirToSun), 0.0);
-    float sunLightStrength  = smoothstep(SUN_ELEV_TWILIGHT_START, 0.05, sunElevation);
-    float minNightAmbient   = 0.1;
-    float currentAmbient    = mix(minNightAmbient, u_floats.z, smoothstep(SUN_ELEV_DEEP_TWILIGHT_END, SUN_ELEV_TWILIGHT_START, sunElevation));
+    // Micro shadowing from normal map
+    // Basically just amplify N.L for low angles
+    float microShadow = clamp(dot(Nmicro, lightDirToSun) * 5.0, 0.0, 1.0);
 
-    // Shadow factor
-    float shadow = getShadowFactor(v_worldPos, N, u_lightDir, v_viewDepth);
+    float shadow = getShadowFactor(v_worldPos, Nmacro, N, u_lightDir, v_viewDepth);
 
-    float shadowMix = Nmicro.y / 3.0;
-    float shadowFactor = mix(1.0, shadow, shadowMix);
-    float finalLight = currentAmbient + NdotL * sunLightStrength * shadow;
-    //finalize and mix
-    vec4 base       = texture2D(s_albedo, v_uvDetail);
-    gl_FragColor    = vec4(base.rgb * finalLight, base.a);
+    float sunIntensity = smoothstep(-0.1, 0.1, sunElevation);
+    vec3 directLight = u_sunColor.xyz * sunIntensity * NdotL * shadow * microShadow;
+
+    // Fake first-bounce global illumination
+    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.2 * clamp(dot(N, -lightDirToSun), 0.0, 1.0);
+
+    // Calculate view direction
+    vec3 viewDir = normalize(u_viewPos.xyz - v_worldPos);
+
+    // Specular. Using Schlick's approximation for fresnel
+    vec3 F0 = vec3_splat(0.04); // roughly linear
+    vec3 halfVec = normalize(lightDirToSun - viewDir);
+    float NdotH = max(dot(N, halfVec), 0.0);
+
+    // Blinn-Phong specular
+    float specPower = 32.0; // Rough surface
+    float specStrength = pow(NdotH, specPower) * microShadow * shadow; // modulated by shadowing
+
+    vec3 fresnel = fresnelSchlick(max(dot(N, viewDir), 0.0), F0);
+
+    // Fog
+    float fogDist = length(v_worldPos);
+    float fogFactor = 1.0 - exp(-fogDist * 0.0005);
+
+    // Combine
+    vec3 finalColor = albedo.rgb * (ambient + directLight + bounce) + (directLight * specStrength * fresnel);
+    finalColor = mix(finalColor, u_horizonColor.xyz, fogFactor);
+    
+    // Gamma correction (linear to sRGB)
+    finalColor = pow(abs(finalColor), vec3_splat(1.0/2.2));
+    
+    gl_FragColor = vec4(finalColor, albedo.a);
 }

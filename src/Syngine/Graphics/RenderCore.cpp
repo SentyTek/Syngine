@@ -19,6 +19,7 @@
 #include "Syngine/Core/Logger.h"
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
+#include "bx/math.h"
 #include <vector>
 
 namespace Syngine {
@@ -34,6 +35,7 @@ SDL_Window*    RenderCore::win = nullptr;
 DebugRender* RenderCore::m_drender = nullptr;
 bool         RenderCore::m_isFirstFrame = true;
 float RenderCore::m_cascadeSizes[RenderCore::NUM_CASCADES] = { 10, 40, 0, 0 };
+float RenderCore::m_cascadeTexelSizes[RenderCore::NUM_CASCADES] = { 0, 0, 0, 0 };
 
 bgfx::VertexBufferHandle RenderCore::dummy = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_billboardVbh = BGFX_INVALID_HANDLE;
@@ -121,7 +123,19 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     SDL_ShowWindow(win); // show the window
 
     // Create default shaders
-    Renderer::m_isReady = true; // Teehee. Temporarily set to true to allow shader loading.
+    Renderer::m_isReady =
+        true; // Teehee. Temporarily set to true to allow shader loading.
+
+    size_t skyProg =
+        Renderer::AddProgram("shaders/default_sky", "skybox", VIEW_SKY);
+    if (skyProg == (size_t)-1) {
+        Syngine::Logger::Error("Failed to create skybox program");
+        bgfx::shutdown();
+        SDL_DestroyWindow(win);
+        SDL_Quit();
+        return false;
+    }
+    
     size_t defaultProg = Renderer::AddProgram("shaders/default", "default");
     if (defaultProg == (size_t)-1) {
         Syngine::Logger::Error("Failed to create default program");
@@ -218,6 +232,24 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
           Renderer::RegisterUniform(
               defaultProg, "u_useVertexColor", UniformType::UNIFORM_VEC4) });
 
+    // Sky program uniforms
+    m_defaultUniformIds.insert(
+        { "u_skyColorZenith",
+          Renderer::RegisterUniform(
+              skyProg, "u_skyColorZenith", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_skyColorMidnight",
+          Renderer::RegisterUniform(
+              skyProg, "u_skyColorMidnight", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_sky_sunColor",
+          Renderer::RegisterUniform(
+              skyProg, "u_sunColor", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_sky_scatterColor",
+          Renderer::RegisterUniform(
+              skyProg, "u_scatterColor", UniformType::UNIFORM_VEC4) });
+
     // Texture program uniforms
     m_defaultUniformIds.insert({ "u_texture_lightDir",
                                  Renderer::RegisterUniform(textureProg,
@@ -249,6 +281,19 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
           Renderer::RegisterUniform(
               textureProg, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
 
+    m_defaultUniformIds.insert(
+        { "u_texture_skyColor",
+          Renderer::RegisterUniform(
+              textureProg, "u_skyColor", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_texture_sunColor",
+          Renderer::RegisterUniform(
+              textureProg, "u_sunColor", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_texture_horizonColor",
+          Renderer::RegisterUniform(
+              textureProg, "u_horizonColor", UniformType::UNIFORM_VEC4) });
+
     // Shadow program uniforms
     m_defaultUniformIds.insert({ "u_default_csmSplits",
                                  Renderer::RegisterUniform(defaultProg,
@@ -279,10 +324,18 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
                                  Renderer::RegisterUniform(textureProg,
                                                  "u_shadowParams",
                                                  UniformType::UNIFORM_VEC4) });
-    m_defaultUniformIds.insert({ "u_default_shadowParams",
-                                 Renderer::RegisterUniform(defaultProg,
-                                                 "u_shadowParams",
-                                                 UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_default_shadowParams",
+          Renderer::RegisterUniform(
+              defaultProg, "u_shadowParams", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_texture_csmTexelSize",
+          Renderer::RegisterUniform(
+              textureProg, "u_csmTexelSize", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_default_csmTexelSize",
+          Renderer::RegisterUniform(
+              defaultProg, "u_csmTexelSize", UniformType::UNIFORM_VEC4) });
     }
 
     // create billboard buffers
@@ -357,6 +410,19 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         m_cascadeSizes[3] = round(m_config.shadowDist);
     }
 
+    float skyColorZenith[4] = { 0.529f, 0.808f, 0.922f, 1.0f };
+    float skyColorMidnight[4] = { 0.05f, 0.05f, 0.1f, 1.0f };
+    float sunColor[4] = { 1.0f, 0.956f, 0.839f, 1.0f };
+    float scatterColor[4]     = { 0.8f, 0.5f, 0.3f, 1.0f };
+    
+    Renderer::SetUniform(m_defaultUniformIds["u_skyColorZenith"], skyColorZenith);
+    Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"], skyColorZenith);
+    Renderer::SetUniform(m_defaultUniformIds["u_skyColorMidnight"], skyColorMidnight);
+    Renderer::SetUniform(m_defaultUniformIds["u_sky_sunColor"], sunColor);
+    Renderer::SetUniform(m_defaultUniformIds["u_texture_sunColor"], sunColor);
+    Renderer::SetUniform(m_defaultUniformIds["u_sky_scatterColor"], scatterColor);
+    Renderer::SetUniform(m_defaultUniformIds["u_texture_horizonColor"], scatterColor);
+
     Window::_SetContextCreated(true);
     
     return true;
@@ -420,41 +486,62 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
 
     float cascadeDistances[NUM_CASCADES];
     float lightViewProj[NUM_CASCADES * 16];
+
+    // How far light is from camera
+    // Light is always targeting camera, will be some distance away
+    float lightDistance = 50.0f;
+
+    bx::Vec3 target = { camPos[0], camPos[1], camPos[2] };
+    bx::Vec3 up     = { 0.0f, 1.0f, 0.0f };
+
+    bx::Vec3 zero = { 0.0f, 0.0f, 0.0f };
+    float    lightViewRaw[16];
+    bx::mtxLookAt(lightViewRaw, zero, lightDirVec);
     
     for (uint32_t i = 0; i < NUM_CASCADES; i++) {
         float size = m_cascadeSizes[i];
 
-        // How far light is from camera
-        // Light is always targeting camera, will be some distance away
-        float lightDistance = 100.0f;
-        
-        bx::Vec3 lightPos = {
-            round(camPos[0]) + lightDir[0] * lightDistance,
-            round(camPos[1]) + lightDir[1] * lightDistance,
-            round(camPos[2]) + lightDir[2] * lightDistance
+        float camPos4[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
+        float camPosLightSpace[4];
+        bx::vec4MulMtx(camPosLightSpace, camPos4, lightViewRaw);
+
+        float worldPerTexel = (size * 2.0f) / float(SHADOW_MAP_SIZE);
+        m_cascadeTexelSizes[i] = worldPerTexel;
+        float xSnapped = floor(camPosLightSpace[0] / worldPerTexel) * worldPerTexel;
+        float ySnapped =
+            floor(camPosLightSpace[1] / worldPerTexel) * worldPerTexel;
+
+        float yOffset = ySnapped - camPosLightSpace[1];
+        float xOffset = xSnapped - camPosLightSpace[0];
+
+        bx::Vec3 lightPosSnapped = {
+            camPos[0] + lightDirVec.x * lightDistance,
+            camPos[1] + lightDirVec.y * lightDistance,
+            camPos[2] + lightDirVec.z * lightDistance
         };
-        
-        bx::Vec3 target = {round(camPos[0]), round(camPos[1]), round(camPos[2])};
-        bx::Vec3 up     = { 0.0f, 1.0f, 0.0f };
 
         if (Core::_GetApp()->debug.CSMBounds) { 
             // Draw line from light to target
-            float from[3] = { lightPos.x, lightPos.y, lightPos.z };
+            float from[3] = { lightPosSnapped.x, lightPosSnapped.y, lightPosSnapped.z };
             float to[3] = { target.x, target.y, target.z };
             Core::_GetApp()->physicsManager->_DrawLine(from, to, JPH::Color::sYellow);
         }
-        
-        bx::mtxLookAt(&outLightView[i * 16], lightPos, target, up);
+
+        bx::mtxLookAt(&outLightView[i * 16], lightPosSnapped, target);
 
         // Try and keep tight near/far planes for good precision
         float lightNear = 20.0f;
         float lightFar = m_config.shadowDist + 50.0f; // Some margin
-        
+
         bx::mtxOrtho(&outLightProj[i * 16],
-                     -size, size,
-                     -size, size,
-                     lightNear, lightFar,
-                     0.0f, bgfx::getCaps()->homogeneousDepth);
+                     -size + xOffset,
+                     size + xOffset,
+                     -size + yOffset,
+                     size + yOffset,
+                     lightNear,
+                     lightFar,
+                     0.0f,
+                     bgfx::getCaps()->homogeneousDepth);
 
         cascadeDistances[i] = m_cascadeSizes[i] / 2.0f;
         outCascadeSplits[i] = cascadeDistances[i];
@@ -621,7 +708,7 @@ void RenderCore::_DrawShadows(const Program&   program,
                               uint8_t          cascade) {
     SYN_PROFILE_FUNCTION();
     const uint64_t renderState =
-        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
+        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
 
     if (Core::_GetApp()->debug.CSMBounds) {
         if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
@@ -828,6 +915,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
 
         std::string type = "u_" + program.name; // Since it's a map, gotta have unique keys
         Renderer::SetUniform(m_defaultUniformIds[type + "_normalMatrix"], normal3x3);
+        Renderer::SetUniform(m_defaultUniformIds[type + "_csmTexelSize"], m_cascadeTexelSizes);
 
         bgfx::submit(program.viewId, program.program);
         m_drawnCounts.forward++;
