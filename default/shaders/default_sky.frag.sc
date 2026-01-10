@@ -1,5 +1,6 @@
 $input v_worldViewRay
 #include <bgfx_shader.sh>
+#include "common.sh"
 
 uniform vec4 u_lightDir;
 uniform vec4 u_skyColorZenith; // Zenith sky color during the day
@@ -46,8 +47,8 @@ void main() {
 
     // Sun halo
     // Mie scattering creates the bright halo around the sun
-    float sunDisk = getMiePhase(cosTheta, 0.9995); // Sharp disk
-    float sunHalo = getMiePhase(cosTheta, 0.76); // Wider halo
+    float sunDisk = getMiePhase(cosTheta, 0.99995); // Sharp disk
+    float sunHalo = getMiePhase(cosTheta, 0.96); // Wider halo
     
     // Energy conservation or something? dampen at night
     vec3 sunLight = u_sunColor.rgb * dayIntensity;
@@ -63,8 +64,10 @@ void main() {
 
     // Composition
     vec3 finalSky = skyGradient + mieScatter;
+
+    // Tone mapping
+    finalSky = ACESFilm(finalSky);
     
-    finalSky = finalSky / (finalSky + vec3_splat(1.0)); // Tone mapping
-    finalSky = pow(abs(finalSky), vec3_splat(1.0/2.2)); // Gamma correction
+    //finalSky = applyGammaCorrection(finalSky, 2.2);
     gl_FragColor = vec4(finalSky, 1.0);
 }

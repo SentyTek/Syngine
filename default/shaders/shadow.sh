@@ -5,17 +5,17 @@ uniform vec4 u_viewPos;
 uniform vec4 u_shadowParams; // x = homogeneous depth?, y = shadow map size, z = light far plane, w unused.
 uniform vec4 u_csmTexelSize; // x = casc0, y = casc1, z = casc2, w = casc3
 
-float sampleShadow2x2PCF(vec2 uv, float compareDepth, float bias, float texelSize) {
+float sampleShadowPCF(vec2 uv, float compareDepth, float bias, float texelSize, float radius, float zReceiver) {
     float shadow = 0.0;
 
-    UNROLL for (int y = -1; y <= 0; y++) {
-        UNROLL for (int x = -1; x <= 0; x++) {
-            vec2 offset = vec2(float(x), float(y)) * texelSize;
+    UNROLL for (int y = -1; y <= 1; y++) {
+        UNROLL for (int x = -1; x <= 1; x++) {
+            vec2 offset = vec2(float(x), float(y)) * radius * texelSize;
             float sampleDepth = texture2D(s_shadowMap, uv + offset).r;
-            shadow += step(0.0, compareDepth - bias - sampleDepth);
+            shadow += zReceiver - bias > sampleDepth ? 1.0 : 0.0;
         }
     }
-    return shadow / 4.0;
+    return shadow / 9.0;
 }
 
 float sampleShadowPoisson8(vec2 uv, float compareDepth, float bias, float texelSize) {
@@ -155,7 +155,7 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
     } else if (c == 1 || c == 2) {
         shadow = sampleShadowPoisson8(uv, normalizedZ, totalBias, texelSize);
     } else {
-        shadow = sampleShadow2x2PCF(uv, normalizedZ, totalBias, texelSize);
+        shadow = sampleShadowPCF(uv, normalizedZ, totalBias, texelSize, 1.0, normalizedZ);
     }
 
     // Blend with next cascade only when transitioning

@@ -1,6 +1,7 @@
 $input v_uvMacro v_uvDetail v_normal v_tangent v_worldPos v_viewDepth
 #include <bgfx_shader.sh>
 #include "shadow.sh"
+#include "common.sh"
 
 //texture slots
 SAMPLER2D(s_albedo, 0);
@@ -83,9 +84,12 @@ void main() {
     // Combine
     vec3 finalColor = albedo.rgb * (ambient + directLight + bounce) + (directLight * specStrength * fresnel);
     finalColor = mix(finalColor, u_horizonColor.xyz, fogFactor);
+
+    // Tone mapping
+    finalColor = ACESFilm(finalColor);
     
     // Gamma correction (linear to sRGB)
-    finalColor = pow(abs(finalColor), vec3_splat(1.0/2.2));
+    //finalColor = applyGammaCorrection(finalColor, 2.2);
     
     gl_FragColor = vec4(finalColor, albedo.a);
 }
