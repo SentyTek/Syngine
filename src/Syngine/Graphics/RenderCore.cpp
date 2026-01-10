@@ -218,11 +218,27 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
                                  Renderer::RegisterUniform(defaultProg,
                                                  "u_lightDir",
                                                  UniformType::UNIFORM_VEC4) });
-    m_defaultUniformIds.insert({ "u_default_normalMatrix",
-                                 Renderer::RegisterUniform(defaultProg,
-                                                 "u_normalMatrix",
-                                                 UniformType::UNIFORM_MAT3) });
-
+    m_defaultUniformIds.insert(
+        { "u_default_normalMatrix",
+          Renderer::RegisterUniform(
+              defaultProg, "u_normalMatrix", UniformType::UNIFORM_MAT3) });
+    m_defaultUniformIds.insert(
+        { "u_default_floats",
+          Renderer::RegisterUniform(
+              defaultProg, "u_floats", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_default_skyColor",
+          Renderer::RegisterUniform(
+              defaultProg, "u_skyColor", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_default_sunColor",
+          Renderer::RegisterUniform(
+              defaultProg, "u_sunColor", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_default_horizonColor",
+          Renderer::RegisterUniform(
+              defaultProg, "u_horizonColor", UniformType::UNIFORM_VEC4) });
+    
     m_defaultUniformIds.insert(
         { "u_default_shadowMap",
           Renderer::RegisterUniform(
@@ -255,7 +271,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
                                  Renderer::RegisterUniform(textureProg,
                                                  "u_lightDir",
                                                  UniformType::UNIFORM_VEC4) });
-    m_defaultUniformIds.insert({ "u_floats",
+    m_defaultUniformIds.insert({ "u_texture_floats",
                                  Renderer::RegisterUniform(textureProg,
                                                  "u_floats",
                                                  UniformType::UNIFORM_VEC4) });
@@ -417,11 +433,14 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     
     Renderer::SetUniform(m_defaultUniformIds["u_skyColorZenith"], skyColorZenith);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"], skyColorZenith);
+    Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"], skyColorZenith);
     Renderer::SetUniform(m_defaultUniformIds["u_skyColorMidnight"], skyColorMidnight);
     Renderer::SetUniform(m_defaultUniformIds["u_sky_sunColor"], sunColor);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_sunColor"], sunColor);
+    Renderer::SetUniform(m_defaultUniformIds["u_default_sunColor"], sunColor);
     Renderer::SetUniform(m_defaultUniformIds["u_sky_scatterColor"], scatterColor);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_horizonColor"], scatterColor);
+    Renderer::SetUniform(m_defaultUniformIds["u_default_horizonColor"], scatterColor);
 
     Window::_SetContextCreated(true);
     
@@ -837,6 +856,8 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         Material& mat = meshData.materials[0];
         // Default vertex color shader
         if (program.name == "default") {
+            float u_floats[4] = { 0.f, 0.f, 0.2f, 0.f };
+            Renderer::SetUniform(m_defaultUniformIds["u_default_floats"], u_floats);
             if (mat.useVertexColor) {
                 float useVertex[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
                 Renderer::SetUniform(m_defaultUniformIds["u_default_useVertex"], useVertex);
@@ -854,7 +875,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
                 mat.ambient,
                 mat.tileDetail,
             };
-            Renderer::SetUniform(m_defaultUniformIds["u_floats"], u_floats);
+            Renderer::SetUniform(m_defaultUniformIds["u_texture_floats"], u_floats);
 
             bgfx::setTexture(
                 0,
