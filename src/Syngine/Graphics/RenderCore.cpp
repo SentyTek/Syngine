@@ -10,6 +10,7 @@
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/ZoneManager.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
+#include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -22,8 +23,16 @@
 #include "bx/math.h"
 #include <vector>
 
+#define SYN_INT_RENDEREXIT(program)                                            \
+    Syngine::Logger::Error("Failed to create " #program " program");           \
+    bgfx::shutdown();                                                          \
+    SDL_DestroyWindow(win);                                                    \
+    SDL_Quit();                                                                \
+    return false;
+
 namespace Syngine {
 
+// I present to you an unholy abomination of static member definitions
 std::unordered_map<std::string, uint16_t> RenderCore::m_defaultUniformIds;
 
 bgfx::TextureHandle       RenderCore::m_shadowDepth = BGFX_INVALID_HANDLE;
@@ -46,6 +55,14 @@ std::unordered_map<uint16_t, std::vector<Program>> Renderer::viewPrograms;
 RenderCore::DrawnObjectCount                       RenderCore::m_drawnCounts;
 float RenderCore::m_maxSmallObjDistance =
     50.0f; //* Small objects get culled beyond this distance
+
+std::vector<RenderCore::RenderPacket> RenderCore::m_renderPackets;
+bgfx::FrameBufferHandle RenderCore::m_sceneFB; //* Framebuffer for scene rendering
+bgfx::TextureHandle     RenderCore::m_sceneColor; //* Color texture for scene rendering (RGBA16F)
+bgfx::TextureHandle     RenderCore::m_sceneDepth; //* Depth texture for scene rendering (D24S8)
+bgfx::TextureHandle     RenderCore::m_sceneNormal; //* Normal texture for scene rendering (RGBA8)
+bgfx::FrameBufferHandle RenderCore::m_ssaoFB; //* Framebuffer for SSAO rendering
+bgfx::TextureHandle     RenderCore::m_ssaoTex; //* SSAO texture (R8)
 
 bool RenderCore::_Initialize(const RendererConfig& config) {
     m_config = config;
@@ -129,59 +146,47 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     size_t skyProg =
         Renderer::AddProgram("shaders/default_sky", "skybox", VIEW_SKY);
     if (skyProg == (size_t)-1) {
-        Syngine::Logger::Error("Failed to create skybox program");
-        bgfx::shutdown();
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return false;
+        SYN_INT_RENDEREXIT("skybox")
     }
     
     size_t defaultProg = Renderer::AddProgram("shaders/default", "default");
     if (defaultProg == (size_t)-1) {
-        Syngine::Logger::Error("Failed to create default program");
-        bgfx::shutdown();
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return false;
+        SYN_INT_RENDEREXIT("default")
     }
 
     size_t textureProg = Renderer::AddProgram("shaders/default_texture", "texture");
     if (textureProg == (size_t)-1) {
-        Syngine::Logger::Error("Failed to create texture program");
-        bgfx::shutdown();
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return false;
+        SYN_INT_RENDEREXIT("texture")
     }
 
     size_t debugProg =
         Renderer::AddProgram("shaders/default_debug", "default_debugger", VIEW_DEBUG);
     if (debugProg == (size_t)-1) {
-        Syngine::Logger::Error("Failed to create debug program");
-        bgfx::shutdown();
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return false;
+        SYN_INT_RENDEREXIT("debugger")
     }
     
     size_t billboardProg =
         Renderer::AddProgram("shaders/default_billboard", "billboard", VIEW_BILLBOARD);
     if (billboardProg == (size_t)-1) {
-        Syngine::Logger::Error("Failed to create debug billboard program");
-        bgfx::shutdown();
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return false;
+        SYN_INT_RENDEREXIT("billboard")
     }
 
     size_t shadowProg =
         Renderer::AddProgram("shaders/default_shadow", "shadow", VIEW_SHADOW);
     if (shadowProg == (size_t)-1) {
-        Syngine::Logger::Error("Failed to create shadow program");
-        bgfx::shutdown();
-        SDL_DestroyWindow(win);
-        SDL_Quit();
-        return false;
+        SYN_INT_RENDEREXIT("shadow")
+    }
+
+    size_t ssaoProg =
+        Renderer::AddProgram("shaders/ssao", "ssao", VIEW_POSTPROCESS);
+    if (ssaoProg == (size_t)-1) {
+        SYN_INT_RENDEREXIT("ssao")
+    }
+
+    size_t tonemapProg = Renderer::AddProgram(
+        "shaders/tonemapping", "tonemapping", VIEW_POSTPROCESS);
+    if (tonemapProg == (size_t)-1) {
+        SYN_INT_RENDEREXIT("tonemapping")
     }
     Renderer::m_isReady = false;
 
@@ -352,6 +357,34 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         { "u_default_csmTexelSize",
           Renderer::RegisterUniform(
               defaultProg, "u_csmTexelSize", UniformType::UNIFORM_VEC4) });
+
+    // SSAO program uniforms
+    m_defaultUniformIds.insert(
+        { "u_ssao_params",
+          Renderer::RegisterUniform(
+              ssaoProg, "u_ssao_params", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "s_ssao_normalTex",
+          Renderer::RegisterUniform(
+              ssaoProg, "s_normalTex", UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "s_ssao_depthTex",
+          Renderer::RegisterUniform(
+              ssaoProg, "s_depthTex", UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "s_ssao_randomTex",
+          Renderer::RegisterUniform(
+              ssaoProg, "s_randomTex", UniformType::UNIFORM_SAMPLER) });
+
+    // Tonemapping program uniforms
+    m_defaultUniformIds.insert(
+        { "s_tonemap_sceneTex",
+          Renderer::RegisterUniform(
+              tonemapProg, "s_sceneTex", UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "s_tonemap_ssaoTex",
+          Renderer::RegisterUniform(
+              tonemapProg, "s_ssaoTex", UniformType::UNIFORM_SAMPLER) });
     }
 
     // create billboard buffers
@@ -426,6 +459,37 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         m_cascadeSizes[3] = round(m_config.shadowDist);
     }
 
+    // Create scene textures
+    const uint64_t tsFlags =
+        BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
+
+    m_sceneColor = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                         uint16_t(Renderer::height),
+                                         false,
+                                         1,
+                                         bgfx::TextureFormat::BGRA8,
+                                         tsFlags);
+    m_sceneNormal = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                          uint16_t(Renderer::height),
+                                          false,
+                                          1,
+                                          bgfx::TextureFormat::RGBA8,
+                                          tsFlags);
+    m_sceneDepth =
+        bgfx::createTexture2D(uint16_t(Renderer::width),
+                              uint16_t(Renderer::height),
+                              false,
+                              1,
+                              bgfx::TextureFormat::D24S8,
+                              BGFX_TEXTURE_RT | BGFX_TEXTURE_RT_WRITE_ONLY);
+    m_ssaoTex = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                      uint16_t(Renderer::height),
+                                      false,
+                                      1,
+                                      bgfx::TextureFormat::R8,
+                                      tsFlags);
+    m_ssaoFB  = bgfx::createFrameBuffer(1, &m_ssaoTex, true);
+    
     float skyColorZenith[4] = { 0.529f, 0.808f, 0.922f, 1.0f };
     float skyColorMidnight[4] = { 0.05f, 0.05f, 0.1f, 1.0f };
     float sunColor[4] = { 1.0f, 0.956f, 0.839f, 1.0f };
@@ -718,6 +782,121 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject* go, CameraComponent* camera
     return maxExtent < (cascadeSize * 0.015f);
 }
 
+void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
+    m_renderPackets.clear();
+
+    // Iterate registry
+    auto gameObjects = Registry::GetRenderableObjects();
+    for (auto& go : gameObjects) {
+        if (!go) continue;
+        auto* meshComp = go->GetComponent<MeshComponent>();
+        if (!meshComp || !meshComp->isEnabled || !meshComp->meshData.valid)
+            continue;
+
+        if (_ShouldCullBySize(go, camera)) {
+            m_drawnCounts.culledSize++;
+            continue;
+        }
+
+        MeshAABB aabb = meshComp->GetAABB();
+        bx::Vec3 min = { aabb.min[0], aabb.min[1], aabb.min[2] };
+        bx::Vec3 max = { aabb.max[0], aabb.max[1], aabb.max[2] };
+        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
+            m_drawnCounts.culledFrustum++;
+            continue;
+        }
+
+        RenderPacket packet;
+        packet.vbh = meshComp->meshData.vbh;
+        packet.ibh = meshComp->meshData.ibh;
+        go->GetComponent<TransformComponent>()->GetModelMatrix(packet.modelMtx);
+
+        Material& mat = meshComp->meshData.materials[0];
+        packet.program = Renderer::GetProgram(go->type.c_str());
+
+        MaterialInstance matInst;
+        matInst.renderState = BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LESS |
+                              BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
+        if (go->type == "default") {
+            // Uniform: u_default_floats
+            Uniform* u = Renderer::GetUniform(
+                m_defaultUniformIds.at("u_default_floats"));
+            static float floatData[4] = { 0.f, 0.f, 0.2f, 0.f };
+            matInst.uniforms.push_back({ u->handle,  &floatData, u->num });
+
+            // Uniform: u_default_useVertex / u_baseColor
+            if (mat.useVertexColor) {
+                Uniform* u = Renderer::GetUniform(
+                    m_defaultUniformIds.at("u_default_useVertex"));
+                static float useVertexData[4] = { 1.f, 0.f, 0.f, 0.f };
+                matInst.uniforms.push_back(
+                    { u->handle, &useVertexData, u->num });
+            } else {
+                Uniform* u = Renderer::GetUniform(
+                    m_defaultUniformIds.at("u_default_useVertex"));
+                static float useVertexData[4] = { 0.f, 0.f, 0.f, 0.f };
+                matInst.uniforms.push_back(
+                    { u->handle, &useVertexData, u->num });
+                Uniform* uBaseColor =
+                    Renderer::GetUniform(m_defaultUniformIds.at("u_baseColor"));
+                matInst.uniforms.push_back(
+                    { uBaseColor->handle, mat.baseColor, uBaseColor->num });
+            }
+        } else if (go->type == "texture") {
+            uint32_t samplerFlags =
+                BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
+            // Uniform: u_texture_floats
+            Uniform* u = Renderer::GetUniform(
+                m_defaultUniformIds.at("u_texture_floats"));
+            static float floatData[4] = { 0.f, 0.f, 0.2f, 0.f };
+            matInst.uniforms.push_back({ u->handle, &floatData, u->num });
+
+            // Textures
+            matInst.textures.push_back({
+                0, 
+                Renderer::GetUniform(m_defaultUniformIds.at("u_texture_albedo"))->handle, 
+                mat.albedo, 
+                samplerFlags
+            });
+
+            matInst.textures.push_back({
+                1, 
+                Renderer::GetUniform(m_defaultUniformIds.at("u_normalMap"))->handle, 
+                mat.normalMap, 
+                samplerFlags
+            });
+
+            matInst.textures.push_back({
+                2, 
+                Renderer::GetUniform(m_defaultUniformIds.at("u_heightMap"))->handle, 
+                mat.heightMap, 
+                samplerFlags
+            });
+        }
+
+        packet.material = matInst;
+        m_renderPackets.push_back(packet);
+    }
+}
+
+void RenderCore::_ScreenSpaceQuad(ViewID view, Program program) {
+    bgfx::setViewClear(view,
+                       BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
+                       0x000000ff,
+                       1.0f,
+                       0);
+    bgfx::setState(BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LEQUAL |
+                   BGFX_STATE_MSAA);
+
+    // Damn everything about macos
+#if BX_PLATFORM_OSX
+    bgfx::setVertexBuffer(0, Renderer::dummy);
+#else
+    bgfx::setVertexCount(3);
+#endif
+    bgfx::submit(view, program.program);
+}
+
 /*
 --- Drawing functions ---
 */
@@ -817,126 +996,11 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
                                  BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW;
 
-    std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
-    
-    // Find every object with the current program to prevent running the same
-    // GameObject multiple times
-    std::vector<GameObject*> objectsWithProgram;
-    
-    for (auto& gameObject : gameObjects) {
-        if (!gameObject) continue;
-        
-        if (gameObject->type == program.name) {
-            objectsWithProgram.push_back(gameObject);
-        }
-    }
+    for (auto& packet : m_renderPackets) {
+        if (program.program.idx != packet.program.program.idx) continue; // Skip if not matching program
+        bgfx::setState(renderState | packet.material.renderState);
 
-    const uint64_t samplerFlags =
-                BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
-
-    for (auto& gameObject : objectsWithProgram) {
-        auto* meshComp = gameObject->GetComponent<MeshComponent>();
-        MeshData meshData = meshComp->meshData;
-        if (!meshData.valid || !meshComp->isEnabled) continue;
-
-        if (_ShouldCullBySize(gameObject, camera)) {
-            m_drawnCounts.culledSize++;
-            continue;
-        } 
-
-        MeshAABB aabb = meshComp->GetAABB();
-        bx::Vec3 min = { aabb.min[0], aabb.min[1], aabb.min[2] };
-        bx::Vec3 max = { aabb.max[0], aabb.max[1], aabb.max[2] };
-        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
-            m_drawnCounts.culledFrustum++;
-            continue;
-        }
-        
-        bgfx::setState(renderState);
-        Material& mat = meshData.materials[0];
-        // Default vertex color shader
-        if (program.name == "default") {
-            float u_floats[4] = { 0.f, 0.f, 0.2f, 0.f };
-            Renderer::SetUniform(m_defaultUniformIds["u_default_floats"], u_floats);
-            if (mat.useVertexColor) {
-                float useVertex[4] = { 1.0f, 0.0f, 0.0f, 0.0f };
-                Renderer::SetUniform(m_defaultUniformIds["u_default_useVertex"], useVertex);
-            } else {
-                float useVertex[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
-                Renderer::SetUniform(m_defaultUniformIds["u_default_useVertex"], useVertex);
-                Renderer::SetUniform(m_defaultUniformIds["u_baseColor"], mat.baseColor);
-            }
-        }
-        // Default textured shader
-        else if (program.name == "texture") {
-            float u_floats[4] = {
-                mat.heightScale,
-                mat.mixFactor,
-                mat.ambient,
-                mat.tileDetail,
-            };
-            Renderer::SetUniform(m_defaultUniformIds["u_texture_floats"], u_floats);
-
-            bgfx::setTexture(
-                0,
-                Renderer::GetUniform(m_defaultUniformIds["u_texture_albedo"])->handle,
-                mat.albedo,
-                samplerFlags);
-            bgfx::setTexture(
-                1,
-                Renderer::GetUniform(m_defaultUniformIds["u_normalMap"])->handle,
-                mat.normalMap,
-                samplerFlags);
-            bgfx::setTexture(
-                2,
-                Renderer::GetUniform(m_defaultUniformIds["u_heightMap"])->handle,
-                mat.heightMap,
-                samplerFlags);
-        }
-        // Probably a custom shader
-        else {
-            Program shader = Renderer::GetProgram(gameObject->type.c_str());
-            if(!bgfx::isValid(shader.program)) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Program %s not found", gameObject->type.c_str());
-                continue;
-            }
-        }
-
-        if (m_config.useShadows && meshComp->receiveShadows) {
-            // Set shadow map for the texture program
-            const uint64_t depthSampler =
-                BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
-            std::string name = "u_" + program.name + "_shadowMap";
-            bgfx::setTexture(
-                3,
-                Renderer::GetUniform(m_defaultUniformIds[name])->handle,
-                m_shadowDepth,
-                depthSampler);
-        }
-
-        bgfx::setVertexBuffer(0, meshData.vbh);
-        bgfx::setIndexBuffer(meshData.ibh);
-
-        // Set common uniforms
-        float modelMtx[16];
-        gameObject->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
-        bgfx::setTransform(modelMtx);
-        
-        float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));
-        float sy = bx::length(bx::Vec3(modelMtx[4], modelMtx[5], modelMtx[6]));
-        float sz = bx::length(bx::Vec3(modelMtx[8], modelMtx[9], modelMtx[10]));
-
-        float normal3x3[9];
-        for(int i = 0; i < 3; ++i) {
-            normal3x3[i * 3 + 0] = modelMtx[i * 4 + 0] / sx;
-            normal3x3[i * 3 + 1] = modelMtx[i * 4 + 1] / sy;
-            normal3x3[i * 3 + 2] = modelMtx[i * 4 + 2] / sz;
-        }
-
-        std::string type = "u_" + program.name; // Since it's a map, gotta have unique keys
-        Renderer::SetUniform(m_defaultUniformIds[type + "_normalMatrix"], normal3x3);
-        Renderer::SetUniform(m_defaultUniformIds[type + "_csmTexelSize"], m_cascadeTexelSizes);
+        packet.material.Bind(); // Set uniforms and textures
 
         bgfx::submit(program.viewId, program.program);
         m_drawnCounts.forward++;

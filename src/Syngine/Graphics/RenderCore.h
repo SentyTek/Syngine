@@ -17,6 +17,7 @@
 #include <array>
 
 #include <bgfx/bgfx.h>
+#include <vector>
 
 namespace Syngine {
 
@@ -65,6 +66,62 @@ class RenderCore {
         Syngine::VIEW_UI_DEBUG
     };
 
+    /// @brief Struct representing a material instance for rendering. Used for
+    /// binding textures and uniforms.
+    /// @internal
+    struct MaterialInstance {
+        struct Texture {
+            uint8_t stage;
+            bgfx::UniformHandle handle;
+            bgfx::TextureHandle texture;
+            uint32_t samplerFlags;
+        };
+        struct UniformData {
+            bgfx::UniformHandle handle;
+            const void*        data;
+            uint16_t           num = 1;
+        };
+        std::vector<Texture> textures;
+        std::vector<UniformData> uniforms;
+
+        uint64_t renderState = BGFX_STATE_DEFAULT;
+
+        void Bind() const {
+            if (renderState != 0) {
+                bgfx::setState(renderState);
+            }
+
+            for (const auto& tex : textures) {
+                bgfx::setTexture(
+                    tex.stage,
+                    tex.handle,
+                    tex.texture,
+                    tex.samplerFlags);
+            }
+            for (const auto& uni : uniforms) {
+                bgfx::setUniform(uni.handle, uni.data, uni.num);
+            }
+        }
+    };
+
+    /// @brief Struct representing a render packet for submission to the GPU.
+    /// @internal
+    struct RenderPacket {
+        bgfx::VertexBufferHandle vbh;
+        bgfx::IndexBufferHandle  ibh;
+        float                    modelMtx[16];
+
+        MaterialInstance material;
+        Program          program;
+
+        bool visible;
+    };
+
+    static std::vector<RenderPacket> m_renderPackets; //* Collected render packets for the current frame
+    void
+    _CollectRenderPackets(CameraComponent* camera); //* Collect render packets
+                                                    //for the current frame
+
     static bool _PrepareRenderViews(CameraComponent* camera);
     static CameraComponent::Frustum _GetCascadeFrustum(uint8_t          cascade,
                                                       CameraComponent* camera);
@@ -78,6 +135,7 @@ class RenderCore {
                            CameraComponent* camera,
                            DebugModes       debug);
     static void _DrawBillboard(const Program& program);
+    static void _DrawPostProcess(const Program& program);
     static void _DrawDbgBillboard(const Program& program);
     static void _DrawUIDebug(CameraComponent* camera);
 
@@ -91,7 +149,17 @@ class RenderCore {
                                          CameraComponent* camera,
                                          uint8_t          cascade);
 
+    static void _ScreenSpaceQuad(ViewID view, Program program);
+
+                                         
     // Static members
+    static bgfx::FrameBufferHandle m_sceneFB; //* Framebuffer for scene rendering
+    static bgfx::TextureHandle     m_sceneColor; //* Color texture for scene rendering (RGBA16F)
+    static bgfx::TextureHandle     m_sceneDepth; //* Depth texture for scene rendering (D24S8)
+    static bgfx::TextureHandle     m_sceneNormal; //* Normal texture for scene rendering (RGBA8)
+    static bgfx::FrameBufferHandle m_ssaoFB; //* Framebuffer for SSAO rendering
+    static bgfx::TextureHandle     m_ssaoTex; //* SSAO texture (R8)
+    
     static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
 
     static bgfx::TextureHandle m_shadowDepth; //* Shadow map depth texture handle

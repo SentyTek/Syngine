@@ -80,12 +80,10 @@ void main() {
     // Combine
     vec3 finalColor = albedo.rgb * (ambient + directLight + bounce) + (directLight * specStrength * fresnel);
     finalColor = mix(finalColor, u_horizonColor.xyz, fogFactor);
-
-    // Tone mapping
-    finalColor = ACESFilm(finalColor);
     
-    // Gamma correction (linear to sRGB)
+    // Gamma correction (linear to sRGB) (Tonemapping done in post now)
     //finalColor = applyGammaCorrection(finalColor, 2.2);
     
-    gl_FragColor = vec4(finalColor, albedo.a);
+    gl_FragData[0] = vec4(finalColor, albedo.a);
+    gl_FragData[1] = vec4(N * 0.5 + 0.5, 1.0); //normal output
 }

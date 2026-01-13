@@ -56,9 +56,7 @@ void main() {
     // Combine
     vec3 finalColor = col.rgb * (ambient + directLight + bounce) + (directLight * specStrength * fresnel);
     finalColor = mix(finalColor, u_horizonColor.xyz, fogFactor);
-
-    // Tone mapping
-    finalColor = ACESFilm(finalColor);
     
-    gl_FragColor = vec4(finalColor, col.a);
+    gl_FragData[0] = vec4(finalColor, col.a);
+    gl_FragData[1] = vec4(normal * 0.5 + 0.5, 1.0); //normal output
 }
