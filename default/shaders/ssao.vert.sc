@@ -1,4 +1,3 @@
-$input a_position
 $output v_texcoord0
 #include <bgfx_shader.sh>
 

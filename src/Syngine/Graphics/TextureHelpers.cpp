@@ -56,7 +56,7 @@ static void _BoxDownsample2x2(const uint8_t* src, int srcW, int srcH, std::vecto
 
 bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name) {
     int w, h, channels;
-    stbi_uc* pixels = stbi_load_from_memory(data, size, &w, &h, &channels, 4);
+    stbi_uc* pixels = stbi_load_from_memory(data, static_cast<int>(size), &w, &h, &channels, 4);
     if (!pixels) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                                "Failed to load embedded texture");
@@ -81,7 +81,7 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
 
     for (int level = 0; level < mipCount; level++) {
         //copy level data into bgfx
-        const bgfx::Memory* mem = bgfx::copy(src.data(), src.size());
+        const bgfx::Memory* mem = bgfx::copy(src.data(), static_cast<uint32_t>(src.size()));
         bgfx::updateTexture2D(tex, 0, level, 0, 0, (uint16_t)levelW, (uint16_t)levelH, mem);
 
         //generate next mip in our src buffer
@@ -109,11 +109,11 @@ bgfx::TextureHandle Syngine::LoadTextureFromFile(const char* path) {
     }
 
     Sint64 size = SDL_GetIOSize(rw);
-    std::vector<Sint64> data(size);
+    std::vector<uint8_t> data(size);
     SDL_ReadIO(rw, data.data(), size);
     SDL_CloseIO(rw);
 
-    return Syngine::LoadTextureFromMemory((uint8_t*)data.data(), size, path);
+    return Syngine::LoadTextureFromMemory(data.data(), static_cast<size_t>(size), path);
 }
 
 bgfx::TextureHandle Syngine::CreateFlatTexture() {
@@ -121,6 +121,21 @@ bgfx::TextureHandle Syngine::CreateFlatTexture() {
     const bgfx::Memory* mem = bgfx::copy(data, sizeof(data));
     bgfx::TextureHandle tex = bgfx::createTexture2D(
         1, 1, false, 1, bgfx::TextureFormat::RGBA8,
+        BGFX_TEXTURE_NONE | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
+        mem
+    );
+    return tex;
+}
+
+bgfx::TextureHandle Syngine::CreateNoiseTexture(uint16_t width, uint16_t height) {
+    std::vector<uint8_t> data(width * height * 4);
+    // Random value between 0 and 255 for each channel
+    for (size_t i = 0; i < width * height * 4; ++i) {
+        data[i] = static_cast<uint8_t>(rand() % 256);
+    }
+    const bgfx::Memory* mem = bgfx::copy(data.data(), static_cast<uint32_t>(data.size()));
+    bgfx::TextureHandle tex = bgfx::createTexture2D(
+        width, height, false, 1, bgfx::TextureFormat::RGBA8,
         BGFX_TEXTURE_NONE | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
         mem
     );

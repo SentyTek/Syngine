@@ -27,17 +27,18 @@ class BillboardComponent; // Forward declaration
 /// @section Renderer
 /// @since v0.0.1
 enum ViewID : bgfx::ViewId {
-    VIEW_SHADOW      = 0,  //* Shadow map rendering
-    VIEW_SKY         = 4,  //* Skybox rendering
-    VIEW_GBUFFER     = 5,  //* G-Buffer rendering for deferred shading
-    VIEW_LIGHTING    = 6,  //* Lighting pass for deferred shading
-    VIEW_FORWARD     = 7,  //* Forward rendering pass for translucent objects
-    VIEW_BILLBOARD   = 8,  //* Billboard rendering
-    VIEW_POSTPROCESS = 9, //* Post-processing effects
-    VIEW_DEBUG       = 10,  //* Debug rendering pass for debug rendering
-    VIEW_BILL_DBG    = 11, //* Billboard debug rendering
-    VIEW_UI          = 12, //* UI rendering
-    VIEW_UI_DEBUG    = 13, //* UI debug rendering
+    VIEW_SHADOW    = 0, //* Shadow map rendering
+    VIEW_SKY       = 4, //* Skybox rendering
+    VIEW_GBUFFER   = 5, //* G-Buffer rendering for deferred shading
+    VIEW_LIGHTING  = 6, //* Lighting pass for deferred shading
+    VIEW_FORWARD   = 7, //* Forward rendering pass for translucent objects
+    VIEW_BILLBOARD = 8, //* Billboard rendering
+    VIEW_AO        = 9, //* Ambient occlusion pass
+    VIEW_POSTPROCESS = 10, //* Post-processing effects
+    VIEW_DEBUG       = 11,  //* Debug rendering pass for debug rendering
+    VIEW_BILL_DBG    = 12, //* Billboard debug rendering
+    VIEW_UI          = 13, //* UI rendering
+    VIEW_UI_DEBUG    = 14, //* UI debug rendering
 };
 
 /// @brief Different types of shader uniforms

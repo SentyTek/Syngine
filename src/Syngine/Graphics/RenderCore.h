@@ -59,10 +59,16 @@ class RenderCore {
                                           float*           outLightProj,
                                           float*           outCascadeSplits);
 
-    static constexpr std::array<Syngine::ViewID, 10> _allViews = {
-        Syngine::VIEW_SHADOW,   Syngine::VIEW_SKY,      Syngine::VIEW_GBUFFER,
-        Syngine::VIEW_LIGHTING, Syngine::VIEW_FORWARD,  Syngine::VIEW_BILLBOARD,
-        Syngine::VIEW_DEBUG,    Syngine::VIEW_BILL_DBG, Syngine::VIEW_UI,
+    static constexpr std::array<Syngine::ViewID, 12> _allViews = {
+        Syngine::VIEW_SHADOW,
+        Syngine::VIEW_SKY,
+        Syngine::VIEW_GBUFFER,
+        Syngine::VIEW_LIGHTING,
+        Syngine::VIEW_FORWARD,
+        Syngine::VIEW_AO,
+        Syngine::VIEW_POSTPROCESS,
+        Syngine::VIEW_BILLBOARD, Syngine::VIEW_DEBUG,
+        Syngine::VIEW_BILL_DBG,  Syngine::VIEW_UI,
         Syngine::VIEW_UI_DEBUG
     };
 
@@ -77,7 +83,7 @@ class RenderCore {
             uint32_t samplerFlags;
         };
         struct UniformData {
-            bgfx::UniformHandle handle;
+            size_t             handle;
             const void*        data;
             uint16_t           num = 1;
         };
@@ -87,10 +93,6 @@ class RenderCore {
         uint64_t renderState = BGFX_STATE_DEFAULT;
 
         void Bind() const {
-            if (renderState != 0) {
-                bgfx::setState(renderState);
-            }
-
             for (const auto& tex : textures) {
                 bgfx::setTexture(
                     tex.stage,
@@ -99,7 +101,7 @@ class RenderCore {
                     tex.samplerFlags);
             }
             for (const auto& uni : uniforms) {
-                bgfx::setUniform(uni.handle, uni.data, uni.num);
+                Renderer::SetUniform(uni.handle, uni.data, uni.num);
             }
         }
     };
@@ -117,10 +119,22 @@ class RenderCore {
         bool visible;
     };
 
+    struct internalPrograms {
+        size_t shadowProgram;
+        size_t skyProgram;
+        size_t defaultProgram;
+        size_t textureProgram;
+        size_t debugProgram;
+        size_t billboardProgram;
+        size_t ssaoProgram;
+        size_t tonemapProgram;
+    };
+    static internalPrograms m_internalPrograms;
+
     static std::vector<RenderPacket> m_renderPackets; //* Collected render packets for the current frame
-    void
+    static void
     _CollectRenderPackets(CameraComponent* camera); //* Collect render packets
-                                                    //for the current frame
+                                                    // for the current frame
 
     static bool _PrepareRenderViews(CameraComponent* camera);
     static CameraComponent::Frustum _GetCascadeFrustum(uint8_t          cascade,
@@ -157,6 +171,7 @@ class RenderCore {
     static bgfx::TextureHandle     m_sceneColor; //* Color texture for scene rendering (RGBA16F)
     static bgfx::TextureHandle     m_sceneDepth; //* Depth texture for scene rendering (D24S8)
     static bgfx::TextureHandle     m_sceneNormal; //* Normal texture for scene rendering (RGBA8)
+    static bgfx::TextureHandle     m_ssaoNoiseTex; //* SSAO noise texture (RGBA8)
     static bgfx::FrameBufferHandle m_ssaoFB; //* Framebuffer for SSAO rendering
     static bgfx::TextureHandle     m_ssaoTex; //* SSAO texture (R8)
     
@@ -175,6 +190,8 @@ class RenderCore {
         m_billboardVbh; //* Vertex buffer handle for billboards
     static bgfx::IndexBufferHandle
         m_billboardIbh; //* Index buffer handle for billboards
+
+    static bgfx::VertexBufferHandle m_fsQuadVbh; //* Vertex buffer handle for fullscreen quad
 
     static SDL_Window* win; //* SDL window handle
 

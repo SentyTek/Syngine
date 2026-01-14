@@ -29,4 +29,10 @@ bgfx::TextureHandle LoadTextureFromFile(const char* path);
 /// @return A bgfx::TextureHandle representing a flat texture
 bgfx::TextureHandle CreateFlatTexture();
 
+/// @brief Creates a white noise texture
+/// @param width Width of the texture
+/// @param height Height of the texture
+/// @return A bgfx::TextureHandle representing the noise texture
+bgfx::TextureHandle CreateNoiseTexture(uint16_t width, uint16_t height);
+
 } // namespace Syngine
