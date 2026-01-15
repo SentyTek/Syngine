@@ -1,4 +1,4 @@
-$input v_worldPos, v_worldNormal, v_viewDepth, v_vertexColor
+$input v_worldPos, v_normal, v_viewDepth, v_vertexColor
 #include <bgfx_shader.sh>
 #include "shadow.sh"
 #include "common.sh"
@@ -12,7 +12,7 @@ uniform vec4 u_sunColor;        // sunlight color
 uniform vec4 u_horizonColor;    // fog/horizon color
 
 void main() {
-    vec3 normal = normalize(v_worldNormal);
+    vec3 normal = normalize(v_normal);
     vec3 lightDirToSun = normalize(u_lightDir.xyz);
     float sunElevation = lightDirToSun.y;
 

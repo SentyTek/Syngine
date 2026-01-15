@@ -494,7 +494,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
                                           false,
                                           1,
                                           bgfx::TextureFormat::RGBA8,
-                                          tsFlags | BGFX_TEXTURE_SRGB);
+                                          tsFlags);
     m_sceneDepth =
         bgfx::createTexture2D(uint16_t(Renderer::width),
                               uint16_t(Renderer::height),
@@ -844,6 +844,20 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
         RenderPacket packet;
         packet.vbh = meshComp->meshData.vbh;
         packet.ibh = meshComp->meshData.ibh;
+
+        float modelMtx[16];
+        go->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
+        
+        float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));
+        float sy = bx::length(bx::Vec3(modelMtx[4], modelMtx[5], modelMtx[6]));
+        float sz = bx::length(bx::Vec3(modelMtx[8], modelMtx[9], modelMtx[10]));
+
+        float normal3x3[9];
+        for(int i = 0; i < 3; ++i) {
+            normal3x3[i * 3 + 0] = modelMtx[i * 4 + 0] / sx;
+            normal3x3[i * 3 + 1] = modelMtx[i * 4 + 1] / sy;
+            normal3x3[i * 3 + 2] = modelMtx[i * 4 + 2] / sz;
+        }
         go->GetComponent<TransformComponent>()->GetModelMatrix(packet.modelMtx);
 
         Material& mat = meshComp->meshData.materials[0];
@@ -853,36 +867,48 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
         matInst.renderState = BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LESS |
                               BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
         if (go->type == "default") {
+            matInst.uniforms.reserve(4);
             // Uniform: u_default_floats
             size_t handle = m_defaultUniformIds.at("u_default_floats");
             Uniform* u = Renderer::GetUniform(handle);
-            static float floatData[4] = { 0.f, 0.f, 0.2f, 0.f };
-            matInst.uniforms.push_back({ handle,  &floatData, u->num });
+            matInst.uniforms.push_back(
+                { handle, { 0.f, 0.f, 0.2f, 0.f }, u->num });
+
+            // Model matrix
+            handle = m_defaultUniformIds.at("u_default_normalMatrix");
+            Uniform* uModel = Renderer::GetUniform(handle);
+            matInst.uniforms.push_back(
+                { handle, std::vector<float>(normal3x3, normal3x3 + 9), uModel->num });
 
             // Uniform: u_default_useVertex / u_baseColor
             if (mat.useVertexColor) {
                 size_t handle = m_defaultUniformIds.at("u_default_useVertex");
                 Uniform* u      = Renderer::GetUniform(handle);
-                static float useVertexData[4] = { 1.f, 0.f, 0.f, 0.f };
-                matInst.uniforms.push_back({ handle, &useVertexData, u->num });
+                matInst.uniforms.push_back({ handle, {1.f, 0.f, 0.f, 0.f}, u->num });
             } else {
                 size_t handle = m_defaultUniformIds.at("u_default_useVertex");
                 Uniform* u = Renderer::GetUniform(handle);
-                static float useVertexData[4] = { 0.f, 0.f, 0.f, 0.f };
-                matInst.uniforms.push_back({ handle, &useVertexData, u->num });
+                matInst.uniforms.push_back({ handle, {0.f, 0.f, 0.f, 0.f}, u->num });
 
                 size_t handle2 = m_defaultUniformIds.at("u_baseColor");
                 Uniform* uBaseColor = Renderer::GetUniform(handle2);
-                matInst.uniforms.push_back({ handle2, mat.baseColor, uBaseColor->num });
+                matInst.uniforms.push_back({ handle2, std::vector<float>(mat.baseColor, mat.baseColor + 4), uBaseColor->num });
             }
         } else if (go->type == "texture") {
+            matInst.uniforms.reserve(2);
             uint32_t samplerFlags =
                 BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
             // Uniform: u_texture_floats
             size_t handle = m_defaultUniformIds.at("u_texture_floats");
             Uniform* u = Renderer::GetUniform(handle);
-            static float floatData[4] = { 0.f, 0.f, 0.2f, 0.f };
-            matInst.uniforms.push_back({ handle, &floatData, u->num });
+            matInst.uniforms.push_back({ handle, {0.f, 0.f, 0.2f, 0.f}, u->num });
+
+            // Model matrix
+            handle = m_defaultUniformIds.at("u_texture_normalMatrix");
+            Uniform* uModel = Renderer::GetUniform(handle);
+            matInst.uniforms.push_back(
+                { handle, std::vector<float>(packet.modelMtx, packet.modelMtx + 16), uModel->num });
+
             // Textures
             matInst.textures.push_back({
                 0, 
@@ -913,8 +939,6 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
 void RenderCore::_ScreenSpaceQuad(ViewID view, Program program) {
     SYN_PROFILE_FUNCTION();
-    uint16_t flags = view == VIEW_AO ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH) : (BGFX_CLEAR_NONE);
-    bgfx::setViewClear(view, flags, 0x000000ff, 1.0f, 0);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_CULL_CCW);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
@@ -945,6 +969,7 @@ void RenderCore::_DrawShadows(const Program&   program,
     std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
     {
         SYN_PROFILE_SCOPE("Set Shadow View");
+    bgfx::setViewName(program.viewId + cascade, "Shadow Cascade");
         bgfx::setState(renderState);
     }
     {
@@ -998,15 +1023,11 @@ void RenderCore::_DrawShadows(const Program&   program,
 
 void RenderCore::_DrawSky(const Program& program) {
     SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(program.viewId, "Sky");
     bgfx::setViewFrameBuffer(program.viewId, m_sceneFB);
-    bgfx::setViewClear(program.viewId,
-                       BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
-                       0x000000ff,
-                       1.0f,
-                       0);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_ALWAYS |
-                   BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW);
+                   BGFX_STATE_MSAA | BGFX_STATE_CULL_CW);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
     bgfx::submit(program.viewId, program.program);
@@ -1014,6 +1035,7 @@ void RenderCore::_DrawSky(const Program& program) {
 
 void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(VIEW_FORWARD, "Forward");
     bgfx::setViewFrameBuffer(VIEW_FORWARD, m_sceneFB);
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
                                  BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_Z;
@@ -1023,6 +1045,19 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         bgfx::setState(renderState | packet.material.renderState);
 
         packet.material.Bind(); // Set uniforms and textures
+
+        if (m_config.useShadows) {
+            bgfx::setTexture(
+                3,
+                Renderer::GetUniform(
+                    m_defaultUniformIds.at("u_" + program.name + "_shadowMap"))
+                    ->handle,
+                m_shadowDepth,
+                BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                    BGFX_SAMPLER_U_CLAMP |
+                    BGFX_SAMPLER_V_CLAMP
+            );
+        }
 
         bgfx::setTransform(packet.modelMtx);
         bgfx::setVertexBuffer(0, packet.vbh);
@@ -1036,6 +1071,7 @@ void RenderCore::_DrawDebug(const Program&   program,
                             CameraComponent* camera,
                             DebugModes       debug) {
     SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(program.viewId, "Debug");
     GameObject *p = Registry::GetGameObjectByName("player");
     if (p && Core::IsPhysicsEnabled()) {
         Core::_GetApp()->physicsManager->_DrawDebug(
@@ -1089,6 +1125,7 @@ void RenderCore::_DrawDebug(const Program&   program,
 
 void RenderCore::_DrawBillboard(const Program& program) {
     SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(program.viewId, "Billboards");
     const uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                            BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LEQUAL |
                            BGFX_STATE_MSAA;
@@ -1151,6 +1188,7 @@ void RenderCore::_DrawBillboard(const Program& program) {
 
 void RenderCore::_DrawPostProcess(const Program& program) {
     SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(program.viewId, "PostProcess");
 
     if (program.id == m_internalPrograms.ssaoProgram) {
         bgfx::setViewFrameBuffer(VIEW_AO, m_ssaoFB);
@@ -1190,6 +1228,7 @@ void RenderCore::_DrawPostProcess(const Program& program) {
 
 void RenderCore::_DrawDbgBillboard(const Program& program) {
     SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(program.viewId, "Gizmos");
     // Debug billboards (gizmos) are always drawn on top. Regular billboards (forward pass ig) are depth-tested normally.
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                     BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_ALWAYS;
@@ -1234,6 +1273,7 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
 
 void RenderCore::_DrawUIDebug(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(VIEW_DEBUG, "UI Debug");
     bgfx::setDebug(BGFX_DEBUG_TEXT);
     bgfx::dbgTextClear();
 
@@ -1317,7 +1357,14 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             break;
         }
         case ViewID::VIEW_SKY: {
-            bgfx::setViewRect(view, 0, 0, uint16_t(Renderer::width), uint16_t(Renderer::height));
+            bgfx::setViewRect(view,
+                              0,
+                              0,
+                              uint16_t(Renderer::width),
+                              uint16_t(Renderer::height));
+            bgfx::setViewClear(
+                view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
+
             camera->Update(view, Renderer::width, Renderer::height);
             Camera cam = camera->GetCamera();
             float  skyView[16];
@@ -1327,7 +1374,14 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             break;
         }
         default: {
-            bgfx::setViewRect(view, 0, 0, uint16_t(Renderer::width), uint16_t(Renderer::height));
+            uint16_t flags = view == VIEW_AO ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH) : (BGFX_CLEAR_NONE);
+            bgfx::setViewRect(view,
+                              0,
+                              0,
+                              uint16_t(Renderer::width),
+                              uint16_t(Renderer::height));
+            bgfx::setViewClear(
+                view, flags, 0x000000ff, 1.0f, 0);
             Camera cam = camera->GetCamera();
             bgfx::setViewTransform(view, cam.view, cam.proj);
             break;
@@ -1377,8 +1431,8 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 break;
             case VIEW_BILL_DBG:
             case VIEW_BILLBOARD:
-                if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
-                _DrawBillboard(program);
+                //if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
+                //_DrawBillboard(program);
                 break;
             case VIEW_POSTPROCESS:
             case VIEW_AO:

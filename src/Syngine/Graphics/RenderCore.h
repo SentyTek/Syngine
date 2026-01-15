@@ -84,7 +84,7 @@ class RenderCore {
         };
         struct UniformData {
             size_t             handle;
-            const void*        data;
+            std::vector<float> data;
             uint16_t           num = 1;
         };
         std::vector<Texture> textures;
@@ -101,7 +101,7 @@ class RenderCore {
                     tex.samplerFlags);
             }
             for (const auto& uni : uniforms) {
-                Renderer::SetUniform(uni.handle, uni.data, uni.num);
+                Renderer::SetUniform(uni.handle, uni.data.data(), uni.num);
             }
         }
     };
