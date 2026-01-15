@@ -127,6 +127,7 @@ class RenderCore {
         size_t debugProgram;
         size_t billboardProgram;
         size_t ssaoProgram;
+        size_t ssaoBlurProgram;
         size_t tonemapProgram;
     };
     static internalPrograms m_internalPrograms;
@@ -173,7 +174,11 @@ class RenderCore {
     static bgfx::TextureHandle     m_sceneNormal; //* Normal texture for scene rendering (RGBA8)
     static bgfx::TextureHandle     m_ssaoNoiseTex; //* SSAO noise texture (RGBA8)
     static bgfx::FrameBufferHandle m_ssaoFB; //* Framebuffer for SSAO rendering
+    static bgfx::FrameBufferHandle m_ssaoBlurHFB; //* Temp framebuffer for SSAO blurring (horizontal)
+    static bgfx::FrameBufferHandle m_ssaoBlurVFB; //* Temp framebuffer for SSAO blurring (vertical)
     static bgfx::TextureHandle     m_ssaoTex; //* SSAO texture (R8)
+    static bgfx::TextureHandle     m_ssaoBlurH; //* SSAO texture mid-blur (R8)
+    static bgfx::TextureHandle     m_ssaoBlurFinal; //* SSAO texture post-blur (Use this one) (R8)
     
     static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
 

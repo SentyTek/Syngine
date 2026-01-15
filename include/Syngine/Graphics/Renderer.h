@@ -33,12 +33,12 @@ enum ViewID : bgfx::ViewId {
     VIEW_LIGHTING  = 6, //* Lighting pass for deferred shading
     VIEW_FORWARD   = 7, //* Forward rendering pass for translucent objects
     VIEW_BILLBOARD = 8, //* Billboard rendering
-    VIEW_AO        = 9, //* Ambient occlusion pass
-    VIEW_POSTPROCESS = 10, //* Post-processing effects
-    VIEW_DEBUG       = 11,  //* Debug rendering pass for debug rendering
-    VIEW_BILL_DBG    = 12, //* Billboard debug rendering
-    VIEW_UI          = 13, //* UI rendering
-    VIEW_UI_DEBUG    = 14, //* UI debug rendering
+    VIEW_AO        = 9, //* Ambient occlusion passes (3 passes)
+    VIEW_POSTPROCESS = 12, //* Post-processing effects passes (Max 8 passes)
+    VIEW_DEBUG       = 16,  //* Debug rendering pass for debug rendering
+    VIEW_BILL_DBG    = 17, //* Billboard debug rendering
+    VIEW_UI          = 18, //* UI rendering
+    VIEW_UI_DEBUG    = 19, //* UI debug rendering
 };
 
 /// @brief Different types of shader uniforms

@@ -6,9 +6,10 @@ SAMPLER2D(s_ssao, 1);       // R8
 
 void main() {
     vec2 uv = v_texcoord0;
+    vec2 flippedUv = vec2(uv.x, 1.0 - uv.y); // Flip Y for texture lookup
     
-    vec3 color = texture2D(s_sceneColor, uv).rgb;
-    float ssao = texture2D(s_ssao, uv).r;
+    vec3 color = texture2D(s_sceneColor, flippedUv).rgb;
+    float ssao = texture2D(s_ssao, flippedUv).r;
     
     // Apply SSAO (Multiplicative approximation)
     color *= pow(ssao, 2.0); // 2.0 is an arbitrary strength factor

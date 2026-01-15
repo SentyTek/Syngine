@@ -23,6 +23,7 @@
 #include "bgfx/defines.h"
 #include "bx/math.h"
 #include <cstddef>
+#include <cstdint>
 #include <vector>
 
 #define SYN_INT_RENDEREXIT(program)                                            \
@@ -66,7 +67,11 @@ bgfx::TextureHandle                   RenderCore::m_ssaoNoiseTex = BGFX_INVALID_
 bgfx::TextureHandle                   RenderCore::m_sceneDepth = BGFX_INVALID_HANDLE;
 bgfx::TextureHandle                   RenderCore::m_sceneNormal = BGFX_INVALID_HANDLE;
 bgfx::FrameBufferHandle               RenderCore::m_ssaoFB = BGFX_INVALID_HANDLE;
+bgfx::FrameBufferHandle               RenderCore::m_ssaoBlurHFB = BGFX_INVALID_HANDLE;
+bgfx::FrameBufferHandle               RenderCore::m_ssaoBlurVFB = BGFX_INVALID_HANDLE;
 bgfx::TextureHandle                   RenderCore::m_ssaoTex = BGFX_INVALID_HANDLE;
+bgfx::TextureHandle                   RenderCore::m_ssaoBlurH = BGFX_INVALID_HANDLE;
+bgfx::TextureHandle                   RenderCore::m_ssaoBlurFinal = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle              RenderCore::m_fsQuadVbh = BGFX_INVALID_HANDLE;
 
 bool RenderCore::_Initialize(const RendererConfig& config) {
@@ -186,6 +191,12 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         Renderer::AddProgram("shaders/ssao", "ssao", VIEW_POSTPROCESS);
     if (m_internalPrograms.ssaoProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("ssao")
+    }
+
+    m_internalPrograms.ssaoBlurProgram = Renderer::AddProgram(
+        "shaders/ssao_blur", "ssao_blur", VIEW_POSTPROCESS);
+    if (m_internalPrograms.ssaoBlurProgram == (size_t)-1) {
+        SYN_INT_RENDEREXIT("ssao_blur")
     }
 
     m_internalPrograms.tonemapProgram = Renderer::AddProgram(
@@ -377,8 +388,29 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
               m_internalPrograms.ssaoProgram, "s_depth", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
         { "s_ssao_noiseTex",
-          Renderer::RegisterUniform(
-              m_internalPrograms.ssaoProgram, "s_noise", UniformType::UNIFORM_SAMPLER) });
+          Renderer::RegisterUniform(m_internalPrograms.ssaoProgram,
+                                    "s_noise",
+                                    UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "s_ssaob_ssaoTex",
+          Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
+                                    "s_ssao",
+                                    UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "s_ssaob_depthTex",
+          Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
+                                    "s_depth",
+                                    UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "s_ssaob_normalTex",
+          Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
+                                    "s_normal",
+                                    UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
+        { "u_ssaob_params",
+          Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
+                                    "u_floats",
+                                    UniformType::UNIFORM_VEC4) });
 
     // Tonemapping program uniforms
     m_defaultUniformIds.insert(
@@ -508,7 +540,21 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
                                       1,
                                       bgfx::TextureFormat::R8,
                                       tsFlags);
+    m_ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                        uint16_t(Renderer::height),
+                                        false,
+                                        1,
+                                        bgfx::TextureFormat::R8,
+                                        tsFlags);
+    m_ssaoBlurFinal = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                            uint16_t(Renderer::height),
+                                            false,
+                                            1,
+                                            bgfx::TextureFormat::R8,
+                                            tsFlags);
     m_ssaoFB  = bgfx::createFrameBuffer(1, &m_ssaoTex, true);
+    m_ssaoBlurHFB  = bgfx::createFrameBuffer(1, &m_ssaoBlurH, true);
+    m_ssaoBlurVFB  = bgfx::createFrameBuffer(1, &m_ssaoBlurFinal, true);
 
     // Create global scene framebuffer (MRT: 0:Color, 1:Normal, Depth)
     bgfx::TextureHandle screenTextures[] = { m_sceneColor, m_sceneNormal, m_sceneDepth };
@@ -939,7 +985,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
 void RenderCore::_ScreenSpaceQuad(ViewID view, Program program) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_CULL_CCW);
+    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_CULL_CW);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
     bgfx::submit(view, program.program);
@@ -1188,9 +1234,10 @@ void RenderCore::_DrawBillboard(const Program& program) {
 
 void RenderCore::_DrawPostProcess(const Program& program) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setViewName(program.viewId, "PostProcess");
 
+    // I'd like to use a switch here but can't convert program IDs to case labels
     if (program.id == m_internalPrograms.ssaoProgram) {
+        bgfx::setViewName(VIEW_AO, "SSAO Main");
         bgfx::setViewFrameBuffer(VIEW_AO, m_ssaoFB);
         bgfx::setTexture(
             0,
@@ -1207,8 +1254,15 @@ void RenderCore::_DrawPostProcess(const Program& program) {
             Renderer::GetUniform(m_defaultUniformIds.at("s_ssao_noiseTex"))
                 ->handle,
             m_ssaoNoiseTex);
+        const float ssaoParams[4] = {
+            0.3f, 0.025f, 0.2f, static_cast<float>(Renderer::width)
+        };
+        Renderer::SetUniform(
+            m_defaultUniformIds.at("u_ssao_params"),
+            ssaoParams);
         _ScreenSpaceQuad(VIEW_AO, program);
     } else if (program.id == m_internalPrograms.tonemapProgram) {
+        bgfx::setViewName(program.viewId, "Tonemap");
         bgfx::setViewFrameBuffer(VIEW_POSTPROCESS,
                                  BGFX_INVALID_HANDLE); // Backbuffer
         bgfx::setTexture(
@@ -1220,8 +1274,47 @@ void RenderCore::_DrawPostProcess(const Program& program) {
             1,
             Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_ssaoTex"))
                 ->handle,
-            m_ssaoTex);
+            m_ssaoBlurFinal);
          _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
+    } else if (program.id == m_internalPrograms.ssaoBlurProgram) {
+        for (int i = 0; i < 2; ++i) {
+            if (i == 0) { // Horizontal blur
+                bgfx::setViewName(ViewID(VIEW_AO + 1), "SSAO Blur H");
+                bgfx::setViewFrameBuffer(VIEW_AO + 1, m_ssaoBlurHFB);
+                bgfx::setTexture(
+                0,
+                Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_ssaoTex"))
+                    ->handle,
+                m_ssaoTex);
+            } else { // Vertical blur
+                bgfx::setViewName(ViewID(VIEW_AO + 2), "SSAO Blur V");
+                bgfx::setViewFrameBuffer(VIEW_AO + 2, m_ssaoBlurVFB);
+                bgfx::setTexture(
+                0,
+                Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_ssaoTex"))
+                    ->handle,
+                m_ssaoBlurH);
+            }
+
+            bgfx::setTexture(
+                1,
+                Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_depthTex"))
+                    ->handle,
+                m_sceneDepth);
+            bgfx::setTexture(
+                2,
+                Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_normalTex"))
+                    ->handle,
+                m_sceneNormal);
+
+            const float ssaoBlurParams[4] = {
+                6.0f, static_cast<float>(i), static_cast<float>(uint16_t(Renderer::width)), 0.f
+            };
+            Renderer::SetUniform(
+                m_defaultUniformIds.at("u_ssaob_params"),
+                ssaoBlurParams);
+            _ScreenSpaceQuad(ViewID(VIEW_AO + i + 1), program);
+        }
     }
 
 }
@@ -1373,21 +1466,51 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             bgfx::setViewTransform(view, skyView, cam.proj);
             break;
         }
-        default: {
-            uint16_t flags = view == VIEW_AO ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH) : (BGFX_CLEAR_NONE);
+        case VIEW_AO:
+        case VIEW_POSTPROCESS: {
             bgfx::setViewRect(view,
                               0,
                               0,
                               uint16_t(Renderer::width),
                               uint16_t(Renderer::height));
-            bgfx::setViewClear(
-                view, flags, 0x000000ff, 1.0f, 0);
+            uint16_t flags = view == VIEW_AO
+                                 ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH)
+                                 : (BGFX_CLEAR_NONE);
+            bgfx::setViewClear(view, flags, 0x000000ff, 1.0f, 0);
+            float identity[16];
+            bx::mtxIdentity(identity);
+            bgfx::setViewTransform(view, identity, identity);
+            break;
+        }
+        default: {
+            bgfx::setViewRect(view,
+                              0,
+                              0,
+                              uint16_t(Renderer::width),
+                              uint16_t(Renderer::height));
+            //bgfx::setViewClear(
+            //    view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
             Camera cam = camera->GetCamera();
             bgfx::setViewTransform(view, cam.view, cam.proj);
             break;
         }
         }
     }
+
+    // Update addition AO views
+    uint16_t flags = BGFX_CLEAR_NONE;
+    for (int i = 0; i < 2; ++i) {
+        bgfx::setViewRect(ViewID(VIEW_AO + i + 1),
+                          0,
+                          0,
+                          uint16_t(Renderer::width),
+                          uint16_t(Renderer::height));
+        bgfx::setViewClear(ViewID(VIEW_AO + i + 1), flags, 0x000000ff, 1.0f, 0);
+        float identity[16];
+        bx::mtxIdentity(identity);
+        bgfx::setViewTransform(ViewID(VIEW_AO + i + 1), identity, identity);
+    }
+
     m_drawnCounts = DrawnObjectCount(); // Reset counts for this frame
     return true;
 }
