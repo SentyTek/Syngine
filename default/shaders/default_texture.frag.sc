@@ -19,23 +19,18 @@ void main() {
     vec3 lightDirToSun = normalize(u_lightDir.xyz);
     float sunElevation = lightDirToSun.y;
 
-    // Normal mapping from heightmap (macro)
-    float du    = 1.0/float(textureSize(s_heightMap, 0).x); //one texel in UV
-    float hl    = texture2D(s_heightMap, v_uvMacro + vec2(-du, 0.0)).r;
-    float hr    = texture2D(s_heightMap, v_uvMacro + vec2(du, 0.0)).r;
-    float hd    = texture2D(s_heightMap, v_uvMacro + vec2(0.0, -du)).r;
-    float hu    = texture2D(s_heightMap, v_uvMacro + vec2(0.0, du)).r;
-    vec3 dPdu   = vec3(du, 0, (hr - hl) * u_floats.x);
-    vec3 dPdv   = vec3(0, du, (hu - hd) * u_floats.x);
-    vec3 Nmacro = normalize(cross(dPdu, dPdv));
-
-    // Normal mapping from normal map (micro)
-    vec3 nmap = texture2D(s_normalMap, v_uvDetail).xyz * 2.0 - 1.0;
-    vec3 T     = normalize(v_tangent.xyz);
+    // Get base terrain normal (captures large-scale terrain slopes from vertex normals)
     vec3 vN = normalize(v_normal);
+    
+    // Normal mapping from normal map (micro detail)
+    vec3 nmap = texture2D(s_normalMap, v_uvDetail).xyz * 2.0 - 1.0;
+    vec3 T = normalize(v_tangent.xyz);
     vec3 B = cross(vN, T) * v_tangent.w; // Calculate bitangent
     vec3 Nmicro = normalize(T*nmap.x + B*nmap.y + vN*nmap.z);
-    vec3 N = normalize( mix(Nmacro, Nmicro, u_floats.y) );
+    
+    // Mix base terrain normal with detail normal map
+    // u_floats.y controls how much detail normal mapping is applied
+    vec3 N = normalize(mix(vN, Nmicro, u_floats.y));
 
     // Hemisphere ambient (http://richardssoftware.net/home/Post/58)
     // Instead of flat ambient, mix sky and ground colors based on normal Y
@@ -48,10 +43,10 @@ void main() {
     float NdotL = max(dot(N, lightDirToSun), 0.0);
 
     // Micro shadowing from normal map
-    // Basically just amplify N.L for low angles
-    float microShadow = clamp(dot(Nmicro, lightDirToSun) * 5.0, 0.0, 1.0);
+    // Softer attenuation for grazing angles
+    float microShadow = clamp(dot(Nmicro, lightDirToSun) * 2.0 + 0.3, 0.0, 1.0);
 
-    float shadow = getShadowFactor(v_worldPos, Nmacro, N, u_lightDir, v_viewDepth);
+    float shadow = getShadowFactor(v_worldPos, vN, N, u_lightDir, v_viewDepth);
 
     float sunIntensity = smoothstep(-0.1, 0.1, sunElevation);
     vec3 directLight = u_sunColor.xyz * sunIntensity * NdotL * shadow * microShadow;
@@ -63,13 +58,13 @@ void main() {
     vec3 viewDir = normalize(u_viewPos.xyz - v_worldPos);
 
     // Specular. Using Schlick's approximation for fresnel
-    vec3 F0 = vec3_splat(0.04); // roughly linear
+    vec3 F0 = vec3_splat(0.02); // Lower reflectance for rough ground
     vec3 halfVec = normalize(lightDirToSun - viewDir);
     float NdotH = max(dot(N, halfVec), 0.0);
 
     // Blinn-Phong specular
-    float specPower = 32.0; // Rough surface
-    float specStrength = pow(NdotH, specPower) * microShadow * shadow; // modulated by shadowing
+    float specPower = 64.0; // Higher power = tighter, subtler specular
+    float specStrength = pow(NdotH, specPower) * microShadow * shadow * 0.15; // Much weaker specular for ground
 
     vec3 fresnel = fresnelSchlick(max(dot(N, viewDir), 0.0), F0);
 
@@ -85,5 +80,5 @@ void main() {
     //finalColor = applyGammaCorrection(finalColor, 2.2);
     
     gl_FragData[0] = vec4(finalColor, albedo.a);
-    gl_FragData[1] = vec4(N * 0.5 + 0.5, 1.0); //normal output
+    gl_FragData[1] = vec4(N * 0.5 + 0.5, 1.0); //normal output (world space, encoded to [0,1])
 }

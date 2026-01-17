@@ -9,7 +9,7 @@ void main() {
     vec2 flippedUv = vec2(uv.x, 1.0 - uv.y); // Flip Y for texture lookup
     
     vec3 color = texture2D(s_sceneColor, flippedUv).rgb;
-    float ssao = texture2D(s_ssao, flippedUv).r;
+    float ssao = texture2D(s_ssao, uv).r;
     
     // Apply SSAO (Multiplicative approximation)
     color *= pow(ssao, 2.0); // 2.0 is an arbitrary strength factor

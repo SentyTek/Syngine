@@ -67,9 +67,9 @@ void SynModelLoader::_UnloadAllMeshes() {
 bool AssimpLoader::_LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
-    const uint16_t flags    = aiProcess_JoinIdenticalVertices
-                            | aiProcess_CalcTangentSpace
-                            | aiProcess_GenSmoothNormals;
+    const int flags = aiProcess_JoinIdenticalVertices |
+                      aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
+                      aiProcess_DropNormals;
 
     //read file. ideally use some kind of post processing (tangents, join indices, etc), but this is a simple example
     const std::string resolvedPath = _ResolveOSPath(path.c_str());

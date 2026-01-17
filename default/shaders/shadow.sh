@@ -79,16 +79,19 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
     // Better cascade selection with smoother transition zones
     if (viewDepth > u_csmSplits.x) { 
         c = 1; 
+        currentTexelSize = u_csmTexelSize.y;
         fade = smoothstep(u_csmSplits.x, u_csmSplits.x + blend, viewDepth); 
     }
     
     if (viewDepth > u_csmSplits.y) { 
         c = 2; 
+        currentTexelSize = u_csmTexelSize.z;
         fade = smoothstep(u_csmSplits.y, u_csmSplits.y + blend, viewDepth); 
     }
     
     if (viewDepth > u_csmSplits.z) { 
         c = 3; 
+        currentTexelSize = u_csmTexelSize.w;
         fade = smoothstep(u_csmSplits.z, u_csmSplits.z + blend, viewDepth); 
     }
     
@@ -100,8 +103,8 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
     float NdotL = dot(geomN, lightDirNorm);
     NdotL = clamp(NdotL, 0.01, 1.0);
     
-    // Offset along normal based on angle to light
-    float normalOffset = currentTexelSize * 3.0 * (1.0 - NdotL);
+    // Offset along normal based on angle to light - balanced to prevent both acne and peter-panning
+    float normalOffset = currentTexelSize * 10.0 * (1.0 - NdotL);
     vec3 offsetWorldPos = worldPos + geomN * normalOffset;
     
     vec4 sc = mul(u_csmLightViewProj[c], vec4(offsetWorldPos, 1.0));

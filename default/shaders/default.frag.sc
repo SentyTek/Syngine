@@ -58,5 +58,5 @@ void main() {
     finalColor = mix(finalColor, u_horizonColor.xyz, fogFactor);
     
     gl_FragData[0] = vec4(finalColor, col.a);
-    gl_FragData[1] = vec4(normal * 0.5 + 0.5, 1.0); //normal output
+    gl_FragData[1] = vec4(normal * 0.5 + 0.5, 1.0); //normal output (world space, encoded to [0,1])
 }

@@ -519,13 +519,13 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
                                          uint16_t(Renderer::height),
                                          false,
                                          1,
-                                         bgfx::TextureFormat::BGRA8,
-                                         tsFlags | BGFX_TEXTURE_SRGB);
+                                         bgfx::TextureFormat::RGBA16F,
+                                         tsFlags);
     m_sceneNormal = bgfx::createTexture2D(uint16_t(Renderer::width),
                                           uint16_t(Renderer::height),
                                           false,
                                           1,
-                                          bgfx::TextureFormat::RGBA8,
+                                          bgfx::TextureFormat::RGBA16F,
                                           tsFlags);
     m_sceneDepth =
         bgfx::createTexture2D(uint16_t(Renderer::width),
@@ -538,19 +538,19 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
                                       uint16_t(Renderer::height),
                                       false,
                                       1,
-                                      bgfx::TextureFormat::R8,
+                                      bgfx::TextureFormat::R16,
                                       tsFlags);
     m_ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
                                         uint16_t(Renderer::height),
                                         false,
                                         1,
-                                        bgfx::TextureFormat::R8,
+                                        bgfx::TextureFormat::R16,
                                         tsFlags);
     m_ssaoBlurFinal = bgfx::createTexture2D(uint16_t(Renderer::width),
                                             uint16_t(Renderer::height),
                                             false,
                                             1,
-                                            bgfx::TextureFormat::R8,
+                                            bgfx::TextureFormat::R16,
                                             tsFlags);
     m_ssaoFB  = bgfx::createFrameBuffer(1, &m_ssaoTex, true);
     m_ssaoBlurHFB  = bgfx::createFrameBuffer(1, &m_ssaoBlurH, true);
@@ -1255,7 +1255,7 @@ void RenderCore::_DrawPostProcess(const Program& program) {
                 ->handle,
             m_ssaoNoiseTex);
         const float ssaoParams[4] = {
-            0.3f, 0.025f, 0.2f, static_cast<float>(Renderer::width)
+            0.5f, 0.1f, 1.f, static_cast<float>(Renderer::width)
         };
         Renderer::SetUniform(
             m_defaultUniformIds.at("u_ssao_params"),
@@ -1308,7 +1308,7 @@ void RenderCore::_DrawPostProcess(const Program& program) {
                 m_sceneNormal);
 
             const float ssaoBlurParams[4] = {
-                6.0f, static_cast<float>(i), static_cast<float>(uint16_t(Renderer::width)), 0.f
+                3.0f, static_cast<float>(i), static_cast<float>(uint16_t(Renderer::width)), 0.f
             };
             Renderer::SetUniform(
                 m_defaultUniformIds.at("u_ssaob_params"),
