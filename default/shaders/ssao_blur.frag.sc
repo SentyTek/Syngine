@@ -7,6 +7,13 @@ SAMPLER2D(s_depth, 1);
 SAMPLER2D(s_normal, 2);
 uniform vec4 u_floats; // x = radius, y = vertical (1.0) or horizontal (0.0) blur, z = width, w = unused
 
+float getLinearDistance(vec2 uv) {
+    float depth = texture2D(s_depth, uv).r;
+    if (depth >= 1.0) return 1000.0; // Far plane
+    float z_ndc = depth * 2.0 - 1.0;
+    return u_proj[3][2] / (z_ndc - u_proj[2][2]);
+}
+
 void main() {
     vec2 uv = v_texcoord0;
     float ao = 0.0;
@@ -43,10 +50,10 @@ void main() {
         float w = exp(-float(i*i) / twoSigmaSq); // Gaussian weight
 
         float depthDiff = abs(sampleDepth - centerDepth);
-        w *= smoothstep(0.2, 0.0, depthDiff); // Depth weight (softened)
+        w *= smoothstep(0.1, 0.0, depthDiff); // Depth weight (softened)
 
         float normalDiff = max(dot(sampleNormal, centerNormal), 0.0);
-        w *= pow(normalDiff, 4.0); // Normal weight (stricter to preserve edges)
+        w *= pow(normalDiff, 2.0); // Normal weight (stricter to preserve edges)
 
         ao += sampleAO * w;
         weightSum += w;

@@ -104,7 +104,7 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
     NdotL = clamp(NdotL, 0.01, 1.0);
     
     // Offset along normal based on angle to light - balanced to prevent both acne and peter-panning
-    float normalOffset = currentTexelSize * 10.0 * (1.0 - NdotL);
+    float normalOffset = currentTexelSize * 0.2 * (1.0 - NdotL);
     vec3 offsetWorldPos = worldPos + geomN * normalOffset;
     
     vec4 sc = mul(u_csmLightViewProj[c], vec4(offsetWorldPos, 1.0));
@@ -137,17 +137,17 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
 
     float cascadeShadowMapSize = 1024.0;
 
-    float baseBias = 0.00005;
-    float maxBias = 0.003;
+    float baseBias= 0.00003;
+    float maxBias = 0.0005;
 
-    float cascadeBiasMult = 1.0 + float(c) * 2.0;
+    float cascadeBiasMult = 1.0 + float(c) * 0.25;
     baseBias *= cascadeBiasMult;
     maxBias *= cascadeBiasMult;
 
     float slopeBias = clamp(1.0 - NdotL, 0.0, 1.0);
     float sunElev = clamp(lightDir.y, 0.0, 1.0);
     float sunsetFactor = smoothstep(0.0, 0.2, 1.0 - sunElev);
-    float totalBias = mix(baseBias, maxBias, slopeBias * sunsetFactor);
+    float totalBias = mix(baseBias, maxBias, slopeBias);
 
     float texelSize = 1.0 / cascadeShadowMapSize;
     float shadow = 0.0;

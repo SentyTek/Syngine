@@ -37,29 +37,32 @@ void main() {
     float hemiMix = N.y * 0.5 + 0.5;
     vec3 skyColor = u_skyColor.xyz;
     vec4 albedo = texture2D(s_albedo, v_uvDetail);
-    vec3 ambient = mix(albedo.rgb, skyColor, hemiMix) * u_floats.z;
+
+    // Rotate lightDirToSun by 90 degrees around the X axis for micro shadowing
+    vec3 rotatedLightDir = vec3(lightDirToSun.x, -lightDirToSun.z, lightDirToSun.y);
 
     // Lighting is direct sun
-    float NdotL = max(dot(N, lightDirToSun), 0.0);
+    float NdotL = smoothstep(-0.12, 0.15, max(dot(N, rotatedLightDir), 0.0)); //Smoothstep to extend light over horizon
+    vec3 ambient = mix(albedo.rgb, skyColor, hemiMix) * u_floats.z * clamp(NdotL, 0.1, 1.0); // Ambient scaled by NdotL for better blending at low sun angles
 
     // Micro shadowing from normal map
     // Softer attenuation for grazing angles
-    float microShadow = clamp(dot(Nmicro, lightDirToSun) * 2.0 + 0.3, 0.0, 1.0);
-
+    float microShadow = clamp(dot(Nmicro, rotatedLightDir) * 2.0 + 0.3, 0.0, 1.0);
     float shadow = getShadowFactor(v_worldPos, vN, N, u_lightDir, v_viewDepth);
+    shadow = mix(1.0, shadow, smoothstep(0.1, 0.3, sunElevation)); // Fade shadows to full light (1.0) at low sun angles
 
-    float sunIntensity = smoothstep(-0.1, 0.1, sunElevation);
+    float sunIntensity = smoothstep(-0.12, 0.15, sunElevation);
     vec3 directLight = u_sunColor.xyz * sunIntensity * NdotL * shadow * microShadow;
 
     // Fake first-bounce global illumination
-    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.2 * clamp(dot(N, -lightDirToSun), 0.0, 1.0);
+    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.2 * clamp(dot(N, rotatedLightDir), 0.0, 1.0);
 
     // Calculate view direction
     vec3 viewDir = normalize(u_viewPos.xyz - v_worldPos);
 
     // Specular. Using Schlick's approximation for fresnel
     vec3 F0 = vec3_splat(0.02); // Lower reflectance for rough ground
-    vec3 halfVec = normalize(lightDirToSun - viewDir);
+    vec3 halfVec = normalize(lightDirToSun + viewDir);
     float NdotH = max(dot(N, halfVec), 0.0);
 
     // Blinn-Phong specular
@@ -80,5 +83,6 @@ void main() {
     //finalColor = applyGammaCorrection(finalColor, 2.2);
     
     gl_FragData[0] = vec4(finalColor, albedo.a);
+    //gl_FragData[0] = vec4(directLight, 1.0); //debug: sun elevation
     gl_FragData[1] = vec4(N * 0.5 + 0.5, 1.0); //normal output (world space, encoded to [0,1])
 }

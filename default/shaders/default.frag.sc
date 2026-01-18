@@ -22,10 +22,10 @@ void main() {
     // Instead of flat ambient, mix sky and ground colors based on normal Y
     float hemiMix = normal.y * 0.5 + 0.5;
     vec3 skyColor = u_skyColor.xyz;
-    vec3 ambient = mix(col.rgb, skyColor, hemiMix) * u_floats.z;
 
     // Lighting is direct sun
     float NdotL = max(dot(normal, lightDirToSun), 0.0);
+    vec3 ambient = mix(col.rgb, skyColor, hemiMix) * u_floats.z  * clamp(NdotL, 0.1, 1.0); // Ambient scaled by NdotL for better blending at low sun angles;
     
     float shadowFactor = getShadowFactor(v_worldPos, vec3(0.0, 1.0, 0.0), normal, u_lightDir, v_viewDepth);
     
