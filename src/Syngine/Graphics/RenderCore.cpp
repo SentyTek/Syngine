@@ -38,8 +38,21 @@ namespace Syngine {
 // I present to you an unholy abomination of static member definitions
 std::unordered_map<std::string, uint16_t> RenderCore::m_defaultUniformIds;
 
-bgfx::TextureHandle       RenderCore::m_shadowDepth = BGFX_INVALID_HANDLE;
-bgfx::FrameBufferHandle   RenderCore::m_shadowFB    = BGFX_INVALID_HANDLE;
+RenderCore::RenderCoreBuffers RenderCore::m_buffers = {
+    .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
+    .sceneColor = BGFX_INVALID_HANDLE, //* Color texture for scene rendering (RGBA16F)
+    .sceneDepth = BGFX_INVALID_HANDLE, //* Depth texture for scene rendering (D24S8)
+    .sceneNormal = BGFX_INVALID_HANDLE, //* Normal texture for scene rendering (RGBA8)
+    .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
+    .ssaoBlurHFB = BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (horizontal)
+    .ssaoBlurVFB = BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (vertical)
+    .ssaoTex = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
+    .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
+    .ssaoBlurFinal = BGFX_INVALID_HANDLE, //* SSAO texture post-blur (Use this one) (R8)
+    .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
+    .shadowFB = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
+};
+
 
 RendererConfig RenderCore::m_config;
 SDL_Window*    RenderCore::win = nullptr;
@@ -52,6 +65,7 @@ float RenderCore::m_cascadeTexelSizes[RenderCore::NUM_CASCADES] = { 0, 0, 0, 0 }
 bgfx::VertexBufferHandle RenderCore::dummy = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_billboardVbh = BGFX_INVALID_HANDLE;
 bgfx::IndexBufferHandle  RenderCore::m_billboardIbh = BGFX_INVALID_HANDLE;
+bgfx::VertexBufferHandle RenderCore::m_fsQuadVbh = BGFX_INVALID_HANDLE;
 
 std::unordered_map<uint16_t, Uniform> Renderer::m_uniformRegistry;
 std::unordered_map<uint16_t, std::vector<Program>> Renderer::viewPrograms;
@@ -61,18 +75,6 @@ float RenderCore::m_maxSmallObjDistance =
 
 RenderCore::internalPrograms RenderCore::m_internalPrograms;
 std::vector<RenderCore::RenderPacket> RenderCore::m_renderPackets;
-bgfx::FrameBufferHandle               RenderCore::m_sceneFB = BGFX_INVALID_HANDLE;
-bgfx::TextureHandle                   RenderCore::m_sceneColor = BGFX_INVALID_HANDLE;
-bgfx::TextureHandle                   RenderCore::m_ssaoNoiseTex = BGFX_INVALID_HANDLE;
-bgfx::TextureHandle                   RenderCore::m_sceneDepth = BGFX_INVALID_HANDLE;
-bgfx::TextureHandle                   RenderCore::m_sceneNormal = BGFX_INVALID_HANDLE;
-bgfx::FrameBufferHandle               RenderCore::m_ssaoFB = BGFX_INVALID_HANDLE;
-bgfx::FrameBufferHandle               RenderCore::m_ssaoBlurHFB = BGFX_INVALID_HANDLE;
-bgfx::FrameBufferHandle               RenderCore::m_ssaoBlurVFB = BGFX_INVALID_HANDLE;
-bgfx::TextureHandle                   RenderCore::m_ssaoTex = BGFX_INVALID_HANDLE;
-bgfx::TextureHandle                   RenderCore::m_ssaoBlurH = BGFX_INVALID_HANDLE;
-bgfx::TextureHandle                   RenderCore::m_ssaoBlurFinal = BGFX_INVALID_HANDLE;
-bgfx::VertexBufferHandle              RenderCore::m_fsQuadVbh = BGFX_INVALID_HANDLE;
 
 bool RenderCore::_Initialize(const RendererConfig& config) {
     m_config = config;
@@ -483,90 +485,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     }
 #endif
 
-    // If shadows are enabled, initialize shadow mapping resources
-    if (m_config.useShadows) {
-        RenderCore::m_shadowDepth = bgfx::createTexture2D(
-            SHADOW_MAP_SIZE * 2,
-            SHADOW_MAP_SIZE * 2,
-            false,
-            1,
-            bgfx::TextureFormat::D16,
-            BGFX_TEXTURE_RT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                BGFX_SAMPLER_U_CLAMP |
-                BGFX_SAMPLER_V_CLAMP); // I wish I knew what the flags meant.
-
-        if (!bgfx::isValid(RenderCore::m_shadowDepth)) {
-            Syngine::Logger::Error("Failed to create shadow depth texture");
-            return false;
-        }
-
-        RenderCore::m_shadowFB = bgfx::createFrameBuffer(1, &RenderCore::m_shadowDepth, true);
-        if (!bgfx::isValid(RenderCore::m_shadowFB)) {
-            Syngine::Logger::Error("Failed to create shadow framebuffer");
-            bgfx::destroy(RenderCore::m_shadowDepth);
-            return false;
-        }
-
-        m_cascadeSizes[2] = round(m_config.shadowDist / 3.0f);
-        m_cascadeSizes[3] = round(m_config.shadowDist);
-    }
-
-    // Create scene textures
-    const uint64_t tsFlags =
-        BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
-
-    m_sceneColor = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                         uint16_t(Renderer::height),
-                                         false,
-                                         1,
-                                         bgfx::TextureFormat::RGBA16F,
-                                         tsFlags);
-    m_sceneNormal = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                          uint16_t(Renderer::height),
-                                          false,
-                                          1,
-                                          bgfx::TextureFormat::RGBA16F,
-                                          tsFlags);
-    m_sceneDepth =
-        bgfx::createTexture2D(uint16_t(Renderer::width),
-                              uint16_t(Renderer::height),
-                              false,
-                              1,
-                              bgfx::TextureFormat::D24S8,
-                              BGFX_TEXTURE_RT);
-    m_ssaoTex = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                      uint16_t(Renderer::height),
-                                      false,
-                                      1,
-                                      bgfx::TextureFormat::R16,
-                                      tsFlags);
-    m_ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                        uint16_t(Renderer::height),
-                                        false,
-                                        1,
-                                        bgfx::TextureFormat::R16,
-                                        tsFlags);
-    m_ssaoBlurFinal = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                            uint16_t(Renderer::height),
-                                            false,
-                                            1,
-                                            bgfx::TextureFormat::R16,
-                                            tsFlags);
-    m_ssaoFB  = bgfx::createFrameBuffer(1, &m_ssaoTex, true);
-    m_ssaoBlurHFB  = bgfx::createFrameBuffer(1, &m_ssaoBlurH, true);
-    m_ssaoBlurVFB  = bgfx::createFrameBuffer(1, &m_ssaoBlurFinal, true);
-
-    // Create global scene framebuffer (MRT: 0:Color, 1:Normal, Depth)
-    bgfx::TextureHandle screenTextures[] = { m_sceneColor, m_sceneNormal, m_sceneDepth };
-    m_sceneFB = bgfx::createFrameBuffer(
-        BX_COUNTOF(screenTextures), screenTextures, true);
-
-    m_ssaoNoiseTex = Syngine::CreateNoiseTexture(4, 4);
-
-    if (!bgfx::isValid(m_sceneColor) || !bgfx::isValid(m_sceneDepth) ||
-        !bgfx::isValid(m_sceneNormal) || !bgfx::isValid(m_ssaoFB) ||
-        !bgfx::isValid(m_ssaoNoiseTex)) {
-        Syngine::Logger::Error("Failed to create scene textures");
+    if (!_CreateSceneBuffers()) {
         return false;
     }
 
@@ -606,23 +525,112 @@ void RenderCore::_Shutdown() {
         RenderCore::dummy = BGFX_INVALID_HANDLE;
     }
 
-    // Destroy shadow framebuffer and texture
-    if (bgfx::isValid(m_shadowFB)) {
-        bgfx::destroy(m_shadowFB);
-        m_shadowFB = BGFX_INVALID_HANDLE;
-    }
-    if (bgfx::isValid(m_shadowDepth)) {
-        bgfx::destroy(m_shadowDepth);
-        m_shadowDepth = BGFX_INVALID_HANDLE;
-    }
+    // Destroy scene buffers
+    m_buffers.ForEachFrameBuffer([](auto& fb) { if (bgfx::isValid(fb)) bgfx::destroy(fb); });
+    m_buffers.ForEachTexture([](auto& tex) { if (bgfx::isValid(tex)) bgfx::destroy(tex); });
     m_defaultUniformIds.clear();
 
     bgfx::shutdown();
 }
 
-void RenderCore::_SetResolution(int width, int height) {
+bool RenderCore::_CreateSceneBuffers() {
+        // If shadows are enabled, initialize shadow mapping resources
+    if (m_config.useShadows) {
+        m_buffers.shadowDepth = bgfx::createTexture2D(
+            SHADOW_MAP_SIZE * 2,
+            SHADOW_MAP_SIZE * 2,
+            false,
+            1,
+            bgfx::TextureFormat::D16,
+            BGFX_TEXTURE_RT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                BGFX_SAMPLER_U_CLAMP |
+                BGFX_SAMPLER_V_CLAMP); // I wish I knew what the flags meant.
+
+        if (!bgfx::isValid(m_buffers.shadowDepth)) {
+            Syngine::Logger::Error("Failed to create shadow depth texture");
+            return false;
+        }
+
+        m_buffers.shadowFB = bgfx::createFrameBuffer(1, &m_buffers.shadowDepth, true);
+        if (!bgfx::isValid(m_buffers.shadowFB)) {
+            Syngine::Logger::Error("Failed to create shadow framebuffer");
+            bgfx::destroy(m_buffers.shadowDepth);
+            return false;
+        }
+
+        m_cascadeSizes[2] = round(m_config.shadowDist / 3.0f);
+        m_cascadeSizes[3] = round(m_config.shadowDist);
+    }
+
+    // Create scene textures
+    const uint64_t tsFlags =
+        BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
+
+    m_buffers.sceneColor = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                         uint16_t(Renderer::height),
+                                         false,
+                                         1,
+                                         bgfx::TextureFormat::RGBA16F,
+                                         tsFlags);
+    m_buffers.sceneNormal = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                          uint16_t(Renderer::height),
+                                          false,
+                                          1,
+                                          bgfx::TextureFormat::RGBA16F,
+                                          tsFlags);
+    m_buffers.sceneDepth =
+        bgfx::createTexture2D(uint16_t(Renderer::width),
+                              uint16_t(Renderer::height),
+                              false,
+                              1,
+                              bgfx::TextureFormat::D24S8,
+                              BGFX_TEXTURE_RT);
+    m_buffers.ssaoTex = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                      uint16_t(Renderer::height),
+                                      false,
+                                      1,
+                                      bgfx::TextureFormat::R16,
+                                      tsFlags);
+    m_buffers.ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                        uint16_t(Renderer::height),
+                                        false,
+                                        1,
+                                        bgfx::TextureFormat::R16,
+                                        tsFlags);
+    m_buffers.ssaoBlurFinal = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                            uint16_t(Renderer::height),
+                                            false,
+                                            1,
+                                            bgfx::TextureFormat::R16,
+                                            tsFlags);
+    m_buffers.ssaoFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoTex, true);
+    m_buffers.ssaoBlurHFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurH, true);
+    m_buffers.ssaoBlurVFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurFinal, true);
+
+    // Create global scene framebuffer (MRT: 0:Color, 1:Normal, Depth)
+    bgfx::TextureHandle screenTextures[] = { m_buffers.sceneColor, m_buffers.sceneNormal, m_buffers.sceneDepth };
+    m_buffers.sceneFB = bgfx::createFrameBuffer(
+        BX_COUNTOF(screenTextures), screenTextures, true);
+
+    if (!bgfx::isValid(m_buffers.sceneColor) || !bgfx::isValid(m_buffers.sceneDepth) ||
+        !bgfx::isValid(m_buffers.sceneNormal) || !bgfx::isValid(m_buffers.ssaoFB)) {
+        Syngine::Logger::Error("Failed to create scene textures");
+        return false;
+    }
+    return true;
+}
+
+bool RenderCore::_SetResolution(int width, int height) {
+    Renderer::height = height;
+    Renderer::width = width;
     bgfx::reset(uint32_t(width), uint32_t(height), m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
     bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
+
+    // Reset all frame buffers to new res
+    m_buffers.ForEachFrameBuffer([](auto& fb) { if (bgfx::isValid(fb)) bgfx::destroy(fb); });
+    m_buffers.ForEachTexture([](auto& tex) { if (bgfx::isValid(tex)) bgfx::destroy(tex); });
+    if (!_CreateSceneBuffers()) return false;
+    return true;
 }
 
 Uniform* RenderCore::_GetDefaultUniform(const std::string& name) {
@@ -1069,7 +1077,7 @@ void RenderCore::_DrawShadows(const Program&   program,
 void RenderCore::_DrawSky(const Program& program, const CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program.viewId, "Sky");
-    bgfx::setViewFrameBuffer(program.viewId, m_sceneFB);
+    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_ALWAYS |
                    BGFX_STATE_MSAA | BGFX_STATE_CULL_CW);
@@ -1085,7 +1093,7 @@ void RenderCore::_DrawSky(const Program& program, const CameraComponent* camera)
 void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_FORWARD, "Forward");
-    bgfx::setViewFrameBuffer(VIEW_FORWARD, m_sceneFB);
+    bgfx::setViewFrameBuffer(VIEW_FORWARD, m_buffers.sceneFB);
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
                                  BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_Z;
 
@@ -1101,7 +1109,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
                 Renderer::GetUniform(
                     m_defaultUniformIds.at("u_" + program.name + "_shadowMap"))
                     ->handle,
-                m_shadowDepth,
+                m_buffers.shadowDepth,
                 BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
                     BGFX_SAMPLER_U_CLAMP |
                     BGFX_SAMPLER_V_CLAMP
@@ -1221,7 +1229,7 @@ void RenderCore::_DrawBillboard(const Program& program) {
             bgfx::setTexture(
                 3,
                 Renderer::GetUniform(m_defaultUniformIds["s_billboard_shadowMap"])->handle,
-                m_shadowDepth,
+                m_buffers.shadowDepth,
                 depthSampler);
         }
 
@@ -1240,24 +1248,19 @@ void RenderCore::_DrawPostProcess(const Program& program) {
     // I'd like to use a switch here but can't convert program IDs to case labels
     if (program.id == m_internalPrograms.ssaoProgram) {
         bgfx::setViewName(VIEW_AO, "SSAO Main");
-        bgfx::setViewFrameBuffer(VIEW_AO, m_ssaoFB);
+        bgfx::setViewFrameBuffer(VIEW_AO, m_buffers.ssaoFB);
         bgfx::setTexture(
             0,
             Renderer::GetUniform(m_defaultUniformIds.at("s_ssao_depthTex"))
                 ->handle,
-            m_sceneDepth);
+            m_buffers.sceneDepth);
         bgfx::setTexture(
             1,
             Renderer::GetUniform(m_defaultUniformIds.at("s_ssao_normalTex"))
                 ->handle,
-            m_sceneNormal);
-        bgfx::setTexture(
-            2,
-            Renderer::GetUniform(m_defaultUniformIds.at("s_ssao_noiseTex"))
-                ->handle,
-            m_ssaoNoiseTex);
+            m_buffers.sceneNormal);
         const float ssaoParams[4] = {
-            0.5f, 0.1f, 1.f, static_cast<float>(Renderer::width)
+            0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width)
         };
         Renderer::SetUniform(
             m_defaultUniformIds.at("u_ssao_params"),
@@ -1271,43 +1274,43 @@ void RenderCore::_DrawPostProcess(const Program& program) {
             0,
             Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_sceneTex"))
                 ->handle,
-            m_sceneColor);
+            m_buffers.sceneColor);
         bgfx::setTexture(
             1,
             Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_ssaoTex"))
                 ->handle,
-            m_ssaoBlurFinal);
+            m_buffers.ssaoBlurFinal);
          _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
     } else if (program.id == m_internalPrograms.ssaoBlurProgram) {
         for (int i = 0; i < 2; ++i) {
             if (i == 0) { // Horizontal blur
                 bgfx::setViewName(ViewID(VIEW_AO + 1), "SSAO Blur H");
-                bgfx::setViewFrameBuffer(VIEW_AO + 1, m_ssaoBlurHFB);
+                bgfx::setViewFrameBuffer(VIEW_AO + 1, m_buffers.ssaoBlurHFB);
                 bgfx::setTexture(
                 0,
                 Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_ssaoTex"))
                     ->handle,
-                m_ssaoTex);
+                m_buffers.ssaoTex);
             } else { // Vertical blur
                 bgfx::setViewName(ViewID(VIEW_AO + 2), "SSAO Blur V");
-                bgfx::setViewFrameBuffer(VIEW_AO + 2, m_ssaoBlurVFB);
+                bgfx::setViewFrameBuffer(VIEW_AO + 2, m_buffers.ssaoBlurVFB);
                 bgfx::setTexture(
                 0,
                 Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_ssaoTex"))
                     ->handle,
-                m_ssaoBlurH);
+                m_buffers.ssaoBlurH);
             }
 
             bgfx::setTexture(
                 1,
                 Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_depthTex"))
                     ->handle,
-                m_sceneDepth);
+                m_buffers.sceneDepth);
             bgfx::setTexture(
                 2,
                 Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_normalTex"))
                     ->handle,
-                m_sceneNormal);
+                m_buffers.sceneNormal);
 
             const float ssaoBlurParams[4] = {
                 3.0f, static_cast<float>(i), static_cast<float>(uint16_t(Renderer::width)), 0.f
@@ -1436,7 +1439,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             
             for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
                 bgfx::ViewId cascadeViewId = view + i;
-                bgfx::setViewFrameBuffer(cascadeViewId, m_shadowFB);
+                bgfx::setViewFrameBuffer(cascadeViewId, m_buffers.shadowFB);
                 uint16_t x = (i % 2) * SHADOW_MAP_SIZE;
                 uint16_t y = (i / 2) * SHADOW_MAP_SIZE;
                 bgfx::setViewRect(

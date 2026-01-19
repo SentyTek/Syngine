@@ -4,7 +4,6 @@ $input v_texcoord0
 
 SAMPLER2D(s_depth, 0);
 SAMPLER2D(s_normal, 1);
-SAMPLER2D(s_noise, 2);
 
 uniform vec4 u_ssaoParams; // x: radius, y: bias (angle), z: intensity, w: renderWidth
 

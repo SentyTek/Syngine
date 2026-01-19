@@ -44,7 +44,7 @@ class RenderCore {
     /// @param width Width in pixels
     /// @param height Height in pixels
     /// @internal
-    static void _SetResolution(int width, int height);
+    static bool _SetResolution(int width, int height);
 
     /// @brief Get default uniform data by name
     /// @param name Name of the uniform
@@ -132,6 +132,8 @@ class RenderCore {
     };
     static internalPrograms m_internalPrograms;
 
+    static bool _CreateSceneBuffers();
+
     static std::vector<RenderPacket> m_renderPackets; //* Collected render packets for the current frame
     static void
     _CollectRenderPackets(CameraComponent* camera); //* Collect render packets
@@ -165,25 +167,45 @@ class RenderCore {
                                          uint8_t          cascade);
 
     static void _ScreenSpaceQuad(ViewID view, Program program);
-
                                          
     // Static members
-    static bgfx::FrameBufferHandle m_sceneFB; //* Framebuffer for scene rendering
-    static bgfx::TextureHandle     m_sceneColor; //* Color texture for scene rendering (RGBA16F)
-    static bgfx::TextureHandle     m_sceneDepth; //* Depth texture for scene rendering (D24S8)
-    static bgfx::TextureHandle     m_sceneNormal; //* Normal texture for scene rendering (RGBA8)
-    static bgfx::TextureHandle     m_ssaoNoiseTex; //* SSAO noise texture (RGBA8)
-    static bgfx::FrameBufferHandle m_ssaoFB; //* Framebuffer for SSAO rendering
-    static bgfx::FrameBufferHandle m_ssaoBlurHFB; //* Temp framebuffer for SSAO blurring (horizontal)
-    static bgfx::FrameBufferHandle m_ssaoBlurVFB; //* Temp framebuffer for SSAO blurring (vertical)
-    static bgfx::TextureHandle     m_ssaoTex; //* SSAO texture (R8)
-    static bgfx::TextureHandle     m_ssaoBlurH; //* SSAO texture mid-blur (R8)
-    static bgfx::TextureHandle     m_ssaoBlurFinal; //* SSAO texture post-blur (Use this one) (R8)
+    struct RenderCoreBuffers {
+        bgfx::FrameBufferHandle sceneFB; //* Framebuffer for scene rendering
+        bgfx::TextureHandle     sceneColor; //* Color texture for scene rendering (RGBA16F)
+        bgfx::TextureHandle     sceneDepth; //* Depth texture for scene rendering (D24S8)
+        bgfx::TextureHandle     sceneNormal; //* Normal texture for scene rendering (RGBA8)
+        bgfx::FrameBufferHandle ssaoFB; //* Framebuffer for SSAO rendering
+        bgfx::FrameBufferHandle ssaoBlurHFB; //* Temp framebuffer for SSAO blurring (horizontal)
+        bgfx::FrameBufferHandle ssaoBlurVFB; //* Temp framebuffer for SSAO blurring (vertical)
+        bgfx::TextureHandle     ssaoTex; //* SSAO texture (R8)
+        bgfx::TextureHandle     ssaoBlurH; //* SSAO texture mid-blur (R8)
+        bgfx::TextureHandle     ssaoBlurFinal; //* SSAO texture post-blur (Use this one) (R8)
+        bgfx::TextureHandle     shadowDepth; //* Shadow map depth texture handle
+        bgfx::FrameBufferHandle shadowFB; //* Shadow map framebuffer
+
+        template <class T>
+        void ForEachTexture(T&& t) {
+            t(sceneColor);
+            t(sceneDepth);
+            t(sceneNormal);
+            t(ssaoTex);
+            t(ssaoBlurH);
+            t(ssaoBlurFinal);
+            t(shadowDepth);
+        }
+        template <class T>
+        void ForEachFrameBuffer(T&& t) {
+            t(sceneFB);
+            t(ssaoFB);
+            t(ssaoBlurHFB);
+            t(ssaoBlurVFB);
+            t(shadowFB);
+        }
+    };
+    static RenderCoreBuffers m_buffers;
     
     static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
 
-    static bgfx::TextureHandle m_shadowDepth; //* Shadow map depth texture handle
-    static bgfx::FrameBufferHandle m_shadowFB; //* Shadow map framebuffer handle
     static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
     static constexpr uint8_t       NUM_CASCADES    = 4;
     static float                   m_cascadeSizes[NUM_CASCADES];

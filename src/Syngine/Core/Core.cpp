@@ -248,9 +248,9 @@ bool Core::HandleEvents() {
                 SDL_GetWindowFromID(event.window.windowID);
             SDL_GetWindowSize(resizedWindow, &w, &h);
 
-            m_app->renderer->width  = w;
-            m_app->renderer->height = h;
-            RenderCore::_SetResolution(w, h);
+            if (!RenderCore::_SetResolution(w, h)) {
+                Logger::Error("Failed to reset resolution");
+            }
             break;
         }
         }
