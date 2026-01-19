@@ -14,6 +14,10 @@ void main() {
     // Apply SSAO (Multiplicative approximation)
     color *= pow(ssao, 2.0); // 2.0 is an arbitrary strength factor
 
+    // Global exposure control
+    float exposure = 0.8;
+    color *= exposure;
+
     // ACES Tone Mapping
     float a = 2.51;
     float b = 0.03;

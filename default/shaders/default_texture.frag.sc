@@ -43,7 +43,8 @@ void main() {
 
     // Lighting is direct sun
     float NdotL = smoothstep(-0.12, 0.15, max(dot(N, rotatedLightDir), 0.0)); //Smoothstep to extend light over horizon
-    vec3 ambient = mix(albedo.rgb, skyColor, hemiMix) * u_floats.z * clamp(NdotL, 0.1, 1.0); // Ambient scaled by NdotL for better blending at low sun angles
+    float nightFactor = clamp(smoothstep(-0.05, 0.05, sunElevation), 0.1, 1.0);
+    vec3 ambient = mix(albedo.rgb, skyColor, hemiMix) * u_floats.z * clamp(NdotL, 0.1, 0.7); // Ambient scaled by NdotL for better blending at low sun angles
 
     // Micro shadowing from normal map
     // Softer attenuation for grazing angles
@@ -76,7 +77,11 @@ void main() {
     float fogFactor = 1.0 - exp(-fogDist * 0.0005);
 
     // Combine
-    vec3 finalColor = albedo.rgb * (ambient + directLight + bounce) + (directLight * specStrength * fresnel);
+    vec3 lit = (ambient + directLight + bounce) * nightFactor;
+    vec3 spec = (directLight * specStrength * fresnel) * nightFactor;
+
+
+    vec3 finalColor = albedo.rgb * lit + spec;
     finalColor = mix(finalColor, u_horizonColor.xyz, fogFactor);
     
     // Gamma correction (linear to sRGB) (Tonemapping done in post now)

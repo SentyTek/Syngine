@@ -144,7 +144,7 @@ class RenderCore {
     static void _DrawShadows(const Program&   program,
                              CameraComponent* camera,
                              uint8_t          cascade);
-    static void _DrawSky(const Program& program);
+    static void _DrawSky(const Program& program, const CameraComponent* camera);
     static void _DrawForward(const Program& program, CameraComponent* camera);
     static void _DrawDebug(const Program&   program,
                            CameraComponent* camera,

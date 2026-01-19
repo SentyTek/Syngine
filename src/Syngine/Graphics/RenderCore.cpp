@@ -282,9 +282,9 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
           Renderer::RegisterUniform(
               m_internalPrograms.skyProgram, "u_sunColor", UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert(
-        { "u_sky_scatterColor",
+        { "u_sky_cameraPos",
           Renderer::RegisterUniform(
-              m_internalPrograms.skyProgram, "u_scatterColor", UniformType::UNIFORM_VEC4) });
+              m_internalPrograms.skyProgram, "u_cameraPos", UniformType::UNIFORM_VEC4) });
 
     // Texture program uniforms
     m_defaultUniformIds.insert({ "u_texture_lightDir",
@@ -583,7 +583,6 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     Renderer::SetUniform(m_defaultUniformIds["u_sky_sunColor"], sunColor);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_sunColor"], sunColor);
     Renderer::SetUniform(m_defaultUniformIds["u_default_sunColor"], sunColor);
-    Renderer::SetUniform(m_defaultUniformIds["u_sky_scatterColor"], scatterColor);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_horizonColor"], scatterColor);
     Renderer::SetUniform(m_defaultUniformIds["u_default_horizonColor"], scatterColor);
 
@@ -1067,13 +1066,17 @@ void RenderCore::_DrawShadows(const Program&   program,
     }
 }
 
-void RenderCore::_DrawSky(const Program& program) {
+void RenderCore::_DrawSky(const Program& program, const CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program.viewId, "Sky");
     bgfx::setViewFrameBuffer(program.viewId, m_sceneFB);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_ALWAYS |
                    BGFX_STATE_MSAA | BGFX_STATE_CULL_CW);
+
+    const float* cameraPos = camera->GetPosition();
+
+    Renderer::SetUniform(m_defaultUniformIds.at("u_sky_cameraPos"), cameraPos);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
     bgfx::submit(program.viewId, program.program);
@@ -1129,8 +1132,7 @@ void RenderCore::_DrawDebug(const Program&   program,
     // Draw various debug overlays
     if (debug.Gizmos) {
         // Draw zone boundaries
-        std::vector<ZoneComponent*> zones = Core::_GetApp()->zoneManager.get()->GetZones();
-        for (auto zone : zones) {
+        for (std::vector<ZoneComponent*> zones = Core::_GetApp()->zoneManager->GetZones(); auto zone : zones) {
             if (!zone || !zone->isEnabled || !m_drender) continue;
             switch (zone->GetShape()) {
                 case ZoneShape::BOX: {
@@ -1544,7 +1546,7 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 }
                 break;
             case VIEW_SKY:
-                _DrawSky(program);
+                _DrawSky(program, camera);
                 break;
             case VIEW_FORWARD:
                 _DrawForward(program, camera);

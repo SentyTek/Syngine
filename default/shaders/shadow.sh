@@ -8,8 +8,10 @@ uniform vec4 u_csmTexelSize; // x = casc0, y = casc1, z = casc2, w = casc3
 float sampleShadowPCF(vec2 uv, float compareDepth, float bias, float texelSize, float radius, float zReceiver) {
     float shadow = 0.0;
 
-    UNROLL for (int y = -1; y <= 1; y++) {
-        UNROLL for (int x = -1; x <= 1; x++) {
+    UNROLL
+    for (int y = -1; y <= 1; y++) {
+        UNROLL
+        for (int x = -1; x <= 1; x++) {
             vec2 offset = vec2(float(x), float(y)) * radius * texelSize;
             float sampleDepth = texture2D(s_shadowMap, uv + offset).r;
             shadow += zReceiver - bias > sampleDepth ? 1.0 : 0.0;
@@ -32,7 +34,8 @@ float sampleShadowPoisson8(vec2 uv, float compareDepth, float bias, float texelS
 
     float shadow = 0.0;
 
-    UNROLL for (int i = 0; i < 8; i++) {
+    UNROLL
+    for (int i = 0; i < 8; i++) {
         vec2 sampleUV = uv + poissonDisk8[i] * texelSize;
         float sampleDepth = texture2D(s_shadowMap, sampleUV).r;
         shadow += step(0.0, compareDepth - bias - sampleDepth);
@@ -61,7 +64,8 @@ float sampleShadowPoisson16(vec2 uv, float compareDepth, float bias, float texel
     poissonDisk16[15] = vec2(0.14383161, -0.14100790);
     float shadow = 0.0;
 
-    UNROLL for (int i = 0; i < 16; i++) {
+    UNROLL
+    for (int i = 0; i < 16; i++) {
         vec2 sampleUV = uv + poissonDisk16[i] * texelSize;
         float sampleDepth = texture2D(s_shadowMap, sampleUV).r;
         shadow += step(0.0, compareDepth - bias - sampleDepth);
@@ -137,8 +141,8 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
 
     float cascadeShadowMapSize = 1024.0;
 
-    float baseBias= 0.00003;
-    float maxBias = 0.0005;
+    float baseBias= 0.00001;
+    float maxBias = 0.0001;
 
     float cascadeBiasMult = 1.0 + float(c) * 0.25;
     baseBias *= cascadeBiasMult;
