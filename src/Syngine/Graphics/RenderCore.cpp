@@ -1185,6 +1185,7 @@ void RenderCore::_DrawDebug(const Program&   program,
 void RenderCore::_DrawBillboard(const Program& program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program.viewId, "Billboards");
+    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
     const uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                            BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LEQUAL |
                            BGFX_STATE_MSAA;
@@ -1247,7 +1248,6 @@ void RenderCore::_DrawBillboard(const Program& program) {
 
 void RenderCore::_DrawPostProcess(const Program& program) {
     SYN_PROFILE_FUNCTION();
-
     // I'd like to use a switch here but can't convert program IDs to case labels
     if (program.id == m_internalPrograms.ssaoProgram) {
         bgfx::setViewName(VIEW_AO, "SSAO Main");
@@ -1330,6 +1330,7 @@ void RenderCore::_DrawPostProcess(const Program& program) {
 void RenderCore::_DrawDbgBillboard(const Program& program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program.viewId, "Gizmos");
+    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
     // Debug billboards (gizmos) are always drawn on top. Regular billboards (forward pass ig) are depth-tested normally.
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                     BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_ALWAYS;
@@ -1562,8 +1563,8 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 break;
             case VIEW_BILL_DBG:
             case VIEW_BILLBOARD:
-                //if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
-                //_DrawBillboard(program);
+                if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
+                _DrawBillboard(program);
                 break;
             case VIEW_POSTPROCESS:
             case VIEW_AO:
