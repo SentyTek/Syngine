@@ -40,5 +40,6 @@ void main() {
         finalColor *= lightFactor;
     }
 
-    gl_FragColor = vec4(finalColor, base.a);
+    gl_FragData[0] = vec4(finalColor, base.a);
+    gl_FragData[1] = vec4(0.0, 0.0, 1.0, 1.0);
 }
