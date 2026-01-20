@@ -25,6 +25,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+#if BX_PLATFORM_OSX
+#include "Syngine/Graphics/MetalBridge.h"
+#endif
 
 #define SYN_INT_RENDEREXIT(program)                                            \
     Syngine::Logger::Error("Failed to create " #program " program");           \
@@ -481,7 +484,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         fullscreenDummyVBH = bgfx::createVertexBuffer(
             bgfx::copy(dummyData, sizeof(dummyData)), dummyLayout);
 
-        Renderer::dummy = fullscreenDummyVBH;
+        dummy = fullscreenDummyVBH;
     }
 #endif
 
@@ -520,9 +523,9 @@ void RenderCore::_Shutdown() {
         bgfx::destroy(m_billboardIbh);
         m_billboardIbh = BGFX_INVALID_HANDLE;
     }
-    if(bgfx::isValid(RenderCore::dummy)) {
-        bgfx::destroy(RenderCore::dummy);
-        RenderCore::dummy = BGFX_INVALID_HANDLE;
+    if(bgfx::isValid(dummy)) {
+        bgfx::destroy(dummy);
+        dummy = BGFX_INVALID_HANDLE;
     }
 
     // Destroy scene buffers

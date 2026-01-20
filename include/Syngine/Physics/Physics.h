@@ -301,7 +301,8 @@ namespace Syngine {
                         const MeshData&  meshData,
                         EMotionType      motionType,
                         ObjectLayer      layer,
-                        const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f));
+                        const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f),
+                        const float      mass  = 0.f);
 
         /// @brief Create a capsule body
         /// @param position Position of the capsule

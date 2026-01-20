@@ -143,7 +143,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                 scale = JPH::Vec3(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             }
 
-            bodyID = physicsManager->_CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale);
+            bodyID = physicsManager->_CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale, mass);
             break;
         }
         case PhysicsShapes::CAPSULE: {

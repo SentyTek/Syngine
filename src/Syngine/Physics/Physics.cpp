@@ -221,7 +221,7 @@ BodyID Phys::_CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent,
     return box->GetID();
 }
 
-BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale) {
+BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale, const float mass) {
     BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
     if (meshData.numVertices == 0) {
         Syngine::Logger::Error("SynginePhys::CreateMeshBody: Mesh data is empty.");
@@ -278,10 +278,13 @@ BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData
 
     // For static meshes, mass properties are not strictly required, as Jolt treats them as infinite mass.
     // If it were dynamic, mass properties would be needed.
-    // if (motionType == EMotionType::Dynamic) {
-    //    bodySettings.mMassProertiesOverride = meshShape->GetMassProperties();
-    //    bodySettings.mMassPropertiesOverride.ScaleToMass(desired_mass); //For specific mass
-    // }
+    if (motionType == EMotionType::Dynamic) {
+        meshSettings.mMassPropertiesOverride = meshShape->GetMassProperties();
+        if (mass > 0.0f) {
+            meshSettings.mMassPropertiesOverride.ScaleToMass(mass);
+            meshSettings.mOverrideMassProperties = EOverrideMassProperties::MassAndInertiaProvided;
+        }
+    }
 
     Body* body = bodyInterface.CreateBody(meshSettings);
     if (!body) {
