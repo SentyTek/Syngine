@@ -160,6 +160,14 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
             bodyID = physicsManager->_CreateCylinder(posVec, rotationQuat, radius, halfHeight, params.motionType, params.layer, mass);
             break;
         }
+        case PhysicsShapes::COMPOUND: {
+            if (params.compoundParts.empty()) {
+                Syngine::Logger::Error("RigidbodyComponent::Init: No parts provided for compound shape.");
+                return;
+            }
+            bodyID = physicsManager->_CreateCompound(posVec, rotationQuat, params.compoundParts, params.motionType, params.layer, mass);
+            break;
+        }
         default:
             return;
     }

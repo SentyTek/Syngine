@@ -10,7 +10,8 @@
 
 // Forward declarations
 namespace Syngine {
-class DebugRender;
+    class DebugRender;
+    struct CompoundShapePart; // Forward declaration
 }
 
 #include "Syngine/Utils/ModelLoader.h"
@@ -45,7 +46,8 @@ class DebugRender;
 
 using namespace JPH;
 namespace Syngine {
-    struct DebugModes; // Forward declaration
+struct DebugModes; // Forward declaration
+struct CompoundShapePart; // Forward declaration
 
     // Layer definitions for Jolt
     namespace Layers {
@@ -339,6 +341,13 @@ namespace Syngine {
                                EMotionType motionType,
                                ObjectLayer layer,
                                float       mass = 0.0f);
+
+        BodyID _CreateCompound(RVec3Arg                              position,
+                               QuatArg                               rotation,
+                               const std::vector<CompoundShapePart>& parts,
+                               EMotionType                           motionType,
+                               ObjectLayer                           layer,
+                               float mass = 0.0f);
 
         void _DrawFrustum(const float* view, const float* proj);
 

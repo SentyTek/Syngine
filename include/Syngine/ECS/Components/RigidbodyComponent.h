@@ -30,6 +30,7 @@ enum class PhysicsShapes {
     CONVEX_HULL,      //* Convex hull shape
     PLANE,            //* Plane shape
     MESH,             //* Mesh shape
+    COMPOUND,         //* Compound shape
 };
 
 /// @brief Enum for different force application modes
@@ -42,11 +43,20 @@ enum class ForceMode {
                   //* its mass. Note: This is not well supported, and is
                   //* equivalent to FORCE if you did NOT manually set the mass
                   //* yourself.
-    IMPULSE,      //* Add an instant force impulse, using its mass (I = m * dv) (
-                  //* Newton-seconds)
-    VELOCITY_CHANGE //* Change velocity instantaneously, ignoring its mass. Note:
-                     //* This is not well supported, and is equivalent to IMPULSE if
-                     //* you did NOT manually set the mass yourself.
+    IMPULSE, //* Add an instant force impulse, using its mass (I = m * dv) (
+             //* Newton-seconds)
+    VELOCITY_CHANGE //* Change velocity instantaneously, ignoring its mass.
+                    //Note:
+                    //* This is not well supported, and is equivalent to IMPULSE
+                    //if
+                    //* you did NOT manually set the mass yourself.
+};
+
+struct CompoundShapePart {
+    PhysicsShapes shape;
+    std::vector<float> shapeParameters;
+    float              position[3]; // Local position offset
+    float              rotation[4]; // Local rotation quaternion
 };
 
 /// @brief Struct to hold parameters for the RigidbodyComponent.
@@ -62,6 +72,7 @@ struct RigidbodyParameters {
     std::vector<float> shapeParameters = { 1.0f, 1.0f, 1.0f }; // Additional parameters for the shape, e.g., radius for sphere, half extents for box
     JPH::EMotionType motionType = JPH::EMotionType::Dynamic; // Motion type of the rigidbody
     JPH::ObjectLayer layer = Syngine::Layers::MOVING; // Layer of the rigidbody
+    std::vector<CompoundShapePart> compoundParts = {}; // Parts for compound shape
 };
 
 /*
