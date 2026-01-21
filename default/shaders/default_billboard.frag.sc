@@ -27,6 +27,8 @@ void main() {
         float ambient = 0.2;
         
         float lightFactor = ambient + diffuse * 0.8;
+        float nightFactor = clamp(smoothstep(-0.05, 0.05, lightDir.y), 0.2, 1.0);
+        lightFactor *= nightFactor;
         
         // Apply shadow if enabled
         if (u_billboard_lighting.y > 0.5) {

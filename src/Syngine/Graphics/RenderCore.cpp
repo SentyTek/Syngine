@@ -290,6 +290,10 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         { "u_sky_cameraPos",
           Renderer::RegisterUniform(
               m_internalPrograms.skyProgram, "u_cameraPos", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_sky_time",
+          Renderer::RegisterUniform(
+              m_internalPrograms.skyProgram, "u_time", UniformType::UNIFORM_VEC4) });
 
     // Texture program uniforms
     m_defaultUniformIds.insert({ "u_texture_lightDir",
@@ -1088,6 +1092,8 @@ void RenderCore::_DrawSky(const Program& program, const CameraComponent* camera)
     const float* cameraPos = camera->GetPosition();
 
     Renderer::SetUniform(m_defaultUniformIds.at("u_sky_cameraPos"), cameraPos);
+    const float timeVec[4] = { static_cast<float>(Core::m_frameCounter.frameCount), 0.f, 0.f, 0.f };
+    Renderer::SetUniform(m_defaultUniformIds.at("u_sky_time"), timeVec);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
     bgfx::submit(program.viewId, program.program);

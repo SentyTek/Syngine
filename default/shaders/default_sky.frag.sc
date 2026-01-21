@@ -7,6 +7,89 @@ uniform vec4 u_skyColorZenith; // Zenith sky color during the day
 uniform vec4 u_skyColorMidnight; // Zenith sky color at night
 uniform vec4 u_sunColor; // Sunlight color
 uniform vec4 u_cameraPos; // Guess
+uniform vec4 u_time; // Guess
+
+// Top 10 hashes of all time
+float hash11(float p) {
+    p = fract(p * 0.1031);
+    p *= p + 33.33;
+    p *= p + p;
+    return p;
+}
+
+float hash31(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+vec3 hash33(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.xxy + p.yzz) * p.zyx);
+}
+
+// A robust star function using Box Projection to eliminate polar distortion
+vec3 starsFromDir(vec3 viewDir, float time, float nightMask) {
+    // Cubemap projection
+    vec3 aDir = abs(viewDir);
+    float maxDir = max(aDir.x, max(aDir.y, aDir.z));
+
+    vec2 uv;
+    float faceID; // Hello Apple dont'nt sue me
+
+    if (aDir.x >= aDir.y && aDir.x >= aDir.z) {
+        uv = viewDir.yz / viewDir.x; // Project YZ plane
+        faceID = viewDir.x > 0.0 ? 0.0 : 1.0;
+    } else if (aDir.y >= aDir.x && aDir.y >= aDir.z) {
+        uv = viewDir.xz / viewDir.y; // Project XZ plane
+        faceID = viewDir.y > 0.0 ? 2.0 : 3.0;
+    } else {
+        uv = viewDir.xy / viewDir.z; // Project XY plane
+        faceID = viewDir.z > 0.0 ? 4.0 : 5.0;
+    }
+
+    // Remap uv from [-1, 1] to roughly [0, 1] range for easier grid math
+    uv = uv * 0.5 + 0.5;
+
+    // Grid
+    float grid = 100.0; // Grid density (higher = smaller cells, more stars)
+    vec2 g = uv * grid;
+    vec2 cell = floor(g);
+    vec2 f = fract(g);
+
+    // math.random isn't in gpus :(
+    vec3 seed = vec3(cell, faceID + 101.0);
+    float rnd = hash31(seed);
+
+    // Probability threshold (adjust 0.98 to control star count)
+    float exists = step(0.99, rnd);
+
+    vec2 hashPos = hash33(seed + 15.0).xy;
+    vec2 center = 0.25 + 0.5 * hashPos;
+
+    vec2 d = f - center;
+    float dist = length(d);
+
+    // Size variation
+    float size = mix(0.0002, 0.0004, hash11(rnd * 123.4));
+
+    // Smooth glow (core)
+    float core = 1.0 - smoothstep(0.0, size, dist);
+    core = pow(core, 4.0); // Sharpen the dot
+
+    // Use a large multiplier for time to ensure it doesn't look like global pulsing
+    float twinkle = 0.5 + 0.5 * sin(time * 2.0 + rnd * 150.0);
+
+    // Color variation
+    float t = hash31(vec3(cell, 123.0));
+    vec3 col = mix(vec3_splat(1.0), vec3(0.75, 0.85, 1.2), t);
+
+    // Use the original viewDir.y to fade stars near the horizon
+    float horizonFade = smoothstep(0.0, 0.2, viewDir.y);
+
+    return col * exists * core * twinkle * horizonFade * nightMask;
+}
 
 // Ray / sphere intersection in the sphere's local space.
 // r0 = ray origin, rD = ray direction (normalized), radius = sphere radius.
@@ -182,6 +265,11 @@ void main() {
     float sunIntensity = 20.0;
     vec3 finalColor = (colorR + colorM) * sunIntensity;
     finalColor *= u_sunColor.rgb;
+
+    // Lousy ass star rendering
+    // Mix in stars when night factor is low
+    float nightFactor = 1.0 - clamp(smoothstep(-0.05, 0.05, lightDirToSun.y), 0.0, 1.0);
+    finalColor += starsFromDir(viewDir, u_time.x, nightFactor);
 
     // Cheap ground fade: if looking below horizon, blend toward a darker "ground" tint
     // so the sky doesn't look like it's continuing through the planet.
