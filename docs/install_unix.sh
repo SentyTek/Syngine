@@ -132,37 +132,46 @@ compile_commands.json
 
 cd game/src
 touch main.cpp
-echo "#include \"Syngine/Syngine.h\"
+echo "
+#include "Syngine/Syngine.h"
+
 #include <string>
+
 using namespace Syngine;
 
 int AppMain(int argc, char* argv[]) {
-    // Create engine config
-    std::string gameName = \"$PROJECT_NAME\";
-    Syngine::EngineConfig config = {
-        .windowTitle = gameName,
-        .windowWidth = 1600,
-        .windowHeight = 900,
-        .vsync = true
-    };
+    std::string gameName = "$PROJECT_NAME";
+    Syngine::EngineConfig config   = { .windowTitle  = gameName,
+                                       .windowWidth  = 1600,
+                                       .windowHeight = 900,
+                                       .usePhysics   = true };
 
-    // Initialize logger
+    Syngine::RendererConfig rConfig  = { .useShadows      = true,
+                                         .shadowDist      = 500.0f,
+                                         .vsync           = true,
+                                         .usePseudoCamera = false };
+
     Syngine::Logger::Init(gameName);
-    Syngine::Logger::Log(\"Starting \" + gameName);
+    Syngine::Logger::Log("Starting " + gameName);
 
     // Create game
     Syngine::Core engine(config);
-    engine.Initialize();
+    engine.Initialize(rConfig);
 
     // Create default camera
     Syngine::GameObject* camera = new Syngine::GameObject(\"MainCamera\");
     Syngine::CameraComponent* cameraComp = camera->AddComponent<Syngine::CameraComponent>();
 
-    Logger::Info(\"Starting event loop\");
+
+    Logger::Info("Starting event loop");
     while (engine.IsRunning()) {
-        engine.HandleEvents();
-        engine.Update();
-        engine.Render(cameraComp);
+        Profiler::Reset();
+        {
+            SYN_PROFILE_SCOPE("MainLoop")
+            engine.HandleEvents();
+            engine.Update();
+            engine.Render(cameraComp);
+        }
     }
 
     // Cleanup
