@@ -932,7 +932,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             size_t handle = m_defaultUniformIds.at("u_default_floats");
             Uniform* u = Renderer::GetUniform(handle);
             matInst.uniforms.push_back(
-                { handle, { 0.f, 0.f, 0.2f, 0.f }, u->num });
+                { handle, { 0.f, 0.f, 0.1f, 0.f }, u->num });
 
             // Model matrix
             handle = m_defaultUniformIds.at("u_default_normalMatrix");

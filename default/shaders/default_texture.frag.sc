@@ -56,7 +56,7 @@ void main() {
     vec3 directLight = u_sunColor.xyz * sunIntensity * NdotL * shadow * microShadow;
 
     // Fake first-bounce global illumination
-    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.5 * clamp(dot(N, rotatedLightDir), 0.5, 1.0);
+    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.2 * clamp(dot(N, rotatedLightDir), 0.2, 1.0);
 
     // Calculate view direction
     vec3 viewDir = normalize(u_viewPos.xyz - v_worldPos);
