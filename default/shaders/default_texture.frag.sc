@@ -36,7 +36,7 @@ void main() {
     // Instead of flat ambient, mix sky and ground colors based on normal Y
     float hemiMix = N.y * 0.5 + 0.5;
     vec3 skyColor = u_skyColor.xyz;
-    vec4 albedo = texture2D(s_albedo, v_uvDetail);
+    vec4 albedo = texture2D(s_albedo, v_uvMacro * u_floats.w);
 
     // Rotate lightDirToSun by 90 degrees around the X axis for micro shadowing
     vec3 rotatedLightDir = vec3(lightDirToSun.x, -lightDirToSun.z, lightDirToSun.y);
@@ -90,6 +90,6 @@ void main() {
     //finalColor = applyGammaCorrection(finalColor, 2.2);
     
     gl_FragData[0] = vec4(finalColor, albedo.a);
-    //gl_FragData[0] = vec4(directLight, 1.0); //debug: sun elevation
+    //gl_FragData[0] = vec4(v_uvMacro, 1.0, 1.0); //debug: sun elevation
     gl_FragData[1] = vec4(N * 0.5 + 0.5, 1.0); //normal output (world space, encoded to [0,1])
 }

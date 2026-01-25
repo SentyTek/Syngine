@@ -960,8 +960,14 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                 BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
             // Uniform: u_texture_floats
             size_t handle = m_defaultUniformIds.at("u_texture_floats");
-            Uniform* u = Renderer::GetUniform(handle);
-            matInst.uniforms.push_back({ handle, {0.f, 0.f, 0.2f, 0.f}, u->num });
+            Uniform* u      = Renderer::GetUniform(handle);
+            std::vector<float> data = {
+                mat.heightScale,
+                mat.mixFactor,
+                mat.ambient,
+                mat.tileDetail
+            };
+            matInst.uniforms.push_back({ handle, data, u->num });
 
             // Model matrix
             handle = m_defaultUniformIds.at("u_texture_normalMatrix");
@@ -1014,7 +1020,7 @@ void RenderCore::_DrawShadows(const Program&   program,
                               uint8_t          cascade) {
     SYN_PROFILE_FUNCTION();
     const uint64_t renderState =
-        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
+        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
 
     if (Core::_GetApp()->debug.CSMBounds) {
         if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
