@@ -92,7 +92,7 @@ add_library(Syngine STATIC
 # Uncomment to enable graphics debugging.
 # This is done because programs like RenderDoc do not work if window's `dbghelp.dll` is loaded, which we use for crash handling/logging.
 # And so this macro prevents those features from being compiled in. This also disables the Syngine Profiler, which may cause compile-time errors. Use at your own risk.
-target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
+# target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
 
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
