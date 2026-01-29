@@ -56,7 +56,6 @@ We have several pages of documentation available. Note the API reference is auto
 
 - [Debugrenderer](api/debugrenderer_doc.md)
 - [Metalbridge](api/metalbridge_doc.md)
-- [Rendercore](api/rendercore_doc.md)
 - [Renderer](api/renderer_doc.md)
 - [Shaders](api/shaders_doc.md)
 - [Texturehelpers](api/texturehelpers_doc.md)
