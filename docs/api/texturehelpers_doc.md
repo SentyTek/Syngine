@@ -16,6 +16,7 @@
 - [Constructor](#class-constructor)
 - [LoadTextureFromFile](#syngineloadtexturefromfile)
 - [CreateFlatTexture](#synginecreateflattexture)
+- [CreateNoiseTexture](#synginecreatenoisetexture)
 
 ---
 
@@ -77,6 +78,26 @@ bgfx::TextureHandle CreateFlatTexture();
 ```
 
 **Returns:** A bgfx::TextureHandle representing a flat texture
+
+---
+
+#### **`Syngine::CreateNoiseTexture`**
+
+
+ Creates a white noise texture
+
+Signature:
+
+```cpp
+bgfx::TextureHandle CreateNoiseTexture(uint16_t width, uint16_t height);
+```
+
+**Parameters:**
+
+- `width`: Width of the texture
+- `height`: Height of the texture
+
+**Returns:** A bgfx::TextureHandle representing the noise texture
 
 ---
 

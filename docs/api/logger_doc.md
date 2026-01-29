@@ -15,8 +15,8 @@
 
 - [LogLevel](#syngineloglevel)
 - [Logger](#loggerlogger)
-- [GetTimestamp](#loggergettimestamp)
-- [LogLevelToString](#loggerlogleveltostring)
+- [_GetTimestamp](#logger_gettimestamp)
+- [_LogLevelToString](#logger_logleveltostring)
 - [Init](#loggerinit)
 - [Shutdown](#loggershutdown)
 - [Log](#loggerlog)
@@ -30,6 +30,10 @@
 - [SetAutoFlush](#loggersetautoflush)
 - [Flush](#loggerflush)
 - [IsOpen](#loggerisopen)
+- [SetMinLogLevel](#loggersetminloglevel)
+- [GetMinLogLevel](#loggergetminloglevel)
+- [SetupCrashHandler](#loggersetupcrashhandler)
+- [PrintStackTrace](#loggerprintstacktrace)
 
 ---
 
@@ -72,7 +76,7 @@ Signature:
 
 ---
 
-#### **`Logger::GetTimestamp`**
+#### **`Logger::_GetTimestamp`**
 
 
  Get the current timestamp as a string
@@ -83,7 +87,7 @@ Signature:
 Signature:
 
 ```cpp
- static std::string GetTimestamp();
+ static std::string _GetTimestamp();
 ```
 
 **Returns:** Current timestamp as a string
@@ -92,7 +96,7 @@ Signature:
 
 ---
 
-#### **`Logger::LogLevelToString`**
+#### **`Logger::_LogLevelToString`**
 
 
  Convert a LogLevel to a string
@@ -103,7 +107,7 @@ Signature:
 Signature:
 
 ```cpp
- [[nodiscard]] static std::string LogLevelToString(LogLevel level) noexcept;
+ [[nodiscard]] static std::string _LogLevelToString(LogLevel level) noexcept;
 ```
 
 **Parameters:**
@@ -345,7 +349,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline void SetAutoFlush(bool enable) noexcept { autoFlush = enable;
+ static inline void SetAutoFlush(bool enable) noexcept { m_autoFlush = enable;
 ```
 
 **Parameters:**
@@ -393,6 +397,80 @@ Signature:
 **This function has been available since:** v0.0.1
 
 **The return value of this function must not be discarded.**
+
+---
+
+#### **`Logger::SetMinLogLevel`**
+
+
+ Set the minimum log level. Messages below this level will not be logged.
+
+Signature:
+
+```cpp
+ static inline void SetMinLogLevel(LogLevel level) noexcept { m_minLogLevel = level;
+```
+
+**Parameters:**
+
+- `level`: Minimum log level to set
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Logger::GetMinLogLevel`**
+
+
+ Get the current minimum log level
+
+Signature:
+
+```cpp
+ static inline LogLevel GetMinLogLevel() noexcept ;
+```
+
+**Returns:** Current minimum log level
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Logger::SetupCrashHandler`**
+
+
+ Setup crash handler to log crashes
+
+Signature:
+
+```cpp
+ static void SetupCrashHandler();
+```
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Logger::PrintStackTrace`**
+
+
+ Print the current stack trace to the log
+
+Signature:
+
+```cpp
+ static void PrintStackTrace();
+```
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
 
 ---
 

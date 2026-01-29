@@ -15,6 +15,7 @@
 
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
+- [MeshAABB](#synginemeshaabb)
 - [GetComponentType](#synginegetcomponenttype)
 - [Clone](#syngineclone)
 - [Init](#syngineinit)
@@ -24,6 +25,7 @@
 - [UnloadMesh](#syngineunloadmesh)
 - [IsMeshLoaded](#syngineismeshloaded)
 - [UploadMesh](#syngineuploadmesh)
+- [GetAABB](#synginegetaabb)
 
 ---
 
@@ -55,6 +57,30 @@ Signature:
 
 ## Class & Related Members
 
+
+#### **`Syngine::MeshAABB`**
+
+
+ Structure representing an axis-aligned bounding box (AABB)
+
+Signature:
+
+```cpp
+struct MeshAABB 
+```
+
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `float` | `min[3]` | = {0.0f, 0.0f, 0.0f};        //* Minimum corner of the AABB Minimum corner of the AABB |
+| `float` | `max[3]` | = {0.0f, 0.0f, 0.0f};        //* Maximum corner of the AABB Maximum corner of the AABB |
+| `float` | `center[3]` | = {0.0f, 0.0f, 0.0f};     //* Center of the AABB Center of the AABB |
+| `float` | `halfExtents[3]` | = {0.0f, 0.0f, 0.0f}; //* Half extents of the AABB Half extents of the AABB |
+
+**This function has been available since:** v0.0.1
+
+---
 
 #### **`Syngine::GetComponentType`**
 
@@ -227,7 +253,7 @@ Signature:
 Signature:
 
 ```cpp
- bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices, std::vector<uint8_t> baseColor = {});
+ bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices,
 ```
 
 **Parameters:**
@@ -244,6 +270,25 @@ Signature:
 
 ---
 
+#### **`Syngine::GetAABB`**
+
+
+ Get the axis-aligned bounding box (AABB) of the mesh
+
+Signature:
+
+```cpp
+ MeshAABB& GetAABB();
+```
+
+**Returns:** Reference to the MeshAABB structure
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
 ## Member Variables
 
 
@@ -253,6 +298,7 @@ Signature:
 | `bool` | `castShadows` | Whether the mesh casts shadows |
 | `bool` | `receiveSunLight` | Whether the mesh receives sunlight |
 | `MeshData` | `meshData` | Mesh data for the GameObject |
+| `mutable` | `MeshAABB` | Axis-aligned bounding box of the mesh |
 
 ---
 

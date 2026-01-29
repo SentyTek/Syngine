@@ -27,6 +27,8 @@
 - [GetFarPlane](#synginegetfarplane)
 - [SetAngles](#synginesetangles)
 - [GetAngles](#synginegetangles)
+- [](#syngine)
+- [](#syngine)
 
 ---
 
@@ -328,6 +330,60 @@ Signature:
 - `pitch`: Reference to store the pitch angle in radians
 
 **Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::`**
+
+
+ Structure representing a plane in 3D space
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ };
+```
+
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `float` | `normal[3]` | = { 0.f, 1.f, 0.f }; //* Normal vector of the plane Normal vector of the plane |
+| `float` | `distance` | Distance from origin |
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::`**
+
+
+ Structure representing a frustum for view culling
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ };
+```
+
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `Plane` | `top` | Top plane |
+| `Plane` | `bottom` | Bottom plane |
+| `Plane` | `left` | Left plane |
+| `Plane` | `right` | Right plane |
+| `Plane` | `n` | Near plane |
+| `Plane` | `f` | Far plane |
 
 **This function has been available since:** v0.0.1
 

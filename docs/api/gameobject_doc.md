@@ -43,7 +43,7 @@
 Signature:
 
 ```cpp
- GameObject(string name, string type = "default", string initialTag = "");
+ GameObject(std::string name, std::string type = "default", std::string initialTag = "");
 ```
 
 **Parameters:**
@@ -359,8 +359,8 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `string` | `type` | Type of the GameObject, used for shaders. |
-| `string` | `gizmo` | Gizmo type for rendering in the editor, e.g., |
+| `std::string` | `type` | Type of the GameObject, used for shaders. |
+| `std::string` | `gizmo` | Gizmo type for rendering in the editor, e.g., |
 | `std::vector<std::string>` | `tags` | Tags for grouping and identifying GameObjects |
 
 ---

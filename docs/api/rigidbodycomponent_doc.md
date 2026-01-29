@@ -55,7 +55,8 @@ Signature:
 
 **Parameters:**
 
-- `static`: constexpr Syngine::Components componentType Rigidbody component type
+- `static`: Rigidbody component type
+- `static`: Rigidbody component type
 - `owner`: Pointer to the GameObject that owns this component
 - `params`: Rigidbody parameters to initialize the component
 
@@ -91,6 +92,7 @@ enum class PhysicsShapes
 | `CONVEX_HULL` | Convex hull shape |
 | `PLANE` | Plane shape |
 | `MESH` | Mesh shape |
+| `COMPOUND` | Compound shape |
 
 **This function has been available since:** v0.0.1
 
@@ -114,7 +116,7 @@ enum class ForceMode
 | `FORCE` | Add a continuous force to the rigidbody using its mass (F = m * a) (Newtons) |
 | `ACCELERATION` | Add a continuous acceleration to the rigidbody, ignoring its mass. Note: This is not well supported, and is equivalent to FORCE if you did NOT manually set the mass yourself. |
 | `IMPULSE` | Add an instant force impulse, using its mass (I = m * dv) ( Newton-seconds) |
-| `VELOCITY_CHANGE` | Change velocity instantaneously, ignoring its mass. Note: This is not well supported, and is equivalent to IMPULSE if you did NOT manually set the mass yourself. |
+| `VELOCITY_CHANGE` | Change velocity instantaneously, ignoring its mass. |
 
 **This function has been available since:** v0.0.1
 
