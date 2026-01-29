@@ -2,7 +2,7 @@
 // │ Syngine                              │
 // │ Created 2025-05-29                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
@@ -37,6 +37,8 @@
 namespace Syngine {
 PlayerComponent::PlayerComponent(GameObject*               owner,
                                  Syngine::CameraComponent* camera) {
+    if (!Core::IsPhysicsEnabled()) return;
+    
     this->m_owner = owner;
     this->Init(camera);
 }
@@ -45,6 +47,8 @@ PlayerComponent::PlayerComponent(GameObject*               owner,
 // I do not like it one bit.
 // I do not like it, Sam-I-Am.
 PlayerComponent::PlayerComponent(const PlayerComponent& other) {
+    if (!Core::IsPhysicsEnabled()) return;
+    
     this->m_owner = other.m_owner;
     this->m_camera = other.m_camera;
     this->m_window = other.m_window;

@@ -2,7 +2,7 @@
 // │ Syngine                              │
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
@@ -133,6 +133,7 @@ void TransformComponent::_QuatMultiply(const float* q1, const float* q2, float* 
 // --- Dirty flag helpers
 void TransformComponent::_MarkLocalDirty() {
     m_dirtyLocal = true;
+    ++m_version;
     _MarkWorldDirty();
 }
 void TransformComponent::_MarkWorldDirty() {

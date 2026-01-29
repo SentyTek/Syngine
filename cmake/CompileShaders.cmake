@@ -2,14 +2,14 @@
 # │ Syngine                              │
 # │ Created 2025-06-05                   │
 # ├──────────────────────────────────────┤
-# │ Copyright (c) SentyTek 2025-2025     │
+# │ Copyright (c) SentyTek 2025-2026     │
 # │ Placeholder License                  │
 # ╰──────────────────────────────────────╯
 # root/engine/cmake/CompileShaders.cmake
 
 # Function to automatically find and compile BGFX shaders from a directory.
 #
-# Example Usage in your main CMakeLists.txt:
+# Example Usage in main CMakeLists.txt:
 #   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake") # Or wherever this file is
 #   include(${CMAKE_SOURCE_DIR}/engine/cmake/CompileShaders.cmake)
 #

@@ -2,12 +2,14 @@
 // │ Syngine                              │
 // │ Created 2025-05-21                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Physics/Physics.h"
 #include "Jolt/Math/MathTypes.h"
+#include "Jolt/Physics/Body/MotionType.h"
+#include "Jolt/Physics/Collision/Shape/StaticCompoundShape.h"
 #include "Syngine/Core/Core.h"
 #include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/Core/Logger.h"
@@ -15,6 +17,7 @@
 
 #include <thread> //for hardware_concurrency
 
+#include "Jolt/Jolt.h"
 #include "Jolt/Core/Factory.h"
 #include "Jolt/Core/TempAllocator.h"
 #include "Jolt/Geometry/IndexedTriangle.h"
@@ -30,10 +33,9 @@
 #include "Jolt/Physics/Collision/Shape/CylinderShape.h"
 #include "Jolt/Physics/PhysicsSettings.h"
 #include "Jolt/RegisterTypes.h"
-#include <Jolt/Core/JobSystemSingleThreaded.h> //for single threaded fallback
-#include <Jolt/Core/Memory.h>
-#include <Jolt/Core/StreamWrapper.h>
-#include <Jolt/Core/IssueReporting.h>
+#include "Jolt/Core/Memory.h"
+#include "Jolt/Core/StreamWrapper.h"
+#include "Jolt/Core/IssueReporting.h"
 #include "SDL3/SDL_log.h"
 
 using namespace JPH;
@@ -221,7 +223,7 @@ BodyID Phys::_CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent,
     return box->GetID();
 }
 
-BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale) {
+BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale, const float mass) {
     BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
     if (meshData.numVertices == 0) {
         Syngine::Logger::Error("SynginePhys::CreateMeshBody: Mesh data is empty.");
@@ -278,10 +280,13 @@ BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData
 
     // For static meshes, mass properties are not strictly required, as Jolt treats them as infinite mass.
     // If it were dynamic, mass properties would be needed.
-    // if (motionType == EMotionType::Dynamic) {
-    //    bodySettings.mMassProertiesOverride = meshShape->GetMassProperties();
-    //    bodySettings.mMassPropertiesOverride.ScaleToMass(desired_mass); //For specific mass
-    // }
+    if (motionType == EMotionType::Dynamic) {
+        meshSettings.mMassPropertiesOverride = meshShape->GetMassProperties();
+        if (mass > 0.0f) {
+            meshSettings.mMassPropertiesOverride.ScaleToMass(mass);
+            meshSettings.mOverrideMassProperties = EOverrideMassProperties::MassAndInertiaProvided;
+        }
+    }
 
     Body* body = bodyInterface.CreateBody(meshSettings);
     if (!body) {
@@ -349,4 +354,107 @@ BodyID Phys::_CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeig
     }
     bodyInterface.AddBody(cylinder->GetID(), EActivation::Activate);
     return cylinder->GetID();
+}
+
+BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vector<CompoundShapePart>& parts, EMotionType motionType, ObjectLayer layer, float mass) {
+    BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
+    if (parts.empty()) {
+        Syngine::Logger::Error("SynginePhys::CreateCompound: No parts provided for compound shape.");
+        return BodyID();
+    }
+
+    StaticCompoundShapeSettings compoundShapeSettings;
+
+    // Create and add each part to the compound shape
+    for (const auto& part : parts) {
+        ShapeRefC partShape = nullptr;
+        switch (part.shape) {
+        case PhysicsShapes::BOX: {
+            if (part.shapeParameters.size() < 3) continue;
+            Vec3 halfExtents(part.shapeParameters[0],
+                             part.shapeParameters[1],
+                             part.shapeParameters[2]);
+            BoxShapeSettings boxSettings(halfExtents);
+            auto             result = boxSettings.Create();
+            if (result.HasError()) {
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create box shape for compound part: %s", result.GetError().c_str());
+                continue;
+            }
+            partShape = result.Get();
+            break;
+        }
+        case PhysicsShapes::SPHERE: {
+            if (part.shapeParameters.empty()) continue;
+            float radius = part.shapeParameters[0];
+            SphereShapeSettings sphereSettings(radius);
+            auto                result = sphereSettings.Create();
+            if (result.HasError()) {
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create sphere shape for compound part: %s", result.GetError().c_str());
+                continue;
+            }
+            partShape = result.Get();
+            break;
+        }
+        case PhysicsShapes::CAPSULE: {
+            if (part.shapeParameters.size() < 2) continue;
+            float radius = part.shapeParameters[0];
+            float halfHeight = part.shapeParameters[1];
+            CapsuleShapeSettings capsuleSettings(halfHeight, radius);
+            auto                 result = capsuleSettings.Create();
+            if (result.HasError()) {
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create capsule shape for compound part: %s", result.GetError().c_str());
+                continue;
+            }
+            partShape = result.Get();
+            break;
+        }
+        case PhysicsShapes::CYLINDER: {
+            if (part.shapeParameters.size() < 2) continue;
+            float radius = part.shapeParameters[0];
+            float halfHeight = part.shapeParameters[1];
+            CylinderShapeSettings cylinderSettings(halfHeight, radius);
+            auto                  result = cylinderSettings.Create();
+            if (result.HasError()) {
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create cylinder shape for compound part: %s", result.GetError().c_str());
+                continue;
+            }
+            partShape = result.Get();
+            break;
+        }
+        default:
+            continue;
+        }
+
+        if (partShape) {
+            Vec3 childPos(part.position[0], part.position[1], part.position[2]);
+            Quat childRot(part.rotation[0], part.rotation[1], part.rotation[2], part.rotation[3]);
+            compoundShapeSettings.AddShape(childPos, childRot, partShape);
+        }
+    }
+
+    ShapeSettings::ShapeResult compoundShapeResult = compoundShapeSettings.Create();
+    if (compoundShapeResult.HasError()) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create compound shape: %s", compoundShapeResult.GetError().c_str());
+        return BodyID();
+    }
+    ShapeRefC compoundShape = compoundShapeResult.Get();
+
+    BodyCreationSettings bodySettings(
+        compoundShape, position, rotation, motionType, layer);
+
+    if (motionType == EMotionType::Dynamic && mass > 0.0f) {
+        bodySettings.mMassPropertiesOverride = compoundShape->GetMassProperties();
+        bodySettings.mMassPropertiesOverride.ScaleToMass(mass);
+        bodySettings.mOverrideMassProperties = EOverrideMassProperties::MassAndInertiaProvided;
+    }
+
+    Body* body = bodyInterface.CreateBody(bodySettings);
+    if (!body) {
+        Syngine::Logger::Error(
+            "SynginePhys::CreateCompound: Failed to create compoundbody.");
+        return BodyID();
+    }
+    bodyInterface.AddBody(body->GetID(), EActivation::Activate);
+    return body->GetID();
+        
 }

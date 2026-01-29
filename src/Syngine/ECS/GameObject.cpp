@@ -2,7 +2,7 @@
 // │ Syngine                              │
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
@@ -12,7 +12,7 @@
 
 using namespace Syngine;
 
-GameObject::GameObject(string name, string type, string initialTag) {
+GameObject::GameObject(std::string name, std::string type, std::string initialTag) {
     this->name = name;
     this->type = type;
     this->tags.push_back(initialTag);

@@ -2,12 +2,13 @@
 // │ Syngine                              │
 // │ Created 2025-06-10                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
 #pragma once
 #include "Syngine/ECS/Component.h"
+#include "bx/math.h"
 
 namespace Syngine {
 
@@ -135,6 +136,39 @@ class CameraComponent : public Syngine::Component {
   private:
     GameObject* m_owner; // Reference to the owner game object
     Camera      camera;  // Camera data
+
+    /// @brief Structure representing a plane in 3D space
+    /// @since v0.0.1
+    /// @internal
+    struct Plane {
+        float normal[3] = { 0.f, 1.f, 0.f }; //* Normal vector of the plane
+        float distance  = 0.f;               //* Distance from origin
+    };
+
+    /// @brief Structure representing a frustum for view culling
+    /// @since v0.0.1
+    /// @internal
+    struct Frustum {
+        Plane top;    //* Top plane
+        Plane bottom; //* Bottom plane
+        Plane left;   //* Left plane
+        Plane right;  //* Right plane
+        Plane n;   //* Near plane
+        Plane f;    //* Far plane
+    };
+
+    static void _normalizePlane(CameraComponent::Plane& plane);
+
+    Frustum _extractFrustum();
+
+    bool _aabbInsidePlane(const Plane&    plane,
+                          const bx::Vec3& min,
+                          const bx::Vec3& max);
+    bool _aabbInsideFrustum(const Frustum&  frustum,
+                            const bx::Vec3& min,
+                            const bx::Vec3& max);
+
+    friend class RenderCore;
 }; // class CameraComponent
 
 } // namespace Syngine

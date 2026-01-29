@@ -1,5 +1,5 @@
 $input a_position a_normal a_color0
-$output v_worldPos v_worldNormal v_viewDepth v_vertexColor
+$output v_worldPos v_normal v_viewDepth v_vertexColor
 #include <bgfx_shader.sh>
 
 // u_model is the world matrix (model matrix)
@@ -14,7 +14,7 @@ void main() {
     vec4 worldPos = mul(u_model[0], vec4(a_position, 1.0));
     v_worldPos = worldPos.xyz;
     v_viewDepth = mul(u_view, worldPos).z;
-    v_worldNormal = normalize(mul(u_normalMatrix, a_normal));
+    v_normal = normalize(mul(u_normalMatrix, a_normal));
     v_vertexColor = a_color0;
     
     gl_Position = mul(u_viewProj, worldPos);

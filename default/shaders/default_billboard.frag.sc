@@ -27,18 +27,21 @@ void main() {
         float ambient = 0.2;
         
         float lightFactor = ambient + diffuse * 0.8;
+        float nightFactor = clamp(smoothstep(-0.05, 0.05, lightDir.y), 0.2, 1.0);
+        lightFactor *= nightFactor;
         
         // Apply shadow if enabled
         if (u_billboard_lighting.y > 0.5) {
             // Calculate view depth (distance from camera)
             float viewDepth = length(v_worldPos - u_viewPos.xyz);
             vec3 fakeNormal = vec3(0.0, 1.0, 0.0); // Assume upward facing normal
-            float shadowFactor = getShadowFactor(v_worldPos, fakeNormal, u_lightDir, viewDepth);
+            float shadowFactor = getShadowFactor(v_worldPos, vec3(0.0, 1.0, 0.0), fakeNormal, u_lightDir, viewDepth);
             lightFactor *= shadowFactor;
         }
         
         finalColor *= lightFactor;
     }
 
-    gl_FragColor = vec4(finalColor, base.a);
+    gl_FragData[0] = vec4(finalColor, base.a);
+    gl_FragData[1] = vec4(0.0, 0.0, 1.0, 1.0);
 }

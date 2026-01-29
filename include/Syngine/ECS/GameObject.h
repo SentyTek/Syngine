@@ -2,7 +2,7 @@
 // │ Syngine                              │
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
@@ -12,13 +12,10 @@
 #include <map>
 #include <vector>
 
+#include "Syngine/Core/Core.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/AllComponents.h"
-#include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
-
-using namespace std;
 
 namespace Syngine {
 
@@ -29,12 +26,12 @@ namespace Syngine {
 /// @since v0.0.1
 class GameObject {
   public:
-    string name; //* Name of the GameObject, used for identification and
+    std::string name; //* Name of the GameObject, used for identification and
                  //* debugging.
 
-    string type; //* Type of the GameObject, used for shaders.
+    std::string type; //* Type of the GameObject, used for shaders.
 
-    string gizmo; //* Gizmo type for rendering in the editor, e.g.,
+    std::string gizmo; //* Gizmo type for rendering in the editor, e.g.,
                   //* "camera_render", "mesh_render"
 
     std::vector<std::string> tags; //* Tags for grouping and identifying GameObjects
@@ -43,7 +40,7 @@ class GameObject {
     /// @param name Name of the GameObject
     /// @param type Type of the GameObject, defaults to "default"
     /// @since v0.0.1
-    GameObject(string name, string type = "default", string initialTag = "");
+    GameObject(std::string name, std::string type = "default", std::string initialTag = "");
 
     GameObject(const GameObject& other);
     GameObject& operator=(const GameObject& other);
@@ -149,7 +146,7 @@ class GameObject {
   private:
     long id; // Unique ID for the GameObject
 
-    std::map<Syngine::Components, unique_ptr<Syngine::Component>>
+    std::map<Syngine::Components, std::unique_ptr<Syngine::Component>>
         components; // Map of components attached to the GameObject
 
     bool isActive = true; // Whether the GameObject is active or not
@@ -163,17 +160,12 @@ T* GameObject::GetComponent() const {
     }
     
     return dynamic_cast<T*>(it->second.get());
-}
+};
+
 
 template <typename T, typename... Args>
 T* GameObject::AddComponent(Args&&... args) {
     auto type = T::componentType;
-    if (!Syngine::Core::_GetApp()) {
-        Syngine::Logger::Error(
-            "Cannot add component when Core is not initialized");
-        return nullptr;
-    }
-
     if (components.contains(type)) return nullptr;
 
     // Forward the arguments to the component constructor

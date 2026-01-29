@@ -2,7 +2,7 @@
 // │ Syngine                              │
 // │ Created 2025-05-22                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
@@ -29,12 +29,17 @@
 #include <vector>
 
 namespace Syngine {
-RigidbodyComponent::RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params) {
+RigidbodyComponent::RigidbodyComponent(GameObject*                  owner,
+                                       Syngine::RigidbodyParameters params) {
+    if (!Core::IsPhysicsEnabled()) return;
+    
     this->m_owner = owner;
     this->Init(params);
 }
 
 RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
+    if (!Core::IsPhysicsEnabled()) return;
+    
     this->m_owner = other.m_owner;
     this->physicsManager = other.physicsManager;
     this->transform = other.transform;
@@ -46,7 +51,10 @@ RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
     this->shapeParameters = other.shapeParameters;
 }
 
-RigidbodyComponent& RigidbodyComponent::operator=(const RigidbodyComponent& other) {
+RigidbodyComponent&
+RigidbodyComponent::operator=(const RigidbodyComponent& other) {
+    if (!Core::IsPhysicsEnabled()) return *this;
+    
     if (this != &other) {
         this->m_owner = other.m_owner;
         this->physicsManager = other.physicsManager;
@@ -135,7 +143,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                 scale = JPH::Vec3(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             }
 
-            bodyID = physicsManager->_CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale);
+            bodyID = physicsManager->_CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale, mass);
             break;
         }
         case PhysicsShapes::CAPSULE: {
@@ -150,6 +158,14 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
             float radius = shapeParameters[1];
             float halfHeight = shapeParameters[0];
             bodyID = physicsManager->_CreateCylinder(posVec, rotationQuat, radius, halfHeight, params.motionType, params.layer, mass);
+            break;
+        }
+        case PhysicsShapes::COMPOUND: {
+            if (params.compoundParts.empty()) {
+                Syngine::Logger::Error("RigidbodyComponent::Init: No parts provided for compound shape.");
+                return;
+            }
+            bodyID = physicsManager->_CreateCompound(posVec, rotationQuat, params.compoundParts, params.motionType, params.layer, mass);
             break;
         }
         default:

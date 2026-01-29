@@ -1,0 +1,123 @@
+$input v_texcoord0
+
+#include <bgfx_shader.sh>
+
+SAMPLER2D(s_depth, 0);
+SAMPLER2D(s_normal, 1);
+
+uniform vec4 u_ssaoParams; // x: radius, y: bias (angle), z: intensity, w: renderWidth
+
+#define PI 3.14159265
+
+// FIX: Robust Position Reconstruction
+// This handles the D3D vs OpenGL coordinate flip automatically
+vec3 reconstructPosition(vec2 uv, float depth) {
+    vec2 clipXY = uv * 2.0 - 1.0;
+    clipXY.y = -clipXY.y; // Fix D3D Flip
+    vec4 clip = vec4(clipXY, depth, 1.0);
+    vec4 view = mul(u_invProj, clip);
+    return view.xyz / view.w;
+}
+
+// Fast spatial offset generator
+vec2 getOffsetDirection(vec2 uv, float index, float count) {
+    // Rotates the sampling direction based on noise
+    float angle = (index + uv.x * uv.y * 100.0) / count * PI * 2.0; 
+    return vec2(cos(angle), sin(angle));
+}
+
+// Add this function above main()
+float InterleavedGradientNoise(vec2 position_screen) {
+    vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);
+    return fract(magic.z * fract(dot(position_screen, magic.xy)));
+}
+
+void main() {
+    vec2 uv = v_texcoord0;
+
+    // Decode Normal: [0,1] -> [-1,1]
+    vec3 worldNormal = texture2D(s_normal, uv).xyz * 2.0 - 1.0;
+    // Transform to View Space (w=0 to ignore translation)
+    vec3 viewNormal = normalize(mul(u_view, vec4(worldNormal, 0.0)).xyz);
+    
+    float depth = texture2D(s_depth, uv).x;
+    if (depth >= 1.0) { gl_FragColor = vec4_splat(1.0); return; } // Skybox
+    
+    vec3 viewPos = reconstructPosition(uv, depth);
+    vec3 viewDir = normalize(-viewPos); // Vector from surface to camera
+
+    int numDirections = 3;   // Number of slice rotations (Quality)
+    int numSteps = 4;        // Samples along each slice (Range)
+    float radius = u_ssaoParams.x; 
+    
+    // Calculate screen-space radius (approximate)
+    // 500.0 is an arbitrary focal length constant, adjust for FOV
+    float projScale = 500.0 / viewPos.z; 
+    float screenRadius = radius * projScale; 
+    
+    // Noise for rotation jitter
+    // Get screen pixel coordinates (approximate if u_viewRect is unavailable)
+    vec2 screenPixel = uv * vec2(1600.0, 900.0); // Or pass uniform u_resolution
+    float randomVal = InterleavedGradientNoise(screenPixel);
+    
+    // Use randomVal to spin the GTAO slice
+    float randomAngle = randomVal * PI * 2.0;
+
+    float visibility = 0.0;
+
+    // Do the thing
+    // TODO: XeGTAO once compute shaders are supported
+    UNROLL for(int d = 0; d < numDirections; ++d) {
+        // Compute direction in 2D Screen Space
+        float angle = (float(d) / float(numDirections)) * PI + randomAngle;
+        vec2 dir = vec2(cos(angle), sin(angle));
+        
+        // We will track the "highest" horizon angle found in this direction
+        float maxHorizonAngle = -1.0;
+
+        UNROLL for(int s = 1; s <= numSteps; ++s) {
+            // March along the 2D direction in screen space
+            // Power function (s*s) pushes samples further out for better range
+            float stepDist = (float(s) + randomVal) / float(numSteps + 1);
+            stepDist *= stepDist; // Exponential stepping
+            
+            vec2 sampleUV = uv + dir * stepDist * 0.05; // 0.05 is Max Screen Radius
+
+            // Guard against screen edges
+            if(sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) continue;
+
+            // Sample Neighbor
+            float sampleDepth = texture2D(s_depth, sampleUV).x;
+            vec3 samplePos = reconstructPosition(sampleUV, sampleDepth);
+            
+            // Calculate Vector to Sample
+            vec3 horizonVec = samplePos - viewPos;
+            float distSq = dot(horizonVec, horizonVec);
+            
+            // Range Attenuation (Ignore things too far away)
+            float attenuation = clamp(1.0 - (distSq / (radius * radius)), 0.0, 1.0);
+
+            // Calculate Angle (Elevation) of this sample relative to surface tangent
+            // Ideally we project this, but simply checking the "slope" works for HBAO-Lite
+            // We want the dot product between the Normal and the Horizon Vector
+            float horizonAngle = dot(normalize(horizonVec), viewNormal);
+            
+            // If this sample is "higher" above the hemisphere horizon, it blocks light
+            if (distSq < radius * radius) {
+                maxHorizonAngle = max(maxHorizonAngle, horizonAngle * attenuation);
+            }
+        }
+        
+        // Integrate visibility for this slice
+        // The bias (u_ssaoParams.y) removes artifacts on flat surfaces (try 0.1)
+        visibility += clamp(1.0 - (maxHorizonAngle - u_ssaoParams.y), 0.0, 1.0);
+    }
+
+    // Average the directions
+    visibility /= float(numDirections);
+    
+    // Intensity
+    visibility = pow(visibility, u_ssaoParams.z);
+
+    gl_FragColor = vec4(vec3_splat(visibility), 1.0);
+}

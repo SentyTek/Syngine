@@ -2,11 +2,23 @@
 // │ Syngine                              │
 // │ Created 2025-07-14                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
+// │ Copyright (c) SentyTek 2025-2026     │
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
 #pragma once
+
+#ifdef _WIN32
+#define NOMINMAX
+#include <windows.h>
+#include <dbghelp.h>
+#include <signal.h>
+#elif defined(__linux__) || defined(__APPLE__)
+#include <execinfo.h>
+#include <unistd.h>
+#include <cxxabi.h>
+#endif
+
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -39,7 +51,7 @@ class Logger {
     /// @return Current timestamp as a string
     /// @since v0.0.1
     /// @internal
-    static std::string GetTimestamp();
+    static std::string _GetTimestamp();
 
     /// @brief Convert a LogLevel to a string
     /// @param level LogLevel to convert
@@ -48,13 +60,19 @@ class Logger {
     /// @internal
     /// @nodiscard
     [[nodiscard]]
-    static std::string LogLevelToString(LogLevel level) noexcept;
+    static std::string _LogLevelToString(LogLevel level) noexcept;
 
-    static inline std::string appName = "SyngineGame";
-    static inline std::unique_ptr<std::ofstream> logFile = nullptr;
-    static inline std::mutex                     logMutex;
-    static inline LogLevel                       minLogLevel = LogLevel::INFO;
-    static inline std::atomic<bool>              autoFlush   = false;
+    static inline std::string                    m_appName = "SyngineGame";
+    static inline std::unique_ptr<std::ofstream> m_logFile = nullptr;
+    static inline std::mutex                     m_logMutex;
+    static inline LogLevel                       m_minLogLevel = LogLevel::INFO;
+    static inline std::atomic<bool>              m_autoFlush   = false;
+
+    static void _CrashHandler(int signal);
+#ifdef _WIN32
+    static LONG WINAPI
+    _WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
+#endif
 
   public:
     /// @brief Initialize the logger with the name of the app and an optional
@@ -137,7 +155,7 @@ class Logger {
     /// @threadsafety safe
     /// @since v0.0.1
     static inline void SetAutoFlush(bool enable) noexcept {
-        autoFlush = enable;
+        m_autoFlush = enable;
     }
 
     /// @brief Force flush the log file
@@ -152,8 +170,33 @@ class Logger {
     /// @nodiscard
     [[nodiscard]]
     static inline bool IsOpen() noexcept {
-        return logFile && logFile->is_open();
+        return m_logFile && m_logFile->is_open();
     }
+
+    /// @brief Set the minimum log level. Messages below this level will not be
+    /// logged.
+    /// @param level Minimum log level to set
+    /// @threadsafety safe
+    /// @since v0.0.1
+    static inline void SetMinLogLevel(LogLevel level) noexcept {
+        m_minLogLevel = level;
+    }
+
+    /// @brief Get the current minimum log level
+    /// @return Current minimum log level
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    static inline LogLevel GetMinLogLevel() noexcept { return m_minLogLevel; }
+
+    /// @brief Setup crash handler to log crashes
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void SetupCrashHandler();
+
+    /// @brief Print the current stack trace to the log
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void PrintStackTrace();
 };
 
 } // namespace Syngine
