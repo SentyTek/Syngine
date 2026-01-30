@@ -18,26 +18,24 @@
 - **Advanced tooling** - XML based asset pipeline, in-engine level editor, hot-reloading support, and more.
 
 ## Roadmap
-Phase one: Core systems with Rendering, Physics, and Input subsystems - In progress. Complete by Q4 25
-Phase two: Engine infrastructure and editing tools (Multithreading, job system, level editor, packages). Start by Winter 2025
+Phase one: Core systems with Rendering, Physics, and Input subsystems - Completed Q4 2025
+Phase two: Engine infrastructure and editing tools (Multithreading, job system, level editor, packages). - In progress. Complete by Q3 2026.
 Phase three: Simulation & Advanced rendering (Compute support, deferred rendering, audio subsystem, volumetrics, post processing)
 Phase four: Modding, Multiplayer, UI systems
-Phase five: More advanced asset management, animations, water, advanced tech
+Phase five: More advanced asset management, animations, advanced tech
 
 ---
-
-## Getting started
-don't.
 
 ## Repository Layout
 
 ```
-/include        -> User-facing header files
-/src            -> Engine source files
-    /Components -> Component type files for the Entity-Component-System
-/lib            -> Other library files not in third_party abd custom libraries
-/testgame       -> Files to be able to quickly test the engine
-/third_party    -> Third party components like SDL
+cmake/          -> CMake files
+default/        -> Included files such as shaders and gizmos to get games running quickly
+docs/           -> Documentation on the engine
+include/        -> User-facing header files
+src/            -> Engine source files
+lib/            -> Other library files not in third_party and custom libraries
+third_party/    -> Third party components like SDL and Jolt
 ```
 
 ## Technologies used
@@ -46,3 +44,4 @@ don't.
 - [Assimp](https://github.com/assimp/assimp/tree/ac5988422a7f1898b25c13fb5fb068c646a4c544)
 - [Jolt Physics](https://github.com/jrouwe/JoltPhysics)
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
+- [miniscl.hpp](https://github.com/MerianBerry/SCL)
