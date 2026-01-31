@@ -23,7 +23,8 @@ We have several pages of documentation available. Note the API reference is auto
 - [Code Format Policy](policy.md)
 
 ### Guides
-- [Performance profiling your game](guides/profiler.md)
+- [Getting Started](start.md)
+- [Performance Profiling Your Syngine Game](guides/profiler.md)
 
 ### API Reference
 

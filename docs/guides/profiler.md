@@ -15,7 +15,12 @@ The Syngine Profiler is a lightweight, built-in tool for measuring performance h
 
 ## 1. Enabling the Profiler
 
-The profiler is currently always available in Syngine. No special build flags are required.
+The profiler is enabled by default, however it may need to be turned off in certain cases:
+- **The game crashes on launch without any log or trace:** This can happen when attempting to use a graphics debugger (e.g RenderDoc) with the Profiler.
+
+To disable the profiler, head to the **engine's** CMakeLists.txt file (often in `engine/` directory), and locate the commented out code: `#target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)`. Uncommenting this code and rebuilding may fix these issues while disabling the profiler
+
+**NOTE:** Any `Syngine::Profiler::*` method calls (e.g. `Profiler::Reset()`) must also be commented out when disabling the profiler to prevent compile time errors.
 
 ---
 
@@ -27,9 +32,9 @@ First, be sure to do `#include "Syngine/Syngine.h"` or `#include "Syngine/Utils/
 The easiest and recommended way to use the Profiler is to use the `SYN_PROFILE_FUNCTION()` macro at the top of a function to automatically use the function name:
 
 ```cpp
-void UpdatePhysics() {
+void SpawnBasketball() {
 	SYN_PROFILE_FUNCTION();
-	// ... physics update code ...
+	// ... code ...
 }
 ```
 
@@ -44,6 +49,7 @@ void MyFunction() {
         SYN_PROFILE_SCOPE("MyFunction.DoThings");
         /* do things */
     }
+    /* more blah */
 }
 ```
 
@@ -88,4 +94,3 @@ Saving every frame is a bad idea. It is best to only save when needed, such as u
 ---
 
 For more details, see the source in `engine/include/Syngine/Utils/Profiler.h` and `engine/src/Syngine/Utils/Profiler.cpp`.
-
