@@ -181,7 +181,7 @@ size_t Renderer::AddProgram(const std::string& vsPath,
 size_t Renderer::AddProgram(const std::string& path,
                             const std::string& name,
                             Syngine::ViewID    viewId) {
-    return AddProgram(path + ".vert.sc.bin", path + ".frag.sc.bin", name, viewId);
+    return AddProgram(path + ".vert.bin", path + ".frag.bin", name, viewId);
 }
 
 Program Renderer::GetProgram(const std::string_view& name) {
