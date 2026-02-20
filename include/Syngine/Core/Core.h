@@ -7,7 +7,6 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Jolt/Core/Core.h"
 
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -19,6 +18,7 @@
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Physics/Physics.h"
 #include "Syngine/Utils/Profiler.h"
+
 #include <cstdint>
 #include <memory>
 

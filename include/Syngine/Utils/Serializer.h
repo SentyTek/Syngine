@@ -8,6 +8,11 @@
 
 #pragma once
 
+#include "Syngine/Core/Logger.h"
+#include "Syngine/Utils/FsUtils.h"
+
+#include <miniscl.hpp>
+
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -227,6 +232,34 @@ class Serializer {
         static bool SaveToFile(const std::string& path, const SaveData& saveData); //* Save save data to file
         static SaveData LoadFromFile(const std::string& path); //* Load save data from file
     };
+
+    // Internal helper to read an asset from a bundle file.
+    // The theory behind this is that we open the bundle, extract the asset as a
+    // stream, and then the caller can handle deserializing that stream into
+    // whatever type T they want (like an image, model, prefab, etc.)
+    static inline scl::stream _ReadFromBundle(const std::string& bundlePath,
+                                              const std::string& assetPath) {
+        scl::pack::Packager pack;
+        scl::path           resolvedBundlePath =
+            _ResolveOSPath(bundlePath.c_str()).c_str();
+        if (!resolvedBundlePath.exists()) {
+            Logger::LogF(LogLevel::ERR, "Bundle file not found: %s", bundlePath.c_str());
+            return scl::stream();
+        }
+        if (!pack.open(resolvedBundlePath)) {
+            Logger::LogF(LogLevel::ERR, "Failed to open bundle: %s", bundlePath.c_str());
+            return scl::stream();
+        }
+        auto&& wts = pack.openFile(assetPath.c_str());
+
+        scl::stream ms;
+        size_t dataSize = wts->stream()->size();
+        ms.write(wts->stream()->data(), dataSize);
+        ms.seek(scl::StreamPos::start, 0);
+
+        pack.close();
+        return ms;
+    }
 };
 
 } // namespace Syngine

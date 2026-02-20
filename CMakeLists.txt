@@ -92,7 +92,7 @@ add_library(Syngine STATIC
 # Uncomment to enable graphics debugging.
 # This is done because programs like RenderDoc do not work if window's `dbghelp.dll` is loaded, which we use for crash handling/logging.
 # And so this macro prevents those features from being compiled in. This also disables the Syngine Profiler, which may cause compile-time errors. Use at your own risk.
-target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
+# target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
 
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
@@ -180,6 +180,12 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/t
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
+
+# Allow not building SynTools if not needed
+option(SYNGINE_BUILD_TOOLS "Build Syngine Tools (Shader Compiler, Asset Packager)" ON)
+if(SYNGINE_BUILD_TOOLS)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tools ${CMAKE_BINARY_DIR}/tools EXCLUDE_FROM_ALL)
+endif()
 
 if(WIN32)
     # Since the root CMakeLists sets CMAKE_WIN32_EXECUTABLE, we need to ensure that

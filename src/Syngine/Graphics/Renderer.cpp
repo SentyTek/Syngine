@@ -132,8 +132,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     return true;
 }
 
-size_t Renderer::AddProgram(const std::string& vsPath,
-                            const std::string& fsPath,
+size_t Renderer::AddProgram(const std::string& path,
                             const std::string& name,
                             Syngine::ViewID    viewId) {
     if (!Renderer::IsReady())
@@ -150,6 +149,9 @@ size_t Renderer::AddProgram(const std::string& vsPath,
                               name.c_str());
         return -1;
     }
+
+    std::string vsPath = path + ".vert.bin";
+    std::string fsPath = path + ".frag.bin";
 
     bgfx::ShaderHandle vs = _LoadShader(vsPath.c_str());
     bgfx::ShaderHandle fs = _LoadShader(fsPath.c_str());
@@ -178,10 +180,54 @@ size_t Renderer::AddProgram(const std::string& vsPath,
     return prog.id;
 }
 
-size_t Renderer::AddProgram(const std::string& path,
-                            const std::string& name,
-                            Syngine::ViewID    viewId) {
-    return AddProgram(path + ".vert.bin", path + ".frag.bin", name, viewId);
+size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& path, const std::string& name, Syngine::ViewID viewId) {
+    if (!Renderer::IsReady()) {
+        Syngine::Logger::Fatal("Cannot add program before renderer is ready");
+        return -1;
+    }
+    if (name.empty() || path.empty() || bundlePath.empty()) {
+         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Invalid parameters for AddProgram from bundle");
+        return -1;
+    }
+    if (GetProgram(name).id != 0) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Program with name \"%s\" already exists",
+                              name.c_str());
+        return -1;
+    }
+
+    bgfx::ShaderHandle vs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".vert.bin").c_str());
+    bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".frag.bin").c_str());
+    bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
+    if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Failed to load shaders for program %s from bundle",
+                              name.c_str());
+        if (bgfx::isValid(vs)) bgfx::destroy(vs);
+        if (bgfx::isValid(fs)) bgfx::destroy(fs);
+        return -1;
+    }
+    programHandle = bgfx::createProgram(vs, fs, true);
+
+    if (!bgfx::isValid(programHandle)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create program %s from bundle", name.c_str());
+        bgfx::destroy(vs);
+        bgfx::destroy(fs);
+        return -1;
+    }
+
+    Program prog;
+    prog.program = programHandle;
+    prog.name    = name;
+    prog.viewId  = viewId;
+    prog.vsPath  = bundlePath + ":" + path + ".vert.bin";
+    prog.fsPath  = bundlePath + ":" + path + ".frag.bin";
+    prog.id      = programHandle.idx;
+
+    viewPrograms[viewId].push_back(prog); // Store program by viewId
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully from bundle", name.c_str());
+    return prog.id;
 }
 
 Program Renderer::GetProgram(const std::string_view& name) {

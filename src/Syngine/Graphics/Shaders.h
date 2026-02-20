@@ -9,6 +9,7 @@
 #pragma once
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Utils/FsUtils.h"
+#include "Syngine/Utils/Serializer.h"
 
 #include <bgfx/bgfx.h>
 #include <SDL3/SDL.h>
@@ -16,6 +17,8 @@
 #include <vector>
 #include <filesystem>
 #include <string>
+
+#include <miniscl.hpp>
 
 namespace Syngine {
 
@@ -69,6 +72,30 @@ inline bgfx::ShaderHandle _LoadShader(const char* shaderPath)
 
     const bgfx::Memory* mem = bgfx::copy(buffer.data(), (uint32_t)buffer.size());
     return bgfx::createShader(mem);
+}
+
+inline bgfx::ShaderHandle _LoadShaderFromMemory(const void* data, size_t size) {
+    if (!data || size == 0) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               "LoadShaderFromMemory: invalid data or size");
+        return BGFX_INVALID_HANDLE;
+    }
+
+    const bgfx::Memory* mem = bgfx::copy(data, (uint32_t)size);
+    return bgfx::createShader(mem);
+}
+
+inline bgfx::ShaderHandle _LoadShaderFromBundle(const char* bundlePath, const char* shaderName) {
+    scl::stream stream = Serializer::_ReadFromBundle(bundlePath, shaderName);
+    if (stream.size() == 0) {
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR,
+            "LoadShaderFromBundle: failed to read shader '%s' from bundle '%s'",
+            shaderName,
+            bundlePath);
+        return BGFX_INVALID_HANDLE;
+    }
+    return _LoadShaderFromMemory(stream.data(), stream.size());
 }
 
 } // namespace Syngine

@@ -21,6 +21,9 @@
 
 #endif
 
+#define SCL_IMPL
+#include "miniscl.hpp"
+
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
