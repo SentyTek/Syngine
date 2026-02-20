@@ -185,6 +185,11 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE
 option(SYNGINE_BUILD_TOOLS "Build Syngine Tools (Shader Compiler, Asset Packager)" ON)
 if(SYNGINE_BUILD_TOOLS)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tools ${CMAKE_BINARY_DIR}/tools EXCLUDE_FROM_ALL)
+    if (WIN32)
+        set_target_properties(syntools PROPERTIES
+            WIN32_EXECUTABLE OFF
+        )
+    endif()
 endif()
 
 if(WIN32)

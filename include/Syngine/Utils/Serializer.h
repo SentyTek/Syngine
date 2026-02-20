@@ -10,6 +10,7 @@
 
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Utils/FsUtils.h"
+#include "Syngine/Utils/Serializer.h"
 
 #include <miniscl.hpp>
 
@@ -250,8 +251,9 @@ class Serializer {
             Logger::LogF(LogLevel::ERR, "Failed to open bundle: %s", bundlePath.c_str());
             return scl::stream();
         }
-        auto&& wts = pack.openFile(assetPath.c_str());
 
+        scl::pack::PackIndex* wts = pack.openFile(assetPath.c_str());
+        wts->waitable().wait();
         scl::stream ms;
         size_t dataSize = wts->stream()->size();
         ms.write(wts->stream()->data(), dataSize);

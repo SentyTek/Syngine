@@ -617,6 +617,15 @@ bool init();
  */
 void terminate();
 } // namespace scl
+
+namespace std {
+template <>
+struct hash<scl::string> {
+  size_t operator()(const scl::string& str) const noexcept {
+    return str.hash();
+  }
+};
+} // namespace std
 #endif
 
 
@@ -2813,6 +2822,7 @@ class reduce_stream : public stream {
 /*#include "scldict.hpp"*/
 /*#include "sclpath.hpp"*/
 /*#include "scljobs.hpp"*/
+#include <unordered_map>
 
 #define SCL_MAX_CHUNKS 4
 
@@ -3010,20 +3020,20 @@ class Packager : protected std::mutex {
   friend class PackIndex;
 
  private:
-  jobs::JobServer                  m_serv;
-  scl::path                        m_family;
-  scl::path                        m_ext;
-  scl::dictionary<PackIndex>       m_index;
-  std::vector<PackIndex*>          m_submitted;
-  std::vector<scl::reduce_stream*> m_archives;
+  jobs::JobServer                            m_serv;
+  scl::path                                  m_family;
+  scl::path                                  m_ext;
+  std::unordered_map<scl::string, PackIndex> m_index;
+  std::vector<PackIndex*>                    m_submitted;
+  std::vector<scl::reduce_stream*>           m_archives;
   // Reduce queue mutex
-  std::mutex                       m_remux;
-  std::queue<scl::reduce_stream*>  m_reduces;
+  std::mutex                                 m_remux;
+  std::queue<scl::reduce_stream*>            m_reduces;
   // Queue of in-progress compressions
-  std::queue<PackIndex*>           m_writing;
-  std::atomic_uint32_t             m_waiting;
-  int                              m_workers;
-  bool                             m_open = false;
+  std::queue<PackIndex*>                     m_writing;
+  std::atomic_uint32_t                       m_waiting;
+  int                                        m_workers;
+  bool                                       m_open = false;
 
   enum class mPackRes {
     // Continue
@@ -3095,20 +3105,20 @@ class Packager : protected std::mutex {
   bool write(std::function<void(size_t, PackIndex*)> cb = {});
 
   /**
-   * @brief Returns the dictionary containing every index known in this pack
+   * @brief Returns an unordered map containing every index known in this pack
    * family.
    *
    * @return
    */
-  const scl::dictionary<PackIndex>& index();
+  const std::unordered_map<scl::string, PackIndex>& index();
 
-  PackIndex*                        operator[](const scl::string& path);
+  PackIndex* operator[](const scl::string& path);
 
   /**
    * @brief Closes this pack.
    *
    */
-  void                              close();
+  void       close();
 };
 
 bool packInit();
@@ -3396,7 +3406,7 @@ long long string::ffi(const string& pattern) const {
     return -1;
   const char* p   = m_buf;
   unsigned    csl = (unsigned)pattern.len();
-  for(; p < m_buf + m_sz && *p; p++) {
+  for(; p < m_buf + m_ln && *p; p++) {
     if(!strncmp(p, pattern.cstr(), csl))
       return (long long)(p - m_buf);
   }
@@ -4150,19 +4160,11 @@ path::path() {
 }
 
 path::path(const string& rhs) : string(rhs) {
-#ifdef _WIN32
-  replace("/", "\\");
-#else
   replace("\\", "/");
-#endif
 }
 
 path::path(const char* rhs) : string(rhs) {
-#ifdef _WIN32
-  replace("/", "\\");
-#else
   replace("\\", "/");
-#endif
 }
 
 path& path::fixendsplit() {
@@ -5276,7 +5278,7 @@ bool Packager::readIndex(scl::reduce_stream& archive, uint32_t bid) {
       delete idx.m_file;
       continue;
     }
-    if(m_index[*idx.m_file] != m_index.end()) {
+    if(m_index.find(*idx.m_file) != m_index.end()) {
       fprintf(stderr, "duplicate file entry (%s) in pack\n",
         idx.m_file->cstr());
       delete idx.m_file;
@@ -5345,31 +5347,30 @@ bool Packager::open(const scl::path& path) {
 PackIndex* Packager::openFile(const path& path) {
   // Syncronous, cause it gotta be. (its cheap-ish).
   lock();
-  auto idx = m_index[path];
-  if(idx == m_index.end() || !idx->m_size) {
+  auto idx = m_index.find(path);
+  if(idx == m_index.end() || !idx->second.m_size) {
     // File does not exist in index, so make a new active one.
-    idx = std::move(PackIndex());
-    PackIndex nidx(&idx.key());
+    PackIndex nidx(&path);
     nidx.m_wt = PackWaitable(nullptr);
     nidx.m_wt.complete();
     nidx.m_family = this;
     nidx.m_active = true;
-    idx           = std::move(nidx);
+    m_index[path] = std::move(nidx);
     unlock();
-    return &idx.value();
-  } else if(idx->m_active) {
+    return &m_index[path];
+  } else if(idx->second.m_active) {
     // Active file. Do nothing.
     unlock();
-    return &idx.value();
+    return &idx->second;
   } else {
     // File is indexed, but not active.
-    idx->m_wt     = PackWaitable(new scl::stream());
-    idx->m_active = true;
+    idx->second.m_wt     = PackWaitable(new scl::stream());
+    idx->second.m_active = true;
 #if 1
-    auto& wt = m_serv.submitJob(new PackFetchJob(idx.value(), *this));
+    auto& wt = m_serv.submitJob(new PackFetchJob(idx->second, *this));
 #endif
     unlock();
-    return &idx.value();
+    return &idx->second;
   }
 }
 
@@ -5384,9 +5385,9 @@ std::vector<PackIndex*> Packager::openFiles(
 
 bool Packager::submit(const scl::path& path) {
   lock();
-  auto idx = m_index[path];
+  auto idx = m_index.find(path);
   if(idx != m_index.end()) {
-    m_submitted.push_back(&idx.value());
+    m_submitted.push_back(&idx->second);
     unlock();
     return true;
   }
@@ -5553,15 +5554,15 @@ bool Packager::write(std::function<void(size_t, PackIndex*)> cb) {
   return true;
 }
 
-const scl::dictionary<PackIndex>& Packager::index() {
+const std::unordered_map<scl::string, PackIndex>& Packager::index() {
   return m_index;
 }
 
 PackIndex* Packager::operator[](const scl::string& path) {
-  auto idx = m_index[path];
+  auto idx = m_index.find(path);
   if(idx == m_index.end())
     return nullptr;
-  return &idx.value();
+  return &idx->second;
 }
 
 void Packager::close() {
@@ -5580,9 +5581,9 @@ void Packager::close() {
     m_reduces.pop();
   }
   for(auto& i : m_index) {
-    if(i->m_active) {
-      i->m_wt->close();
-      delete &i->m_wt.stream();
+    if(i.second.m_active) {
+      i.second.m_wt->close();
+      delete &i.second.m_wt.stream();
     }
   }
   m_index.clear();
