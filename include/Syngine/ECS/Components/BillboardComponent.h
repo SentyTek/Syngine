@@ -33,8 +33,10 @@ enum class BillboardMode {
 class BillboardComponent : public Syngine::Component {
     
     BillboardMode m_mode = BillboardMode::CAMERA_ALIGNED; //* Billboard rendering mode
-    
-    bgfx::TextureHandle m_texture = BGFX_INVALID_HANDLE; //* Texture handle for the billboard
+
+    bgfx::TextureHandle m_texture =
+        BGFX_INVALID_HANDLE; //* Texture handle for the billboard
+    std::string m_texturePath; //* Path to the billboard texture
 
     GameObject* m_owner; // Reference to the owner game object
 
@@ -72,6 +74,11 @@ class BillboardComponent : public Syngine::Component {
     std::unique_ptr<Component> Clone() const override {
         return std::make_unique<BillboardComponent>(*this);
     }
+
+    /// @brief Serializes the BillboardComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// BillboardComponent's state
+    Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the billboard component
     /// @param texturePath Path to the billboard texture

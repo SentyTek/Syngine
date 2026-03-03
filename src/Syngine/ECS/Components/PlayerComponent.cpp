@@ -101,6 +101,23 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
     }
 }
 
+Serializer::DataNode PlayerComponent::Serialize() const {
+    Serializer::DataNode node;
+    node["type"] = std::string("PlayerComponent");
+    node["moveSpeed"] = moveSpeed;
+    node["sprintMult"] = sprintMult;
+    node["crouchSpeed"] = crouchSpeed;
+    node["enableSprinting"] = enableSprinting;
+    node["enableCrouching"] = enableCrouching;
+    node["enableSliding"] = enableSliding;
+    node["standHeight"] = standHeight;
+    node["crouchHeight"] = crouchHeight;
+    node["playerRadius"] = playerRadius;
+    node["mouseSens"] = mouseSens;
+    node["maxPitchAngle"] = maxPitchAngle;
+    return node;
+}
+
 void PlayerComponent::Init(Syngine::CameraComponent* camera) {
     m_transform   = m_owner->GetComponent<TransformComponent>();
 

@@ -8,6 +8,7 @@
 
 #pragma once
 #include <memory>
+#include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
 // Forward declaration
@@ -40,21 +41,27 @@ enum Components {
     SYN_COMPONENT_BILLBOARD     = 524288  //* Billboard component
 };
 
-/**
- * @brief Syngine::Component is the base class for all components that can be
- * attached to GameObject to inherit from. They are used to add functionality to
- * GameObjects, such as mesh, transform, physics, AI, PlayerController, etc.
- * @section Component
- */
+
+/// @brief Syngine::Component is the base class for all components that can be
+/// attached to GameObject to inherit from. They are used to add functionality
+/// to GameObjects, such as mesh, transform, physics, AI, PlayerController, etc.
+/// @section Component
 class Component {
   public:
-    /**
-     * @brief Get the type of this component.
-     * @return The component type as an enum value.
-     */
+    /// @brief Get the type of the component, used for identifying the component
+    /// type
+    /// @return The type of the component, as defined in the Components enum
     virtual Components GetComponentType() = 0;
 
+    /// @brief Clone the component, used for copying components when duplicating
+    /// GameObjects or when copying components from one GameObject to another
+    /// @return A unique pointer to the cloned component
     virtual std::unique_ptr<Component> Clone() const = 0;
+
+    /// @brief Serialize the component to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// component's state
+    virtual Serializer::DataNode Serialize() const = 0;
 
     virtual ~Component() = default;
 

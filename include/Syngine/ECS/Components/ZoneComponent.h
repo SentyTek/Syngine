@@ -77,6 +77,11 @@ class ZoneComponent : public Syngine::Component {
         return std::make_unique<ZoneComponent>(*this);
     }
 
+    /// @brief Serializes the ZoneComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// ZoneComponent's state
+    Serializer::DataNode Serialize() const override;
+
     ~ZoneComponent();
 
     /// @brief Gets the component type of this component.

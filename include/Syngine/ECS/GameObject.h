@@ -12,10 +12,9 @@
 #include <map>
 #include <vector>
 
-#include "Syngine/Core/Core.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
-#include "Syngine/Core/Logger.h"
+#include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
 
@@ -142,6 +141,12 @@ class GameObject {
     /// @threadsafety not-safe
     /// @since v0.0.1
     template <typename T, typename... Args> T* AddComponent(Args&&... args);
+
+    /// @brief Serialize the GameObject and its components into a DataNode for saving
+    /// @return DataNode representing the serialized GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
+    Serializer::DataNode Serialize() const;
 
   private:
     long id; // Unique ID for the GameObject

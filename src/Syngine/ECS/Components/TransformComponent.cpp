@@ -7,12 +7,15 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/Components/TransformComponent.h"
+#include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 
+#include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 #include <cmath>
 
 #include <algorithm>
+#include <vector>
 
 namespace Syngine {
 TransformComponent::TransformComponent(GameObject* owner) {
@@ -63,6 +66,22 @@ TransformComponent& TransformComponent::operator=(const TransformComponent& othe
         this->m_scale[2] = other.m_scale[2];
     }
     return *this;
+}
+
+Serializer::DataNode TransformComponent::Serialize() const {
+    Serializer::DataNode transformNode;
+    Serializer::Float3    pos{ m_position[0], m_position[1], m_position[2] };
+    Serializer::Float4    rot{
+        m_rotation[0], m_rotation[1], m_rotation[2], m_rotation[3]
+    };
+    Serializer::Float3 scale{ m_scale[0], m_scale[1], m_scale[2] };
+
+    transformNode / "type" = static_cast<int>(SYN_COMPONENT_TRANSFORM);
+    transformNode / "position" = pos;
+    transformNode / "rotation" = rot;
+    transformNode / "scale"    = scale;
+
+    return transformNode;
 }
 
 void TransformComponent::Init(std::vector<float> position,

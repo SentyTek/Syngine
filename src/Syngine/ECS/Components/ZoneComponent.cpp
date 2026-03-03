@@ -59,6 +59,19 @@ ZoneComponent& ZoneComponent::operator=(const ZoneComponent& other) {
 ZoneComponent::~ZoneComponent() {}
 Components ZoneComponent::GetComponentType() { return componentType; }
 
+Serializer::DataNode ZoneComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<int>(SYN_COMPONENT_ZONE);
+    node / "shape" = static_cast<int>(m_shape);
+    node / "position" = std::vector<float>{m_pos[0], m_pos[1], m_pos[2]};
+    node / "size" = std::vector<float>{m_size[0], m_size[1], m_size[2]};
+    node / "rotation" = std::vector<float>{m_rot[0], m_rot[1], m_rot[2]};
+    node / "active" = m_active;
+    node / "oneShot" = m_oneShot;
+    node / "tags" = m_tags;
+    return node;
+}
+
 void ZoneComponent::Init(ZoneShape   shape,
                          const float pos[3],
                          const float size[3],

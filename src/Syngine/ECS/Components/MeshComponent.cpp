@@ -17,6 +17,8 @@
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
 
+#include <cfloat>
+
 namespace Syngine {
 MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& path,
@@ -46,6 +48,15 @@ MeshComponent::~MeshComponent() {
 
 Syngine::Components MeshComponent::GetComponentType() {
     return SYN_COMPONENT_MESH;
+}
+
+Serializer::DataNode MeshComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<int>(SYN_COMPONENT_MESH);
+    node / "path" = this->meshData.path;
+    node / "hasTextures" = this->meshData.hasTextures;
+    // Note: For simplicity, we are not serializing the actual vertex/index data or materials here.
+    return node;
 }
 
 void MeshComponent::Init(const std::string& path, bool loadTextures) {
@@ -105,9 +116,9 @@ bool MeshComponent::ReloadMesh() {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to reload mesh from %s",
                               this->meshData.path.c_str());
-        return 1; // Error reloading mesh
+        return false; // Error reloading mesh
     }
-    return 0; // Success
+    return true; // Success
 }
 
 bool MeshComponent::UploadMesh(std::vector<float>    vertices,

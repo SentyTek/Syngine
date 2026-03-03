@@ -10,6 +10,7 @@
 #include "Syngine/ECS/GameObject.h"
 
 #include "Syngine/Utils/Profiler.h"
+#include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
 
@@ -57,6 +58,20 @@ CameraComponent& CameraComponent::operator=(const CameraComponent& other) {
 
 CameraComponent::~CameraComponent() {
     // No specific cleanup needed for now
+}
+
+Serializer::DataNode CameraComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<int>(SYN_COMPONENT_CAMERA);
+    node / "eye" = std::vector<float>{ camera.eye[0], camera.eye[1], camera.eye[2] };
+    node / "target" = std::vector<float>{ camera.target[0], camera.target[1], camera.target[2] };
+    node / "up" = std::vector<float>{ camera.up[0], camera.up[1], camera.up[2] };
+    node / "fov" = camera.fov;
+    node / "nearPlane" = camera.nearPlane;
+    node / "farPlane" = camera.farPlane;
+    node / "yaw" = camera.yaw;
+    node / "pitch" = camera.pitch;
+    return node;
 }
 
 void CameraComponent::Update(int viewId, int width, int height) {

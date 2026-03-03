@@ -19,6 +19,7 @@ BillboardComponent::BillboardComponent(GameObject* owner,
     this->m_owner = owner;
     this->size    = size;
     this->m_mode  = mode;
+    this->m_texturePath = texturePath;
     this->Init(texturePath);
 }
 
@@ -27,6 +28,7 @@ BillboardComponent::BillboardComponent(const BillboardComponent& other) {
     this->size    = other.size;
     this->m_mode  = other.m_mode;
     this->m_texture = other.m_texture;
+    this->m_texturePath = other.m_texturePath;
 }
 
 BillboardComponent& BillboardComponent::operator=(const BillboardComponent& other) {
@@ -35,6 +37,7 @@ BillboardComponent& BillboardComponent::operator=(const BillboardComponent& othe
         this->size    = other.size;
         this->m_mode  = other.m_mode;
         this->m_texture = other.m_texture;
+        this->m_texturePath = other.m_texturePath;
     }
     return *this;
 }
@@ -45,6 +48,18 @@ BillboardComponent::~BillboardComponent() {
 
 Syngine::Components BillboardComponent::GetComponentType() {
     return SYN_COMPONENT_BILLBOARD;
+}
+
+Serializer::DataNode BillboardComponent::Serialize() const {
+    Serializer::DataNode billboardNode;
+    billboardNode / "type" = static_cast<int>(SYN_COMPONENT_BILLBOARD);
+    billboardNode / "size" = size;
+    billboardNode / "mode" = static_cast<int>(m_mode);
+    billboardNode / "texturePath" = m_texturePath;
+        // Note: We don't serialize the texture handle itself, as it's not
+        // meaningful outside of the current runtime context. Instead, we serialize
+        // the texture path, which can be used to reload the texture when deserializing.
+    return billboardNode;
 }
 
 void BillboardComponent::Init(const std::string& texturePath) {

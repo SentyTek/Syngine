@@ -111,6 +111,11 @@ class RigidbodyComponent : public Syngine::Component {
         return std::make_unique<RigidbodyComponent>(*this);
     }
 
+    /// @brief Serializes the RigidbodyComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// RigidbodyComponent's state
+    Serializer::DataNode Serialize() const override;
+
     /// @brief Initialize the RigidbodyComponent
     /// @param params Rigidbody parameters to initialize the component
     /// @note This should only be called when the component is added to a GameObject

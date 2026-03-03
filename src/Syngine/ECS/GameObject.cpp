@@ -114,3 +114,24 @@ bool GameObject::HasComponent(Syngine::Components type) {
     if (it != this->components.end()) return true; // Component found
     return false;
 }
+
+Serializer::DataNode GameObject::Serialize() const {
+    Serializer::DataNode node;
+    node["name"] = this->name;
+    node["type"] = this->type;
+    node["gizmo"] = this->gizmo;
+    node["isActive"] = this->isActive;
+
+    // Serialize tags
+    std::vector<std::string> tagList = this->tags;
+    node["tags"] = tagList;
+
+    // Serialize components
+    Serializer::DataNode componentsNode;
+    for (const auto& [type, comp] : this->components) {
+        componentsNode[std::to_string(static_cast<int>(type))] = comp->Serialize();
+    }
+    node["components"] = componentsNode;
+
+    return node;
+}

@@ -66,6 +66,11 @@ class TransformComponent : public Syngine::Component {
         return std::make_unique<TransformComponent>(*this);
     }
 
+    /// @brief Serializes the TransformComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// TransformComponent's state
+    Serializer::DataNode Serialize() const override;
+
     /// @brief Initializes the transform component with default values.
     /// @param position Initial position of the GameObject
     /// @param rotation Initial rotation of the GameObject (as a quaternion)

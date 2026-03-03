@@ -75,6 +75,11 @@ class PlayerComponent : public Syngine::Component {
         return std::make_unique<PlayerComponent>(*this);
     }
 
+    /// @brief Serializes the PlayerComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// PlayerComponent's state
+    Serializer::DataNode Serialize() const override;
+
     /// @brief Initializes the player component with camera, window, and physics
     /// manager.
     /// @param camera The camera component to use for the player.

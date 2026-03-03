@@ -61,6 +61,11 @@ class MeshComponent : public Syngine::Component {
         return std::make_unique<MeshComponent>(*this);
     }
 
+    /// @brief Serializes the MeshComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// MeshComponent's state
+    Serializer::DataNode Serialize() const override;
+
     /// @brief Initialize the mesh component
     /// @param path Path to the model file
     /// @param loadTextures Whether to load textures for the model

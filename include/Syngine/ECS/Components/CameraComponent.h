@@ -63,6 +63,11 @@ class CameraComponent : public Syngine::Component {
         return std::make_unique<CameraComponent>(*this);
     }
 
+    /// @brief Serializes the CameraComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// CameraComponent's state
+    Serializer::DataNode Serialize() const override;
+
     /// @brief Initialize the camera component
     /// @note This should only be called when the component is added to a GameObject
     /// @threadsafety not-safe

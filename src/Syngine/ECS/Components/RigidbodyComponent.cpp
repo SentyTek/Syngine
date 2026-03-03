@@ -77,6 +77,17 @@ Components RigidbodyComponent::GetComponentType() {
     return SYN_COMPONENT_RIGIDBODY;
 }
 
+Serializer::DataNode RigidbodyComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<int>(SYN_COMPONENT_RIGIDBODY);
+    node / "mass" = mass;
+    node / "friction" = friction;
+    node / "restitution" = restitution;
+    node / "shape"       = static_cast<int>(shape);
+    node / "shapeParameters" = shapeParameters;
+    return node;
+}
+
 JPH::BodyID RigidbodyComponent::_GetBodyID() const { return bodyID; }
 Syngine::Phys* RigidbodyComponent::_GetPhysicsManager() const { return physicsManager; }
 std::vector<float> RigidbodyComponent::GetShapeParameters() const { return shapeParameters; }

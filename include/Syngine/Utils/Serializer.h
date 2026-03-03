@@ -9,10 +9,6 @@
 #pragma once
 
 #include "Syngine/Core/Logger.h"
-#include "Syngine/Utils/FsUtils.h"
-#include "Syngine/Utils/Serializer.h"
-
-#include <miniscl.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -21,7 +17,14 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "../../lib/miniscl.hpp"
+
 namespace Syngine {
+namespace Internal {
+    std::string
+    ResolvePath(const char* path); // Had issues with FsUtils so added this as a
+                                   // workaround for now. Will refactor later.
+}
 
 /// @brief Utility class for serializing and deserializing engine and game data
 /// to disk.
@@ -69,22 +72,55 @@ class Serializer {
         /// @return Reference to the child DataNode
         /// @example playerNode["health"] = 100;
         /// @since v0.0.1
-        DataNode& operator[](const std::string& key);
+        DataNode& operator[](const std::string& key) {
+            if (!std::holds_alternative<NodeMap>(m_data)) {
+                m_data = NodeMap{};
+            }
+            auto& map = std::get<NodeMap>(m_data);
+            return map[key]; // This will default-construct a new DataNode if key
+                            // doesn't exist
+        }
 
-        const DataNode& operator[](const std::string& key) const;
+        const DataNode& operator[](const std::string& key) const {
+            if (!std::holds_alternative<NodeMap>(m_data)) {
+                throw std::runtime_error("DataNode is not an object");
+            }
+            const auto& map = std::get<NodeMap>(m_data);
+            auto        it  = map.find(key);
+            if (it == map.end()) {
+                throw std::runtime_error("Key not found in DataNode: " + key);
+            }
+            return it->second;
+        }
 
         /// @brief Assignment operator to copy data from another DataNode
         /// @param other The other DataNode to copy from
         /// @return Reference to this DataNode
         /// @since v0.0.1
-        DataNode& operator=(const DataNode& other);
+        DataNode& operator=(const DataNode& other) {
+            if (this != &other) {
+                this->m_data = other.m_data;
+            }
+            return *this;
+        }
+
+        /// @brief Assignment operator to set a value directly (int, float,
+        /// bool, string, etc.)
+        /// @tparam T The type of the value to set (int, float, bool,
+        /// std::string, etc.)
+        /// @param value The value to set
+        /// @return Reference to this DataNode
+        /// @since v0.0.1
+        template <typename T> DataNode& operator=(const T& value);
 
         /// @brief Accesses a child DataNode by index (for Array type nodes)
         /// @param index The index of the child node
         /// @return Reference to the child DataNode
         /// @example playerNode / "name" / "last" = "Marston";
         /// @since v0.0.1
-        DataNode&       operator/(const std::string& value);
+        DataNode&       operator/(const std::string& value) {
+            return (*this)[value];
+        }
 
         /// @brief Converts the DataNode to a specific type
         /// @tparam T The type to convert to (int, float, bool, std::string, etc.)
@@ -239,10 +275,10 @@ class Serializer {
     // stream, and then the caller can handle deserializing that stream into
     // whatever type T they want (like an image, model, prefab, etc.)
     static inline scl::stream _ReadFromBundle(const std::string& bundlePath,
-                                              const std::string& assetPath) {
+                                       const std::string& assetPath) {
         scl::pack::Packager pack;
         scl::path           resolvedBundlePath =
-            _ResolveOSPath(bundlePath.c_str()).c_str();
+            Internal::ResolvePath(bundlePath.c_str()).c_str();
         if (!resolvedBundlePath.exists()) {
             Logger::LogF(LogLevel::ERR, "Bundle file not found: %s", bundlePath.c_str());
             return scl::stream();
@@ -263,5 +299,119 @@ class Serializer {
         return ms;
     }
 };
+
+template <typename T>
+inline T Serializer::DataNode::As(const T& defaultValue) const {
+    if (std::holds_alternative<T>(m_data)) {
+        return std::get<T>(m_data);
+    }
+    return defaultValue;
+}
+
+template <typename T>
+inline void Serializer::DataNode::Set(const T& value) {
+    m_data = value;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<int>(const int& value) {
+    m_data = value;
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<float>(const float& value) {
+    m_data = value;
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<bool>(const bool& value) {
+    m_data = value;
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<std::string>(const std::string& value) {
+    m_data = value;
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<const char*>(const char* const& value) {
+    m_data = std::string(value);
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<float>>(const std::vector<float>& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    for (const auto& elem : value) {
+        arr.emplace_back().Set(elem);
+    }
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<int>>(const std::vector<int>& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    for (const auto& elem : value) {
+        arr.emplace_back().Set(elem);
+    }
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<std::string>>(const std::vector<std::string>& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    for (const auto& elem : value) {
+        arr.emplace_back().Set(elem);
+    }
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Float3>(const Serializer::Float3& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    arr.emplace_back().Set(value.x);
+    arr.emplace_back().Set(value.y);
+    arr.emplace_back().Set(value.z);
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Float4>(const Serializer::Float4& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    arr.emplace_back().Set(value.x);
+    arr.emplace_back().Set(value.y);
+    arr.emplace_back().Set(value.z);
+    arr.emplace_back().Set(value.w);
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Mat3>(const Serializer::Mat3& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    for (int i = 0; i < 9; i++) {
+        arr.emplace_back().Set(value.data[i]);
+    }
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Mat4>(const Serializer::Mat4& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    for (int i = 0; i < 16; i++) {
+        arr.emplace_back().Set(value.data[i]);
+    }
+    return *this;
+}
 
 } // namespace Syngine
