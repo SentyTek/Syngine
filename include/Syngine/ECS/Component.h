@@ -14,10 +14,9 @@ namespace Syngine {
 // Forward declaration
 class GameObject;
 
-/**
- * @brief An enum of all the components that can be attached to a GameObject.
- * @section Component
- */
+
+/// @brief An enum of all the components that can be attached to a GameObject.
+/// @section Component
 enum Components {
     SYN_COMPONENT_MESH          = 1,      //* 3D mesh or model
     SYN_COMPONENT_TRANSFORM     = 2,      //* Position, rotation, scale

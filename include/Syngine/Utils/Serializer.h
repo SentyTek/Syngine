@@ -19,11 +19,16 @@
 
 #include "../../lib/miniscl.hpp"
 
+#define SYNINT_PREFAB_VERSION "1.0"
+#define SYNINT_SCENE_VERSION "1.0"
+#define SYNINT_CORESETTINGS_VERSION "1.0"
+
 namespace Syngine {
+    class GameObject; // Forward declaration to avoid circular dependency with GameObject.h
 namespace Internal {
-    std::string
-    ResolvePath(const char* path); // Had issues with FsUtils so added this as a
-                                   // workaround for now. Will refactor later.
+std::string
+ResolvePath(const char* path); // Had issues with FsUtils so added this as a
+                               // workaround for now. Will refactor later.
 }
 
 /// @brief Utility class for serializing and deserializing engine and game data
@@ -47,7 +52,8 @@ class Serializer {
         // Internal data representation
         // std::monostate represents a null/empty state
         std::variant<std::monostate, int, float, bool, std::string, NodeMap, NodeArray> m_data;
-
+        
+        friend class Serializer; // Allow Serializer to access private members for serialization
       public:
         /// @brief The type of data stored in the DataNode
         /// @since v0.0.1
@@ -113,14 +119,23 @@ class Serializer {
         /// @since v0.0.1
         template <typename T> DataNode& operator=(const T& value);
 
+        /// @brief Assignment operator for C-style string literals to set a string value
+        /// @param value The C-style string literal to set
+        /// @return Reference to this DataNode
+        /// @since v0.0.1
+        DataNode& operator=(const char* value) {
+            m_data = std::string(value);
+            return *this;
+        }
+
         /// @brief Accesses a child DataNode by index (for Array type nodes)
         /// @param index The index of the child node
         /// @return Reference to the child DataNode
         /// @example playerNode / "name" / "last" = "Marston";
         /// @since v0.0.1
-        DataNode&       operator/(const std::string& value) {
-            return (*this)[value];
-        }
+        DataNode& operator/(const std::string& value) { return (*this)[value]; }
+
+        bool operator!() const { return std::holds_alternative<std::monostate>(m_data); }
 
         /// @brief Converts the DataNode to a specific type
         /// @tparam T The type to convert to (int, float, bool, std::string, etc.)
@@ -234,13 +249,20 @@ class Serializer {
     struct Prefab {
         std::string name; //* Human-readable name of the prefab
         std::string guid; //* Unique identifier for the prefab
-        DataNode rootGameObject; //* Serialized GameObject tree (with all children and components)
+        DataNode    rootGameObject; //* Serialized GameObject tree (with all
+                                    //children and components)
+        bool isValid =
+            false; //* Indicates if the prefab was successfully loaded/created
+
+        Prefab() =
+            delete; // Force use of parameterized constructor or factory methods
+        Prefab(GameObject* root); // Construct prefab from a GameObject (serializes it)
         
         DataNode Serialize() const; //* Helper to serialize prefab
-        void Deserialize(const DataNode& node); //* Helper to deserialize prefab
+        GameObject* Deserialize(const DataNode& node); //* Helper to deserialize prefab
         
-        static bool SaveToFile(const std::string& path, const Prefab& prefab); //* Save prefab to file
-        static Prefab LoadFromFile(const std::string& path); //* Load prefab from file
+        bool SaveToFile(const std::string& path); //* Save prefab to file
+        Prefab LoadFromFile(const std::string& path); //* Load prefab from file
     };
 
     /// @brief Represents a complete game scene with all GameObjects and scene settings
@@ -300,6 +322,7 @@ class Serializer {
     }
 };
 
+// Template implementations for DataNode
 template <typename T>
 inline T Serializer::DataNode::As(const T& defaultValue) const {
     if (std::holds_alternative<T>(m_data)) {

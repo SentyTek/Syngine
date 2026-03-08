@@ -300,6 +300,7 @@ class Core {
     friend class RigidbodyComponent;
     friend class PlayerComponent;
     friend class Registry;
+    friend class Serializer;
 #ifndef SYN_DEBUG_GRAPHICS
     friend class Syngine::Profiler;
 #endif

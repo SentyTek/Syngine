@@ -471,9 +471,16 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 
     // Get display size
     SDL_DisplayID dId = SDL_GetDisplayForWindow(m_app->window->_GetSDLWindow());
-    SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
-    specs.screenWidth       = disMode.w;
-    specs.screenHeight      = disMode.h;
+    if (dId == 0) {
+        Logger::Error("Failed to get display for window: " +
+                      std::string(SDL_GetError()));
+        specs.screenWidth  = 0;
+        specs.screenHeight = 0;
+    } else {
+        SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
+        specs.screenWidth       = disMode.w;
+        specs.screenHeight      = disMode.h;
+    }
 
     // Get window resolution
     int w, h;

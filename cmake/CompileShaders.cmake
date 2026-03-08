@@ -58,6 +58,19 @@ function(compile_all_shaders)
     if(NOT ARG_SHADER_FILES_OUTPUT_VAR)
         message(FATAL_ERROR "compile_all_shaders: SHADER_FILES_OUTPUT_VAR not provided.")
     endif()
+
+    # Collect tool target deps
+    set(tool_deps "")
+    if(TARGET syntools)
+        list(APPEND tool_deps syntools)
+    else()
+        message(FATAL "compile_all_shaders: 'syntools' target not found. Ensure it is built before this function is called.")
+    endif()
+    if(TARGET shaderc)
+        list(APPEND tool_deps shaderc)
+    else()
+        message(FATAL "compile_all_shaders: 'shaderc' target not found. Ensure it is built before this function is called.")
+    endif()
     
     # --- Determine output directory based on platform ---
     if(APPLE)
@@ -142,7 +155,7 @@ function(compile_all_shaders)
             OUTPUT ${output_path_final}.vert.bin ${output_path_final}.frag.bin
             COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIRECTORY}"
             COMMAND ${syntools_cmd}
-            DEPENDS ${vert_shader_path} ${ARG_SOURCE_DIRECTORY}/${frag_shader_relative_path}
+            DEPENDS ${vert_shader_path} ${ARG_SOURCE_DIRECTORY}/${frag_shader_relative_path} ${tool_deps}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
             COMMENT "Compiling shader pair: ${shader_base_name}"
             VERBATIM

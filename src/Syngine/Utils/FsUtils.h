@@ -78,4 +78,18 @@ inline bool _CheckRequiredFolders() {
     return true;
 }
 
+/// @brief Take an absolute path and make it relative to the root of the game
+/// directory
+/// @param path The absolute path to convert
+/// @note Assumes the input path is to something within the game directory. If it's not, the behavior is undefined.
+/// @return The path relative to the root of the game directory
+/// @since v0.0.1
+static inline std::string _MakeRelativeToRoot(std::string path) {
+    std::string gameDir = Syngine::_ResolveOSPath("").substr(0, Syngine::_ResolveOSPath("").find_last_of("/\\") + 1);
+    if (path.find(gameDir) == 0) {
+        return path.substr(gameDir.length());
+    }
+    return path; // If the path doesn't start with the game directory, return it unchanged
+}
+
 } // namespace Syngine

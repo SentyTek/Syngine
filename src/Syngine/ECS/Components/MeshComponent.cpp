@@ -53,7 +53,7 @@ Syngine::Components MeshComponent::GetComponentType() {
 Serializer::DataNode MeshComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type" = static_cast<int>(SYN_COMPONENT_MESH);
-    node / "path" = this->meshData.path;
+    node / "path" = _MakeRelativeToRoot(this->meshData.path);
     node / "hasTextures" = this->meshData.hasTextures;
     // Note: For simplicity, we are not serializing the actual vertex/index data or materials here.
     return node;
@@ -71,7 +71,7 @@ bool MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
             this->meshData, path.c_str(), loadTextures)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to load mesh from %s",
-                              _ResolveOSPath(path.c_str()).c_str());
+                              _MakeRelativeToRoot(path).c_str());
         return false; // Error loading mesh
     }
     return true; // Success
@@ -115,7 +115,7 @@ bool MeshComponent::ReloadMesh() {
     if (!loader._ReloadModel(this->meshData, this->meshData.id)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to reload mesh from %s",
-                              this->meshData.path.c_str());
+                              _MakeRelativeToRoot(this->meshData.path).c_str());
         return false; // Error reloading mesh
     }
     return true; // Success
