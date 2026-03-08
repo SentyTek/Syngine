@@ -11,6 +11,7 @@
 #include "Syngine/Core/Core.h"
 
 #include "../../lib/miniscl.hpp"
+#include <string>
 
 namespace Syngine {
 namespace Internal {
@@ -49,8 +50,9 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
 
     Serializer::DataNode node = rootGameObject; // Assuming rootGameObject is already a DataNode
     // Resolve path, delete existing file if it exists, and create new XML document
-    auto adp = _GetAppdataPath(Core::Get()->m_app->config.windowTitle);
-    scl::path outputPath = (adp / path).c_str();
+    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.windowTitle) / path)
+                   .string();
+    scl::path outputPath = adp.c_str();
     std::filesystem::remove(outputPath.cstr()); // Remove existing file if it exists
     scl::xml::XmlDocument doc;
     if (doc.load_file(outputPath) != scl::xml::OK) {
@@ -155,7 +157,7 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
         return false;
     }
     auto res = doc.print(file);
-    if (res != scl::xml::OK) {
+    if (res.code != scl::xml::OK) {
         Logger::Error("Failed to write XML document to file: " + path);
         return false;
     }
