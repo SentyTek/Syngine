@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #include "SDL3/SDL_log.h"
+#include "Syngine/Core/Logger.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <ShlObj.h>
@@ -24,6 +25,8 @@
 #endif
 
 #include "FsUtils.h"
+
+#include "miniscl.hpp"
 
 namespace Syngine {
 
@@ -96,6 +99,12 @@ std::filesystem::path _GetAppdataPath(const std::string& appName) {
                      "Failed to determine AppData folder path.");
     }
     return appDataFolder;
+}
+
+bool _FileExists(const char* path) {
+    std::string fullPath = Syngine::_ResolveOSPath(path);
+    auto        p        = scl::path(fullPath);
+    return p.exists();
 }
 
 } // namespace Syngine

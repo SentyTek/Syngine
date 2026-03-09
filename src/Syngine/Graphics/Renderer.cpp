@@ -197,6 +197,14 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
         return -1;
     }
 
+    // Fallback if bundle doesn't exist
+    if (!_FileExists(bundlePath.c_str())) {
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                              "Bundle %s not found, falling back to regular AddProgram",
+                              bundlePath.c_str());
+        return AddProgram(path, name, viewId);
+    }
+
     bgfx::ShaderHandle vs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".vert.bin").c_str());
     bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".frag.bin").c_str());
     bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
