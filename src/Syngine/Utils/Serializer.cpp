@@ -37,41 +37,29 @@ Serializer::DataNode::Type Serializer::DataNode::GetType() const {
     throw std::runtime_error("Unknown DataNode type");
 }
 
-bool Serializer::Prefab::SaveToFile(const std::string& path) {
-    // Serialize the prefab to a DataNode
-    if (!isValid) {
-        Logger::Error("Cannot serialize invalid prefab");
-        return false;
+void Serializer::DataNode::Append(DataNode& node) {
+    if (!std::holds_alternative<NodeArray>(m_data)) {
+        m_data = NodeArray{};
     }
-    if (!rootGameObject) {
-        Logger::Error("Prefab has no root GameObject to serialize");
-        return false;
-    }
+    auto& arr = std::get<NodeArray>(m_data);
+    arr.push_back(node);
+}
 
-    Serializer::DataNode node = rootGameObject; // Assuming rootGameObject is already a DataNode
-    // Resolve path, delete existing file if it exists, and create new XML document
-    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.windowTitle) / path)
-                   .string();
-    scl::path outputPath = adp.c_str();
-    std::filesystem::remove(outputPath.cstr()); // Remove existing file if it exists
-    scl::xml::XmlDocument doc;
-    if (doc.load_file(outputPath) != scl::xml::OK) {
-        Logger::Error("Couldn't open XML file at " + path);
-        return false;
-    }
+bool Serializer::DataNode::IsObject() const {
+    return std::holds_alternative<NodeMap>(m_data);
+}
 
-    // Base of the file is Prefab root with GameObject child.
-    scl::xml::XmlAttr* v    = doc.new_attr("Version", SYNINT_PREFAB_VERSION);
-    scl::xml::XmlAttr* n    = doc.new_attr(
-        "Name",
-        node.Has("name") ? node["name"].As<std::string>() : "UnnamedPrefab");
-    doc.set_tag("Prefab");
-    doc.add_attr(v);
-    doc.add_attr(n);
+bool Serializer::DataNode::IsArray() const {
+    return std::holds_alternative<NodeArray>(m_data);
+}
 
-    scl::xml::XmlElem* root = doc.new_elem("GameObject");
-    doc.add_child(root);
+bool Serializer::DataNode::IsNull() const {
+    return std::holds_alternative<std::monostate>(m_data);
+}
 
+void Serializer::Prefab::WriteGameObject(const DataNode&        node,
+                                         scl::xml::XmlDocument& doc,
+                                         scl::xml::XmlElem*     parent) const {    
     // Convert DataNode data to XML attributes
     // Defines a lambda function named `ConvertData` that takes a `DataNode`
     // object as input and returns a `std::string`. Within this lambda function,
@@ -117,18 +105,21 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
         return convert(node);
     };
 
-    // Iterate through the DataNode's data and add it as attributes to the XML element
-    for (const auto& [key, value] : std::get<DataNode::NodeMap>(node.m_data)) {
-        if (key == "components") continue;
-        std::string valueStr = ConvertData(value);
-        if (valueStr == "null") continue; // Skip null values to avoid cluttering XML with empty attributes
-        scl::xml::XmlAttr* attr = doc.new_attr(key, valueStr);
-        
-        if (!attr) {
-            Logger::Error("Failed to create XML attribute for key: " + key);
-            continue;
+    // Iterate through the DataNode's data and add it as attributes to the XML
+    // element
+    if (!node.IsNull()) {
+        for (const auto& [key, value] : std::get<DataNode::NodeMap>(node.m_data)) {
+            if (key == "components" || key == "children") continue;
+            std::string valueStr = ConvertData(value);
+            if (valueStr == "null") continue; // Skip null values to avoid cluttering XML with empty attributes
+            scl::xml::XmlAttr* attr = doc.new_attr(key, valueStr);
+            
+            if (!attr) {
+                Logger::Error("Failed to create XML attribute for key: " + key);
+                continue;
+            }
+            parent->add_attr(attr);
         }
-        root->add_attr(attr);
     }
 
     // Handle components separately as child elements
@@ -145,9 +136,62 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
                 }
                 compElem->add_attr(attr);
             }
-            root->add_child(compElem);
+            parent->add_child(compElem);
         }
     }
+
+    // Handle child GameObjects as nested elements
+    if (node.Has("children")) {
+        scl::xml::XmlElem* childElem = doc.new_elem("Children");
+        parent->add_child(childElem);
+        const auto& children = node["children"].As<DataNode::NodeArray>();
+        for (const auto& child : children) {
+            // Recursively serialize child GameObjects
+            Serializer::DataNode childGO = child;
+            scl::xml::XmlElem* childNode = doc.new_elem("GameObject");
+            WriteGameObject(childGO, doc, childNode);
+            childElem->add_child(childNode);
+        }
+    }
+}
+
+bool Serializer::Prefab::SaveToFile(const std::string& path) {
+    // Serialize the prefab to a DataNode
+    if (!isValid) {
+        Logger::Error("Cannot serialize invalid prefab");
+        return false;
+    }
+    if (!rootGameObject) {
+        Logger::Error("Prefab has no root GameObject to serialize");
+        return false;
+    }
+
+    Serializer::DataNode node = rootGameObject; // Assuming rootGameObject is already a DataNode
+    // Resolve path, delete existing file if it exists, and create new XML document
+    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.windowTitle) / path)
+                   .string();
+    scl::path outputPath = adp.c_str();
+    std::filesystem::remove(outputPath.cstr()); // Remove existing file if it exists
+    scl::xml::XmlDocument doc;
+    if (doc.load_file(outputPath) != scl::xml::OK) {
+        Logger::Error("Couldn't open XML file at " + path);
+        return false;
+    }
+
+    // Base of the file is Prefab root with GameObject child.
+    scl::xml::XmlAttr* v    = doc.new_attr("Version", SYNINT_PREFAB_VERSION);
+    scl::xml::XmlAttr* n    = doc.new_attr(
+        "Name",
+        node.Has("name") ? node["name"].As<std::string>() : "UnnamedPrefab");
+    doc.set_tag("Prefab");
+    doc.add_attr(v);
+    doc.add_attr(n);
+
+    scl::xml::XmlElem* root = doc.new_elem("GameObject");
+    doc.add_child(root);
+
+    // Convert DataNode data to XML attributes and child elements
+    Prefab::WriteGameObject(node, doc, root);
 
     // Write XML document to file
     scl::stream file;

@@ -185,10 +185,10 @@ class Serializer {
         DataNode& At(size_t index);
 
         /// @brief Appends a new empty DataNode to the Array type DataNode
-        /// @return Reference to the newly appended DataNode
+        /// @param node The DataNode to append to the array
         /// @pre IsArray() must be true (DataNode is of Array type)
         /// @since v0.0.1
-        DataNode& Append();
+        void Append(DataNode& node);
 
         auto begin() const; // Iterator for Object type nodes
         auto end() const;  // Iterator for Object type nodes
@@ -258,11 +258,13 @@ class Serializer {
             delete; // Force use of parameterized constructor or factory methods
         Prefab(GameObject* root); // Construct prefab from a GameObject (serializes it)
         
-        DataNode Serialize() const; //* Helper to serialize prefab
-        GameObject* Deserialize(const DataNode& node); //* Helper to deserialize prefab
         
         bool SaveToFile(const std::string& path); //* Save prefab to file
         Prefab LoadFromFile(const std::string& path); //* Load prefab from file
+
+      private:
+        void WriteGameObject(const DataNode& node, scl::xml::XmlDocument& doc, scl::xml::XmlElem* parent) const; //* Helper to serialize prefab
+        GameObject* Deserialize(const DataNode& node); //* Helper to deserialize prefab
     };
 
     /// @brief Represents a complete game scene with all GameObjects and scene settings

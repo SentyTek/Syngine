@@ -8,6 +8,8 @@
 
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
+#include "Syngine/ECS/Components/TransformComponent.h"
+#include "Syngine/Utils/Serializer.h"
 #include "Syngine/ECS/GameObject.h"
 
 using namespace Syngine;
@@ -20,6 +22,14 @@ GameObject::GameObject(std::string name, std::string type, std::string initialTa
     this->gizmo = "none";
 
     Registry::AddGameObject(this);
+}
+
+GameObject::GameObject(const Serializer::DataNode& data) {
+    this->name = data["name"].As<std::string>();
+    this->type = data["type"].As<std::string>();
+    this->gizmo = data["gizmo"].As<std::string>();
+    this->isActive = data["isActive"].As<bool>();
+
 }
 
 GameObject::GameObject(const GameObject& other) {
@@ -133,5 +143,52 @@ Serializer::DataNode GameObject::Serialize() const {
     }
     node["components"] = componentsNode;
 
+    // Serialize parent-child relationships
+    // This assumes that the TransformComponent is responsible for parent-child relationships
+    TransformComponent* tComp = this->GetComponent<TransformComponent>();
+    if (tComp) {
+        Serializer::DataNode childrenNodes;
+        for (TransformComponent* child : tComp->GetChildren()) {
+            if (child && child->m_owner) {
+                Serializer::DataNode childNode = child->m_owner->Serialize();
+                childrenNodes.Append(childNode);
+            }
+        }
+        node["children"] = childrenNodes;
+    }
+
     return node;
+}
+
+// Parent system relies on TransformComponent
+
+void GameObject::SetParent(GameObject* parent) {
+    parent->GetComponent<TransformComponent>()->SetParent(
+        parent->GetComponent<TransformComponent>());
+    parent->AddChild(this);
+}
+
+GameObject* GameObject::GetParent() const {
+    TransformComponent* tComp = this->GetComponent<TransformComponent>();
+    if (tComp) {
+        TransformComponent* parentT = tComp->GetParent();
+        if (parentT) {
+            return parentT->m_owner;
+        }
+    }
+    return nullptr;    
+}
+
+void GameObject::RemoveChild(GameObject* child) {
+    TransformComponent* tComp = child->GetComponent<TransformComponent>();
+    if (tComp) {
+        tComp->SetParent(nullptr);
+    }
+}
+
+void GameObject::AddChild(GameObject* child) {
+    TransformComponent* tComp = child->GetComponent<TransformComponent>();
+    if (tComp) {
+        tComp->SetParent(this->GetComponent<TransformComponent>());
+    }
 }

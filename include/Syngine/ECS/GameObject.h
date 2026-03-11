@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <map>
@@ -14,6 +15,7 @@
 
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
+#include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
@@ -39,7 +41,14 @@ class GameObject {
     /// @param name Name of the GameObject
     /// @param type Type of the GameObject, defaults to "default"
     /// @since v0.0.1
-    GameObject(std::string name, std::string type = "default", std::string initialTag = "");
+    GameObject(std::string name,
+               std::string type       = "default",
+               std::string initialTag = "");
+
+    /// @brief Construct from a DataNode, used for deserialization
+    /// @param data DataNode representing the serialized GameObject
+    /// @since v0.0.1
+    GameObject(const Serializer::DataNode& data);
 
     GameObject(const GameObject& other);
     GameObject& operator=(const GameObject& other);
@@ -147,6 +156,30 @@ class GameObject {
     /// @threadsafety safe
     /// @since v0.0.1
     Serializer::DataNode Serialize() const;
+
+    /// @brief Set the parent of the GameObject
+    /// @param parent Pointer to the parent GameObject
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetParent(GameObject* parent);
+
+    /// @brief Get the parent of the GameObject
+    /// @return Pointer to the parent GameObject, or nullptr if there is no parent
+    /// @threadsafety safe
+    /// @since v0.0.1
+    GameObject* GetParent() const;
+
+    /// @brief Add a child GameObject to this GameObject
+    /// @param child Pointer to the child GameObject to add
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void AddChild(GameObject* child);
+
+    /// @brief Remove a child GameObject from this GameObject
+    /// @param child Pointer to the child GameObject to remove
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void RemoveChild(GameObject* child);
 
   private:
     long id; // Unique ID for the GameObject
