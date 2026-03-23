@@ -10,6 +10,7 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/ModelLoader.h"
+#include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
 
@@ -144,6 +145,12 @@ class MeshComponent : public Syngine::Component {
         true; //* Whether the AABB needs to be recalculated
     mutable uint64_t m_cachedTransformVersion =
         0; //* Cached version of the transform when AABB was last calculated
+
+    MeshComponent(Serializer::DataNode* node);
+
+    static Serializer::DataNode& Deserialize(const scl::xml::XmlElem* node);
+
+    friend class Serializer;
 };
 
 } // namespace Syngine

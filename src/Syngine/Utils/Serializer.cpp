@@ -8,17 +8,17 @@
 
 #include "Syngine/Utils/Serializer.h"
 #include "Syngine/Utils/FsUtils.h"
-#include "Syngine/Core/Core.h"
+#include "Syngine/ECS/GameObject.h"
 
 #include "../../lib/miniscl.hpp"
 #include <string>
+#include <variant>
+#include <stdexcept>
 
 namespace Syngine {
 namespace Internal {
 std::string ResolvePath(const char* path) { return _ResolveOSPath(path); }
 } // namespace Internal
-
-Serializer::Prefab::Prefab(GameObject* root) : rootGameObject(root->Serialize()), isValid(true) {}
 
 bool Serializer::DataNode::Has(const std::string& key) const {
     if (!std::holds_alternative<NodeMap>(m_data)) return false;
@@ -57,158 +57,46 @@ bool Serializer::DataNode::IsNull() const {
     return std::holds_alternative<std::monostate>(m_data);
 }
 
-void Serializer::Prefab::WriteGameObject(const DataNode&        node,
-                                         scl::xml::XmlDocument& doc,
-                                         scl::xml::XmlElem*     parent) const {    
-    // Convert DataNode data to XML attributes
-    // Defines a lambda function named `ConvertData` that takes a `DataNode`
-    // object as input and returns a `std::string`. Within this lambda function,
-    // there is a nested lambda function named `convert` that recursively
-    // converts the data within the `DataNode` object to a string representation
-    // based on its type.
-    auto ConvertData = [](const DataNode& node) -> std::string {
-        std::function<std::string(const DataNode&)> convert = [&convert](const DataNode& n) -> std::string {
-            switch (n.GetType()) {
-                case DataNode::Type::Null: return std::string("null");
-                case DataNode::Type::Boolean: return n.As<bool>() ? std::string("true") : std::string("false");
-                case DataNode::Type::Integer: return std::to_string(n.As<int>());
-                case DataNode::Type::Float: {
-                    std::string s = std::to_string(n.As<float>());
-                    auto dot = s.find('.');
-                    if (dot != std::string::npos) {
-                        auto last = s.find_last_not_of('0');
-                        s = (last == dot) ? s.substr(0, dot) : s.substr(0, last + 1);
-                    }
-                    return s;
-                }
-                case DataNode::Type::String: return n.As<std::string>();
-                case DataNode::Type::Object: return std::string("<object>");
-                case DataNode::Type::Array: {
-                    std::string valueStr; // Default value required so XML doesn't have null attribs
-                    const auto& arr = std::get<DataNode::NodeArray>(n.m_data);
-                    for (size_t i = 0; i < arr.size(); ++i) {
-                        // Special case for empty string arrays to avoid "null" values
-                        if (i == 0 &&
-                            arr[i].GetType() == DataNode::Type::String &&
-                            arr[i].As<std::string>() == "") {
-                            valueStr = "null"; 
-                            break;
-                        };
-                        if (i > 0) valueStr += ",";
-                        valueStr += convert(arr[i]);
-                    }
-                    return valueStr;
-                }
-                default: return std::string("unknown");
-            }
-        };
-        return convert(node);
-    };
-
-    // Iterate through the DataNode's data and add it as attributes to the XML
-    // element
-    if (!node.IsNull()) {
-        for (const auto& [key, value] : std::get<DataNode::NodeMap>(node.m_data)) {
-            if (key == "components" || key == "children") continue;
-            std::string valueStr = ConvertData(value);
-            if (valueStr == "null") continue; // Skip null values to avoid cluttering XML with empty attributes
-            scl::xml::XmlAttr* attr = doc.new_attr(key, valueStr);
-            
-            if (!attr) {
-                Logger::Error("Failed to create XML attribute for key: " + key);
-                continue;
-            }
-            parent->add_attr(attr);
-        }
-    }
-
-    // Handle components separately as child elements
-    if (node.Has("components")) {
-        const auto& components = node["components"].As<DataNode::NodeMap>();
-        for (const auto& comp : components) {
-            scl::xml::XmlElem* compElem = doc.new_elem("Component");
-            for (const auto& [key, value] : std::get<DataNode::NodeMap>(comp.second.m_data)) {
-                std::string valueStr = ConvertData(value);
-                scl::xml::XmlAttr* attr = doc.new_attr(key, valueStr);
-                if (!attr) {
-                    Logger::Error("Failed to create XML attribute for component key: " + key);
-                    continue;
-                }
-                compElem->add_attr(attr);
-            }
-            parent->add_child(compElem);
-        }
-    }
-
-    // Handle child GameObjects as nested elements
-    if (node.Has("children")) {
-        scl::xml::XmlElem* childElem = doc.new_elem("Children");
-        parent->add_child(childElem);
-        const auto& children = node["children"].As<DataNode::NodeArray>();
-        for (const auto& child : children) {
-            // Recursively serialize child GameObjects
-            Serializer::DataNode childGO = child;
-            scl::xml::XmlElem* childNode = doc.new_elem("GameObject");
-            WriteGameObject(childGO, doc, childNode);
-            childElem->add_child(childNode);
-        }
-    }
+size_t Serializer::DataNode::Size() const {
+    if (!IsArray()) return 0;
+    return std::get<NodeArray>(m_data).size();
 }
 
-bool Serializer::Prefab::SaveToFile(const std::string& path) {
-    // Serialize the prefab to a DataNode
-    if (!isValid) {
-        Logger::Error("Cannot serialize invalid prefab");
-        return false;
+Serializer::DataNode& Serializer::DataNode::At(size_t index) {
+    if (!IsArray()) {
+        throw std::runtime_error("DataNode is not an array");
     }
-    if (!rootGameObject) {
-        Logger::Error("Prefab has no root GameObject to serialize");
-        return false;
+    auto& arr = std::get<NodeArray>(m_data);
+    if (index >= arr.size()) {
+        throw std::out_of_range("Index out of range in DataNode array");
     }
+    return arr[index];
+}
 
-    Serializer::DataNode node = rootGameObject; // Assuming rootGameObject is already a DataNode
-    // Resolve path, delete existing file if it exists, and create new XML document
-    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.windowTitle) / path)
-                   .string();
-    scl::path outputPath = adp.c_str();
-    std::filesystem::remove(outputPath.cstr()); // Remove existing file if it exists
-    scl::xml::XmlDocument doc;
-    if (doc.load_file(outputPath) != scl::xml::OK) {
-        Logger::Error("Couldn't open XML file at " + path);
-        return false;
+Serializer::DataNode::NodeMap::const_iterator Serializer::DataNode::begin() const {
+    static const NodeMap emptyMap{};
+    if (!std::holds_alternative<NodeMap>(m_data)) {
+        return emptyMap.begin();
     }
+    return std::get<NodeMap>(m_data).begin();
+}
 
-    // Base of the file is Prefab root with GameObject child.
-    scl::xml::XmlAttr* v    = doc.new_attr("Version", SYNINT_PREFAB_VERSION);
-    scl::xml::XmlAttr* n    = doc.new_attr(
-        "Name",
-        node.Has("name") ? node["name"].As<std::string>() : "UnnamedPrefab");
-    doc.set_tag("Prefab");
-    doc.add_attr(v);
-    doc.add_attr(n);
-
-    scl::xml::XmlElem* root = doc.new_elem("GameObject");
-    doc.add_child(root);
-
-    // Convert DataNode data to XML attributes and child elements
-    Prefab::WriteGameObject(node, doc, root);
-
-    // Write XML document to file
-    scl::stream file;
-    file.open(outputPath, scl::OpenMode::WRITE, true);
-    if (!file.is_open()) {
-        Logger::Error("Failed to open file for writing: " + path);
-        return false;
+Serializer::DataNode::NodeMap::const_iterator Serializer::DataNode::end() const {
+    static const NodeMap emptyMap{};
+    if (!std::holds_alternative<NodeMap>(m_data)) {
+        return emptyMap.end();
     }
-    auto res = doc.print(file);
-    if (res.code != scl::xml::OK) {
-        Logger::Error("Failed to write XML document to file: " + path);
-        return false;
-    }
-    file.flush();
-    file.close();
+    return std::get<NodeMap>(m_data).end();
+}
 
-    return true;
+std::vector<std::string> Serializer::DataNode::GetKeys() const {
+    std::vector<std::string> keys;
+    if (!std::holds_alternative<NodeMap>(m_data)) return keys;
+    const auto& map = std::get<NodeMap>(m_data);
+    for (const auto& [key, _] : map) {
+        keys.push_back(key);
+    }
+    return keys;
 }
 
 } // namespace Syngine

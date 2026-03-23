@@ -14,6 +14,7 @@
 
 #include "SDL3/SDL_video.h"
 #include "SDL3/SDL_events.h"
+#include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 
 #include "Jolt/Jolt.h"
@@ -184,6 +185,11 @@ class PlayerComponent : public Syngine::Component {
 
     Syngine::Phys* m_physicsManager = nullptr;
     JPH::Ref<JPH::Character> m_character;
+
+    PlayerComponent(Serializer::DataNode* node);
+    static Serializer::DataNode& Deserialize(const scl::xml::XmlElem* node);
+
+    friend class Serializer;
 };
 
 } // namespace Syngine

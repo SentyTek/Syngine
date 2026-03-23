@@ -173,6 +173,15 @@ class CameraComponent : public Syngine::Component {
                             const bx::Vec3& min,
                             const bx::Vec3& max);
 
+    CameraComponent(Serializer::DataNode* node);
+
+    /// @brief Deserialize the CameraComponent from a data node
+    /// @param node The XML element representing the component in the prefab/scene file
+    /// @return A reference to the deserialized data node representing the CameraComponent's state
+    static Serializer::DataNode& Deserialize(const scl::xml::XmlElem* node);
+
+    friend class Serializer;
+
     friend class RenderCore;
 }; // class CameraComponent
 

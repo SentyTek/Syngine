@@ -40,7 +40,15 @@ class BillboardComponent : public Syngine::Component {
 
     GameObject* m_owner; // Reference to the owner game object
 
-    float m_rot[3] = {0.0f, 0.0f, 0.0f}; //* Rotation of the billboard
+    float m_rot[3] = { 0.0f, 0.0f, 0.0f }; //* Rotation of the billboard
+
+    // Private constructor for deserialization
+    BillboardComponent(Serializer::DataNode* node);
+
+    // Helper function to write the component data to XML for prefab/scene saving
+    static Serializer::DataNode& Deserialize(const scl::xml::XmlElem* node);
+
+    friend class Serializer;
   public:
     
     float size = 1.0f; //* Size of the billboard

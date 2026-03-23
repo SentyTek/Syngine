@@ -14,6 +14,7 @@
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/Profiler.h"
 
+#include "Syngine/Utils/Serializer.h"
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
 
@@ -302,6 +303,12 @@ MeshAABB& MeshComponent::GetAABB() {
     m_cachedTransformVersion = currentTransformVersion;
     m_aabb = result;
     return m_aabb;
+}
+
+// MARK: Serializer specializations for MeshComponent
+Serializer::DataNode&
+MeshComponent::Deserialize(const scl::xml::XmlElem* node) {
+    
 }
 
 } // namespace Syngine

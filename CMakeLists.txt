@@ -75,6 +75,8 @@ add_library(Syngine STATIC
     src/Syngine/Utils/FsUtils.cpp
     src/Syngine/Utils/Profiler.cpp
     src/Syngine/Utils/Serializer.cpp
+    src/Syngine/Utils/Prefab.cpp
+    src/Syngine/ECS/ComponentRegistry.cpp
 
     # Physics
     src/Syngine/Physics/Physics.cpp

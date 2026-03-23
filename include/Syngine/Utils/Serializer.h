@@ -190,8 +190,8 @@ class Serializer {
         /// @since v0.0.1
         void Append(DataNode& node);
 
-        auto begin() const; // Iterator for Object type nodes
-        auto end() const;  // Iterator for Object type nodes
+        NodeMap::const_iterator begin() const; // Iterator for Object type nodes
+        NodeMap::const_iterator end() const;  // Iterator for Object type nodes
 
         /// @brief Gets all keys in the Object type DataNode. For iteration.
         /// @return Vector of keys as strings
@@ -250,21 +250,25 @@ class Serializer {
         std::string name; //* Human-readable name of the prefab
         std::string guid; //* Unique identifier for the prefab
         DataNode    rootGameObject; //* Serialized GameObject tree (with all
-                                    //children and components)
+                                    // children and components)
+        GameObject* rootGameObjectPtr =
+            nullptr; //* Pointer to the deserialized root GameObject (not
+                     //serialized, used at runtime)
+        
         bool isValid =
             false; //* Indicates if the prefab was successfully loaded/created
 
-        Prefab() =
-            delete; // Force use of parameterized constructor or factory methods
-        Prefab(GameObject* root); // Construct prefab from a GameObject (serializes it)
-        
-        
+        Prefab(GameObject*
+                   root); // Construct prefab from a GameObject (serializes it)
+        Prefab(const std::string& path); // Construct prefab by loading from file
+            
         bool SaveToFile(const std::string& path); //* Save prefab to file
         Prefab LoadFromFile(const std::string& path); //* Load prefab from file
-
-      private:
-        void WriteGameObject(const DataNode& node, scl::xml::XmlDocument& doc, scl::xml::XmlElem* parent) const; //* Helper to serialize prefab
-        GameObject* Deserialize(const DataNode& node); //* Helper to deserialize prefab
+            
+        private:
+          Prefab();
+          void WriteGameObject(const DataNode& node, scl::xml::XmlDocument& doc, scl::xml::XmlElem* parent) const; //* Helper to serialize prefab
+          DataNode& Deserialize(const scl::xml::XmlElem* elem, DataNode& outNode); //* Helper to deserialize prefab
     };
 
     /// @brief Represents a complete game scene with all GameObjects and scene settings
@@ -294,7 +298,7 @@ class Serializer {
         static SaveData LoadFromFile(const std::string& path); //* Load save data from file
     };
 
-    // Internal helper to read an asset from a bundle file.
+    // Internal helper to read a generic asset from a bundle file.
     // The theory behind this is that we open the bundle, extract the asset as a
     // stream, and then the caller can handle deserializing that stream into
     // whatever type T they want (like an image, model, prefab, etc.)
@@ -436,6 +440,13 @@ inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Mat4>(c
     for (int i = 0; i < 16; i++) {
         arr.emplace_back().Set(value.data[i]);
     }
+    return *this;
+}
+
+// Generic template for other types that don't have a specific specialization
+template <typename T>
+inline Serializer::DataNode& Serializer::DataNode::operator=(const T& value) {
+    m_data = value;
     return *this;
 }
 
