@@ -8,6 +8,7 @@
 
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/Component.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/GameObject.h"
 
 #include "Syngine/Utils/Serializer.h"
@@ -404,5 +405,43 @@ TransformComponent* TransformComponent::GetParent() const {
 std::vector<TransformComponent*>& TransformComponent::GetChildren() const {
     return (std::vector<TransformComponent*>&)m_children;
 }
+
+static Syngine::ComponentRegistrar s_transformRegistrar(
+    SYN_COMPONENT_TRANSFORM,
+
+    // ParseXml
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<int>(SYN_COMPONENT_TRANSFORM);
+
+        for (const auto& attr : elem->attributes()) {
+            scl::string key = attr->tag();
+            scl::string value = attr->data();
+
+            if (key == "position") {
+                std::vector<float> pos = Serializer::_ParseFloatArray(value);
+                node / "position" = pos;
+            } else if (key == "rotation") {
+                std::vector<float> rot = Serializer::_ParseFloatArray(value);
+                node / "rotation" = rot;
+            } else if (key == "scale") {
+                std::vector<float> scale = Serializer::_ParseFloatArray(value);
+                node / "scale" = scale;
+            }
+        }
+
+        return node;
+    },
+
+    // Instantiate
+    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+        std::vector<float> pos = data["position"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
+        std::vector<float> rot = data["rotation"].As<std::vector<float>>({0.0f, 0.0f, 0.0f, 1.0f});
+        std::vector<float> scale = data["scale"].As<std::vector<float>>({0.5f, 0.5f, 0.5f});
+        auto comp = std::make_unique<TransformComponent>(owner);
+        comp->Init(pos, rot, scale); // This probably isn't Good Practice
+        return comp;
+    }
+);
 
 } // namespace Syngine

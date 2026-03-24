@@ -47,11 +47,6 @@ class TransformComponent : public Syngine::Component {
     static void _QuatFromEulerDeg(float x, float y, float z, float* outQuat);
     static void _QuatNormalize(float* quat);
     static void _QuatMultiply(const float* q1, const float* q2, float* outQuat);
-
-    TransformComponent(Serializer::DataNode* node); // Private constructor for deserialization
-    static Serializer::DataNode& Deserialize(const scl::xml::XmlElem* node); // Helper function to write the component data to XML for prefab/scene saving
-    friend class Serializer;
-
   public:
     static constexpr Syngine::Components componentType =
         SYN_COMPONENT_TRANSFORM; //* Transform component type

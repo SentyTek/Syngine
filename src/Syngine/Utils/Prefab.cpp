@@ -6,16 +6,19 @@
 // │ Placeholder License                  │
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/Serializer.h"
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Core/Core.h"
+#include "Syngine/ECS/ComponentRegistry.h"
+#include <string>
 
 namespace Syngine {
 
-Serializer::Prefab::Prefab(GameObject* root) : rootGameObject(root->Serialize()), isValid(true), rootGameObjectPtr(root) {}
-Serializer::Prefab::Prefab() : rootGameObject(DataNode{}), isValid(false), rootGameObjectPtr(nullptr) {}
+Serializer::Prefab::Prefab(GameObject* root) : rootGameObjectData(root->Serialize()), isValid(true), rootGameObject(root) {}
+Serializer::Prefab::Prefab() : rootGameObjectData(DataNode{}), isValid(false), rootGameObject(nullptr) {}
 
-Serializer::Prefab::Prefab(const std::string& path) : rootGameObject(DataNode{}), isValid(false), rootGameObjectPtr(nullptr) {
+Serializer::Prefab::Prefab(const std::string& path) : rootGameObjectData(DataNode{}), isValid(false), rootGameObject(nullptr) {
     *this = LoadFromFile(path);
     if (!isValid) {
         Logger::Error("Failed to load prefab from path: " + path);
@@ -132,7 +135,7 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
         return false;
     }
 
-    Serializer::DataNode node = rootGameObject; // Assuming rootGameObject is already a DataNode
+    Serializer::DataNode node = rootGameObjectData;
     // Resolve path, delete existing file if it exists, and create new XML document
     auto adp = (_GetAppdataPath(Core::Get()->m_app->config.windowTitle) / path)
                    .string();
@@ -212,7 +215,11 @@ Serializer::Prefab Serializer::Prefab::LoadFromFile(const std::string& path) {
         Logger::Error("Prefab XML missing root GameObject element: " + path);
         return prefab;
     }
-    prefab.rootGameObject = prefab.Deserialize(rootElem, prefab.rootGameObject);
+    prefab.rootGameObjectData = prefab.Deserialize(rootElem, prefab.rootGameObjectData);
+
+    // Now that the prefab is deserialized into a DataNode, we can instantiate it into actual GameObjects and Components
+    prefab.rootGameObject = new GameObject(prefab.rootGameObjectData);
+    prefab.name = prefab.rootGameObject->name; // Set prefab name to root GameObject's name for convenience
 
     prefab.isValid = true; // Mark as valid after successful deserialization
     return prefab;
@@ -220,6 +227,7 @@ Serializer::Prefab Serializer::Prefab::LoadFromFile(const std::string& path) {
 
 Serializer::DataNode& Serializer::Prefab::Deserialize(const scl::xml::XmlElem* elem, Serializer::DataNode& outNode) {
     // Convert XML attributes to DataNode data
+    const auto& attributes = elem->attributes();
     for (const auto& attr : elem->attributes()) {
         scl::string key = attr->tag();
         scl::string value = attr->data();
@@ -230,14 +238,7 @@ Serializer::DataNode& Serializer::Prefab::Deserialize(const scl::xml::XmlElem* e
             outNode["isActive"] = (value == "true");
         } else if (key == "tags") {
             // tags are CSV in XML, convert back to array
-            std::vector<std::string> tags;
-            long long end = value.ffi(",");
-            while (end != std::string::npos) { 
-                tags.push_back(value.substr(0, end).cstr());
-                value = value.substr(end + 1);
-                end = value.ffi(",");
-            }
-            tags.push_back(value.cstr()); // Last tag after final comma
+            std::vector<std::string> tags = Serializer::_ParseStringArray(value);
             outNode["tags"] = tags;
         }
     }
@@ -247,22 +248,11 @@ Serializer::DataNode& Serializer::Prefab::Deserialize(const scl::xml::XmlElem* e
     if (!componentsElem.empty()) {
         DataNode componentsNode;
         for (const auto& compElem : componentsElem) {
-            DataNode compNode;
-            for (const auto& attr : compElem->attributes()) {
-                std::string key = attr->tag().cstr();
-                // Depending on type, the value may either be a list of floats,
-                // a string, a bool, or a float.
-                // Deal with type first, it's simple and an int
-                if (key == "type") {
-                    compNode["type"] = std::stoi(attr->data().cstr());
-                    continue;
-                }
-                // Then depending on the type, call on the component to
-                // deserialize the rest of the attributes.
-                int type = compNode["type"].As<int>();
-                
-            }
-            componentsNode[compNode["type"].As<std::string>()] = compNode; // Use component type as key
+            auto typeAttr = compElem->find_attr("type");
+            if (!typeAttr) continue;
+            int typeId = std::stoi(typeAttr->data().cstr());
+            DataNode compNode = ComponentRegistry::ParseXml(typeId, compElem);
+            componentsNode[std::to_string(typeId)] = compNode; // Use component type as key
         }
         outNode["components"] = componentsNode;
     }
@@ -274,7 +264,7 @@ Serializer::DataNode& Serializer::Prefab::Deserialize(const scl::xml::XmlElem* e
         for (const auto& childElem : childrenElem->find_children("GameObject")) {
             DataNode childNode;
             Deserialize(childElem, childNode); // Recursive call to deserialize child GameObject
-            childrenNode.As<DataNode::NodeArray>().push_back(childNode);
+            childrenNode.Append(childNode);
         }
         outNode["children"] = childrenNode;
     }

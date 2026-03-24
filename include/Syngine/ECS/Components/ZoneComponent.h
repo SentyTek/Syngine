@@ -51,14 +51,6 @@ class ZoneComponent : public Syngine::Component {
     std::vector<std::string> m_tags; //* Tags of the zone
 
     GameObject* m_owner; // Reference to the owner game object
-
-    ZoneComponent(
-        Serializer::DataNode* node); // Private constructor for deserialization
-    static Serializer::DataNode&
-    Deserialize(const scl::xml::XmlElem*
-                    node); // Helper function to write the component data to XML
-                           // for prefab/scene saving
-    friend class Serializer;
   public:
     static constexpr Syngine::Components componentType =
         SYN_COMPONENT_ZONE; //* Zone component type

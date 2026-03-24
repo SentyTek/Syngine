@@ -237,10 +237,5 @@ class RigidbodyComponent : public Syngine::Component {
                          // half extents for box
 
     void _MatrixToQuat(float* outQuat, const float* mtx);
-
-    RigidbodyComponent(Serializer::DataNode* node); // Private constructor for deserialization
-    static Serializer::DataNode& Deserialize(const scl::xml::XmlElem* node);
-
-    friend class Serializer;
 };
 } // namespace Syngine

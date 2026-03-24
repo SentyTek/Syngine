@@ -30,7 +30,7 @@ class ComponentRegistry {
       static Serializer::DataNode ParseXml(uint64_t                 type,
                                            const scl::xml::XmlElem* node);
 
-      std::unique_ptr<Component> Instantiate(uint64_t                    type,
+      static std::unique_ptr<Component> Instantiate(uint64_t                    type,
                                              GameObject*                 owner,
                                              const Serializer::DataNode& data);
 

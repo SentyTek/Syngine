@@ -11,6 +11,9 @@
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/Utils/Serializer.h"
 #include "Syngine/ECS/GameObject.h"
+#include "Syngine/ECS/ComponentRegistry.h"
+#include <unordered_map>
+
 
 using namespace Syngine;
 
@@ -29,7 +32,32 @@ GameObject::GameObject(const Serializer::DataNode& data) {
     this->type = data["type"].As<std::string>();
     this->gizmo = data["gizmo"].As<std::string>();
     this->isActive = data["isActive"].As<bool>();
+    if (data.Has("tags")) {
+        this->tags = data["tags"].As<std::vector<std::string>>();
+    }
 
+    // Deserialize components
+    if (data.Has("components")) {
+        const auto& componentsNode = data["components"];
+        for (const auto& [typeStr, data] : componentsNode.As<Serializer::DataNode::NodeMap>()) {
+            int typeId = std::stoi(typeStr);
+            std::unique_ptr<Component> comp = ComponentRegistry::Instantiate(typeId, this, data);
+            if (comp) {
+                this->components[static_cast<Syngine::Components>(typeId)] = std::move(comp);
+            }
+        }
+    }
+
+    Registry::AddGameObject(this);
+
+    // Children.
+    if (data.Has("children")) {
+        const auto& childrenNode = data["children"];
+        for (const auto& childData : childrenNode.As<Serializer::DataNode::NodeArray>()) {
+            GameObject* child = new GameObject(childData);
+            this->AddChild(child);
+        }
+    }
 }
 
 GameObject::GameObject(const GameObject& other) {

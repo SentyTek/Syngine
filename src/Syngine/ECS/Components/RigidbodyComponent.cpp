@@ -10,6 +10,7 @@
 #include "Syngine/Core/Logger.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/RigidbodyComponent.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
@@ -24,8 +25,10 @@
 
 #include "Jolt/Math/MathTypes.h"
 #include "Jolt/Physics/Body/MotionProperties.h"
+#include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 
+#include <memory>
 #include <vector>
 
 namespace Syngine {
@@ -449,5 +452,44 @@ void RigidbodyComponent::_MatrixToQuat(float* outQuat, const float* mtx) {
         }
     }
 }
+
+static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
+    Syngine::SYN_COMPONENT_RIGIDBODY,
+
+    // ParseXml
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<int>(SYN_COMPONENT_RIGIDBODY);
+        for (const auto& attr : elem->attributes()) {
+            std::string key = attr->tag().cstr();
+            std::string value = attr->data().cstr();
+
+            if (key == "mass")
+                node["mass"] = std::stof(value);
+            else if (key == "friction")
+                node["friction"] = std::stof(value);
+            else if (key == "restitution")
+                node["restitution"] = std::stof(value);
+            else if (key == "shape")
+                node["shape"] = static_cast<int>(std::stoi(value));
+            else if (key == "shapeParameters") {
+                scl::string v = attr->data();
+                node["shapeParameters"] = Serializer::_ParseFloatArray(v);
+            }
+        }
+        return node;
+    },
+
+    // Instantiate
+    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+        RigidbodyParameters params;
+        params.mass = data["mass"].As(1.0f);
+        params.friction = data["friction"].As(0.5f);
+        params.restitution = data["restitution"].As(0.0f);
+        params.shape = static_cast<PhysicsShapes>(data["shape"].As(0));
+        params.shapeParameters = data["shapeParameters"].As<std::vector<float>>({});
+        return std::make_unique<RigidbodyComponent>(owner, params);
+    }
+);
 
 } // namespace Syngine

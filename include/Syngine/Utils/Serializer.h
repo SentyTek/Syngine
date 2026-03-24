@@ -46,9 +46,11 @@ class Serializer {
     /// and hierarchical structures (like JSON or YAML).
     /// @since v0.0.1
     class DataNode {
+      public:
         using NodeMap = std::unordered_map<std::string, DataNode>;
         using NodeArray = std::vector<DataNode>;
 
+      private:
         // Internal data representation
         // std::monostate represents a null/empty state
         std::variant<std::monostate, int, float, bool, std::string, NodeMap, NodeArray> m_data;
@@ -249,9 +251,9 @@ class Serializer {
     struct Prefab {
         std::string name; //* Human-readable name of the prefab
         std::string guid; //* Unique identifier for the prefab
-        DataNode    rootGameObject; //* Serialized GameObject tree (with all
+        DataNode    rootGameObjectData; //* Serialized GameObject tree (with all
                                     // children and components)
-        GameObject* rootGameObjectPtr =
+        GameObject* rootGameObject =
             nullptr; //* Pointer to the deserialized root GameObject (not
                      //serialized, used at runtime)
         
@@ -298,10 +300,17 @@ class Serializer {
         static SaveData LoadFromFile(const std::string& path); //* Load save data from file
     };
 
-    // Internal helper to read a generic asset from a bundle file.
     // The theory behind this is that we open the bundle, extract the asset as a
     // stream, and then the caller can handle deserializing that stream into
     // whatever type T they want (like an image, model, prefab, etc.)
+    /// @brief Internal helper function to read an asset from a bundle file and
+    /// return it as a stream
+    /// @param bundlePath The path to the bundle file
+    /// @param assetPath The path to the asset within the bundle
+    /// @return A stream containing the asset data, or an empty stream if there
+    /// was an error
+    /// @since v0.0.1
+    /// @internal
     static inline scl::stream _ReadFromBundle(const std::string& bundlePath,
                                        const std::string& assetPath) {
         scl::pack::Packager pack;
@@ -326,9 +335,128 @@ class Serializer {
         pack.close();
         return ms;
     }
+
+    /// @brief Internal helper to parse float arrays
+    /// @param value The string value to parse (expected format: "x,y,z")
+    /// @return A vector of floats with the parsed values, or an empty vector if
+    /// parsing fails
+    /// @since v0.0.1
+    /// @internal
+    static inline std::vector<float> _ParseFloatArray(scl::string& value) {
+        // See _ParseStringArray for explanation of CSV parsing logic
+        std::vector<float> floats;
+        size_t             end = value.ffi(",");
+        #pragma warning(push)
+        #pragma warning(disable: 4244) // Suppress conversion warning from __int64 to uint
+        #pragma warning(disable: 4267) // Suppress conversion warning from size_t to uint
+        while (end != std::string::npos) {
+            floats.push_back(std::stof(value.substr(0, end).cstr()));
+            value = value.substr(end + 1);
+            end   = value.ffi(",");
+        }
+        floats.push_back(std::stof(value.cstr()));
+        #pragma warning(pop)
+        return floats;
+    }
+
+    /// @brief Internal helper to parse int arrays
+    /// @param value The string value to parse (expected format: "x,y,z")
+    /// @return A vector of ints with the parsed values, or an empty vector if
+    /// parsing fails
+    /// @since v0.0.1
+    /// @internal
+    static inline std::vector<int> _ParseIntArray(scl::string& value) {
+        // See _ParseStringArray for explanation of CSV parsing logic
+        std::vector<int> ints;
+        size_t           end = value.ffi(",");
+        #pragma warning(push)
+        #pragma warning(disable: 4267) // Suppress conversion warning from size_t to uint
+        while (end != std::string::npos) {
+            ints.push_back(std::stoi(value.substr(0, end).cstr()));
+            value = value.substr(end + 1);
+            end   = value.ffi(",");
+        }
+        ints.push_back(std::stoi(value.cstr()));
+        #pragma warning(pop)
+        return ints;
+    }
+
+    /// @brief Internal helper to parse string arrays
+    /// @param value The string value to parse (expected format: "str1,str2,str3")
+    /// @return A vector of strings with the parsed values, or an empty vector if
+    /// parsing fails
+    /// @since v0.0.1
+    /// @internal
+    static inline std::vector<std::string>
+    _ParseStringArray(scl::string value) {
+        // tags are CSV in XML, convert back to array
+        std::vector<std::string> tags;
+        long long                end = value.ffi(","); // Find first comma
+        #pragma warning(push)
+        #pragma warning(disable: 4244) // Suppress conversion warning from __int64 to uint
+        while (end != std::string::npos) {
+            tags.push_back(value.substr(0, end).cstr()); // Extract substring up to comma as a tag
+            value = value.substr(end + 1); // Remove parsed part from string
+            end   = value.ffi(","); // Find next comma in remaining string
+        }
+        tags.push_back(value.cstr()); // Last tag after final comma
+        #pragma warning(pop)
+        return tags;
+    }
 };
 
 // Template implementations for DataNode
+// MARK: As<>() conversions
+
+template <>
+inline std::vector<float>
+Serializer::DataNode::As<std::vector<float>>(const std::vector<float>& defaultValue) const {
+    if (!std::holds_alternative<NodeArray>(m_data)) {
+        return defaultValue;
+    }
+
+    const auto& arr = std::get<NodeArray>(m_data);
+    std::vector<float> out;
+    out.reserve(arr.size());
+    for (const auto& elem : arr) {
+        out.push_back(elem.As<float>(0.0f));
+    }
+    return out;
+}
+
+template <>
+inline std::vector<int>
+Serializer::DataNode::As<std::vector<int>>(const std::vector<int>& defaultValue) const {
+    if (!std::holds_alternative<NodeArray>(m_data)) {
+        return defaultValue;
+    }
+
+    const auto& arr = std::get<NodeArray>(m_data);
+    std::vector<int> out;
+    out.reserve(arr.size());
+    for (const auto& elem : arr) {
+        out.push_back(elem.As<int>(0));
+    }
+    return out;
+}
+
+template <>
+inline std::vector<std::string>
+Serializer::DataNode::As<std::vector<std::string>>(const std::vector<std::string>& defaultValue) const {
+    if (!std::holds_alternative<NodeArray>(m_data)) {
+        return defaultValue;
+    }
+
+    const auto& arr = std::get<NodeArray>(m_data);
+    std::vector<std::string> out;
+    out.reserve(arr.size());
+    for (const auto& elem : arr) {
+        out.push_back(elem.As<std::string>(""));
+    }
+    return out;
+}
+
+// Generic template for other types that don't have a specific specialization
 template <typename T>
 inline T Serializer::DataNode::As(const T& defaultValue) const {
     if (std::holds_alternative<T>(m_data)) {
@@ -337,6 +465,7 @@ inline T Serializer::DataNode::As(const T& defaultValue) const {
     return defaultValue;
 }
 
+// MARK: Set() and operator=() for setting values in DataNode
 template <typename T>
 inline void Serializer::DataNode::Set(const T& value) {
     m_data = value;

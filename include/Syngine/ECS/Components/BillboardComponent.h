@@ -22,7 +22,8 @@ namespace Syngine {
 enum class BillboardMode {
     CAMERA_ALIGNED = 0, //* Always faces the camera
     AXIS_Y_ALIGNED = 1, //* Rotates around Y (vertical) axis only
-    FIXED          = 2  //* No rotation, fixed orientation
+    FIXED          = 2, //* No rotation, fixed orientation
+    COUNT          = 3  //* Number of billboard modes (for validation)
 };
 
 
@@ -41,14 +42,6 @@ class BillboardComponent : public Syngine::Component {
     GameObject* m_owner; // Reference to the owner game object
 
     float m_rot[3] = { 0.0f, 0.0f, 0.0f }; //* Rotation of the billboard
-
-    // Private constructor for deserialization
-    BillboardComponent(Serializer::DataNode* node);
-
-    // Helper function to write the component data to XML for prefab/scene saving
-    static Serializer::DataNode& Deserialize(const scl::xml::XmlElem* node);
-
-    friend class Serializer;
   public:
     
     float size = 1.0f; //* Size of the billboard

@@ -185,11 +185,6 @@ class PlayerComponent : public Syngine::Component {
 
     Syngine::Phys* m_physicsManager = nullptr;
     JPH::Ref<JPH::Character> m_character;
-
-    PlayerComponent(Serializer::DataNode* node);
-    static Serializer::DataNode& Deserialize(const scl::xml::XmlElem* node);
-
-    friend class Serializer;
 };
 
 } // namespace Syngine

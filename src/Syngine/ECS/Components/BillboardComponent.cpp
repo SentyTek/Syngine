@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/Components/BillboardComponent.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Graphics/TextureHelpers.h"
@@ -73,5 +74,40 @@ void BillboardComponent::Init(const std::string& texturePath) {
                               texturePath.c_str());
     }
 }
+
+static Syngine::ComponentRegistrar s_billboardRegistrar(
+    Syngine::SYN_COMPONENT_BILLBOARD,
+    // ParseXML: XML element -> DataNode
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<int>(SYN_COMPONENT_BILLBOARD);
+        for (const auto& attr : elem->attributes()) {
+            scl::string key = attr->tag();
+            scl::string value = attr->data();
+            if (key == "size") {
+                node / "size" = std::stof(value.cstr());
+            } else if (key == "mode") {
+                node / "mode" = std::stoi(value.cstr());
+            } else if (key == "texturePath") {
+                node / "texturePath" = value;
+            }
+        }
+        return node;
+    },
+
+    // Instantiate: DataNode -> Component instance
+    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+        float size = data.Has("size") ? data["size"].As<float>() : 1.0f;
+        BillboardMode mode = BillboardMode::CAMERA_ALIGNED;
+        if (data.Has("mode")) {
+            int modeInt = data["mode"].As<int>();
+            if (modeInt >= 0 && modeInt < static_cast<int>(BillboardMode::COUNT)) {
+                mode = static_cast<BillboardMode>(modeInt);
+            }
+        }
+        std::string texturePath = data.Has("texturePath") ? data["texturePath"].As<std::string>() : "";
+        return std::make_unique<BillboardComponent>(owner, texturePath, mode, size);
+    }
+);
 
 } // namespace Syngine

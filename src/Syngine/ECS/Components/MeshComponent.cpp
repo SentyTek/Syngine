@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Logger.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/FsUtils.h"
@@ -17,8 +18,10 @@
 #include "Syngine/Utils/Serializer.h"
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
+#include "miniscl.hpp"
 
 #include <cfloat>
+#include <string>
 
 namespace Syngine {
 MeshComponent::MeshComponent(GameObject*        owner,
@@ -56,7 +59,7 @@ Serializer::DataNode MeshComponent::Serialize() const {
     node / "type" = static_cast<int>(SYN_COMPONENT_MESH);
     node / "path" = _MakeRelativeToRoot(this->meshData.path);
     node / "hasTextures" = this->meshData.hasTextures;
-    // Note: For simplicity, we are not serializing the actual vertex/index data or materials here.
+    //TODO: mats will need to be serialized at some point
     return node;
 }
 
@@ -305,10 +308,32 @@ MeshAABB& MeshComponent::GetAABB() {
     return m_aabb;
 }
 
-// MARK: Serializer specializations for MeshComponent
-Serializer::DataNode&
-MeshComponent::Deserialize(const scl::xml::XmlElem* node) {
-    
-}
+static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH, 
+    // ParseXML: XML element -> DataNode
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<int>(SYN_COMPONENT_MESH);
+        for (const auto& attr : elem->attributes()) {
+            scl::string key = attr->tag();
+            scl::string value = attr->data();
+            if (key == "path") {
+                std::string svalue = std::string(value.cstr());
+                node / "path" = svalue;
+            } else if (key == "hasTextures") {
+                node / "hasTextures" = (value == "true");
+            }
+        }
+        return node;
+    },
+
+    // Instantiate: DataNode -> Component instance
+    [](Syngine::GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+        std::string path = data.Has("path") ? data["path"].As<std::string>() : "";
+        bool hasTextures = data.Has("hasTextures") ? data["hasTextures"].As<bool>() : false;
+        auto component =
+            owner->AddComponent<Syngine::MeshComponent>(path, hasTextures);
+        return std::make_unique<Syngine::MeshComponent>(*component);
+    }
+);
 
 } // namespace Syngine
