@@ -49,7 +49,7 @@ class HealthComponent : public Component {
 		m_owner = owner;
 	}
 
-	ComponentTypeID GetComponentType() override { return componentType; }
+	ComponentTypeId GetComponentType() override { return componentType; }
 
 	std::unique_ptr<Component> Clone() const override {
 		return std::make_unique<HealthComponent>(*this);
@@ -57,7 +57,7 @@ class HealthComponent : public Component {
 
 	Serializer::DataNode Serialize() const override {
 		Serializer::DataNode node;
-		node["type"] = static_cast<uint64_t>(componentType);
+		node["type"] = static_cast<Syngine::ComponentTypeId>(componentType);
 		node["health"] = m_health;
 		node["maxHealth"] = m_maxHealth;
 		return node;
@@ -75,10 +75,17 @@ class HealthComponent : public Component {
   private:
 	int m_health = 100;
 	int m_maxHealth = 100;
+    GameObject* m_owner = nullptr;
 };
 
 } // namespace Syngine
 ```
+
+This contains several useful parts:
+- The constructor sets values obviously. The first parameter in a Component ctor must be `GameObject*`, as this is set by the engine.
+- `GetComponentType()` and `Clone()` methods are required by the engine as well.
+- `Serialize()` to convert the live Component into DataNode(s) for saving to disk.
+- `Init()` and `Update(float deltaTime)` methods are provided as well, the engine should call these accordingly, but they are optional in a Component.
 
 ---
 

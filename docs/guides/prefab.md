@@ -3,12 +3,6 @@
 [<-- Back](../index.md)
 
 This guide explains how Prefabs work in the current engine implementation.
-It is based on the runtime flow in:
-
-- engine/src/Syngine/Utils/Prefab.cpp
-- engine/src/Syngine/Utils/Serializer.h
-- engine/src/Syngine/ECS/GameObject.cpp
-- game/src/Game.cpp
 
 ## What A Prefab Is (Right Now)
 
@@ -16,7 +10,7 @@ A prefab is a serialized GameObject tree (root object + children + components)
 stored as XML. At runtime, loading a prefab creates a new GameObject tree from
 that XML data.
 
-In the current code, the prefab root XML tag is Prefab with:
+The prefab root XML tag is `Prefab` with:
 
 - Version (must match SYNINT_PREFAB_VERSION, currently 1.0)
 - Name (derived from root GameObject name)
