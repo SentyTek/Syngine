@@ -53,7 +53,7 @@ class Serializer {
       private:
         // Internal data representation
         // std::monostate represents a null/empty state
-        std::variant<std::monostate, int, float, bool, std::string, NodeMap, NodeArray> m_data;
+        std::variant<std::monostate, int, uint64_t, float, bool, std::string, NodeMap, NodeArray> m_data;
         
         friend class Serializer; // Allow Serializer to access private members for serialization
       public:
@@ -62,6 +62,7 @@ class Serializer {
         enum class Type {
             Null,    //* No data
             Integer, //* Integer number
+            UnsignedInteger, //* Unsigned integer number
             Float,   //* Floating-point number
             Boolean, //* Boolean value
             String,  //* String value
@@ -112,9 +113,9 @@ class Serializer {
             return *this;
         }
 
-        /// @brief Assignment operator to set a value directly (int, float,
+        /// @brief Assignment operator to set a value directly (int, uint64_t, float,
         /// bool, string, etc.)
-        /// @tparam T The type of the value to set (int, float, bool,
+        /// @tparam T The type of the value to set (int, uint64_t, float, bool,
         /// std::string, etc.)
         /// @param value The value to set
         /// @return Reference to this DataNode
