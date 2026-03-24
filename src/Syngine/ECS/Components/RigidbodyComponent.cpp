@@ -76,13 +76,13 @@ RigidbodyComponent::~RigidbodyComponent() {
     Destroy();
 }
 
-Components RigidbodyComponent::GetComponentType() {
+Syngine::ComponentTypeID RigidbodyComponent::GetComponentType() {
     return SYN_COMPONENT_RIGIDBODY;
 }
 
 Serializer::DataNode RigidbodyComponent::Serialize() const {
     Serializer::DataNode node;
-    node / "type" = static_cast<int>(SYN_COMPONENT_RIGIDBODY);
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_RIGIDBODY);
     node / "mass" = mass;
     node / "friction" = friction;
     node / "restitution" = restitution;
@@ -459,7 +459,7 @@ static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
     // ParseXml
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<int>(SYN_COMPONENT_RIGIDBODY);
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_RIGIDBODY);
         for (const auto& attr : elem->attributes()) {
             std::string key = attr->tag().cstr();
             std::string value = attr->data().cstr();

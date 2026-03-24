@@ -48,7 +48,7 @@ class TransformComponent : public Syngine::Component {
     static void _QuatNormalize(float* quat);
     static void _QuatMultiply(const float* q1, const float* q2, float* outQuat);
   public:
-    static constexpr Syngine::Components componentType =
+    static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_TRANSFORM; //* Transform component type
 
     /// @brief Constructor for the TransformComponent class
@@ -93,7 +93,7 @@ class TransformComponent : public Syngine::Component {
     /// @return The component type as an enum value
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
 
     /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in
     /// radians)

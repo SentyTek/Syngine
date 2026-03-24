@@ -84,7 +84,7 @@ struct RigidbodyParameters {
  */
 class RigidbodyComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::Components componentType = SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type
+    static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type
 
     /// @brief Constructor for the RigidbodyComponent class
     /// @param owner Pointer to the GameObject that owns this component
@@ -103,7 +103,7 @@ class RigidbodyComponent : public Syngine::Component {
     /// @return The component type as an enum value
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
 
     /// @brief Clone the RigidbodyComponent
     /// @return A unique pointer to the cloned RigidbodyComponent

@@ -105,7 +105,7 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
 
 Serializer::DataNode PlayerComponent::Serialize() const {
     Serializer::DataNode node;
-    node["type"] = std::string("PlayerComponent");
+    node["type"] = static_cast<int>(Syngine::SYN_COMPONENT_PLAYER);
     node["moveSpeed"] = moveSpeed;
     node["sprintMult"] = sprintMult;
     node["crouchSpeed"] = crouchSpeed;
@@ -161,7 +161,7 @@ PlayerComponent::~PlayerComponent() {
     }
 }
 
-Syngine::Components PlayerComponent::GetComponentType() {
+Syngine::ComponentTypeID PlayerComponent::GetComponentType() {
     return SYN_COMPONENT_PLAYER;
 }
 

@@ -77,7 +77,7 @@ Serializer::DataNode TransformComponent::Serialize() const {
     };
     Serializer::Float3 scale{ m_scale[0], m_scale[1], m_scale[2] };
 
-    transformNode / "type" = static_cast<int>(SYN_COMPONENT_TRANSFORM);
+    transformNode / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_TRANSFORM);
     transformNode / "position" = pos;
     transformNode / "rotation" = rot;
     transformNode / "scale"    = scale;
@@ -105,7 +105,7 @@ void TransformComponent::Init(std::vector<float> position,
     _MarkLocalDirty();
 }
 
-Syngine::Components TransformComponent::GetComponentType() {
+Syngine::ComponentTypeID TransformComponent::GetComponentType() {
     return SYN_COMPONENT_TRANSFORM;
 }
 
@@ -412,7 +412,7 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
     // ParseXml
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<int>(SYN_COMPONENT_TRANSFORM);
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_TRANSFORM);
 
         for (const auto& attr : elem->attributes()) {
             scl::string key = attr->tag();

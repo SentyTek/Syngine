@@ -48,7 +48,7 @@ class BillboardComponent : public Syngine::Component {
     bool  receiveShadows = true; //* Whether the billboard receives shadows
     bool  receiveSunLight = true; //* Whether the billboard receives sunlight
     
-    static constexpr Syngine::Components componentType =
+    static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_BILLBOARD; //* Billboard component type
 
     /// @brief Construct a new Billboard Component object
@@ -71,7 +71,7 @@ class BillboardComponent : public Syngine::Component {
 
     /// @brief Get the type of this component
     /// @return The component type as an enum value
-    Components GetComponentType() override;
+    ComponentTypeID GetComponentType() override;
     std::unique_ptr<Component> Clone() const override {
         return std::make_unique<BillboardComponent>(*this);
     }
@@ -89,9 +89,10 @@ class BillboardComponent : public Syngine::Component {
     /// @internal
     void Init(const std::string& texturePath);
 
-    /// @brief Update the billboard component
+    /// @brief Update the billboard component. Unused.
+    /// @param deltaTime Time elapsed since the last update, in seconds
     /// @since v0.0.1
-    void Update() {};
+    void Update(float deltaTime) override {};
 
     /// @brief Get the texture handle of the billboard
     /// @return bgfx::TextureHandle The texture handle

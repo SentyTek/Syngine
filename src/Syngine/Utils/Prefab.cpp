@@ -250,7 +250,7 @@ Serializer::DataNode& Serializer::Prefab::Deserialize(const scl::xml::XmlElem* e
         for (const auto& compElem : componentsElem) {
             auto typeAttr = compElem->find_attr("type");
             if (!typeAttr) continue;
-            int typeId = std::stoi(typeAttr->data().cstr());
+            Syngine::ComponentTypeID typeId = std::stoull(typeAttr->data().cstr()); // Pray it doesn't get negative somehow
             DataNode compNode = ComponentRegistry::ParseXml(typeId, compElem);
             componentsNode[std::to_string(typeId)] = compNode; // Use component type as key
         }
@@ -258,7 +258,7 @@ Serializer::DataNode& Serializer::Prefab::Deserialize(const scl::xml::XmlElem* e
     }
 
     // Handle child GameObjects
-    auto childrenElem = elem->find_children("Children")[0]; // Only ever expect one Children element
+    auto childrenElem = elem->find_children("Children").front();
     if (childrenElem) {
         DataNode childrenNode;
         for (const auto& childElem : childrenElem->find_children("GameObject")) {

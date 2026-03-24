@@ -48,7 +48,7 @@ enum class PlayerState {
 /// @section PlayerComponent
 class PlayerComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER; //* Player component type
+    static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_PLAYER; //* Player component type
 
     /// @brief Constructor for PlayerComponent
     /// @param owner The GameObject that owns this component.
@@ -68,7 +68,7 @@ class PlayerComponent : public Syngine::Component {
     /// @return The component type of this component.
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
 
     /// @brief Clone the PlayerComponent
     /// @return A unique pointer to the cloned PlayerComponent

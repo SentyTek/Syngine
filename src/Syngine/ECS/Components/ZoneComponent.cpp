@@ -59,11 +59,11 @@ ZoneComponent& ZoneComponent::operator=(const ZoneComponent& other) {
 }
 
 ZoneComponent::~ZoneComponent() {}
-Components ZoneComponent::GetComponentType() { return componentType; }
+Syngine::ComponentTypeID ZoneComponent::GetComponentType() { return componentType; }
 
 Serializer::DataNode ZoneComponent::Serialize() const {
     Serializer::DataNode node;
-    node / "type" = static_cast<int>(SYN_COMPONENT_ZONE);
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
     node / "shape" = static_cast<int>(m_shape);
     node / "position" = std::vector<float>{m_pos[0], m_pos[1], m_pos[2]};
     node / "size" = std::vector<float>{m_size[0], m_size[1], m_size[2]};
@@ -262,7 +262,7 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
     // ParseXml
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<int>(SYN_COMPONENT_ZONE);
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
         for (const auto& attr : elem->attributes()) {
             scl::string key = attr->tag();
             scl::string value = attr->data();

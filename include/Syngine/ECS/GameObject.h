@@ -127,14 +127,21 @@ class GameObject {
     /// @return 0 on success, -1 if the component was not found
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int RemoveComponent(Syngine::Components type);
+    int RemoveComponent(Syngine::ComponentTypeID type);
 
     /// @brief Check if the GameObject has a component of the specified type
     /// @param type Type of the component to check
     /// @return true if the component exists, false otherwise
     /// @threadsafety safe
     /// @since v0.0.1
-    bool HasComponent(Syngine::Components type);
+    bool HasComponent(Syngine::ComponentTypeID type);
+
+    /// @brief Get a component of the specified type
+    /// @param type Type of the component to get
+    /// @return Pointer to the component if it exists, nullptr otherwise
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    Component* GetComponent(Syngine::ComponentTypeID type) const;
 
     /// @brief Get a component of the specified type
     /// @param T Type of the component to get
@@ -184,7 +191,7 @@ class GameObject {
   private:
     long id; // Unique ID for the GameObject
 
-    std::map<Syngine::Components, std::unique_ptr<Syngine::Component>>
+    std::map<Syngine::ComponentTypeID, std::unique_ptr<Syngine::Component>>
         components; // Map of components attached to the GameObject
 
     bool isActive = true; // Whether the GameObject is active or not

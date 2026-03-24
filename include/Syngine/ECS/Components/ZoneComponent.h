@@ -52,7 +52,7 @@ class ZoneComponent : public Syngine::Component {
 
     GameObject* m_owner; // Reference to the owner game object
   public:
-    static constexpr Syngine::Components componentType =
+    static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_ZONE; //* Zone component type
 
     /// @brief Constructor for ZoneComponent
@@ -88,7 +88,7 @@ class ZoneComponent : public Syngine::Component {
     /// @return The component type of this component.
     /// @threadsafety read-only
     /// @since v0.0.1
-    Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
 
     /// @brief Initializes the zone component with shape, position, and size.
     /// @param shape The shape of the zone (box or sphere).

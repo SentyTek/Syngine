@@ -131,7 +131,7 @@ GameObject* Registry::GetGameObjectById(int id) noexcept {
 }
 
 std::vector<GameObject*>
-Registry::GetGameObjectsWithComponent(Syngine::Components type) noexcept {
+Registry::GetGameObjectsWithComponent(Syngine::ComponentTypeID type) noexcept {
     std::vector<GameObject*> result;
     for (const auto& pair : m_AllObjects) {
         if (pair.second->HasComponent(type)) {
@@ -143,7 +143,7 @@ Registry::GetGameObjectsWithComponent(Syngine::Components type) noexcept {
 
 // Internal notifications
 void Registry::_NotifyComponentAdded(GameObject*         gameobject,
-                                    Syngine::Components type) noexcept {
+                                    Syngine::ComponentTypeID type) noexcept {
     if (!gameobject) return;
 
     switch (type) {
@@ -184,7 +184,7 @@ void Registry::_NotifyComponentAdded(GameObject*         gameobject,
 }
 
 void Registry::_NotifyComponentRemoved(GameObject*         gameobject,
-                                      Syngine::Components type) noexcept {
+                                      Syngine::ComponentTypeID type) noexcept {
     if (!gameobject) return;
 
     auto removeFrom = [&](std::vector<GameObject*>& vec) {

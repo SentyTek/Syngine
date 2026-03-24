@@ -50,13 +50,13 @@ MeshComponent::~MeshComponent() {
     this->UnloadMesh();
 }
 
-Syngine::Components MeshComponent::GetComponentType() {
+Syngine::ComponentTypeID MeshComponent::GetComponentType() {
     return SYN_COMPONENT_MESH;
 }
 
 Serializer::DataNode MeshComponent::Serialize() const {
     Serializer::DataNode node;
-    node / "type" = static_cast<int>(SYN_COMPONENT_MESH);
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
     node / "path" = _MakeRelativeToRoot(this->meshData.path);
     node / "hasTextures" = this->meshData.hasTextures;
     //TODO: mats will need to be serialized at some point
@@ -312,7 +312,7 @@ static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH,
     // ParseXML: XML element -> DataNode
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<int>(SYN_COMPONENT_MESH);
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
         for (const auto& attr : elem->attributes()) {
             scl::string key = attr->tag();
             scl::string value = attr->data();
@@ -330,9 +330,8 @@ static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH,
     [](Syngine::GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
         std::string path = data.Has("path") ? data["path"].As<std::string>() : "";
         bool hasTextures = data.Has("hasTextures") ? data["hasTextures"].As<bool>() : false;
-        auto component =
-            owner->AddComponent<Syngine::MeshComponent>(path, hasTextures);
-        return std::make_unique<Syngine::MeshComponent>(*component);
+        auto meshComp = std::make_unique<MeshComponent>(owner, path, hasTextures);
+        return meshComp;
     }
 );
 

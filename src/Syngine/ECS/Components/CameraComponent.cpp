@@ -63,7 +63,7 @@ CameraComponent::~CameraComponent() {
 
 Serializer::DataNode CameraComponent::Serialize() const {
     Serializer::DataNode node;
-    node / "type" = static_cast<int>(SYN_COMPONENT_CAMERA);
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
     node / "eye" = std::vector<float>{ camera.eye[0], camera.eye[1], camera.eye[2] };
     node / "fov" = camera.fov;
     node / "farPlane" = camera.farPlane;
@@ -100,7 +100,7 @@ void CameraComponent::Update(int viewId, int width, int height) {
     bgfx::setViewTransform(viewId, cam.view, cam.proj);
 }
 
-Components CameraComponent::GetComponentType() {
+Syngine::ComponentTypeID CameraComponent::GetComponentType() {
     return SYN_COMPONENT_CAMERA;
 }
 
@@ -230,7 +230,7 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
     // ParseXml
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<int>(SYN_COMPONENT_CAMERA);
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
         for (const auto& attr : elem->attributes()) {
             scl::string key = attr->tag();
             std::string value = attr->data().cstr();

@@ -40,10 +40,11 @@ GameObject::GameObject(const Serializer::DataNode& data) {
     if (data.Has("components")) {
         const auto& componentsNode = data["components"];
         for (const auto& [typeStr, data] : componentsNode.As<Serializer::DataNode::NodeMap>()) {
-            int typeId = std::stoi(typeStr);
+            Syngine::ComponentTypeID typeId = std::stoull(typeStr);
             std::unique_ptr<Component> comp = ComponentRegistry::Instantiate(typeId, this, data);
             if (comp) {
-                this->components[static_cast<Syngine::Components>(typeId)] = std::move(comp);
+                this->components[typeId] = std::move(comp);
+                Registry::_NotifyComponentAdded(this, typeId);
             }
         }
     }
@@ -98,6 +99,7 @@ GameObject& GameObject::operator=(const GameObject& other) {
         // Use the AddComponent method to ensure proper registration
         this->components[type] = comp->Clone();
         this->components[type]->m_owner = this;
+        Registry::_NotifyComponentAdded(this, type);
     }
 
     // Register the new GameObject
@@ -136,21 +138,31 @@ size_t GameObject::GetComponentCount() const noexcept {
     return this->components.size();
 }
 
-int GameObject::RemoveComponent(Syngine::Components type) {
+int GameObject::RemoveComponent(Syngine::ComponentTypeID type) {
     auto it = this->components.find(type);
     if (it == this->components.end()) {
-        return 1; // Component not found
+        return -1; // Component not found
     }
     
     this->components.erase(it);
+    Registry::_NotifyComponentRemoved(this, type);
     return 0;
 }
 
-bool GameObject::HasComponent(Syngine::Components type) {
+bool GameObject::HasComponent(Syngine::ComponentTypeID type) {
     // Check if the component exists in the map
     auto it = this->components.find(type);
     if (it != this->components.end()) return true; // Component found
     return false;
+}
+
+Component* GameObject::GetComponent(Syngine::ComponentTypeID type) const {
+    auto it = this->components.find(type);
+    if (it == this->components.end()) {
+        return nullptr; // Component not found
+    }
+    
+    return it->second.get();
 }
 
 Serializer::DataNode GameObject::Serialize() const {
@@ -167,7 +179,7 @@ Serializer::DataNode GameObject::Serialize() const {
     // Serialize components
     Serializer::DataNode componentsNode;
     for (const auto& [type, comp] : this->components) {
-        componentsNode[std::to_string(static_cast<int>(type))] = comp->Serialize();
+        componentsNode[std::to_string(type)] = comp->Serialize();
     }
     node["components"] = componentsNode;
 
@@ -191,8 +203,19 @@ Serializer::DataNode GameObject::Serialize() const {
 // Parent system relies on TransformComponent
 
 void GameObject::SetParent(GameObject* parent) {
-    parent->GetComponent<TransformComponent>()->SetParent(
-        parent->GetComponent<TransformComponent>());
+    if (parent == this) {
+        Syngine::Logger::Warn("GameObject cannot be its own parent");
+        return;
+    }
+    if (parent == nullptr) {
+        // Detach from current parent
+        TransformComponent* tComp = this->GetComponent<TransformComponent>();
+        if (tComp) {
+            tComp->SetParent(nullptr);
+        }
+        return;
+    }
+    this->GetComponent<TransformComponent>()->SetParent(parent->GetComponent<TransformComponent>());
     parent->AddChild(this);
 }
 
@@ -215,6 +238,14 @@ void GameObject::RemoveChild(GameObject* child) {
 }
 
 void GameObject::AddChild(GameObject* child) {
+    if (child == this) {
+        Syngine::Logger::Warn("GameObject cannot be a child of itself");
+        return;
+    }
+    if (child == nullptr) {
+        Syngine::Logger::Warn("Cannot add null child to GameObject");
+        return;
+    }
     TransformComponent* tComp = child->GetComponent<TransformComponent>();
     if (tComp) {
         tComp->SetParent(this->GetComponent<TransformComponent>());

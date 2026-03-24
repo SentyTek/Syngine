@@ -47,7 +47,7 @@ BillboardComponent::~BillboardComponent() {
     // No specific cleanup needed for now
 }
 
-Syngine::Components BillboardComponent::GetComponentType() {
+Syngine::ComponentTypeID BillboardComponent::GetComponentType() {
     return SYN_COMPONENT_BILLBOARD;
 }
 
@@ -80,7 +80,7 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
     // ParseXML: XML element -> DataNode
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<int>(SYN_COMPONENT_BILLBOARD);
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_BILLBOARD);
         for (const auto& attr : elem->attributes()) {
             scl::string key = attr->tag();
             scl::string value = attr->data();
