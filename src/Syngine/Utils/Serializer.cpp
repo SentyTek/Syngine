@@ -29,6 +29,7 @@ bool Serializer::DataNode::Has(const std::string& key) const {
 Serializer::DataNode::Type Serializer::DataNode::GetType() const {
     if (std::holds_alternative<std::monostate>(m_data)) return Type::Null;
     if (std::holds_alternative<int>(m_data)) return Type::Integer;
+    if (std::holds_alternative<uint64_t>(m_data)) return Type::UnsignedInteger;
     if (std::holds_alternative<float>(m_data)) return Type::Float;
     if (std::holds_alternative<bool>(m_data)) return Type::Boolean;
     if (std::holds_alternative<std::string>(m_data)) return Type::String;

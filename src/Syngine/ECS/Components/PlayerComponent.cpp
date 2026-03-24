@@ -195,11 +195,15 @@ void PlayerComponent::_HandleInput(const SDL_Event& event) {
     }
 }
 
-void PlayerComponent::Update(const bool* keystate, float deltaTime) {
+void PlayerComponent::Update(float deltaTime) {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
     }
+    
+    // Fetch keyboard state internally
+    const bool* keystate = SDL_GetKeyboardState(NULL);
+    
     m_prevPlayerState = m_playerState;
     m_deltaTime = deltaTime;
 
@@ -348,7 +352,7 @@ void PlayerComponent::Update(const bool* keystate, float deltaTime) {
     m_realMoveSpeed = bx::lerp(m_realMoveSpeed, m_targetMoveSpeed, 1.0f - bx::exp(-moveSpeedLerpSpeed * m_deltaTime));
 }
 
-void PlayerComponent::_PostPhysicsUpdate() {
+void PlayerComponent::PostPhysicsUpdate() {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;

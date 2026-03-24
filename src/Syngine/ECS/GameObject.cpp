@@ -8,6 +8,7 @@
 
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
+#include "Syngine/ECS/Components/RigidbodyComponent.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/Utils/Serializer.h"
 #include "Syngine/ECS/GameObject.h"
@@ -249,5 +250,13 @@ void GameObject::AddChild(GameObject* child) {
     TransformComponent* tComp = child->GetComponent<TransformComponent>();
     if (tComp) {
         tComp->SetParent(this->GetComponent<TransformComponent>());
+
+        // Prefab children can create rigidbodies before parent linkage.
+        // After parenting, push the updated world pose into the physics body.
+        if (auto* rb = child->GetComponent<RigidbodyComponent>()) {
+            rb->SyncBodyToTransform();
+        }
+    } else {
+        Syngine::Logger::Error("Child GameObject must have a TransformComponent to be added as a child");
     }
 }

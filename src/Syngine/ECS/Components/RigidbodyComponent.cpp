@@ -100,6 +100,13 @@ float RigidbodyComponent::GetRestitution() const { return restitution; }
 
 // Initialize the RigidbodyComponent with the given parameters.
 void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
+    pendingParams = params;
+    initPending = false;
+
+    if (initComplete && !bodyID.IsInvalid()) {
+        return;
+    }
+
     this->physicsManager = Syngine::Core::_GetApp()->physicsManager.get();
     this->transform      = this->m_owner->GetComponent<TransformComponent>();
     this->mass           = params.mass;
@@ -107,8 +114,14 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
     this->restitution    = params.restitution;
     this->shape          = params.shape;
     this->shapeParameters = params.shapeParameters;
+    if (!this->transform) {
+        initPending = true;
+        Syngine::Logger::Warn("RigidbodyComponent deferred initialization: waiting for TransformComponent");
+        return;
+    }
 
     if (!physicsManager || !transform) {
+        initPending = true;
         return;
     }
 
@@ -191,16 +204,52 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         // Set the body properties (mass set during body creation)
         if (friction > 0) bodyInterface.SetFriction(bodyID, friction);
         if (restitution > 0) bodyInterface.SetRestitution(bodyID, restitution);
+        initComplete = true;
+        initPending = false;
+    } else {
+        initPending = true;
     }
 }
 
-void RigidbodyComponent::Update(bool simulate) {
+void RigidbodyComponent::RetryInitIfPending() {
+    if (!initPending || initComplete) {
+        return;
+    }
+
+    Syngine::Logger::LogF(LogLevel::INFO, "RigidbodyComponent: Retrying initialization for GameObject '%s'", m_owner->name.c_str());
+    Init(pendingParams);
+}
+
+void RigidbodyComponent::SyncBodyToTransform() {
+    if (initPending && !initComplete) {
+        RetryInitIfPending();
+    }
+
     if (!physicsManager || !transform || bodyID.IsInvalid()) {
         return;
     }
-    if (!physicsManager || !transform || bodyID.IsInvalid()) return;
 
     BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    float* curPos = transform->GetPosition();
+    float  curRot[4];
+    transform->GetRotationQuaternion(curRot[0], curRot[1], curRot[2], curRot[3]);
+
+    Vec3 pos(curPos[0], curPos[1], curPos[2]);
+    Quat rot(curRot[0], curRot[1], curRot[2], curRot[3]);
+    bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
+}
+
+void RigidbodyComponent::Update(float deltaTime) {
+    if (initPending && !initComplete) {
+        RetryInitIfPending();
+    }
+
+    if (!physicsManager || !transform || bodyID.IsInvalid()) {
+        return;
+    }
+
+    BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    bool simulate = Syngine::Core::Get()->GetSimulationState();
 
     if (simulate) {
         // Smoothly lerp the TransformComponent towards the physics body's

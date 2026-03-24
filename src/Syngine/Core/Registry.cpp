@@ -11,6 +11,7 @@
 #include "Syngine/Core/ZoneManager.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
+#include "Syngine/ECS/Components/RigidbodyComponent.h"
 
 #include <string>
 
@@ -155,6 +156,15 @@ void Registry::_NotifyComponentAdded(GameObject*         gameobject,
                 // Check if already in the list
                 if (std::find(m_RenderableObjects.begin(), m_RenderableObjects.end(), gameobject) == m_RenderableObjects.end()) {
                     m_RenderableObjects.push_back(gameobject);
+                }
+            }
+
+            // If a rigidbody was added before transform, retry deferred init now.
+            if (type == Syngine::SYN_COMPONENT_TRANSFORM &&
+                gameobject->HasComponent(Syngine::SYN_COMPONENT_RIGIDBODY)) {
+                auto* rb = gameobject->GetComponent<Syngine::RigidbodyComponent>();
+                if (rb) {
+                    rb->RetryInitIfPending();
                 }
             }
             break;

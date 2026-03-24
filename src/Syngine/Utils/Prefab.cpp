@@ -41,6 +41,7 @@ void Serializer::Prefab::WriteGameObject(const DataNode&        node,
                 case DataNode::Type::Null: return std::string("null");
                 case DataNode::Type::Boolean: return n.As<bool>() ? std::string("true") : std::string("false");
                 case DataNode::Type::Integer: return std::to_string(n.As<int>());
+                case DataNode::Type::UnsignedInteger: return std::to_string(n.As<uint64_t>());
                 case DataNode::Type::Float: {
                     std::string s = std::to_string(n.As<float>());
                     auto dot = s.find('.');

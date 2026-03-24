@@ -102,15 +102,12 @@ class PlayerComponent : public Syngine::Component {
 
     /// @brief Updates the player. Mostly handles movement, physics, and
     /// updating the state.
-    /// @param keystate The current state of the keyboard.
-    /// @param simulate Whether to simulate physics or not.
     /// @param deltaTime The time since the last update.
     /// @note This is called every frame to update the player's position,
-    /// rotation, and state.
+    /// rotation, and state. Fetches keyboard state internally.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    /// @internal
-    void Update(const bool* keystate, float deltaTime);
+    void Update(float deltaTime) override;
 
     /// @brief Updates position and camera after physics simulation.
     /// @note This is called after the physics simulation to update the player's
@@ -118,7 +115,7 @@ class PlayerComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    void _PostPhysicsUpdate();
+    void PostPhysicsUpdate() override;
 
     /// @brief Gets the current player state.
     /// @return The current player state.

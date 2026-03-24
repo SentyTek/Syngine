@@ -295,34 +295,33 @@ bool Core::Update() {
         }
     }
 
-    const bool* keystate = SDL_GetKeyboardState(NULL);
     if (m_internal.simulate) {
-        auto players =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_PLAYER);
-        for (auto go : players) {
+        // Polymorphic component update loop - iterate all GameObjects
+        auto& allGameObjects = Registry::GetAllGameObjects();
+        
+        // Update all components
+        for (auto& [id, go] : allGameObjects) {
             if (!go) continue;
-            PlayerComponent* pc = go->GetComponent<PlayerComponent>();
-            if (!pc) continue;
-            pc->Update(keystate, deltaTime);
-        }
-
-        for (auto go :
-             Registry::GetGameObjectsWithComponent(SYN_COMPONENT_RIGIDBODY)) {
-            if (!go) continue;
-            RigidbodyComponent* rb = go->GetComponent<RigidbodyComponent>();
-            if (!rb) continue;
-            rb->Update(m_internal.DEFAULT_PHYSICS_TIMESTEP);
+            const auto& components = go->GetComponents();
+            for (const auto& [typeId, component] : components) {
+                if (component && component->isEnabled) {
+                    component->Update(deltaTime);
+                }
+            }
         }
 
         // Update zones
         m_app->zoneManager->_UpdateZones();
 
-        // Post physics update (e.g. for player camera)
-        for (auto go : players) {
+        // Post physics update - call after physics step
+        for (auto& [id, go] : allGameObjects) {
             if (!go) continue;
-            PlayerComponent* pc = go->GetComponent<PlayerComponent>();
-            if (!pc) continue;
-            pc->_PostPhysicsUpdate();
+            const auto& components = go->GetComponents();
+            for (const auto& [typeId, component] : components) {
+                if (component && component->isEnabled) {
+                    component->PostPhysicsUpdate();
+                }
+            }
         }
     }
 

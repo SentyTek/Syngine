@@ -158,6 +158,14 @@ class GameObject {
     /// @since v0.0.1
     template <typename T, typename... Args> T* AddComponent(Args&&... args);
 
+    /// @brief Get const access to the components map for iteration
+    /// @return Const reference to the components map
+    /// @threadsafety safe
+    /// @since v0.0.1
+    const std::map<ComponentTypeID, std::unique_ptr<Component>>& GetComponents() const {
+        return components;
+    }
+
     /// @brief Serialize the GameObject and its components into a DataNode for saving
     /// @return DataNode representing the serialized GameObject
     /// @threadsafety safe
