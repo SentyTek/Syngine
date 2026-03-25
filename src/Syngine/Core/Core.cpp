@@ -80,9 +80,17 @@ Core::Core(const EngineConfig config) {
 
 Core::~Core() {
     // Cleanup
+
+    // Destroy all game objects first. This ensures components (like Billboards, Meshes)
+    // release their BGFX resources (textures, buffers) before we shut down the renderer.
+    Syngine::Registry::Clear();
+
     if (m_app) {
         if (m_app->synModels) {
-            m_app->synModels->_UnloadAllMeshes(); // Must run before renderer resets (bgfx still alive)
+            // Don't call _UnloadAllMeshes() here because Registry::Clear() has
+            // already done it for us. Doing it again causes a
+            // BGFX assertion errors due to double-freeing. Please don't have
+            // orphaned meshes.
             m_app->synModels.reset();
         }
         if (m_app->renderer) {

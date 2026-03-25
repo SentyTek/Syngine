@@ -82,12 +82,27 @@ int Registry::RemoveGameObject(GameObject* gameObject) noexcept {
 }
 
 void Registry::Clear() noexcept {
-    // Clear all GameObjects and indexed sublists
+    // Collect all objects into a temporary vector to avoid iterator
+    // invalidation during deletion
+    std::vector<GameObject*> objectsToDelete;
+    objectsToDelete.reserve(m_AllObjects.size());
+    for (auto& pair : m_AllObjects) {
+        objectsToDelete.push_back(pair.second);
+    }
+
+    // Clear all internal maps/lists so that when ~GameObject calls
+    // RemoveGameObject, it returns early (object not found) instead of trying
+    // to erase from these containers.
     m_AllObjects.clear();
     m_PhysicsObjects.clear();
     m_RenderableObjects.clear();
     m_ScriptedObjects.clear();
     m_Gizmos.clear();
+
+    // Delete the objects (invokes destructors, which cleans up components/resources)
+    for (GameObject* obj : objectsToDelete) {
+        delete obj;
+    }
 }
 
 int Registry::RemoveGameObjectById(int id) noexcept {

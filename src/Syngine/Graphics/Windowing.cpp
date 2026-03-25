@@ -66,7 +66,6 @@ Window::~Window() {
     SDL_DestroyWindow(m_window);
     SDL_Quit();
     m_window = nullptr;
-    Syngine::Logger::Info("Window destroyed successfully");
 }
 
 bool Window::ShouldClose() const noexcept { return m_shouldClose; }

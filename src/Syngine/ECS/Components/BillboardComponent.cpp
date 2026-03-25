@@ -28,23 +28,35 @@ BillboardComponent::BillboardComponent(const BillboardComponent& other) {
     this->m_owner = other.m_owner;
     this->size    = other.size;
     this->m_mode  = other.m_mode;
-    this->m_texture = other.m_texture;
     this->m_texturePath = other.m_texturePath;
+    this->m_texture = BGFX_INVALID_HANDLE;
+    if (!this->m_texturePath.empty()) {
+        this->Init(this->m_texturePath);
+    }
 }
 
 BillboardComponent& BillboardComponent::operator=(const BillboardComponent& other) {
     if (this != &other) {
+        if (bgfx::isValid(this->m_texture)) {
+            bgfx::destroy(this->m_texture);
+            this->m_texture = BGFX_INVALID_HANDLE;
+        }
         this->m_owner = other.m_owner;
         this->size    = other.size;
         this->m_mode  = other.m_mode;
-        this->m_texture = other.m_texture;
         this->m_texturePath = other.m_texturePath;
+        if (!this->m_texturePath.empty()) {
+            this->Init(this->m_texturePath);
+        }
     }
     return *this;
 }
 
 BillboardComponent::~BillboardComponent() {
-    // No specific cleanup needed for now
+    if (bgfx::isValid(this->m_texture)) {
+        bgfx::destroy(this->m_texture);
+        this->m_texture = BGFX_INVALID_HANDLE;
+    }
 }
 
 Syngine::ComponentTypeID BillboardComponent::GetComponentType() {

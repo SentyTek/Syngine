@@ -84,11 +84,11 @@ bool MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
 bool MeshComponent::UnloadMesh() {
     // Unload the mesh data
     if (bgfx::isValid(this->meshData.vbh)) {
-        // bgfx::destroy(this->meshData.vbh);
+        bgfx::destroy(this->meshData.vbh);
         this->meshData.vbh = BGFX_INVALID_HANDLE;
     }
     if (bgfx::isValid(this->meshData.ibh)) {
-        // bgfx::destroy(this->meshData.ibh);
+        bgfx::destroy(this->meshData.ibh);
         this->meshData.ibh = BGFX_INVALID_HANDLE;
     }
     for (auto& mat : this->meshData.materials) {

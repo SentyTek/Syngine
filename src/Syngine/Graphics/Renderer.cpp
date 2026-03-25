@@ -74,36 +74,23 @@ Renderer::~Renderer() {
     }
     m_uniformRegistry.clear();
 
-    // Destroy all programs and uniforms (if not already destroyed)
-    for (auto& view : Renderer::viewPrograms) {
+    // Destroy all programs. Uniforms are already destroyed above via m_uniformRegistry
+    // (RegisterUniform copies the same handle/data pointer into both stores, so only
+    // destroy from one of them).
+    for (auto& view : viewPrograms) {
         for (auto& prog : view.second) {
-            for (auto& uniform : prog.uniforms) {
-                if (bgfx::isValid(uniform.handle)) {
-                    bgfx::destroy(uniform.handle);
-                }
-                if (uniform.data) {
-                    free(uniform.data);
-                    uniform.data = nullptr;
-                }
-            }
             bgfx::destroy(prog.program);
         }
     }
-    Renderer::viewPrograms.clear();
-    // TODO: loop through renderer::viewprograms effectively (note each program
-    // stores uniforms)
+    viewPrograms.clear();
 
     // Clear gizmos
     for (auto& [tag, gizmo] : m_gizmoRegistry) {
-        bgfx::TextureHandle tex = gizmo->_GetTexture();
-        if (bgfx::isValid(tex)) {
-            bgfx::destroy(tex);
-        }
         delete gizmo;
     }
     m_gizmoRegistry.clear();
 
-    bgfx::shutdown(); // Shut down bgfx BEFORE destroying the window
+    RenderCore::_Shutdown(); // Destroys RenderCore buffers/textures/VBs and calls bgfx::shutdown()
 }
 
 bool Renderer::_CreateRenderer(const RendererConfig& config) {
@@ -269,8 +256,8 @@ Program* Renderer::_GetProgram(size_t id) {
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& name) {
     for (int i = 0; i < viewPrograms[viewId].size(); ++i) {
         if (viewPrograms[viewId][i].name == name) {
-            // Destroy all uniforms associated with this program
             for (auto& uniform : viewPrograms[viewId][i].uniforms) {
+                m_uniformRegistry.erase(uniform.handle.idx);
                 bgfx::destroy(uniform.handle);
                 if (uniform.data) {
                     free(uniform.data);
@@ -285,8 +272,8 @@ bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& nam
 }
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, size_t id) {
     if (id < viewPrograms[viewId].size()) {
-        // Destroy all uniforms associated with this program
         for (auto& uniform : viewPrograms[viewId][id].uniforms) {
+            m_uniformRegistry.erase(uniform.handle.idx);
             bgfx::destroy(uniform.handle);
             if (uniform.data) {
                 free(uniform.data);
@@ -302,8 +289,8 @@ bool Renderer::RemoveProgram(Syngine::ViewID viewId, size_t id) {
 bool Renderer::RemoveAllPrograms() {
     for (auto& programs : viewPrograms) {
         for (auto& program : programs.second) {
-            // Destroy all uniforms associated with this program
             for (auto& uniform : program.uniforms) {
+                m_uniformRegistry.erase(uniform.handle.idx);
                 bgfx::destroy(uniform.handle);
                 if (uniform.data) {
                     free(uniform.data);

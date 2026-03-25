@@ -553,10 +553,20 @@ void RenderCore::_Shutdown() {
         bgfx::destroy(dummy);
         dummy = BGFX_INVALID_HANDLE;
     }
+    if(bgfx::isValid(m_fsQuadVbh)) {
+        bgfx::destroy(m_fsQuadVbh);
+        m_fsQuadVbh = BGFX_INVALID_HANDLE;
+    }
 
-    // Destroy scene buffers
-    m_buffers.ForEachFrameBuffer([](auto& fb) { if (bgfx::isValid(fb)) bgfx::destroy(fb); });
-    m_buffers.ForEachTexture([](auto& tex) { if (bgfx::isValid(tex)) bgfx::destroy(tex); });
+    // Framebuffers are created with destroyTextures=true, so they own and
+    // release attached textures on destroy.
+    m_buffers.ForEachFrameBuffer([](auto& fb) {
+        if (bgfx::isValid(fb)) {
+            bgfx::destroy(fb);
+        }
+        fb = BGFX_INVALID_HANDLE;
+    });
+    m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
     m_defaultUniformIds.clear();
 
     bgfx::shutdown();
@@ -655,9 +665,15 @@ bool RenderCore::_SetResolution(int width, int height) {
     bgfx::reset(uint32_t(width), uint32_t(height), m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
     bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
 
-    // Reset all frame buffers to new res
-    m_buffers.ForEachFrameBuffer([](auto& fb) { if (bgfx::isValid(fb)) bgfx::destroy(fb); });
-    m_buffers.ForEachTexture([](auto& tex) { if (bgfx::isValid(tex)) bgfx::destroy(tex); });
+    // Reset all frame buffers to new res. Framebuffer destroy also releases
+    // attached textures because those FBOs were created with destroyTextures=true.
+    m_buffers.ForEachFrameBuffer([](auto& fb) {
+        if (bgfx::isValid(fb)) {
+            bgfx::destroy(fb);
+        }
+        fb = BGFX_INVALID_HANDLE;
+    });
+    m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
     if (!_CreateSceneBuffers()) return false;
     return true;
 }
