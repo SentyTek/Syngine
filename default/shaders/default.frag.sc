@@ -27,15 +27,15 @@ void main() {
     float NdotL = max(dot(normal, lightDirToSun), 0.0);
 
     float nightFactor = clamp(smoothstep(-0.05, 0.05, sunElevation), 0.2, 1.0);
-    vec3 ambient = mix(col.rgb, skyColor, hemiMix) * u_floats.z  * clamp(NdotL, 0.1, 1.0); // Ambient scaled by NdotL for better blending at low sun angles;
+    vec3 ambient = mix(col.rgb, skyColor, hemiMix) * u_floats.z;
     
     float shadowFactor = getShadowFactor(v_worldPos, vec3(0.0, 1.0, 0.0), normal, u_lightDir, v_viewDepth);
-    
+
     float sunIntensity = smoothstep(-0.1, 0.1, sunElevation);
     vec3 directLight = u_sunColor.xyz * sunIntensity * NdotL * shadowFactor;
 
     // Fake first-bounce global illumination
-    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.5 * clamp(dot(normal, -lightDirToSun), 0.5, 1.0);
+    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.05 * clamp(dot(normal, -lightDirToSun), 0.2, 1.0);
 
     // Calculate view direction
     vec3 viewDir = normalize(u_viewPos.xyz - v_worldPos);

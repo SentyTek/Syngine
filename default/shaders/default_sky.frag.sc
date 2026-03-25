@@ -78,8 +78,8 @@ vec3 starsFromDir(vec3 viewDir, float time, float nightMask) {
     float core = 1.0 - smoothstep(0.0, size, dist);
     core = pow(core, 4.0); // Sharpen the dot
 
-    // Use a large multiplier for time to ensure it doesn't look like global pulsing
-    float twinkle = 0.5 + 0.5 * sin(time * 2.0 + rnd * 150.0);
+    // Use a large multiplier for time to ensure it doesn't look like global pulsing (spoiler alert it does)
+    //float twinkle = 0.5 + 0.5 * sin(time * 2.0 + rnd * 150.0);
 
     // Color variation
     float t = hash31(vec3(cell, 123.0));
@@ -88,7 +88,7 @@ vec3 starsFromDir(vec3 viewDir, float time, float nightMask) {
     // Use the original viewDir.y to fade stars near the horizon
     float horizonFade = smoothstep(0.0, 0.2, viewDir.y);
 
-    return col * exists * core * twinkle * horizonFade * nightMask;
+    return col * exists * core * horizonFade * nightMask; // * twinkle;
 }
 
 // Ray / sphere intersection in the sphere's local space.

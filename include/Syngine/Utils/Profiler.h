@@ -8,6 +8,9 @@
 
 #pragma once
 
+// If this macro is defined, we're not compiling in the profiler
+// To prevent build issues, the PROFILESCOPE and PROFILEFUNCTION
+// macros are still defined as other code still uses it.
 #ifdef SYN_DEBUG_GRAPHICS
 #define SYN_PROFILE_SCOPE(name)
 #define SYN_PROFILE_FUNCTION()

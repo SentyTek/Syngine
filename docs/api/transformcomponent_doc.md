@@ -39,6 +39,7 @@
 - [SetParent](#synginesetparent)
 - [GetParent](#synginegetparent)
 - [GetChildren](#synginegetchildren)
+- [GetVersion](#synginegetversion)
 
 ---
 
@@ -94,7 +95,7 @@ Signature:
 Signature:
 
 ```cpp
- void Init(std::vector<float> position = {0.0f, 0.0f, 0.0f}, std::vector<float> rotation = {0.0f, 0.0f, 0.0f, 1.0f},
+ void Init(std::vector<float> position = { 0.0f, 0.0f, 0.0f }, std::vector<float> rotation = { 0.0f, 0.0f, 0.0f, 1.0f },
 ```
 
 **Parameters:**
@@ -334,7 +335,7 @@ Signature:
 Signature:
 
 ```cpp
- void SetPosition(float x, float y,
+ void SetPosition(float x, float y, float z);
 ```
 
 **Parameters:**
@@ -573,6 +574,21 @@ Signature:
 
 ---
 
+#### **`Syngine::GetVersion`**
+
+
+ Get the version number of this transform
+
+Signature:
+
+```cpp
+ uint64_t GetVersion() const ;
+```
+
+**Returns:** Version number that increments on each change
+
+---
+
 ## Member Variables
 
 
@@ -581,7 +597,7 @@ Signature:
 | `float` | `m_position` | Position of the transform |
 | `float` | `m_rotation` | Rotation of the transform (Quaternion) |
 | `float` | `m_scale` | Scale of the transform |
-| `constexpr` | `Syngine` | Transform component type |
+| `std::vector<TransformComponent*>` | `m_children` | Child transform components |
 
 ---
 

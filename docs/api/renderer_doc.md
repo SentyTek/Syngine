@@ -36,10 +36,12 @@
 - [SetSunDirection](#renderersetsundirection)
 - [SetGizmoSize](#renderersetgizmosize)
 - [GetGizmoSize](#renderergetgizmosize)
-- [_RenderFrame](#renderer_renderframe)
 - [_RegisterGizmo](#renderer_registergizmo)
+- [GetUniform](#renderergetuniform)
+- [SetPseudoCamera](#renderersetpseudocamera)
 - [_CreateRenderer](#renderer_createrenderer)
 - [_RenderGizmos](#renderer_rendergizmos)
+- [_GetProgram](#renderer_getprogram)
 
 ---
 
@@ -54,7 +56,7 @@
 Signature:
 
 ```cpp
- Renderer(int width, int height, const RendererConfig& config = RendererConfig());
+ Renderer(int width, int height, const RendererConfig& config);
 ```
 
 **Parameters:**
@@ -95,6 +97,8 @@ enum ViewID : bgfx::ViewId
 | `VIEW_LIGHTING` | Lighting pass for deferred shading |
 | `VIEW_FORWARD` | Forward rendering pass for translucent objects |
 | `VIEW_BILLBOARD` | Billboard rendering |
+| `VIEW_AO` | Ambient occlusion passes (3 passes) |
+| `VIEW_POSTPROCESS` | Post-processing effects passes (Max 8 passes) |
 | `VIEW_DEBUG` | Debug rendering pass for debug rendering |
 | `VIEW_BILL_DBG` | Billboard debug rendering |
 | `VIEW_UI` | UI rendering |
@@ -196,6 +200,8 @@ struct RendererConfig
 | --- | --- | --- | 
 | `bool` | `useShadows` | Whether to use shadow mapping |
 | `float` | `shadowDist` | Distance for shadow rendering |
+| `bool` | `vsync` | Whether to enable vertical sync |
+| `bool` | `usePseudoCamera` | (only if DebugModes.Enabled == true) Pseudo camera is a separate camera that all rendering will use, but the main camera will still be the one drawn to the screen |
 
 ---
 
@@ -559,34 +565,6 @@ Signature:
 
 ---
 
-#### **`Renderer::_RenderFrame`**
-
-
- Render a frame
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- bool _RenderFrame(CameraComponent* camera, DebugModes debug);
-```
-
-**Parameters:**
-
-- `lightDir`: Direction of the light for lighting calculations
-- `camera`: Pointer to the camera component for rendering
-- `debug`: Whether to render debug information
-
-**Returns:** If it rendered successfully
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
-
 #### **`Renderer::_RegisterGizmo`**
 
 
@@ -607,6 +585,50 @@ Signature:
 
 - `tag`: Name of the gizmo
 - `size`: Size of the gizmo
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Renderer::GetUniform`**
+
+
+ Get a uniform by ID
+
+Signature:
+
+```cpp
+ static Uniform* GetUniform(size_t id);
+```
+
+**Parameters:**
+
+- `id`: ID of the uniform (Returned by RegisterUniform)
+
+**Returns:** Pointer to the Uniform struct, or nullptr if not found
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Renderer::SetPseudoCamera`**
+
+
+ Set which CameraComponent to use as the pseudo camera for rendering
+
+Signature:
+
+```cpp
+ static void SetPseudoCamera(CameraComponent* camera);
+```
+
+**Parameters:**
+
+- `camera`: Pointer to the CameraComponent to use as the pseudo camera
 
 **Thread Safety:** not-safe
 
@@ -666,6 +688,30 @@ Signature:
 
 ---
 
+#### **`Renderer::_GetProgram`**
+
+
+ Internal helper for GetProgram.
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ static Program* _GetProgram(size_t id);
+```
+
+**Parameters:**
+
+- `id`: ID of the shader program
+
+**Returns:** Pointer to the Program struct, or nullptr if not found
+
+**Thread Safety:** read-only
+
+---
+
 ## Member Variables
 
 
@@ -675,18 +721,11 @@ Signature:
 | `int` | `height` | Height of the game window in pixels |
 | `std::string` | `m_title` | Title of the game window |
 | `bool` | `m_isReady` | Whether the renderer is initialized and ready |
-| `RendererConfig` | `m_config` | Renderer configuration options |
+| `static` | `std` | Registry of shader uniforms |
 | `static` | `std` | Registry of gizmos |
 | `float` | `m_gizmoSize` | Default size for gizmos |
-| `bgfx::VertexBufferHandle` | `m_billboardVbh` | Vertex buffer handle for billboards |
-| `bgfx::IndexBufferHandle` | `m_billboardIbh` | Index buffer handle for billboards |
-| `SDL_Window*` | `win` | SDL window handle |
-| `bgfx::VertexBufferHandle` | `dummy` | Dummy vertex buffer handle for rendering |
 | `static` | `std` | Shader programs organized by view ID |
-| `static` | `std` | Registry of shader uniforms |
-| `static` | `std` | Default uniform IDs |
-| `bgfx::TextureHandle` | `m_shadowDepth` | Shadow map depth texture handle |
-| `bgfx::FrameBufferHandle` | `m_shadowFB` | Shadow map framebuffer handle |
+| `CameraComponent*` | `m_pseudoCamera` | Pseudo camera for rendering when enabled in debug mode |
 | `DebugRender*` | `m_drender` | Debug renderer instance |
 | `bool` | `m_isFirstFrame` | Whether this is the first frame being rendered |
 
