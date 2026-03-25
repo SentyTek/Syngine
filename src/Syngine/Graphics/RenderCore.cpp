@@ -32,7 +32,7 @@
 #include "Syngine/Graphics/MetalBridge.h"
 #endif
 
-#define SYN_INT_SHADERBUNDLENAME "shaders/default_shaders.bin"
+#define SYNINT_DEFAULT_SHADERBUNDLE_NAME "shaders/default_shaders.spk"
 
 #define SYN_INT_RENDEREXIT(program)                                            \
     Syngine::Logger::Error("Failed to create " #program " program");           \
@@ -164,26 +164,26 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         true; // Teehee. Temporarily set to true to allow shader loading.
 
     m_internalPrograms.skyProgram =
-        Renderer::AddProgram(SYN_INT_SHADERBUNDLENAME, "shaders/default_sky", "skybox", VIEW_SKY);
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_sky", "skybox", VIEW_SKY);
     if (m_internalPrograms.skyProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("skybox")
     }
 
     m_internalPrograms.defaultProgram = Renderer::AddProgram(
-        SYN_INT_SHADERBUNDLENAME, "shaders/default", "default");
+        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default", "default");
     if (m_internalPrograms.defaultProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("default")
     }
 
     m_internalPrograms.textureProgram = Renderer::AddProgram(
-        SYN_INT_SHADERBUNDLENAME, "shaders/default_texture", "texture");
+        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_texture", "texture");
     if (m_internalPrograms.textureProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("texture")
     }
 
     m_internalPrograms.debugProgram =
-        Renderer::AddProgram(SYN_INT_SHADERBUNDLENAME,
-                             "shaders/default_debug",
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "default_debug",
                              "default_debugger",
                              VIEW_DEBUG);
     if (m_internalPrograms.debugProgram == (size_t)-1) {
@@ -191,8 +191,8 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     }
 
     m_internalPrograms.billboardProgram =
-        Renderer::AddProgram(SYN_INT_SHADERBUNDLENAME,
-                             "shaders/default_billboard",
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "default_billboard",
                              "billboard",
                              VIEW_BILLBOARD);
     if (m_internalPrograms.billboardProgram == (size_t)-1) {
@@ -200,8 +200,8 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     }
 
     m_internalPrograms.shadowProgram =
-        Renderer::AddProgram(SYN_INT_SHADERBUNDLENAME,
-                             "shaders/default_shadow",
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "default_shadow",
                              "shadow",
                              VIEW_SHADOW);
     if (m_internalPrograms.shadowProgram == (size_t)-1) {
@@ -209,14 +209,14 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     }
 
     m_internalPrograms.ssaoProgram = Renderer::AddProgram(
-        SYN_INT_SHADERBUNDLENAME, "shaders/ssao", "ssao", VIEW_POSTPROCESS);
+        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao", "ssao", VIEW_POSTPROCESS);
     if (m_internalPrograms.ssaoProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("ssao")
     }
 
     m_internalPrograms.ssaoBlurProgram =
-        Renderer::AddProgram(SYN_INT_SHADERBUNDLENAME,
-                             "shaders/ssao_blur",
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "ssao_blur",
                              "ssao_blur",
                              VIEW_POSTPROCESS);
     if (m_internalPrograms.ssaoBlurProgram == (size_t)-1) {
@@ -224,8 +224,8 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     }
 
     m_internalPrograms.tonemapProgram =
-        Renderer::AddProgram(SYN_INT_SHADERBUNDLENAME,
-                             "shaders/tonemapping",
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "tonemapping",
                              "tonemapping",
                              VIEW_POSTPROCESS);
     if (m_internalPrograms.tonemapProgram == (size_t)-1) {

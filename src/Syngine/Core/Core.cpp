@@ -81,15 +81,15 @@ Core::Core(const EngineConfig config) {
 Core::~Core() {
     // Cleanup
     if (m_app) {
-        if (m_app->window) {
-            m_app->window.reset();
+        if (m_app->synModels) {
+            m_app->synModels->_UnloadAllMeshes(); // Must run before renderer resets (bgfx still alive)
+            m_app->synModels.reset();
         }
         if (m_app->renderer) {
             m_app->renderer.reset();
         }
-        if (m_app->synModels) {
-            m_app->synModels->_UnloadAllMeshes();
-            m_app->synModels.reset();
+        if (m_app->window) {
+            m_app->window.reset();
         }
         if (m_app->physicsManager) {
             m_app->physicsManager->_Shutdown();
