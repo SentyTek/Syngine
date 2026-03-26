@@ -13,10 +13,11 @@
 ## Goto: 
 
 
-- [Constructor](#class-constructor)
+- [Member Variables](#member-variables)
 - [HardwareSpecs](#synginehardwarespecs)
 - [EngineConfig](#syngineengineconfig)
 - [DebugModes](#synginedebugmodes)
+- [SDL_Init](#coresdl_init)
 - [Initialize](#coreinitialize)
 - [Get](#coreget)
 - [IsRunning](#coreisrunning)
@@ -31,40 +32,13 @@
 - [IsPhysicsEnabled](#coreisphysicsenabled)
 - [SetDebugMode](#coresetdebugmode)
 - [GetDebugMode](#coregetdebugmode)
-- [](#core)
+- [App](#coreapp)
 - [_GetApp](#core_getapp)
 - [_GetConfig](#core_getconfig)
-- [oneSecond](#coreonesecond)
+- [_FrameCounter](#core_framecounter)
 - [_HandleKeyEvent](#core_handlekeyevent)
 
 ---
-
-## Class Constructor
-
-
-#### **`Core::Core`**
-
-
-
-
-Signature:
-
-```cpp
- Core(const EngineConfig config);
-```
-
-**Parameters:**
-
-- `config`: Engine configuration (Syngine::EngineConfig)
-
-**This function has been available since:** v0.0.1
-
-**Throws:** std::runtime_error if initialization fails (e.g., SDL_Init() fails or missing files)
-
----
-
-## Class & Related Members
-
 
 #### **`Syngine::HardwareSpecs`**
 
@@ -76,7 +50,7 @@ Signature:
 Signature:
 
 ```cpp
-struct HardwareSpecs 
+struct HardwareSpecs
 ```
 
 **Members:**
@@ -110,7 +84,7 @@ struct HardwareSpecs
 Signature:
 
 ```cpp
-struct EngineConfig 
+struct EngineConfig
 ```
 
 **Members:**
@@ -134,7 +108,7 @@ struct EngineConfig
 Signature:
 
 ```cpp
-struct DebugModes 
+struct DebugModes
 ```
 
 **Members:**
@@ -146,6 +120,21 @@ struct DebugModes
 | `bool` | `Gizmos` | Gizmos such as cameras, lights, and audio sources |
 | `bool` | `CSMBounds` | Cascading Shadow Map zone bounds. |
 | `bool` | `DrawBoundingBoxes` | Whether to draw mesh bounding boxes |
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::SDL_Init`**
+
+
+ Core class to manage the application
+
+Signature:
+
+```cpp
+ public: /// @brief Constructor for the Core class /// @param config Engine configuration (Syngine::EngineConfig) /// @throws std::runtime_error if initialization fails (e.g., SDL_Init() /// fails or missing files) /// @since v0.0.1 Core(const EngineConfig config);
+```
 
 **This function has been available since:** v0.0.1
 
@@ -337,7 +326,7 @@ Signature:
 Signature:
 
 ```cpp
- static bool IsInitialized() noexcept { return m_instance != nullptr; };
+ static bool IsInitialized() noexcept;
 ```
 
 **Returns:** True if initialized, false otherwise
@@ -354,7 +343,7 @@ Signature:
 Signature:
 
 ```cpp
- static bool IsPhysicsEnabled() { return m_instance && m_instance->m_app &&
+ static bool IsPhysicsEnabled();
 ```
 
 **Returns:** True if physics is enabled, false otherwise
@@ -371,7 +360,7 @@ Signature:
 Signature:
 
 ```cpp
- static bool SetDebugMode(DebugModes mode) { if (m_instance && m_instance->m_app) {
+ static bool SetDebugMode(DebugModes mode);
 ```
 
 **Parameters:**
@@ -392,7 +381,7 @@ Signature:
 Signature:
 
 ```cpp
- static DebugModes GetDebugMode() { if (m_instance && m_instance->m_app) {
+ static DebugModes GetDebugMode();
 ```
 
 **Returns:** Current DebugModes struct
@@ -401,7 +390,7 @@ Signature:
 
 ---
 
-#### **`Core::`**
+#### **`Core::App`**
 
 
  Struct to hold application state
@@ -409,7 +398,7 @@ Signature:
 Signature:
 
 ```cpp
- };
+ struct App
 ```
 
 **Members:**
@@ -468,7 +457,7 @@ Signature:
 
 ---
 
-#### **`Core::oneSecond`**
+#### **`Core::_FrameCounter`**
 
 
  Frame counter for FPS and TPS tracking
@@ -479,7 +468,7 @@ Signature:
 Signature:
 
 ```cpp
- float oneSecond = 0.0f;
+ struct _FrameCounter
 ```
 
 **This function has been available since:** v0.0.1
@@ -489,7 +478,7 @@ Signature:
 #### **`Core::_HandleKeyEvent`**
 
 
-~~~~
+~~Handle key events for debug actions~~
 
 **DEPRECATED**
 
@@ -501,11 +490,20 @@ Signature:
 
 **Parameters:**
 
-- `static`: Core* m_instance Pointer to the global Core instance
-- `static`: App* m_app Pointer to the global App instance
-- `static`: bool m_shouldClose Whether the application should close
-- `static`: _internal m_internal Internal state struct
-- `static`: _FrameCounter m_frameCounter Frame counter for FPS/TPS tracking
+- `event`: SDL_Event to handle
+
+---
+
+## Member Variables
+
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `Core*` | `m_instance` | Pointer to the global Core instance |
+| `App*` | `m_app` | Pointer to the global App instance |
+| `bool` | `m_shouldClose` | Whether the application should close |
+| `_internal` | `m_internal` | Internal state struct |
+| `_FrameCounter` | `m_frameCounter` | Frame counter for FPS/TPS tracking |
 
 ---
 

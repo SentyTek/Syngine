@@ -29,7 +29,7 @@
 Signature:
 
 ```cpp
-enum DefaultComponents : ComponentTypeID 
+enum DefaultComponents : ComponentTypeID
 ```
 
 **Members:**
@@ -62,15 +62,13 @@ enum DefaultComponents : ComponentTypeID
 #### **`Component::GetComponentType`**
 
 
-
+ Syngine::Component is the base class for all components that can be attached to GameObject to inherit from. They are used to add functionality to GameObjects, such as mesh, transform, physics, AI, PlayerController, etc.
 
 Signature:
 
 ```cpp
- virtual ComponentTypeID GetComponentType() = 0;
+ public: /// @brief Get the type of the component, used for identifying the component /// type /// @return The type of the component, as defined in the Components enum virtual ComponentTypeID GetComponentType() = 0;
 ```
-
-**Returns:** The type of the component, as defined in the Components enum
 
 ---
 

@@ -58,7 +58,7 @@ std::filesystem::path _GetAppdataPath(const std::string& appName);
 Signature:
 
 ```cpp
-static inline std::string _ResolveOSPath(const char* path){
+static inline std::string _ResolveOSPath(const char* path);
 ```
 
 **Parameters:**
@@ -82,7 +82,7 @@ static inline std::string _ResolveOSPath(const char* path){
 Signature:
 
 ```cpp
-inline bool _CheckRequiredFolders() { const char* requiredFolders[] = {
+inline bool _CheckRequiredFolders();
 ```
 
 **Returns:** True if all required folders exist, false otherwise
@@ -101,7 +101,7 @@ inline bool _CheckRequiredFolders() { const char* requiredFolders[] = {
 Signature:
 
 ```cpp
-static inline std::string _MakeRelativeToRoot(std::string path) { std::string gameDir = Syngine::_ResolveOSPath("").substr(0, Syngine::_ResolveOSPath("").find_last_of("/\\") + 1);
+static inline std::string _MakeRelativeToRoot(std::string path);
 ```
 
 **Parameters:**

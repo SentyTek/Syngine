@@ -84,7 +84,7 @@ Signature:
 Signature:
 
 ```cpp
-enum ViewID : bgfx::ViewId 
+enum ViewID : bgfx::ViewId
 ```
 
 **Members:**
@@ -116,7 +116,7 @@ enum ViewID : bgfx::ViewId
 Signature:
 
 ```cpp
-enum UniformType 
+enum UniformType
 ```
 
 **Members:**
@@ -141,7 +141,7 @@ enum UniformType
 Signature:
 
 ```cpp
-struct Uniform 
+struct Uniform
 ```
 
 **Members:**
@@ -166,7 +166,7 @@ struct Uniform
 Signature:
 
 ```cpp
-struct Program 
+struct Program
 ```
 
 **Members:**
@@ -191,7 +191,7 @@ struct Program
 Signature:
 
 ```cpp
-struct RendererConfig 
+struct RendererConfig
 ```
 
 **Members:**
@@ -217,7 +217,7 @@ struct RendererConfig
 Signature:
 
 ```cpp
- static size_t AddProgram(const std::string& path, const std::string& name,
+ static size_t AddProgram(const std::string& path, const std::string& name, Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
 ```
 
 **Parameters:**
@@ -246,7 +246,7 @@ Signature:
 Signature:
 
 ```cpp
- static size_t AddProgram(const std::string& bundlePath, const std::string& path,
+ static size_t AddProgram(const std::string& bundlePath, const std::string& path, const std::string& name, Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
 ```
 
 **Parameters:**
@@ -537,7 +537,7 @@ Signature:
 Signature:
 
 ```cpp
- static void SetGizmoSize(float size) ;
+ static void SetGizmoSize(float size);
 ```
 
 **Parameters:**
@@ -556,7 +556,7 @@ Signature:
 Signature:
 
 ```cpp
- static float GetGizmoSize() ;
+ static float GetGizmoSize();
 ```
 
 **Returns:** Size of the gizmo
@@ -717,7 +717,6 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `int` | `width` | Width of the game window in pixels |
 | `int` | `height` | Height of the game window in pixels |
 | `std::string` | `m_title` | Title of the game window |
 | `bool` | `m_isReady` | Whether the renderer is initialized and ready |

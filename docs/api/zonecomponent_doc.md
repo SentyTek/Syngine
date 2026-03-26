@@ -13,44 +13,46 @@
 ## Goto: 
 
 
+- [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
-- [X](#synginex)
-- [Clone](#syngineclone)
-- [Serialize](#syngineserialize)
-- [GetComponentType](#synginegetcomponenttype)
-- [Init](#syngineinit)
-- [Update](#syngineupdate)
-- [GetShape](#synginegetshape)
-- [GetPosition](#synginegetposition)
-- [SetPosition](#synginesetposition)
-- [GetSize](#synginegetsize)
-- [SetSize](#synginesetsize)
-- [GetRotation](#synginegetrotation)
-- [SetRotation](#synginesetrotation)
-- [IsActive](#syngineisactive)
-- [SetActive](#synginesetactive)
-- [IsOneShot](#syngineisoneshot)
-- [_AddObject](#syngine_addobject)
-- [_HasOneTimeObject](#syngine_hasonetimeobject)
-- [_IsTrackingObject](#syngine_istrackingobject)
-- [_RemoveObject](#syngine_removeobject)
-- [AddTag](#syngineaddtag)
-- [RemoveTag](#syngineremovetag)
-- [HasTag](#synginehastag)
-- [GetTags](#synginegettags)
-- [SetTags](#synginesettags)
-- [IsInZone](#syngineisinzone)
-- [IsInZone](#syngineisinzone)
-- [GetObjectsInZone](#synginegetobjectsinzone)
-- [GetObjectsInZoneByTag](#synginegetobjectsinzonebytag)
-- [_GetOwner](#syngine_getowner)
+- [ZoneShape](#synginezoneshape)
+- [m_size](#zonecomponentm_size)
+- [Clone](#zonecomponentclone)
+- [Serialize](#zonecomponentserialize)
+- [GetComponentType](#zonecomponentgetcomponenttype)
+- [Init](#zonecomponentinit)
+- [Update](#zonecomponentupdate)
+- [GetShape](#zonecomponentgetshape)
+- [GetPosition](#zonecomponentgetposition)
+- [SetPosition](#zonecomponentsetposition)
+- [GetSize](#zonecomponentgetsize)
+- [SetSize](#zonecomponentsetsize)
+- [GetRotation](#zonecomponentgetrotation)
+- [SetRotation](#zonecomponentsetrotation)
+- [IsActive](#zonecomponentisactive)
+- [SetActive](#zonecomponentsetactive)
+- [IsOneShot](#zonecomponentisoneshot)
+- [_AddObject](#zonecomponent_addobject)
+- [_HasOneTimeObject](#zonecomponent_hasonetimeobject)
+- [_IsTrackingObject](#zonecomponent_istrackingobject)
+- [_RemoveObject](#zonecomponent_removeobject)
+- [AddTag](#zonecomponentaddtag)
+- [RemoveTag](#zonecomponentremovetag)
+- [HasTag](#zonecomponenthastag)
+- [GetTags](#zonecomponentgettags)
+- [SetTags](#zonecomponentsettags)
+- [IsInZone](#zonecomponentisinzone)
+- [IsInZone](#zonecomponentisinzone)
+- [GetObjectsInZone](#zonecomponentgetobjectsinzone)
+- [GetObjectsInZoneByTag](#zonecomponentgetobjectsinzonebytag)
+- [_GetOwner](#zonecomponent_getowner)
 
 ---
 
 ## Class Constructor
 
 
-#### **`Syngine::ZoneComponent`**
+#### **`ZoneComponent::ZoneComponent`**
 
 
  Constructor for ZoneComponent
@@ -60,20 +62,11 @@
 Signature:
 
 ```cpp
- ZoneComponent(GameObject* owner, ZoneShape shape,
+ ZoneComponent(GameObject* owner, ZoneShape shape, const float pos[3], const float size[3], bool oneShot = false);
 ```
 
 **Parameters:**
 
-- `1`: Size of the zone (whd for box, r for sphere)
-- `ZoneShape`: Shape of the zone (box or sphere)
-- `float`: Position of the zone center Rotation of the zone (for box shape). This is a
-- `bool`: Whether the zone is active or not
-- `bool`: Whether the zone is a one-shot zone
-- `m_objectsIn`: Objects that are currently in the zone
-- `m_triggeredObjects`: Objects that have triggered the zone (for one-shot zones)
-- `std`: Tags of the zone
-- `SYN_COMPONENT_ZONE`: Zone component type
 - `owner`: The GameObject that owns this component.
 - `shape`: The shape of the zone (box or sphere).
 - `pos`: The position of the zone center.
@@ -85,7 +78,7 @@ Signature:
 ## Class & Related Members
 
 
-#### **`Syngine::X`**
+#### **`Syngine::ZoneShape`**
 
 
  Enum representing the shape of the zone.
@@ -93,12 +86,25 @@ Signature:
 Signature:
 
 ```cpp
- BOX = 0, SPHERE = 1,
+enum class ZoneShape
 ```
 
 ---
 
-#### **`Syngine::Clone`**
+#### **`ZoneComponent::m_size`**
+
+
+ ZoneComponent is used to define an area within the game world that can be used to trigger events
+
+Signature:
+
+```cpp
+ float m_size[3] = { 1.0f, 1.0f, 1.0f }; //* Size of the zone (whd for box, r for sphere)
+```
+
+---
+
+#### **`ZoneComponent::Clone`**
 
 
  Clone the ZoneComponent
@@ -106,14 +112,14 @@ Signature:
 Signature:
 
 ```cpp
- std::unique_ptr<Component> Clone() const override { return std::make_unique<ZoneComponent>(*this);
+ std::unique_ptr<Component> Clone() const override;
 ```
 
 **Returns:** A unique pointer to the cloned ZoneComponent
 
 ---
 
-#### **`Syngine::Serialize`**
+#### **`ZoneComponent::Serialize`**
 
 
  Serializes the ZoneComponent to a data node
@@ -128,7 +134,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetComponentType`**
+#### **`ZoneComponent::GetComponentType`**
 
 
  Gets the component type of this component.
@@ -147,7 +153,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Init`**
+#### **`ZoneComponent::Init`**
 
 
  Initializes the zone component with shape, position, and size.
@@ -160,7 +166,7 @@ Signature:
 Signature:
 
 ```cpp
- void Init(ZoneShape shape, const float pos[3],
+ void Init(ZoneShape shape, const float pos[3], const float size[3], bool oneShot);
 ```
 
 **Parameters:**
@@ -176,7 +182,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Update`**
+#### **`ZoneComponent::Update`**
 
 
  Update the zone component.
@@ -186,14 +192,14 @@ Signature:
 Signature:
 
 ```cpp
- void Update() {};
+ void Update();
 ```
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Syngine::GetShape`**
+#### **`ZoneComponent::GetShape`**
 
 
  Get the shape of the zone.
@@ -212,7 +218,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetPosition`**
+#### **`ZoneComponent::GetPosition`**
 
 
  Get the position of the zone center.
@@ -233,7 +239,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetPosition`**
+#### **`ZoneComponent::SetPosition`**
 
 
  Set the position of the zone center.
@@ -254,7 +260,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetSize`**
+#### **`ZoneComponent::GetSize`**
 
 
  Get the size of the zone.
@@ -275,7 +281,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetSize`**
+#### **`ZoneComponent::SetSize`**
 
 
  Set the size of the zone.
@@ -296,7 +302,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetRotation`**
+#### **`ZoneComponent::GetRotation`**
 
 
  Get the rotation of the zone (for box shape).
@@ -317,7 +323,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetRotation`**
+#### **`ZoneComponent::SetRotation`**
 
 
  Set the rotation of the zone (for box shape).
@@ -338,7 +344,7 @@ Signature:
 
 ---
 
-#### **`Syngine::IsActive`**
+#### **`ZoneComponent::IsActive`**
 
 
  Check if the zone is active.
@@ -357,7 +363,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetActive`**
+#### **`ZoneComponent::SetActive`**
 
 
  Set the active state of the zone.
@@ -378,7 +384,7 @@ Signature:
 
 ---
 
-#### **`Syngine::IsOneShot`**
+#### **`ZoneComponent::IsOneShot`**
 
 
  Check if the zone is a one-shot zone.
@@ -397,7 +403,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_AddObject`**
+#### **`ZoneComponent::_AddObject`**
 
 
  Add an object to the triggered list (for one-shot zones).
@@ -421,7 +427,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_HasOneTimeObject`**
+#### **`ZoneComponent::_HasOneTimeObject`**
 
 
  Check if an object is in the triggered list (for one-shot zones).
@@ -447,7 +453,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_IsTrackingObject`**
+#### **`ZoneComponent::_IsTrackingObject`**
 
 
  Check if an object is currently inside the zone.
@@ -473,7 +479,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_RemoveObject`**
+#### **`ZoneComponent::_RemoveObject`**
 
 
  Remove an object from the triggered list (for one-shot zones).
@@ -497,7 +503,7 @@ Signature:
 
 ---
 
-#### **`Syngine::AddTag`**
+#### **`ZoneComponent::AddTag`**
 
 
  Add a tag to the zone.
@@ -518,7 +524,7 @@ Signature:
 
 ---
 
-#### **`Syngine::RemoveTag`**
+#### **`ZoneComponent::RemoveTag`**
 
 
  Remove a tag from the zone.
@@ -539,7 +545,7 @@ Signature:
 
 ---
 
-#### **`Syngine::HasTag`**
+#### **`ZoneComponent::HasTag`**
 
 
  Check if the zone has a specific tag.
@@ -562,7 +568,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetTags`**
+#### **`ZoneComponent::GetTags`**
 
 
  Get all tags of the zone.
@@ -581,7 +587,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetTags`**
+#### **`ZoneComponent::SetTags`**
 
 
  Set several tags to the zone at once, replacing existing tags.
@@ -602,7 +608,7 @@ Signature:
 
 ---
 
-#### **`Syngine::IsInZone`**
+#### **`ZoneComponent::IsInZone`**
 
 
  Check if a point is inside the zone.
@@ -625,7 +631,7 @@ Signature:
 
 ---
 
-#### **`Syngine::IsInZone`**
+#### **`ZoneComponent::IsInZone`**
 
 
  Check if a GameObject is inside the zone.
@@ -650,7 +656,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetObjectsInZone`**
+#### **`ZoneComponent::GetObjectsInZone`**
 
 
  Get all GameObjects inside the zone.
@@ -671,7 +677,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetObjectsInZoneByTag`**
+#### **`ZoneComponent::GetObjectsInZoneByTag`**
 
 
  Get all GameObjects inside the zone with a specific tag.
@@ -696,7 +702,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_GetOwner`**
+#### **`ZoneComponent::_GetOwner`**
 
 
  Get the owner GameObject of this zone component.
@@ -715,6 +721,19 @@ Signature:
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
+
+---
+
+## Member Variables
+
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `ZoneShape` | `m_shape` | Shape of the zone (box or sphere) |
+| `float` | `m_pos` | Position of the zone center |
+| `bool` | `m_active` | Whether the zone is active or not |
+| `bool` | `m_oneShot` | Whether the zone is a one-shot zone |
+| `std::vector<std::string>` | `m_tags` | Tags of the zone |
 
 ---
 

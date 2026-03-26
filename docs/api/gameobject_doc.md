@@ -51,7 +51,7 @@
 Signature:
 
 ```cpp
- GameObject(std::string name, std::string type = "default",
+ GameObject(std::string name, std::string type = "default", std::string initialTag = "");
 ```
 
 **Parameters:**
@@ -99,7 +99,7 @@ Signature:
 Signature:
 
 ```cpp
- inline long GetID() noexcept { return this->id; };
+ inline long GetID() noexcept;
 ```
 
 **Returns:** ID of the GameObject
@@ -121,7 +121,7 @@ Signature:
 Signature:
 
 ```cpp
- inline void _SetID(long id) noexcept ;
+ inline void _SetID(long id) noexcept;
 ```
 
 **Parameters:**
@@ -142,7 +142,7 @@ Signature:
 Signature:
 
 ```cpp
- inline bool IsActive() const noexcept ;
+ inline bool IsActive() const noexcept;
 ```
 
 **Returns:** true if the GameObject is active, false otherwise
@@ -182,7 +182,7 @@ Signature:
 Signature:
 
 ```cpp
- inline std::vector<std::string> GetTags() const noexcept ;
+ inline std::vector<std::string> GetTags() const noexcept;
 ```
 
 **Returns:** Vector of tags of the GameObject
@@ -374,7 +374,7 @@ Signature:
  template <typename T> T* GetComponent() const;
 ```
 
-**Parameters:**
+**Template Parameters:**
 
 - `T`: Type of the component to get
 
@@ -397,9 +397,12 @@ Signature:
  template <typename T, typename... Args> T* AddComponent(Args&&... args);
 ```
 
-**Parameters:**
+**Template Parameters:**
 
 - `T`: Type of the component to add
+
+**Parameters:**
+
 - `args`: Arguments to pass to the component constructor
 
 **Returns:** Pointer to the added component if successful, nullptr otherwise
@@ -418,7 +421,7 @@ Signature:
 Signature:
 
 ```cpp
- const std::map<ComponentTypeID, std::unique_ptr<Component>>& GetComponents() const { return components;
+ const std::map<ComponentTypeID, std::unique_ptr<Component>>& GetComponents() const;
 ```
 
 **Returns:** Const reference to the components map

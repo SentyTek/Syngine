@@ -15,39 +15,39 @@
 
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
-- [Clone](#syngineclone)
-- [Serialize](#syngineserialize)
-- [Init](#syngineinit)
-- [Update](#syngineupdate)
-- [GetComponentType](#synginegetcomponenttype)
-- [GetRotationEuler](#synginegetrotationeuler)
-- [GetRotationQuaternion](#synginegetrotationquaternion)
-- [GetModelMatrix](#synginegetmodelmatrix)
-- [GetLocalMatrix](#synginegetlocalmatrix)
-- [GetPosition](#synginegetposition)
-- [GetScale](#synginegetscale)
-- [GetLocalPosition](#synginegetlocalposition)
-- [GetLocalRotation](#synginegetlocalrotation)
-- [GetLocalScale](#synginegetlocalscale)
-- [SetPosition](#synginesetposition)
-- [SetRotationEuler](#synginesetrotationeuler)
-- [SetRotationQuat](#synginesetrotationquat)
-- [SetScale](#synginesetscale)
-- [SetWorldPosition](#synginesetworldposition)
-- [SetWorldRotationQuat](#synginesetworldrotationquat)
-- [SetWorldRotationEuler](#synginesetworldrotationeuler)
-- [SetWorldScale](#synginesetworldscale)
-- [SetParent](#synginesetparent)
-- [GetParent](#synginegetparent)
-- [GetChildren](#synginegetchildren)
-- [GetVersion](#synginegetversion)
+- [Clone](#transformcomponentclone)
+- [Serialize](#transformcomponentserialize)
+- [Init](#transformcomponentinit)
+- [Update](#transformcomponentupdate)
+- [GetComponentType](#transformcomponentgetcomponenttype)
+- [GetRotationEuler](#transformcomponentgetrotationeuler)
+- [GetRotationQuaternion](#transformcomponentgetrotationquaternion)
+- [GetModelMatrix](#transformcomponentgetmodelmatrix)
+- [GetLocalMatrix](#transformcomponentgetlocalmatrix)
+- [GetPosition](#transformcomponentgetposition)
+- [GetScale](#transformcomponentgetscale)
+- [GetLocalPosition](#transformcomponentgetlocalposition)
+- [GetLocalRotation](#transformcomponentgetlocalrotation)
+- [GetLocalScale](#transformcomponentgetlocalscale)
+- [SetPosition](#transformcomponentsetposition)
+- [SetRotationEuler](#transformcomponentsetrotationeuler)
+- [SetRotationQuat](#transformcomponentsetrotationquat)
+- [SetScale](#transformcomponentsetscale)
+- [SetWorldPosition](#transformcomponentsetworldposition)
+- [SetWorldRotationQuat](#transformcomponentsetworldrotationquat)
+- [SetWorldRotationEuler](#transformcomponentsetworldrotationeuler)
+- [SetWorldScale](#transformcomponentsetworldscale)
+- [SetParent](#transformcomponentsetparent)
+- [GetParent](#transformcomponentgetparent)
+- [GetChildren](#transformcomponentgetchildren)
+- [GetVersion](#transformcomponentgetversion)
 
 ---
 
 ## Class Constructor
 
 
-#### **`Syngine::TransformComponent`**
+#### **`TransformComponent::TransformComponent`**
 
 
  Constructor for the TransformComponent class
@@ -71,7 +71,7 @@ Signature:
 ## Class & Related Members
 
 
-#### **`Syngine::Clone`**
+#### **`TransformComponent::Clone`**
 
 
  Clone the TransformComponent
@@ -79,14 +79,14 @@ Signature:
 Signature:
 
 ```cpp
- std::unique_ptr<Component> Clone() const override { return std::make_unique<TransformComponent>(*this);
+ std::unique_ptr<Component> Clone() const override;
 ```
 
 **Returns:** A unique pointer to the cloned TransformComponent
 
 ---
 
-#### **`Syngine::Serialize`**
+#### **`TransformComponent::Serialize`**
 
 
  Serializes the TransformComponent to a data node
@@ -101,7 +101,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Init`**
+#### **`TransformComponent::Init`**
 
 
  Initializes the transform component with default values.
@@ -111,7 +111,7 @@ Signature:
 Signature:
 
 ```cpp
- void Init(std::vector<float> position = { 0.0f, 0.0f, 0.0f }, std::vector<float> rotation = { 0.0f, 0.0f, 0.0f, 1.0f },
+ void Init(std::vector<float> position = { 0.0f, 0.0f, 0.0f }, std::vector<float> rotation = { 0.0f, 0.0f, 0.0f, 1.0f }, std::vector<float> scale = { 1.0f, 1.0f, 1.0f });
 ```
 
 **Parameters:**
@@ -126,7 +126,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Update`**
+#### **`TransformComponent::Update`**
 
 
  Update the transform component.
@@ -136,7 +136,7 @@ Signature:
 Signature:
 
 ```cpp
- void Update() {};
+ void Update();
 ```
 
 **Thread Safety:** not-safe
@@ -145,7 +145,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetComponentType`**
+#### **`TransformComponent::GetComponentType`**
 
 
  Get the type of this component
@@ -164,7 +164,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetRotationEuler`**
+#### **`TransformComponent::GetRotationEuler`**
 
 
  Get the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
@@ -187,7 +187,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetRotationQuaternion`**
+#### **`TransformComponent::GetRotationQuaternion`**
 
 
  Get the GLOBAL rotation of the transform as a quaternion
@@ -206,7 +206,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetModelMatrix`**
+#### **`TransformComponent::GetModelMatrix`**
 
 
  Get a GLOBAL model matrix for the transform
@@ -227,7 +227,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetLocalMatrix`**
+#### **`TransformComponent::GetLocalMatrix`**
 
 
  Get a LOCAL model matrix for the transform
@@ -248,7 +248,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetPosition`**
+#### **`TransformComponent::GetPosition`**
 
 
  Get the GLOBAL position of the transform
@@ -267,7 +267,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetScale`**
+#### **`TransformComponent::GetScale`**
 
 
  Get the GLOBAL scale of the transform
@@ -286,7 +286,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetLocalPosition`**
+#### **`TransformComponent::GetLocalPosition`**
 
 
  Get the LOCAL position of the transform
@@ -305,7 +305,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetLocalRotation`**
+#### **`TransformComponent::GetLocalRotation`**
 
 
  Get the LOCAL rotation of the transform as a quaternion
@@ -324,7 +324,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetLocalScale`**
+#### **`TransformComponent::GetLocalScale`**
 
 
  Get the LOCAL scale of the transform
@@ -343,7 +343,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetPosition`**
+#### **`TransformComponent::SetPosition`**
 
 
  Set the LOCAL position of the transform
@@ -366,7 +366,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetRotationEuler`**
+#### **`TransformComponent::SetRotationEuler`**
 
 
  Set the LOCAL rotation of the transform as XYZ Euler angles (in degrees)
@@ -389,7 +389,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetRotationQuat`**
+#### **`TransformComponent::SetRotationQuat`**
 
 
  Set the LOCAL rotation of the transform as a quaternion
@@ -413,7 +413,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetScale`**
+#### **`TransformComponent::SetScale`**
 
 
  Set the LOCAL scale of the transform
@@ -436,7 +436,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetWorldPosition`**
+#### **`TransformComponent::SetWorldPosition`**
 
 
  Set the GLOBAL position of the transform
@@ -459,7 +459,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetWorldRotationQuat`**
+#### **`TransformComponent::SetWorldRotationQuat`**
 
 
  Set the GLOBAL rotation of the transform as a quaternion
@@ -483,7 +483,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetWorldRotationEuler`**
+#### **`TransformComponent::SetWorldRotationEuler`**
 
 
  Set the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
@@ -506,7 +506,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetWorldScale`**
+#### **`TransformComponent::SetWorldScale`**
 
 
  Set the GLOBAL scale of the transform
@@ -529,7 +529,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetParent`**
+#### **`TransformComponent::SetParent`**
 
 
  Set the parent transform of this transform
@@ -552,7 +552,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetParent`**
+#### **`TransformComponent::GetParent`**
 
 
  Get the parent transform of this transform
@@ -571,7 +571,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetChildren`**
+#### **`TransformComponent::GetChildren`**
 
 
  Get the child transforms of this transform
@@ -590,7 +590,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetVersion`**
+#### **`TransformComponent::GetVersion`**
 
 
  Get the version number of this transform
@@ -598,7 +598,7 @@ Signature:
 Signature:
 
 ```cpp
- uint64_t GetVersion() const ;
+ uint64_t GetVersion() const;
 ```
 
 **Returns:** Version number that increments on each change
@@ -610,7 +610,6 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float` | `m_position` | Position of the transform |
 | `float` | `m_rotation` | Rotation of the transform (Quaternion) |
 | `float` | `m_scale` | Scale of the transform |
 | `std::vector<TransformComponent*>` | `m_children` | Child transform components |

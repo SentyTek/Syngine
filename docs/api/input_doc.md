@@ -14,40 +14,13 @@
 
 
 - [Constructor](#class-constructor)
-- [KeyUnbound](#synginekeyunbound)
-- [AnyKeybind](#syngineanykeybind)
+- [KeybindType](#synginekeybindtype)
 - [KeyShortcut](#synginekeyshortcut)
-- [Scancode](#synginescancode)
-- [Constructor](#class-constructor)
-- [Constructor](#class-constructor)
-- [Constructor](#class-constructor)
-- [subType](#synginesubtype)
-- [Operator == overload](#syngineoperator==overload)
-- [_isTriggeredByEvent](#syngine_istriggeredbyevent)
 - [KeySequence](#synginekeysequence)
-- [Scancode](#synginescancode)
-- [Constructor](#class-constructor)
-- [Constructor](#class-constructor)
-- [Constructor](#class-constructor)
-- [subType](#synginesubtype)
-- [reset](#synginereset)
-- [next](#synginenext)
-- [increment](#syngineincrement)
-- [wasReset](#synginewasreset)
-- [_isTriggeredByEvent](#syngine_istriggeredbyevent)
-- [Operator == overload](#syngineoperator==overload)
 - [KeyBinding](#synginekeybinding)
-- [Constructor](#class-constructor)
-- [Constructor](#class-constructor)
-- [subType](#synginesubtype)
-- [Operator == overload](#syngineoperator==overload)
-- [_isTriggeredByEvent](#syngine_istriggeredbyevent)
-- [_isTriggeredByEvent](#syngine_istriggeredbyevent)
-- [](#inputaction)
-- [onPressed](#inputactiononpressed)
+- [:](#inputaction:)
 - [onReleased](#inputactiononreleased)
 - [onStateChanged](#inputactiononstatechanged)
-- [Constructor](#class-constructor)
 - [Constructor](#class-constructor)
 - [Operator = overload](#inputactionoperator=overload)
 - [Constructor](#class-constructor)
@@ -76,662 +49,6 @@
 ## Class Constructor
 
 
-#### **`Syngine::of`**
-
-
- A tag enum representing each of the keybindable types
-
-Signature:
-
-```cpp
- // of modifiers SEQUENCE = 4, //* A keybind that is bound to a sequence of keycodes,
-```
-
-**Parameters:**
-
-- `UNBOUND`: A keybind that is not bound to any key
-- `KEYCODE`: A keybind that is bound to a specific keycode
-- `SCANCODE`: A keybind that is bound to a specific scancode
-- `SHORTCUT`: A keybind that is bound to a keycode or scancode and a set
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-#### **`Syngine::KeyUnbound`**
-
-
- A type representing an unbound action, or the lack of a key binding
-
-Signature:
-
-```cpp
-using KeyUnbound = std::monostate;
-```
-
-**Parameters:**
-
-- `MOUSE_BUTTON`: A keybind that is bound to a mouse button
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::AnyKeybind`**
-
-
- A type representing any keybind
-
-Signature:
-
-```cpp
-using AnyKeybind = std::variant<KeyUnbound, Keycode,
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::KeyShortcut`**
-
-
- A type representing a keyboard shortcut; a single keycode or scancode and any number of modifiers
-
-Signature:
-
-```cpp
-struct KeyShortcut 
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::Scancode`**
-
-
-
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- std::variant<Keycode, Scancode> key;
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class Constructor
-
-
-#### **`Syngine::KeyShortcut`**
-
-
- `KeyShortcut`s aren't default-constructable
-
-**Note:** Use a ``KeyBinding`` holding a ``KeyUnknown`` (the default constructor of `KeyBinding`) instead
-
-Signature:
-
-```cpp
- KeyShortcut() = delete;
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-## Class Constructor
-
-
-#### **`Syngine::KeyShortcut`**
-
-
- Create a ``KeyShortcut`` with no modifiers
-
-Signature:
-
-```cpp
- KeyShortcut(std::variant<Keycode, Scancode> key) : key(key), modifiers() ;
-```
-
-**Parameters:**
-
-- `key`: The key to bind
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-## Class Constructor
-
-
-#### **`Syngine::KeyShortcut`**
-
-
- Create a ``KeyShortcut`` with the given modifiers
-
-Signature:
-
-```cpp
- KeyShortcut(std::variant<Keycode, Scancode> key, Keymod modifiers) : key(key), modifiers(modifiers) ;
-```
-
-**Parameters:**
-
-- `key`: The key to bind
-- `modifiers`: The modifiers to bind
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-#### **`Syngine::subType`**
-
-
- Returns the ``KeybindType`` corresponding to the type this object contains, if any
-
-Signature:
-
-```cpp
- KeybindType subType() const { return static_cast<KeybindType>(key.index() + 1);
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Operator == overload`**
-
-
- Equality operator for ``KeyShortcut``
-
-Signature:
-
-```cpp
- bool operator==(const KeyShortcut& other) const { return key == other.key && modifiers == other.modifiers;
-```
-
-**Parameters:**
-
-- `other`: The ``KeyShortcut`` to compare against
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::_isTriggeredByEvent`**
-
-
- Checks if the keyboard event triggers this binding
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- bool _isTriggeredByEvent(SDL_KeyboardEvent event) const;
-```
-
-**Parameters:**
-
-- `event`: The event to check against
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::KeySequence`**
-
-
- An array of key bindings which is triggered when pressed in sequence
-
-Signature:
-
-```cpp
-struct KeySequence 
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::Scancode`**
-
-
-
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- std::vector<std::variant<Keycode, Scancode, KeyShortcut>> bound;
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class Constructor
-
-
-#### **`Syngine::KeySequence`**
-
-
- `KeySequence`s aren't default-constructable and must hold at least one binding
-
-**Note:** Use a ``KeyBinding`` holding a ``KeyUnknown`` (the default constructor of `KeyBinding`) instead
-
-Signature:
-
-```cpp
- KeySequence() = delete;
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-## Class Constructor
-
-
-#### **`Syngine::KeySequence`**
-
-
- Create a ``KeySequence`` with a single binding. This isn't very useful on it's own and may be removed
-
-Signature:
-
-```cpp
- KeySequence(std::variant<Keycode, Scancode, KeyShortcut> key) : bound{ key }, nextIndex(0) {
-```
-
-**Parameters:**
-
-- `key`: The binding to bind
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-## Class Constructor
-
-
-#### **`Syngine::KeySequence`**
-
-
- Create a ``KeySequence`` with a list of bindings
-
-Signature:
-
-```cpp
- KeySequence( std::initializer_list<std::variant<Keycode, Scancode, KeyShortcut>>
-```
-
-**Parameters:**
-
-- `list`: The list of bindings to bind
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-#### **`Syngine::subType`**
-
-
- Returns the ``KeybindType`` corresponding to the type this object contains at the given index, or ``KeybindType::UNBOUND`` if the index is out of bounds
-
-Signature:
-
-```cpp
- KeybindType subType(uint32_t index) const { if (index < bound.size()) {
-```
-
-**Parameters:**
-
-- `index`: The index to find the type of
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::reset`**
-
-
- Resets the trigger progress of the sequence
-
-**Note:** You probably shouldn't call this unless you really need to, and it might be removed
-
-Signature:
-
-```cpp
- void reset() ;
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::next`**
-
-
- Gets the next key to be triggered
-
-**Note:** You probably shouldn't call this unless you really need to, and it might be removed
-
-Signature:
-
-```cpp
- AnyKeybind next() { const std::variant<Keycode, Scancode, KeyShortcut> nextKey =
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::increment`**
-
-
- Increments the trigger progress of the sequence, as if the previous key had been triggered
-
-**Note:** You probably shouldn't call this unless you really need to, and it might be removed
-
-Signature:
-
-```cpp
- void increment() { this->nextIndex = (nextIndex + 1) % bound.size();
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::wasReset`**
-
-
- Gets the reset state of the sequence
-
-Signature:
-
-```cpp
- bool wasReset() const ;
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::_isTriggeredByEvent`**
-
-
- Determines if the keybind is triggered, increments the progress if it was, and resets the sequence if it wasn't
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- bool _isTriggeredByEvent(SDL_KeyboardEvent event);
-```
-
-**Parameters:**
-
-- `event`: The ``SDL_KeyboardEvent`` to check the sequence against
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Operator == overload`**
-
-
- Equality operator for ``KeySequence``
-
-Signature:
-
-```cpp
- bool operator==(const KeySequence& other) const { return bound == other.bound;
-```
-
-**Parameters:**
-
-- `other`: The ``KeySequence`` to compare against
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::KeyBinding`**
-
-
- A container for holding any type of keybind
-
-Signature:
-
-```cpp
-struct KeyBinding 
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class Constructor
-
-
-#### **`Syngine::KeyBinding`**
-
-
- Construct a `KeyBinding` containing a ``KeyUnbound``
-
-Signature:
-
-```cpp
- KeyBinding() : binding(KeyUnbound()) {};
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-## Class Constructor
-
-
-#### **`Syngine::KeyBinding`**
-
-
- Construct a `KeyBinding` from ``AnyKeybind``
-
-Signature:
-
-```cpp
- KeyBinding(AnyKeybind bind) : binding(bind) ;
-```
-
-**Parameters:**
-
-- `keycode`: The keycode to bind
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class & Related Members
-
-
-#### **`Syngine::subType`**
-
-
- Returns the ``KeybindType`` corresponding to the type this object contains
-
-Signature:
-
-```cpp
- KeybindType subType() const { return static_cast<KeybindType>(binding.index());
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Operator == overload`**
-
-
- Equality operator for ``KeyBinding``
-
-Signature:
-
-```cpp
- bool operator==(const KeyBinding& other) const { return binding == other.binding;
-```
-
-**Parameters:**
-
-- `other`: The ``KeyBinding`` to compare against
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::_isTriggeredByEvent`**
-
-
- Determines if the KeyBinding is triggered by a keyboard event
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- bool _isTriggeredByEvent(SDL_KeyboardEvent event);
-```
-
-**Parameters:**
-
-- `event`: The ``SDL_KeyboardEvent`` to check against
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`Syngine::_isTriggeredByEvent`**
-
-
- Determines if the KeyBinding is triggered by a keyboard event
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- bool _isTriggeredByEvent(SDL_MouseButtonEvent event);
-```
-
-**Parameters:**
-
-- `event`: The ``SDL_KeyboardEvent`` to check against
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`InputAction::`**
-
-
-
-
-Signature:
-
-```cpp
- /// @brief The callback called when the action is triggered
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`InputAction::onPressed`**
-
-
-
-
-Signature:
-
-```cpp
- std::function<void()> onPressed = []() -> void {};
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`InputAction::onReleased`**
-
-
- The callback called when the action is released
-
-Signature:
-
-```cpp
- std::function<void()> onReleased = []() -> void {};
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-#### **`InputAction::onStateChanged`**
-
-
- The callback called whenever the trigger state of the action changes
-
-Signature:
-
-```cpp
- std::function<void()> onStateChanged = []() -> void {};
-```
-
-**This function has been available since:** 0.0.1
-
----
-
-## Class Constructor
-
-
 #### **`InputAction::InputAction`**
 
 
@@ -742,7 +59,7 @@ Signature:
 Signature:
 
 ```cpp
- InputAction(const std::string& identifier, const std::string& name,
+ InputAction(const std::string& identifier, const std::string& name, const std::string& category = "", Syngine::KeyBinding binding = KeyBinding(), Callbacks callbacks = { .onPressed = []() -> void {}, .onReleased = []() -> void {}, .onStateChanged = []() -> void {} });
 ```
 
 **Parameters:**
@@ -757,6 +74,170 @@ Signature:
 
 ## Class & Related Members
 
+
+#### **`Syngine::KeybindType`**
+
+
+ A tag enum representing each of the keybindable types
+
+Signature:
+
+```cpp
+enum class KeybindType : size_t
+```
+
+**Members:**
+
+| Name | Description |
+| --- | --- | 
+| `UNBOUND` | A keybind that is not bound to any key |
+| `KEYCODE` | A keybind that is bound to a specific keycode |
+| `SCANCODE` | A keybind that is bound to a specific scancode |
+| `SHORTCUT` | A keybind that is bound to a keycode or scancode and a set |
+| `SEQUENCE` | A keybind that is bound to a sequence of keycodes, |
+| `MOUSE_BUTTON` | A keybind that is bound to a mouse button |
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`Syngine::KeyShortcut`**
+
+
+ Checks if the keyboard event triggers this binding
+
+#### This function is internal use only and not intended for public use!
+
+
+**Note:** Use a ``KeyBinding`` holding a ``KeyUnknown`` (the default constructor of `KeyBinding`) instead
+
+Signature:
+
+```cpp
+struct KeyShortcut
+```
+
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `key` | `The` | key to bind |
+| `key` | `The` | key to bind |
+| `modifiers` | `The` | modifiers to bind |
+| `other` | `The` | ``KeyShortcut`` to compare against |
+| `event` | `The` | event to check against |
+
+**Returns:** `true` if the event triggers the binding, `false` otherwise
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`Syngine::KeySequence`**
+
+
+ Equality operator for ``KeySequence``
+
+#### This function is internal use only and not intended for public use!
+
+
+**Note:** You probably shouldn't call this unless you really need to, and it might be removed
+
+Signature:
+
+```cpp
+struct KeySequence
+```
+
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `key` | `The` | binding to bind |
+| `list` | `The` | list of bindings to bind |
+| `index` | `The` | index to find the type of |
+| `event` | `The` | ``SDL_KeyboardEvent`` to check the sequence against |
+| `other` | `The` | ``KeySequence`` to compare against |
+
+**Returns:** `true` if the objects are equal, `false` otherwise
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`Syngine::KeyBinding`**
+
+
+ Determines if the KeyBinding is triggered by a keyboard event
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+struct KeyBinding
+```
+
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `keycode` | `The` | keycode to bind |
+| `other` | `The` | ``KeyBinding`` to compare against |
+| `event` | `The` | ``SDL_KeyboardEvent`` to check against |
+| `event` | `The` | ``SDL_KeyboardEvent`` to check against |
+
+**Returns:** `true` if the contained subtype is triggered by the event, `false` otherwise
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`InputAction:::`**
+
+
+ A bound input action
+
+**Note:** InputActions are *not* anonymous and *must* have a unique identifier, which cannot be changed
+
+Signature:
+
+```cpp
+ public: /// @brief A container for callbacks /// @since 0.0.1 struct Callbacks { /// @brief The callback called when the action is triggered /// @since 0.0.1 std::function<void()> onPressed = []() -> void;
+```
+
+---
+
+#### **`InputAction::onReleased`**
+
+
+ The callback called when the action is released
+
+Signature:
+
+```cpp
+ std::function<void()> onReleased = []() -> void;
+```
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`InputAction::onStateChanged`**
+
+
+ The callback called whenever the trigger state of the action changes
+
+Signature:
+
+```cpp
+ std::function<void()> onStateChanged = []() -> void;
+```
+
+**This function has been available since:** 0.0.1
+
+---
 
 ## Class Constructor
 
@@ -862,6 +343,8 @@ Signature:
  bool isPressed();
 ```
 
+**Returns:** `true` for every frame the binding is triggered, `false` otherwise
+
 **This function has been available since:** 0.0.1
 
 ---
@@ -876,6 +359,8 @@ Signature:
 ```cpp
  bool wasPressed();
 ```
+
+**Returns:** `true` the first frame the binding is triggered, `false` otherwise
 
 **This function has been available since:** 0.0.1
 
@@ -892,6 +377,8 @@ Signature:
  bool wasReleased();
 ```
 
+**Returns:** `true` the first frame the binding is released, `false` otherwise
+
 **This function has been available since:** 0.0.1
 
 ---
@@ -907,6 +394,8 @@ Signature:
  bool stateChanged();
 ```
 
+**Returns:** `true` on every frame where the state is different from the last frame, `false` otherwise
+
 **This function has been available since:** 0.0.1
 
 ---
@@ -919,7 +408,7 @@ Signature:
 Signature:
 
 ```cpp
- void setOnPressedCallback(std::function<void()> callback) { callbacks.onPressed = callback;
+ void setOnPressedCallback(std::function<void()> callback);
 ```
 
 **Parameters:**
@@ -938,7 +427,7 @@ Signature:
 Signature:
 
 ```cpp
- void setOnReleasedCallback(std::function<void()> callback) { callbacks.onReleased = callback;
+ void setOnReleasedCallback(std::function<void()> callback);
 ```
 
 **Parameters:**
@@ -957,7 +446,7 @@ Signature:
 Signature:
 
 ```cpp
- void setOnStateChangedCallback(std::function<void()> callback) { callbacks.onStateChanged = callback;
+ void setOnStateChangedCallback(std::function<void()> callback);
 ```
 
 **Parameters:**
@@ -978,7 +467,7 @@ Signature:
 Signature:
 
 ```cpp
- static void RegisterAction(const std::string& identifier, const std::string& name,
+ static void RegisterAction(const std::string& identifier, const std::string& name, const std::string& category, KeyBinding binding, Callbacks callbacks);
 ```
 
 **Parameters:**
@@ -1003,12 +492,14 @@ Signature:
 Signature:
 
 ```cpp
- bool operator==(const InputAction& other) const { return binding == other.binding;
+ bool operator==(const InputAction& other) const;
 ```
 
 **Parameters:**
 
 - `other`: The ``InputAction`` to compare against
+
+**Returns:** `true` if the objects are equal, `false` otherwise
 
 **This function has been available since:** 0.0.1
 

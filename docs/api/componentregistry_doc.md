@@ -13,14 +13,14 @@
 ## Goto: 
 
 
-- [using](#componentregistryusing)
+- [Serializer::DataNode](#componentregistryserializer::datanode)
 - [Register](#componentregistryregister)
 - [ParseXml](#componentregistryparsexml)
 - [Instantiate](#componentregistryinstantiate)
 
 ---
 
-#### **`ComponentRegistry::using`**
+#### **`ComponentRegistry::Serializer::DataNode`**
 
 
  ComponentRegistry is a global registry that maps component type IDs to their corresponding XML parsing and instantiation functions. This allows for dynamic creation of components from serialized data without hardcoding each type in the deserialization logic.
@@ -28,7 +28,7 @@
 Signature:
 
 ```cpp
- public: using ParseXmlFn =
+ public: using ParseXmlFn = std::function<Serializer::DataNode(const scl::xml::XmlElem*)>;
 ```
 
 ---
@@ -86,7 +86,7 @@ Signature:
 Signature:
 
 ```cpp
- static std::unique_ptr<Component> Instantiate(Syngine::ComponentTypeID type,
+ static std::unique_ptr<Component> Instantiate(Syngine::ComponentTypeID type, GameObject* owner, const Serializer::DataNode& data);
 ```
 
 **Parameters:**

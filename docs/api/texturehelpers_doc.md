@@ -13,17 +13,14 @@
 ## Goto: 
 
 
-- [Constructor](#class-constructor)
+- [LoadTextureFromMemory](#syngineloadtexturefrommemory)
 - [LoadTextureFromFile](#syngineloadtexturefromfile)
 - [CreateFlatTexture](#synginecreateflattexture)
 - [CreateNoiseTexture](#synginecreatenoisetexture)
 
 ---
 
-## Class Constructor
-
-
-#### **`Syngine::bgfx::TextureHandleLoadTextureFromMemory`**
+#### **`Syngine::LoadTextureFromMemory`**
 
 
  Loads a texture from memory
@@ -31,7 +28,7 @@
 Signature:
 
 ```cpp
-bgfx::TextureHandleLoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
+bgfx::TextureHandle LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
 ```
 
 **Parameters:**
@@ -43,9 +40,6 @@ bgfx::TextureHandleLoadTextureFromMemory(const uint8_t* data, size_t size, const
 **Returns:** A bgfx::TextureHandle representing the loaded texture
 
 ---
-
-## Class & Related Members
-
 
 #### **`Syngine::LoadTextureFromFile`**
 

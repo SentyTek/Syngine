@@ -120,7 +120,7 @@ Signature:
 Signature:
 
 ```cpp
- DebugRender* _GetDebugRenderer() ;
+ DebugRender* _GetDebugRenderer();
 ```
 
 **Returns:** Pointer to the debug renderer
@@ -135,7 +135,7 @@ Signature:
 Signature:
 
 ```cpp
- void _DrawDebug(int width, int height,
+ void _DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam, DebugModes debug);
 ```
 
 **Parameters:**
@@ -157,7 +157,7 @@ Signature:
 Signature:
 
 ```cpp
- BodyInterface& _GetBodyInterface() { return mPhysicsSystem.GetBodyInterface();
+ BodyInterface& _GetBodyInterface();
 ```
 
 **Returns:** Reference to the body interface
@@ -177,7 +177,7 @@ Signature:
 Signature:
 
 ```cpp
- PhysicsSystem& _GetPhysicsSystem() ;
+ PhysicsSystem& _GetPhysicsSystem();
 ```
 
 **Returns:** Reference to the physics system
@@ -197,7 +197,7 @@ Signature:
 Signature:
 
 ```cpp
- const BPLayerInterfaceImpl& _GetBroadPhaseLayerInterface() const { return mBroadPhaseLayerInterface;
+ const BPLayerInterfaceImpl& _GetBroadPhaseLayerInterface() const;
 ```
 
 **Returns:** Reference to the broad phase layer interface
@@ -217,7 +217,7 @@ Signature:
 Signature:
 
 ```cpp
- const ObjectLayerPairFilterImpl& _GetObjectLayerPairFilter() const { return mObjectLayerPairFilter;
+ const ObjectLayerPairFilterImpl& _GetObjectLayerPairFilter() const;
 ```
 
 **Returns:** Reference to the object vs broad phase layer filter
@@ -237,7 +237,7 @@ Signature:
 Signature:
 
 ```cpp
- const ObjectVsBroadPhaseLayerFilterImpl& _GetObjectVsBroadPhaseLayerFilter() const { return mObjectVsBroadPhaseLayerFilter;
+ const ObjectVsBroadPhaseLayerFilterImpl& _GetObjectVsBroadPhaseLayerFilter() const;
 ```
 
 **Returns:** Reference to the object vs broad phase layer filter
@@ -257,7 +257,7 @@ Signature:
 Signature:
 
 ```cpp
- BodyID _CreateSphere(RVec3Arg position, float radius,
+ BodyID _CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer, float mass = 0.0f);
 ```
 
 **Parameters:**
@@ -285,7 +285,7 @@ Signature:
 Signature:
 
 ```cpp
- BodyID _CreateBox(RVec3Arg position, QuatArg rotation,
+ BodyID _CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, EMotionType motionType, ObjectLayer layer, float mass = 0.0f);
 ```
 
 **Parameters:**
@@ -316,7 +316,7 @@ Signature:
 Signature:
 
 ```cpp
- BodyID _CreateMeshBody(RVec3Arg position,
+ BodyID _CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f), const float mass = 0.f);
 ```
 
 **Parameters:**
@@ -345,7 +345,7 @@ Signature:
 Signature:
 
 ```cpp
- BodyID _CreateCapsule(RVec3Arg position, float radius,
+ BodyID _CreateCapsule(RVec3Arg position, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer, float mass = 0.0f);
 ```
 
 **Parameters:**
@@ -374,7 +374,7 @@ Signature:
 Signature:
 
 ```cpp
- BodyID _CreateCylinder(RVec3Arg position, QuatArg rotation,
+ BodyID _CreateCylinder(RVec3Arg position, QuatArg rotation, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer, float mass = 0.0f);
 ```
 
 **Parameters:**

@@ -24,28 +24,16 @@
 #### **`ZoneManager::_RegisterZone`**
 
 
- Registers a zone with the manager.
+ ZoneManager is responsible for managing all ZoneComponents in the game.
 
 #### This function is internal use only and not intended for public use!
 
 
-**Note:** This is called automatically when a ZoneComponent is created.
-
 Signature:
 
 ```cpp
- static void _RegisterZone(ZoneComponent* zone) noexcept;
+ public: /// @brief Registers a zone with the manager. /// @param zone The zone to register. /// @since v0.0.1 /// @threadsafety not-safe /// @internal /// @note This is called automatically when a ZoneComponent is created. /// @noexcept static void _RegisterZone(ZoneComponent* zone) noexcept;
 ```
-
-**Parameters:**
-
-- `zone`: The zone to register.
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
-**This function will not throw exceptions.**
 
 ---
 

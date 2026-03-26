@@ -16,24 +16,25 @@
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
 - [MeshAABB](#synginemeshaabb)
-- [GetComponentType](#synginegetcomponenttype)
-- [Clone](#syngineclone)
-- [Serialize](#syngineserialize)
-- [Init](#syngineinit)
-- [Update](#syngineupdate)
-- [LoadMesh](#syngineloadmesh)
-- [ReloadMesh](#synginereloadmesh)
-- [UnloadMesh](#syngineunloadmesh)
-- [IsMeshLoaded](#syngineismeshloaded)
-- [UploadMesh](#syngineuploadmesh)
-- [GetAABB](#synginegetaabb)
+- [bool](#meshcomponentbool)
+- [GetComponentType](#meshcomponentgetcomponenttype)
+- [Clone](#meshcomponentclone)
+- [Serialize](#meshcomponentserialize)
+- [Init](#meshcomponentinit)
+- [Update](#meshcomponentupdate)
+- [LoadMesh](#meshcomponentloadmesh)
+- [ReloadMesh](#meshcomponentreloadmesh)
+- [UnloadMesh](#meshcomponentunloadmesh)
+- [IsMeshLoaded](#meshcomponentismeshloaded)
+- [UploadMesh](#meshcomponentuploadmesh)
+- [GetAABB](#meshcomponentgetaabb)
 
 ---
 
 ## Class Constructor
 
 
-#### **`Syngine::MeshComponent`**
+#### **`MeshComponent::MeshComponent`**
 
 
  Constructor for the MeshComponent class
@@ -43,7 +44,7 @@
 Signature:
 
 ```cpp
- MeshComponent(GameObject* owner, const std::string& path = "",
+ MeshComponent(GameObject* owner, const std::string& path = "", bool loadTextures = true);
 ```
 
 **Parameters:**
@@ -67,23 +68,38 @@ Signature:
 Signature:
 
 ```cpp
-struct MeshAABB 
+struct MeshAABB
 ```
 
 **Members:**
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float` | `min[3]` | = {0.0f, 0.0f, 0.0f};        //* Minimum corner of the AABB Minimum corner of the AABB |
-| `float` | `max[3]` | = {0.0f, 0.0f, 0.0f};        //* Maximum corner of the AABB Maximum corner of the AABB |
-| `float` | `center[3]` | = {0.0f, 0.0f, 0.0f};     //* Center of the AABB Center of the AABB |
-| `float` | `halfExtents[3]` | = {0.0f, 0.0f, 0.0f}; //* Half extents of the AABB Half extents of the AABB |
+| `float[3]` | `min` | Minimum corner of the AABB |
+| `float[3]` | `max` | Maximum corner of the AABB |
+| `float[3]` | `center` | Center of the AABB |
+| `float[3]` | `halfExtents` | Half extents of the AABB |
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Syngine::GetComponentType`**
+#### **`MeshComponent::bool`**
+
+
+ Component for rendering 3D mesh models. Supports loading 3D asset files and uploading custom mesh data.
+
+Signature:
+
+```cpp
+ public: bool receiveShadows = true; //* Whether the mesh receives shadows
+```
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`MeshComponent::GetComponentType`**
 
 
  Get the type of this component
@@ -102,7 +118,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Clone`**
+#### **`MeshComponent::Clone`**
 
 
  Clone the MeshComponent
@@ -110,14 +126,14 @@ Signature:
 Signature:
 
 ```cpp
- std::unique_ptr<Component> Clone() const override { return std::make_unique<MeshComponent>(*this);
+ std::unique_ptr<Component> Clone() const override;
 ```
 
 **Returns:** A unique pointer to the cloned MeshComponent
 
 ---
 
-#### **`Syngine::Serialize`**
+#### **`MeshComponent::Serialize`**
 
 
  Serializes the MeshComponent to a data node
@@ -132,7 +148,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Init`**
+#### **`MeshComponent::Init`**
 
 
  Initialize the mesh component
@@ -156,7 +172,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Update`**
+#### **`MeshComponent::Update`**
 
 
  Update the mesh component. Unused.
@@ -166,7 +182,7 @@ Signature:
 Signature:
 
 ```cpp
- void Update(float deltaTime) override {};
+ void Update(float deltaTime) override;
 ```
 
 **Parameters:**
@@ -177,7 +193,7 @@ Signature:
 
 ---
 
-#### **`Syngine::LoadMesh`**
+#### **`MeshComponent::LoadMesh`**
 
 
  Load a mesh from a file
@@ -201,7 +217,7 @@ Signature:
 
 ---
 
-#### **`Syngine::ReloadMesh`**
+#### **`MeshComponent::ReloadMesh`**
 
 
  Reload the mesh from the file
@@ -222,7 +238,7 @@ Signature:
 
 ---
 
-#### **`Syngine::UnloadMesh`**
+#### **`MeshComponent::UnloadMesh`**
 
 
  Unload the mesh
@@ -246,7 +262,7 @@ Signature:
 
 ---
 
-#### **`Syngine::IsMeshLoaded`**
+#### **`MeshComponent::IsMeshLoaded`**
 
 
  Check if the mesh is loaded
@@ -254,7 +270,7 @@ Signature:
 Signature:
 
 ```cpp
- bool IsMeshLoaded() const { return bgfx::isValid(this->meshData.vbh) &&
+ bool IsMeshLoaded() const;
 ```
 
 **Returns:** true if the mesh is loaded, false otherwise
@@ -265,7 +281,7 @@ Signature:
 
 ---
 
-#### **`Syngine::UploadMesh`**
+#### **`MeshComponent::UploadMesh`**
 
 
  Upload mesh data directly
@@ -273,7 +289,7 @@ Signature:
 Signature:
 
 ```cpp
- bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices,
+ bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices, std::vector<uint8_t> baseColor = {});
 ```
 
 **Parameters:**
@@ -290,7 +306,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetAABB`**
+#### **`MeshComponent::GetAABB`**
 
 
  Get the axis-aligned bounding box (AABB) of the mesh
@@ -314,7 +330,6 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `bool` | `receiveShadows` | Whether the mesh receives shadows |
 | `bool` | `castShadows` | Whether the mesh casts shadows |
 | `bool` | `receiveSunLight` | Whether the mesh receives sunlight |
 | `MeshData` | `meshData` | Mesh data for the GameObject |

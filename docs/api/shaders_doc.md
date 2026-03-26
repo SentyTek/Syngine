@@ -28,7 +28,7 @@
 Signature:
 
 ```cpp
-inline bgfx::ShaderHandle _LoadShader(const char* shaderPath){
+inline bgfx::ShaderHandle _LoadShader(const char* shaderPath);
 ```
 
 **Parameters:**

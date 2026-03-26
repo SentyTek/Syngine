@@ -35,23 +35,13 @@
 #### **`Registry::AddGameObject`**
 
 
-
+ Registry class to manage GameObjects. Owns all GameObjects, stores indexed sublists of GameObjects for fast lookups
 
 Signature:
 
 ```cpp
- static int AddGameObject(GameObject* GameObject) noexcept;
+ public: /// @brief Add a GameObject to the registry. /// @param GameObject The GameObject to add. /// @return 0 on success, -1 if failure. /// @threadsafety safe /// @since v0.0.1 static int AddGameObject(GameObject* GameObject) noexcept;
 ```
-
-**Parameters:**
-
-- `GameObject`: The GameObject to add.
-
-**Returns:** 0 on success, -1 if failure.
-
-**Thread Safety:** safe
-
-**This function has been available since:** v0.0.1
 
 ---
 
@@ -220,7 +210,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline std::unordered_map<int, GameObject*>& GetAllGameObjects() noexcept { return m_AllObjects;
+ static inline std::unordered_map<int, GameObject*>& GetAllGameObjects() noexcept;
 ```
 
 **Returns:** std::unordered_map A reference to the unordered map of all GameObjects. The map is indexed by GameObject ID.
@@ -239,7 +229,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline std::vector<GameObject*> GetPhysicsObjects() noexcept { return m_PhysicsObjects;
+ static inline std::vector<GameObject*> GetPhysicsObjects() noexcept;
 ```
 
 **Returns:** std::vector A vector of GameObjects that have physics enabled.
@@ -258,7 +248,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline std::vector<GameObject*> GetRenderableObjects() noexcept { return m_RenderableObjects;
+ static inline std::vector<GameObject*> GetRenderableObjects() noexcept;
 ```
 
 **Returns:** std::vector A vector of GameObjects that are renderable.
@@ -277,7 +267,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline std::vector<GameObject*> GetScriptedObjects() noexcept { return m_ScriptedObjects;
+ static inline std::vector<GameObject*> GetScriptedObjects() noexcept;
 ```
 
 **Returns:** std::vector A vector of GameObjects that have a script attached.
@@ -296,7 +286,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline std::vector<GameObject*> GetGizmos() noexcept { return m_Gizmos;
+ static inline std::vector<GameObject*> GetGizmos() noexcept;
 ```
 
 **Returns:** std::vector A vector of GameObjects that are gizmos.
@@ -315,7 +305,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline size_t GetGameObjectCount() noexcept { return m_AllObjects.size();
+ static inline size_t GetGameObjectCount() noexcept;
 ```
 
 **Returns:** size_t The number of GameObjects in the registry.

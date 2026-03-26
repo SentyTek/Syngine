@@ -45,7 +45,7 @@
 Signature:
 
 ```cpp
-enum class LogLevel 
+enum class LogLevel
 ```
 
 **Members:**
@@ -175,7 +175,7 @@ Signature:
 Signature:
 
 ```cpp
- static void Log(const std::string_view message, LogLevel level = LogLevel::INFO,
+ static void Log(const std::string_view message, LogLevel level = LogLevel::INFO, bool toConsole = true);
 ```
 
 **Parameters:**
@@ -349,7 +349,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline void SetAutoFlush(bool enable) noexcept { m_autoFlush = enable;
+ static inline void SetAutoFlush(bool enable) noexcept;
 ```
 
 **Parameters:**
@@ -387,7 +387,7 @@ Signature:
 Signature:
 
 ```cpp
- [[nodiscard]] static inline bool IsOpen() noexcept {
+ [[nodiscard]] static inline bool IsOpen() noexcept;
 ```
 
 **Returns:** True if the log file is open, false otherwise
@@ -408,7 +408,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline void SetMinLogLevel(LogLevel level) noexcept { m_minLogLevel = level;
+ static inline void SetMinLogLevel(LogLevel level) noexcept;
 ```
 
 **Parameters:**
@@ -429,7 +429,7 @@ Signature:
 Signature:
 
 ```cpp
- static inline LogLevel GetMinLogLevel() noexcept ;
+ static inline LogLevel GetMinLogLevel() noexcept;
 ```
 
 **Returns:** Current minimum log level

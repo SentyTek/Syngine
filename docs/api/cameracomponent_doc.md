@@ -14,29 +14,30 @@
 
 
 - [Constructor](#class-constructor)
-- [yaw](#syngineyaw)
-- [GetComponentType](#synginegetcomponenttype)
-- [Clone](#syngineclone)
-- [Serialize](#syngineserialize)
-- [Init](#syngineinit)
-- [Update](#syngineupdate)
-- [SetPosition](#synginesetposition)
-- [GetPosition](#synginegetposition)
-- [SetFOV](#synginesetfov)
-- [GetFOV](#synginegetfov)
-- [SetFarPlane](#synginesetfarplane)
-- [GetFarPlane](#synginegetfarplane)
-- [SetAngles](#synginesetangles)
-- [GetAngles](#synginegetangles)
-- [](#syngine)
-- [](#syngine)
+- [Camera](#synginecamera)
+- [static](#cameracomponentstatic)
+- [GetComponentType](#cameracomponentgetcomponenttype)
+- [Clone](#cameracomponentclone)
+- [Serialize](#cameracomponentserialize)
+- [Init](#cameracomponentinit)
+- [Update](#cameracomponentupdate)
+- [SetPosition](#cameracomponentsetposition)
+- [GetPosition](#cameracomponentgetposition)
+- [SetFOV](#cameracomponentsetfov)
+- [GetFOV](#cameracomponentgetfov)
+- [SetFarPlane](#cameracomponentsetfarplane)
+- [GetFarPlane](#cameracomponentgetfarplane)
+- [SetAngles](#cameracomponentsetangles)
+- [GetAngles](#cameracomponentgetangles)
+- [Plane](#cameracomponentplane)
+- [Frustum](#cameracomponentfrustum)
 
 ---
 
 ## Class Constructor
 
 
-#### **`Syngine::CameraComponent`**
+#### **`CameraComponent::CameraComponent`**
 
 
  Constructor for the CameraComponent class
@@ -54,7 +55,6 @@ Signature:
 
 **Parameters:**
 
-- `static`: constexpr Syngine::ComponentTypeID componentType Camera component type
 - `owner`: Pointer to the GameObject that owns this component
 
 **This function has been available since:** v0.0.1
@@ -64,7 +64,7 @@ Signature:
 ## Class & Related Members
 
 
-#### **`Syngine::yaw`**
+#### **`Syngine::Camera`**
 
 
  Struct to hold camera data
@@ -72,25 +72,45 @@ Signature:
 Signature:
 
 ```cpp
- float yaw = 0.0f; //* Yaw angle in radians
+struct Camera
 ```
 
-**Parameters:**
+**Members:**
 
-- `float`: eye[3] = {0.0f, 0.0f, -5.0f}; //* Camera position in world space Camera position in world space
-- `float`: target[3] = {0.0f, 0.0f, 0.0f}; //* Camera target position Camera target position
-- `float`: up[3] = {0.0f, 1.0f, 0.0f}; //* Camera up vector Camera up vector
-- `float`: fov Field of view in degrees
-- `float`: nearPlane Near clipping plane
-- `float`: farPlane Far clipping plane
-- `float`: view[16]; //* View matrix View matrix
-- `float`: proj[16]; //* Projection matrix Projection matrix
+| Type | Name | Description |
+| --- | --- | --- | 
+| `float[3]` | `eye` | Camera position in world space |
+| `float[3]` | `target` | Camera target position |
+| `float[3]` | `up` | Camera up vector |
+| `float` | `fov` | Field of view in degrees |
+| `float` | `nearPlane` | Near clipping plane |
+| `float` | `farPlane` | Far clipping plane |
+| `float[16]` | `view` | View matrix |
+| `float[16]` | `proj` | Projection matrix |
+| `float` | `yaw` | Yaw angle in radians |
+| `float` | `pitch` | Pitch angle in radians |
+| `float` | `roll` | Roll angle in radians |
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Syngine::GetComponentType`**
+#### **`CameraComponent::static`**
+
+
+ CameraComponent class for managing camera functionality in a game object
+
+Signature:
+
+```cpp
+ public: static constexpr Syngine::ComponentTypeID componentType = Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
+```
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`CameraComponent::GetComponentType`**
 
 
  Get the type of this component
@@ -109,7 +129,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Clone`**
+#### **`CameraComponent::Clone`**
 
 
  Clone the CameraComponent
@@ -117,14 +137,14 @@ Signature:
 Signature:
 
 ```cpp
- std::unique_ptr<Component> Clone() const override {
+ std::unique_ptr<Component> Clone() const override;
 ```
 
 **Returns:** A unique pointer to the cloned CameraComponent
 
 ---
 
-#### **`Syngine::Serialize`**
+#### **`CameraComponent::Serialize`**
 
 
  Serializes the CameraComponent to a data node
@@ -139,7 +159,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Init`**
+#### **`CameraComponent::Init`**
 
 
  Initialize the camera component
@@ -149,7 +169,7 @@ Signature:
 Signature:
 
 ```cpp
- void Init() override {} // No specific initialization needed
+ void Init() override;
 ```
 
 **Thread Safety:** not-safe
@@ -158,7 +178,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Update`**
+#### **`CameraComponent::Update`**
 
 
  Update the camera component
@@ -186,7 +206,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetPosition`**
+#### **`CameraComponent::SetPosition`**
 
 
  Set the camera position
@@ -209,7 +229,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetPosition`**
+#### **`CameraComponent::GetPosition`**
 
 
  Get the camera position
@@ -228,7 +248,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetFOV`**
+#### **`CameraComponent::SetFOV`**
 
 
  Set the camera FOV
@@ -249,7 +269,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetFOV`**
+#### **`CameraComponent::GetFOV`**
 
 
  Get the camera FOV
@@ -268,7 +288,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetFarPlane`**
+#### **`CameraComponent::SetFarPlane`**
 
 
  Set the camera far clipping plane
@@ -289,7 +309,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetFarPlane`**
+#### **`CameraComponent::GetFarPlane`**
 
 
  Get the camera far clipping plane
@@ -308,7 +328,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetAngles`**
+#### **`CameraComponent::SetAngles`**
 
 
  Set the camera near clipping plane
@@ -329,7 +349,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetAngles`**
+#### **`CameraComponent::GetAngles`**
 
 
  Get the camera angles
@@ -351,7 +371,7 @@ Signature:
 
 ---
 
-#### **`Syngine::`**
+#### **`CameraComponent::Plane`**
 
 
  Structure representing a plane in 3D space
@@ -362,21 +382,21 @@ Signature:
 Signature:
 
 ```cpp
- };
+ struct Plane
 ```
 
 **Members:**
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float` | `normal[3]` | = { 0.f, 1.f, 0.f }; //* Normal vector of the plane Normal vector of the plane |
+| `float[3]` | `normal` | Normal vector of the plane |
 | `float` | `distance` | Distance from origin |
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Syngine::`**
+#### **`CameraComponent::Frustum`**
 
 
  Structure representing a frustum for view culling
@@ -387,7 +407,7 @@ Signature:
 Signature:
 
 ```cpp
- };
+ struct Frustum
 ```
 
 **Members:**

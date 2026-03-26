@@ -43,7 +43,7 @@
 Signature:
 
 ```cpp
- BillboardComponent(GameObject* owner, std::string texturePath,
+ BillboardComponent(GameObject* owner, std::string texturePath, BillboardMode mode = BillboardMode::CAMERA_ALIGNED, float size = 1.0f);
 ```
 
 **Parameters:**
@@ -68,7 +68,7 @@ Signature:
 Signature:
 
 ```cpp
-enum class BillboardMode 
+enum class BillboardMode
 ```
 
 **Members:**
@@ -146,7 +146,7 @@ Signature:
 Signature:
 
 ```cpp
- void Update(float deltaTime) override {};
+ void Update(float deltaTime) override;
 ```
 
 **Parameters:**
@@ -168,7 +168,7 @@ Signature:
 Signature:
 
 ```cpp
- bgfx::TextureHandle _GetTexture() const ;
+ bgfx::TextureHandle _GetTexture() const;
 ```
 
 **Returns:** bgfx::TextureHandle The texture handle
@@ -187,7 +187,7 @@ Signature:
 Signature:
 
 ```cpp
- void SetRotX(float rotX) ;
+ void SetRotX(float rotX);
 ```
 
 **Parameters:**
@@ -204,7 +204,7 @@ Signature:
 Signature:
 
 ```cpp
- void SetRotY(float rotY) ;
+ void SetRotY(float rotY);
 ```
 
 **Parameters:**
@@ -221,7 +221,7 @@ Signature:
 Signature:
 
 ```cpp
- void SetRotZ(float rotZ) ;
+ void SetRotZ(float rotZ);
 ```
 
 **Parameters:**
@@ -238,7 +238,7 @@ Signature:
 Signature:
 
 ```cpp
- void SetRot(float rotX, float rotY, float rotZ) { this->m_rot[0] = rotX;
+ void SetRot(float rotX, float rotY, float rotZ);
 ```
 
 **Parameters:**
@@ -257,7 +257,7 @@ Signature:
 Signature:
 
 ```cpp
- float* GetRot() ;
+ float* GetRot();
 ```
 
 **Returns:** float* Pointer to array of 3 floats representing rotation
@@ -272,7 +272,7 @@ Signature:
 Signature:
 
 ```cpp
- BillboardMode GetMode() const ;
+ BillboardMode GetMode() const;
 ```
 
 **Returns:** BillboardMode The billboard rendering mode
@@ -284,7 +284,6 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `BillboardMode` | `m_mode` | Billboard rendering mode |
 | `std::string` | `m_texturePath` | Path to the billboard texture |
 | `float` | `m_rot` | Rotation of the billboard |
 | `float` | `size` | Size of the billboard |

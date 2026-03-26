@@ -13,22 +13,36 @@
 ## Goto: 
 
 
-- [DrawLine](#synginedrawline)
-- [DrawGeometry](#synginedrawgeometry)
-- [DrawText3D](#synginedrawtext3d)
-- [DrawTriangle](#synginedrawtriangle)
-- [CreateTriangleBatch](#synginecreatetrianglebatch)
-- [CreateTriangleBatch](#synginecreatetrianglebatch)
-- [DrawFrustum](#synginedrawfrustum)
-- [DrawFrustum](#synginedrawfrustum)
-- [DrawBox](#synginedrawbox)
-- [DrawSphere](#synginedrawsphere)
-- [RenderLines](#synginerenderlines)
-- [ClearLines](#syngineclearlines)
+- [e](#debugrendere)
+- [DrawLine](#debugrenderdrawline)
+- [DrawGeometry](#debugrenderdrawgeometry)
+- [DrawText3D](#debugrenderdrawtext3d)
+- [DrawTriangle](#debugrenderdrawtriangle)
+- [CreateTriangleBatch](#debugrendercreatetrianglebatch)
+- [CreateTriangleBatch](#debugrendercreatetrianglebatch)
+- [DrawFrustum](#debugrenderdrawfrustum)
+- [DrawFrustum](#debugrenderdrawfrustum)
+- [DrawBox](#debugrenderdrawbox)
+- [DrawSphere](#debugrenderdrawsphere)
+- [RenderLines](#debugrenderrenderlines)
+- [ClearLines](#debugrenderclearlines)
 
 ---
 
-#### **`Syngine::DrawLine`**
+#### **`DebugRender::e`**
+
+
+ Debug renderer class for Syngine
+
+Signature:
+
+```cpp
+ private: /// @brief Internal class to manage batches of debug triangles. Not all /// functions are implemented or documented. /// @section DebugRenderer class BatchImpl : public JPH::RefTargetVirtual { public: JPH_OVERRIDE_NEW_DELETE std::vector<JPH::DebugRenderer::Triangle> mTriangles;
+```
+
+---
+
+#### **`DebugRender::DrawLine`**
 
 
  Draw a line with a color
@@ -39,7 +53,7 @@
 Signature:
 
 ```cpp
- virtual void DrawLine(JPH::RVec3Arg from, JPH::RVec3Arg to,
+ virtual void DrawLine(JPH::RVec3Arg from, JPH::RVec3Arg to, JPH::ColorArg color) override;
 ```
 
 **Parameters:**
@@ -52,7 +66,7 @@ Signature:
 
 ---
 
-#### **`Syngine::DrawGeometry`**
+#### **`DebugRender::DrawGeometry`**
 
 
  Draw geometry
@@ -63,7 +77,7 @@ Signature:
 Signature:
 
 ```cpp
- virtual void DrawGeometry(JPH::RMat44Arg modelMatrix, const JPH::AABox& worldSpaceBounds,
+ virtual void DrawGeometry(JPH::RMat44Arg modelMatrix, const JPH::AABox& worldSpaceBounds, float LODScaleSq, JPH::ColorArg modelColor, const GeometryRef& geometry, ECullMode cullMode = ECullMode::CullBackFace, ECastShadow castShadow = ECastShadow::Off, EDrawMode drawMode = EDrawMode::Wireframe) override;
 ```
 
 **Parameters:**
@@ -81,7 +95,7 @@ Signature:
 
 ---
 
-#### **`Syngine::DrawText3D`**
+#### **`DebugRender::DrawText3D`**
 
 
  Draw a text string in 3D space (Not implemented)
@@ -89,7 +103,7 @@ Signature:
 Signature:
 
 ```cpp
- virtual void DrawText3D(JPH::RVec3Arg position, const std::string_view& inString,
+ virtual void DrawText3D(JPH::RVec3Arg position, const std::string_view& inString, JPH::ColorArg color = JPH::Color::sWhite, float height = 0.5f) override;
 ```
 
 **Parameters:**
@@ -101,7 +115,7 @@ Signature:
 
 ---
 
-#### **`Syngine::DrawTriangle`**
+#### **`DebugRender::DrawTriangle`**
 
 
  Draw a triangle
@@ -112,7 +126,7 @@ Signature:
 Signature:
 
 ```cpp
- virtual void DrawTriangle(JPH::RVec3Arg v1,
+ virtual void DrawTriangle(JPH::RVec3Arg v1, JPH::RVec3Arg v2, JPH::RVec3Arg v3, JPH::ColorArg color, ECastShadow castShadow = ECastShadow::Off) override;
 ```
 
 **Parameters:**
@@ -127,7 +141,7 @@ Signature:
 
 ---
 
-#### **`Syngine::CreateTriangleBatch`**
+#### **`DebugRender::CreateTriangleBatch`**
 
 
  Create a batch of triangles
@@ -152,7 +166,7 @@ Signature:
 
 ---
 
-#### **`Syngine::CreateTriangleBatch`**
+#### **`DebugRender::CreateTriangleBatch`**
 
 
  Create a batch of triangles from vertices and indices
@@ -160,7 +174,7 @@ Signature:
 Signature:
 
 ```cpp
- virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const Vertex* inVertices,
+ virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const Vertex* inVertices, int inVertexCount, const JPH::uint32* inIndices, int inIndexCount) override;
 ```
 
 **Parameters:**
@@ -172,7 +186,7 @@ Signature:
 
 ---
 
-#### **`Syngine::DrawFrustum`**
+#### **`DebugRender::DrawFrustum`**
 
 
  Draw a frustum from a camera object
@@ -196,7 +210,7 @@ Signature:
 
 ---
 
-#### **`Syngine::DrawFrustum`**
+#### **`DebugRender::DrawFrustum`**
 
 
  Draw a frustum from given view and projection matrices
@@ -221,7 +235,7 @@ Signature:
 
 ---
 
-#### **`Syngine::DrawBox`**
+#### **`DebugRender::DrawBox`**
 
 
  Draw a box given min and max points
@@ -245,7 +259,7 @@ Signature:
 
 ---
 
-#### **`Syngine::DrawSphere`**
+#### **`DebugRender::DrawSphere`**
 
 
  Draw a sphere given center and radius
@@ -269,7 +283,7 @@ Signature:
 
 ---
 
-#### **`Syngine::RenderLines`**
+#### **`DebugRender::RenderLines`**
 
 
  Render debug lines
@@ -282,7 +296,7 @@ Signature:
 Signature:
 
 ```cpp
- void RenderLines(const float* view, const float* proj,
+ void RenderLines(const float* view, const float* proj, int width, int height, bgfx::ProgramHandle program);
 ```
 
 **Parameters:**
@@ -297,7 +311,7 @@ Signature:
 
 ---
 
-#### **`Syngine::ClearLines`**
+#### **`DebugRender::ClearLines`**
 
 
  Clear all debug lines

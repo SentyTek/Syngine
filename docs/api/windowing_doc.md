@@ -13,7 +13,7 @@
 ## Goto: 
 
 
-- [Constructor](#class-constructor)
+- [SDL_CreateWindow](#windowsdl_createwindow)
 - [ShouldClose](#windowshouldclose)
 - [GetWidth](#windowgetwidth)
 - [GetHeight](#windowgetheight)
@@ -30,34 +30,21 @@
 
 ---
 
-## Class Constructor
+#### **`Window::SDL_CreateWindow`**
 
 
-#### **`Window::Window`**
+ Manages all of the windowing operations
 
-
+#### This function is internal use only and not intended for public use!
 
 
 Signature:
 
 ```cpp
- Window(const EngineConfig& config);
+ public: /// @brief Constructor for the Window class /// @param config Engine configuration options /// @throws std::runtime_error if initialization fails (e.g., SDL_CreateWindow() /// fails or missing files) /// @threadsafety not-safe /// @since v0.0.1 Window(const EngineConfig& config);
 ```
 
-**Parameters:**
-
-- `config`: Engine configuration options
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
-**Throws:** std::runtime_error if initialization fails (e.g., SDL_CreateWindow() fails or missing files)
-
 ---
-
-## Class & Related Members
-
 
 #### **`Window::ShouldClose`**
 
