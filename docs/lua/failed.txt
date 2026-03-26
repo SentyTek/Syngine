@@ -1,2 +1,4 @@
 2026-01-29 18:53:11 | ./../../include/Syngine/Utils/Profiler.h | ./docgen.lua:185: attempt to concatenate a nil value (field 'title')
 2026-01-29 20:20:25 | ./../../include/Syngine/Utils/Profiler.h | ./docgen.lua:185: attempt to concatenate a nil value (field 'title')
+2026-03-26 03:49:19 | ./../../include/Syngine/Utils/Profiler.h | ./docgen.lua:185: attempt to concatenate a nil value (field 'title')
+2026-03-26 03:49:19 | ./../../include/Syngine/Utils/Serializer.h | ./docgen.lua:185: attempt to concatenate a nil value (field 'title')

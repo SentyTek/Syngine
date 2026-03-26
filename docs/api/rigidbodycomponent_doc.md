@@ -19,7 +19,10 @@
 - [shape](#syngineshape)
 - [GetComponentType](#synginegetcomponenttype)
 - [Clone](#syngineclone)
+- [Serialize](#syngineserialize)
 - [Init](#syngineinit)
+- [RetryInitIfPending](#syngineretryinitifpending)
+- [SyncBodyToTransform](#synginesyncbodytotransform)
 - [Update](#syngineupdate)
 - [Destroy](#synginedestroy)
 - [_GetBodyID](#syngine_getbodyid)
@@ -145,7 +148,7 @@ Signature:
 Signature:
 
 ```cpp
- Syngine::Components GetComponentType() override;
+ Syngine::ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type as an enum value
@@ -168,6 +171,21 @@ Signature:
 ```
 
 **Returns:** A unique pointer to the cloned RigidbodyComponent
+
+---
+
+#### **`Syngine::Serialize`**
+
+
+ Serializes the RigidbodyComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the RigidbodyComponent's state
 
 ---
 
@@ -194,6 +212,40 @@ Signature:
 
 ---
 
+#### **`Syngine::RetryInitIfPending`**
+
+
+ Retry deferred initialization when dependencies (like Transform) become available.
+
+Signature:
+
+```cpp
+ void RetryInitIfPending();
+```
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::SyncBodyToTransform`**
+
+
+ Push the current TransformComponent world pose into the physics body. Useful after runtime re-parenting or prefab child attachment.
+
+Signature:
+
+```cpp
+ void SyncBodyToTransform();
+```
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
 #### **`Syngine::Update`**
 
 
@@ -204,12 +256,12 @@ Signature:
 Signature:
 
 ```cpp
- void Update(bool simulate);
+ void Update(float deltaTime) override;
 ```
 
 **Parameters:**
 
-- `simulate`: Whether to simulate physics or not
+- `deltaTime`: The physics timestep
 
 **Thread Safety:** not-safe
 

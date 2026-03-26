@@ -16,6 +16,7 @@
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
 - [Clone](#syngineclone)
+- [Serialize](#syngineserialize)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [GetComponentType](#synginegetcomponenttype)
@@ -85,6 +86,21 @@ Signature:
 
 ---
 
+#### **`Syngine::Serialize`**
+
+
+ Serializes the TransformComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the TransformComponent's state
+
+---
+
 #### **`Syngine::Init`**
 
 
@@ -137,7 +153,7 @@ Signature:
 Signature:
 
 ```cpp
- Syngine::Components GetComponentType() override;
+ Syngine::ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type as an enum value

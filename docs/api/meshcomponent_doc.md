@@ -18,6 +18,7 @@
 - [MeshAABB](#synginemeshaabb)
 - [GetComponentType](#synginegetcomponenttype)
 - [Clone](#syngineclone)
+- [Serialize](#syngineserialize)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [LoadMesh](#syngineloadmesh)
@@ -90,7 +91,7 @@ struct MeshAABB
 Signature:
 
 ```cpp
- Components GetComponentType() override;
+ Syngine::ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type as an enum value
@@ -113,6 +114,21 @@ Signature:
 ```
 
 **Returns:** A unique pointer to the cloned MeshComponent
+
+---
+
+#### **`Syngine::Serialize`**
+
+
+ Serializes the MeshComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the MeshComponent's state
 
 ---
 
@@ -143,15 +159,19 @@ Signature:
 #### **`Syngine::Update`**
 
 
- Update the mesh component
+ Update the mesh component. Unused.
 
 **Note:** There is no specific update logic for the mesh component
 
 Signature:
 
 ```cpp
- void Update() {};
+ void Update(float deltaTime) override {};
 ```
+
+**Parameters:**
+
+- `deltaTime`: Time elapsed since the last update in seconds
 
 **This function has been available since:** v0.0.1
 

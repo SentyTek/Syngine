@@ -197,7 +197,7 @@ Signature:
 Signature:
 
 ```cpp
- static std::vector<GameObject*> GetGameObjectsWithComponent(Syngine::Components type) noexcept;
+ static std::vector<GameObject*> GetGameObjectsWithComponent(Syngine::ComponentTypeID type) noexcept;
 ```
 
 **Parameters:**
@@ -337,7 +337,7 @@ Signature:
 Signature:
 
 ```cpp
- static void _NotifyComponentAdded(GameObject* gameobject, Syngine::Components type) noexcept;
+ static void _NotifyComponentAdded(GameObject* gameobject, Syngine::ComponentTypeID type) noexcept;
 ```
 
 **Parameters:**
@@ -362,7 +362,7 @@ Signature:
 Signature:
 
 ```cpp
- static void _NotifyComponentRemoved(GameObject* gameobject, Syngine::Components type) noexcept;
+ static void _NotifyComponentRemoved(GameObject* gameobject, Syngine::ComponentTypeID type) noexcept;
 ```
 
 **Parameters:**

@@ -16,6 +16,7 @@
 - [Constructor](#class-constructor)
 - [X](#synginex)
 - [Clone](#syngineclone)
+- [Serialize](#syngineserialize)
 - [GetComponentType](#synginegetcomponenttype)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
@@ -112,6 +113,21 @@ Signature:
 
 ---
 
+#### **`Syngine::Serialize`**
+
+
+ Serializes the ZoneComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the ZoneComponent's state
+
+---
+
 #### **`Syngine::GetComponentType`**
 
 
@@ -120,7 +136,7 @@ Signature:
 Signature:
 
 ```cpp
- Components GetComponentType() override;
+ Syngine::ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type of this component.

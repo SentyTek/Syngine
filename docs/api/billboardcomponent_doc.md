@@ -17,6 +17,7 @@
 - [Constructor](#class-constructor)
 - [BillboardMode](#synginebillboardmode)
 - [GetComponentType](#synginegetcomponenttype)
+- [Serialize](#syngineserialize)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [_GetTexture](#syngine_gettexture)
@@ -77,6 +78,7 @@ enum class BillboardMode
 | `CAMERA_ALIGNED` | Always faces the camera |
 | `AXIS_Y_ALIGNED` | Rotates around Y (vertical) axis only |
 | `FIXED` | No rotation, fixed orientation |
+| `COUNT` | Number of billboard modes (for validation) |
 
 **This function has been available since:** v0.0.1
 
@@ -90,10 +92,25 @@ enum class BillboardMode
 Signature:
 
 ```cpp
- Components GetComponentType() override;
+ ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type as an enum value
+
+---
+
+#### **`Syngine::Serialize`**
+
+
+ Serializes the BillboardComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the BillboardComponent's state
 
 ---
 
@@ -124,13 +141,17 @@ Signature:
 #### **`Syngine::Update`**
 
 
- Update the billboard component
+ Update the billboard component. Unused.
 
 Signature:
 
 ```cpp
- void Update() {};
+ void Update(float deltaTime) override {};
 ```
+
+**Parameters:**
+
+- `deltaTime`: Time elapsed since the last update, in seconds
 
 **This function has been available since:** v0.0.1
 
@@ -264,7 +285,7 @@ Signature:
 | Type | Name | Description |
 | --- | --- | --- | 
 | `BillboardMode` | `m_mode` | Billboard rendering mode |
-| `bgfx::TextureHandle` | `m_texture` | Texture handle for the billboard |
+| `std::string` | `m_texturePath` | Path to the billboard texture |
 | `float` | `m_rot` | Rotation of the billboard |
 | `float` | `size` | Size of the billboard |
 | `bool` | `receiveShadows` | Whether the billboard receives shadows |

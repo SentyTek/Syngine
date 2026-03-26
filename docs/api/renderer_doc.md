@@ -208,36 +208,6 @@ struct RendererConfig
 #### **`Renderer::AddProgram`**
 
 
- Load a shader from vertex and fragment shader file paths and create a shader program
-
-**Note:** Path to each is literal, no automatic suffixes added. Compiler outputs .bin files, so be sure to add this suffix instead of .shader or .sc or whatever the src file is.
-
-**Preconditions:** Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
-
-Signature:
-
-```cpp
- static size_t AddProgram(const std::string& vsPath, const std::string& fsPath,
-```
-
-**Parameters:**
-
-- `vsPath`: Path to the vertex shader file
-- `fsPath`: Path to the fragment shader file
-- `name`: Name of the shader program
-- `viewId`: View ID for the shader program, defaults to VIEW_FORWARD
-
-**Returns:** The ID of the newly created program on success, -1 on failure
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
-
-#### **`Renderer::AddProgram`**
-
-
  Load a shader from a single file path and create a shader program
 
 **Note:** Assumes the vertex shader is named "{name}.vert.bin" and fragment shader "{name}.frag.bin"
@@ -253,6 +223,36 @@ Signature:
 **Parameters:**
 
 - `path`: Path to the shader file
+- `name`: Name of the shader program
+- `viewId`: View ID for the shader program, defaults to VIEW_FORWARD
+
+**Returns:** The index of the newly created program on success, -1 on failure
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Renderer::AddProgram`**
+
+
+ Load a shader from a bundle file and create a shader program
+
+**Note:** Assumes the vertex shader is named "{path}.vert.bin" and fragment shader "{path}.frag.bin" within the bundle
+
+**Preconditions:** Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
+
+Signature:
+
+```cpp
+ static size_t AddProgram(const std::string& bundlePath, const std::string& path,
+```
+
+**Parameters:**
+
+- `bundlePath`: Path to the bundle file containing the shader
+- `path`: Path to the shader file within the bundle (without .vert.bin or .frag.bin suffix)
 - `name`: Name of the shader program
 - `viewId`: View ID for the shader program, defaults to VIEW_FORWARD
 

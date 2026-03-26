@@ -17,10 +17,11 @@
 - [E](#synginee)
 - [GetComponentType](#synginegetcomponenttype)
 - [Clone](#syngineclone)
+- [Serialize](#syngineserialize)
 - [Init](#syngineinit)
 - [_HandleInput](#syngine_handleinput)
 - [Update](#syngineupdate)
-- [_PostPhysicsUpdate](#syngine_postphysicsupdate)
+- [PostPhysicsUpdate](#synginepostphysicsupdate)
 - [GetPlayerState](#synginegetplayerstate)
 - [GetRotation](#synginegetrotation)
 - [SetRotation](#synginesetrotation)
@@ -81,7 +82,7 @@ Signature:
 Signature:
 
 ```cpp
- Syngine::Components GetComponentType() override;
+ Syngine::ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type of this component.
@@ -104,6 +105,21 @@ Signature:
 ```
 
 **Returns:** A unique pointer to the cloned PlayerComponent
+
+---
+
+#### **`Syngine::Serialize`**
+
+
+ Serializes the PlayerComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the PlayerComponent's state
 
 ---
 
@@ -166,21 +182,16 @@ Signature:
 
  Updates the player. Mostly handles movement, physics, and updating the state.
 
-#### This function is internal use only and not intended for public use!
-
-
-**Note:** This is called every frame to update the player's position, rotation, and state.
+**Note:** This is called every frame to update the player's position, rotation, and state. Fetches keyboard state internally.
 
 Signature:
 
 ```cpp
- void Update(const bool* keystate, float deltaTime);
+ void Update(float deltaTime) override;
 ```
 
 **Parameters:**
 
-- `keystate`: The current state of the keyboard.
-- `simulate`: Whether to simulate physics or not.
 - `deltaTime`: The time since the last update.
 
 **Thread Safety:** not-safe
@@ -189,7 +200,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_PostPhysicsUpdate`**
+#### **`Syngine::PostPhysicsUpdate`**
 
 
  Updates position and camera after physics simulation.
@@ -202,7 +213,7 @@ Signature:
 Signature:
 
 ```cpp
- void _PostPhysicsUpdate();
+ void PostPhysicsUpdate() override;
 ```
 
 **Thread Safety:** not-safe

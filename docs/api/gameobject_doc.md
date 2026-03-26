@@ -15,6 +15,7 @@
 
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
+- [Constructor](#class-constructor)
 - [GetID](#gameobjectgetid)
 - [_SetID](#gameobject_setid)
 - [IsActive](#gameobjectisactive)
@@ -28,7 +29,14 @@
 - [RemoveComponent](#gameobjectremovecomponent)
 - [HasComponent](#gameobjecthascomponent)
 - [GetComponent](#gameobjectgetcomponent)
+- [GetComponent](#gameobjectgetcomponent)
 - [AddComponent](#gameobjectaddcomponent)
+- [GetComponents](#gameobjectgetcomponents)
+- [Serialize](#gameobjectserialize)
+- [SetParent](#gameobjectsetparent)
+- [GetParent](#gameobjectgetparent)
+- [AddChild](#gameobjectaddchild)
+- [RemoveChild](#gameobjectremovechild)
 
 ---
 
@@ -43,13 +51,38 @@
 Signature:
 
 ```cpp
- GameObject(std::string name, std::string type = "default", std::string initialTag = "");
+ GameObject(std::string name, std::string type = "default",
 ```
 
 **Parameters:**
 
 - `name`: Name of the GameObject
 - `type`: Type of the GameObject, defaults to "default"
+
+**This function has been available since:** v0.0.1
+
+---
+
+## Class & Related Members
+
+
+## Class Constructor
+
+
+#### **`GameObject::GameObject`**
+
+
+ Construct from a DataNode, used for deserialization
+
+Signature:
+
+```cpp
+ GameObject(const Serializer::DataNode& data);
+```
+
+**Parameters:**
+
+- `data`: DataNode representing the serialized GameObject
 
 **This function has been available since:** v0.0.1
 
@@ -269,7 +302,7 @@ Signature:
 Signature:
 
 ```cpp
- int RemoveComponent(Syngine::Components type);
+ int RemoveComponent(Syngine::ComponentTypeID type);
 ```
 
 **Parameters:**
@@ -292,7 +325,7 @@ Signature:
 Signature:
 
 ```cpp
- bool HasComponent(Syngine::Components type);
+ bool HasComponent(Syngine::ComponentTypeID type);
 ```
 
 **Parameters:**
@@ -302,6 +335,29 @@ Signature:
 **Returns:** true if the component exists, false otherwise
 
 **Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::GetComponent`**
+
+
+ Get a component of the specified type
+
+Signature:
+
+```cpp
+ Component* GetComponent(Syngine::ComponentTypeID type) const;
+```
+
+**Parameters:**
+
+- `type`: Type of the component to get
+
+**Returns:** Pointer to the component if it exists, nullptr otherwise
+
+**Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
@@ -347,6 +403,126 @@ Signature:
 - `args`: Arguments to pass to the component constructor
 
 **Returns:** Pointer to the added component if successful, nullptr otherwise
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::GetComponents`**
+
+
+ Get const access to the components map for iteration
+
+Signature:
+
+```cpp
+ const std::map<ComponentTypeID, std::unique_ptr<Component>>& GetComponents() const { return components;
+```
+
+**Returns:** Const reference to the components map
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::Serialize`**
+
+
+ Serialize the GameObject and its components into a DataNode for saving
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const;
+```
+
+**Returns:** DataNode representing the serialized GameObject
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::SetParent`**
+
+
+ Set the parent of the GameObject
+
+Signature:
+
+```cpp
+ void SetParent(GameObject* parent);
+```
+
+**Parameters:**
+
+- `parent`: Pointer to the parent GameObject
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::GetParent`**
+
+
+ Get the parent of the GameObject
+
+Signature:
+
+```cpp
+ GameObject* GetParent() const;
+```
+
+**Returns:** Pointer to the parent GameObject, or nullptr if there is no parent
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::AddChild`**
+
+
+ Add a child GameObject to this GameObject
+
+Signature:
+
+```cpp
+ void AddChild(GameObject* child);
+```
+
+**Parameters:**
+
+- `child`: Pointer to the child GameObject to add
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`GameObject::RemoveChild`**
+
+
+ Remove a child GameObject from this GameObject
+
+Signature:
+
+```cpp
+ void RemoveChild(GameObject* child);
+```
+
+**Parameters:**
+
+- `child`: Pointer to the child GameObject to remove
 
 **Thread Safety:** not-safe
 

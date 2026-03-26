@@ -17,6 +17,7 @@
 - [yaw](#syngineyaw)
 - [GetComponentType](#synginegetcomponenttype)
 - [Clone](#syngineclone)
+- [Serialize](#syngineserialize)
 - [Init](#syngineinit)
 - [Update](#syngineupdate)
 - [SetPosition](#synginesetposition)
@@ -53,7 +54,7 @@ Signature:
 
 **Parameters:**
 
-- `static`: constexpr Syngine::Components componentType Camera component type
+- `static`: constexpr Syngine::ComponentTypeID componentType Camera component type
 - `owner`: Pointer to the GameObject that owns this component
 
 **This function has been available since:** v0.0.1
@@ -97,7 +98,7 @@ Signature:
 Signature:
 
 ```cpp
- Syngine::Components GetComponentType() override;
+ Syngine::ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type as an enum value
@@ -123,6 +124,21 @@ Signature:
 
 ---
 
+#### **`Syngine::Serialize`**
+
+
+ Serializes the CameraComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the CameraComponent's state
+
+---
+
 #### **`Syngine::Init`**
 
 
@@ -133,7 +149,7 @@ Signature:
 Signature:
 
 ```cpp
- void Init() {}; // No specific initialization needed
+ void Init() override {} // No specific initialization needed
 ```
 
 **Thread Safety:** not-safe
