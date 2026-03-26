@@ -16,6 +16,7 @@
 #include <fstream>
 #include <functional>
 #include <algorithm>
+#include <cstdint>
 #include <stdarg.h>
 #include <string.h>
 

@@ -42,7 +42,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+          sudo apt-get install -y clang libx11-dev libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
 
       - name: Configure (Windows/MSVC)
         if: runner.os == 'Windows'
@@ -60,6 +60,8 @@ jobs:
           cmake -B build -S .
           -G Ninja
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
           -DSYNGINE_BUILD_TOOLS=OFF
           ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
 
@@ -101,7 +103,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+          sudo apt-get install -y clang libx11-dev libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
 
       - name: Configure (Windows/MSVC)
         if: runner.os == 'Windows'
@@ -119,6 +121,8 @@ jobs:
           cmake -B build -S .
           -G Ninja
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
           -DSYNGINE_BUILD_TOOLS=OFF
           ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
 
