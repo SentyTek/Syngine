@@ -12,6 +12,10 @@ project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
 set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
 
+# Generate Version.h for all engine builds (including engine-only CI).
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/versioning.cmake)
+define_version()
+
 # Use static runtime on MSVC. Several libraries we use require this.
 # Please don't change this.
 if(MSVC)

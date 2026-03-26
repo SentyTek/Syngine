@@ -40,6 +40,7 @@ jobs:
           -G Ninja
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DSYNGINE_BUILD_TOOLS=OFF
+          ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
 
       - name: Build
         run: cmake --build build
@@ -77,6 +78,7 @@ jobs:
           -G Ninja
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DSYNGINE_BUILD_TOOLS=OFF
+          ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
 
       - name: Build
         run: cmake --build build
