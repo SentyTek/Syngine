@@ -40,7 +40,8 @@ Next, open a terminal in the engine folder of the project,and run the following 
 
 And that's it! Syngine is now successfully installed, and your project is ready to work on. Before we get the project running though, we need to add a Shader. Shaders are what tell the GPU how to draw things. Syngine comes with a few, but we still need to make one to tie everything together.
 
-## Icon
+## Desktop Setup
+### Icon
 One last step: Creating an app icon:
 - Windows: Use any icon maker app to open an image and generate a `.ico` file, this will be the Windows icon
 - macOS: Use Icon Composer (macOS 26+) to create an icon, then export it as a `.icon` bundle
@@ -52,6 +53,14 @@ The ico, icon, and/or PNG file(s) live in `system/assets`. Ensure the name is ei
 For macOS, we also need an `Assets.xcassets` folder. Xcodebuild needs this folder to properly incorporate the app icon. Do not make this folder yourself. This step is only required on macOS.
 
 On macOS, use the `assets_xcassets.sh` script in `engine/docs` folder. This will create the folder and all required files.
+
+We also recommend changing your app's accent color by opening the `Assets.xcassets` bundle in Xcode
+
+### Info.plist
+The install scripts will automatically generate an Info.plist file, however some things still need to be updated by editing `system/assets/Info.plist.in`.
+
+We recommend updating the copyright, bundle versions, and the development region, if you are developing in a different region  
+
 
 ## Building
 

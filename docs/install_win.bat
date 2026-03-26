@@ -120,10 +120,10 @@ echo 	^<string^>1^</string^>
 echo 	^<key^>CFBundleVersion^</key^>
 echo 	^<string^>1^</string^>
 echo 	^<key^>NSHumanReadableCopyright^</key^>
-echo 	^<string^>Copyright 2025-${CURRENT_YEAR} SentyTek. All rights reserved.^</string^>
+echo 	^<string^>Placeholder Copyright ${CURRENT_YEAR}. Please update this to your own project copyright^</string^>
 echo ^</dict^>
 echo ^</plist^>
-) > info.plist.in
+) > Info.plist.in
 
 if not exist assets mkdir assets
 cd ..

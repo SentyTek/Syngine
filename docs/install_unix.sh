@@ -89,7 +89,7 @@ Exec=@EXEC_PATH@
 Icon=@ICON_NAME@
 Type=Application
 Categories=Game;" > $PROJECT_NAME.desktop.in
-touch info.plist.in
+touch Info.plist.in
 echo '<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -113,7 +113,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright 2025-${CURRENT_YEAR} SentyTek. All rights reserved.</string>
+	<string>Placeholder Copyright ${CURRENT_YEAR}. Please update this to your own project copyright</string>
 </dict>
 </plist>
 ' > info.plist.in

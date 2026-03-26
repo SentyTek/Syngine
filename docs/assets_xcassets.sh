@@ -46,7 +46,7 @@ echo '{
   }
 }' > Contents.json
 
-cd ../$trimmed_name.iconset
+cd ../$trimmed_name.appiconset
 touch Contents.json
 echo '
 {
