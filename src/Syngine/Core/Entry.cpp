@@ -17,6 +17,8 @@
 
 #include <iostream>
 
+#include "Syngine/Core/Logger.h"
+
 // Forward declare the game's main function
 extern int AppMain(int argc, char* argv[]);
 
@@ -58,7 +60,16 @@ int WINAPI WinMain(HINSTANCE hInstance,
     }
 
     // Call the main application function
-    int result = AppMain(argc, argv);
+    int result = 0;
+    try {
+        result = AppMain(argc, argv);
+    } catch (const std::exception& e) {
+        Syngine::Logger::Fatal(std::string("Unhandled exception in WinMain: ") + e.what());
+        result = -1;
+    } catch (...) {
+        Syngine::Logger::Fatal("Unhandled non-std exception in WinMain");
+        result = -1;
+    }
 
     // Cleanup allocated memory
     for (int i = 0; i < argc; ++i) {
@@ -70,6 +81,16 @@ int WINAPI WinMain(HINSTANCE hInstance,
 }
 #else
 int main(int argc, char* argv[]) {
-    return AppMain(argc, argv);
+    int result = 0;
+    try {
+        result = AppMain(argc, argv);
+    } catch (const std::exception& e) {
+        Syngine::Logger::Fatal(std::string("Unhandled exception in main: ") + e.what());
+        result = -1;
+    } catch (...) {
+        Syngine::Logger::Fatal("Unhandled non-std exception in main");
+        result = -1;
+    }
+    return result;
 }
 #endif
