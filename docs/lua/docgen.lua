@@ -10,6 +10,7 @@ local docwords = {
     "@brief",
     "@param",
     "@return",
+    "@returns",
     "@note",
     "@example",
     "@since",
@@ -24,16 +25,209 @@ local docwords = {
     "@block",
     "@nodiscard",
     "@see",
+    "@tparam",
 
     "enum",
     "struct"
 }
+
+local function stripLineComment(line)
+    return line:gsub("//.*", "")
+end
+
+local function parseStructMember(line)
+    local decl = line:gsub("//%*.*$", ""):gsub("%s+$", "")
+    if decl == "" then
+        return nil, nil
+    end
+
+    local name, arrayPart = decl:match("([%w_]+)%s*(%b[])%s*[=;]")
+    if not name then
+        name = decl:match("([%w_]+)%s*[=;]")
+    end
+    if not name then
+        return nil, nil
+    end
+
+    local typeName = decl:match("^%s*(.-)%s+" .. name)
+    if not typeName then
+        return nil, nil
+    end
+
+    if arrayPart and #arrayPart > 0 then
+        typeName = typeName .. arrayPart
+    end
+
+    return typeName, name
+end
+
+local function stripTemplatePrefix(signature)
+    local s = signature:gsub("%s+", " ")
+
+    while s:match("^%s*template%s*<") do
+        local i = s:find("<")
+        local depth = 0
+        local j = i
+
+        while j <= #s do
+            local ch = s:sub(j, j)
+            if ch == "<" then
+                depth = depth + 1
+            elseif ch == ">" then
+                depth = depth - 1
+                if depth == 0 then
+                    s = s:sub(j + 1):gsub("^%s*", "")
+                    break
+                end
+            end
+            j = j + 1
+        end
+
+        if depth ~= 0 then
+            break
+        end
+    end
+
+    return s
+end
+
+local function collectSignature(f, firstLine)
+    local parts = { firstLine }
+
+    local parenDepth = 0
+    local angleDepth = 0
+    local initBraceDepth = 0
+    local bodyBraceDepth = 0
+    local sawParams = false
+    local bodyStarted = false
+
+    local function scan(line)
+        local s = stripLineComment(line)
+        local i = 1
+
+        while i <= #s do
+            local ch = s:sub(i, i)
+
+            if bodyStarted then
+                if ch == "{" then
+                    bodyBraceDepth = bodyBraceDepth + 1
+                elseif ch == "}" then
+                    bodyBraceDepth = bodyBraceDepth - 1
+                end
+            else
+                if ch == "(" then
+                    parenDepth = parenDepth + 1
+                    sawParams = true
+                elseif ch == ")" then
+                    if parenDepth > 0 then
+                        parenDepth = parenDepth - 1
+                    end
+                elseif ch == "<" then
+                    angleDepth = angleDepth + 1
+                elseif ch == ">" then
+                    if angleDepth > 0 then
+                        angleDepth = angleDepth - 1
+                    end
+                elseif ch == "{" then
+                    if parenDepth > 0 then
+                        initBraceDepth = initBraceDepth + 1
+                    elseif sawParams and parenDepth == 0 and initBraceDepth == 0 then
+                        bodyStarted = true
+                        bodyBraceDepth = 1
+                    end
+                elseif ch == "}" then
+                    if initBraceDepth > 0 then
+                        initBraceDepth = initBraceDepth - 1
+                    end
+                elseif ch == ";" then
+                    if parenDepth == 0 and angleDepth == 0 and initBraceDepth == 0 and not bodyStarted then
+                        return true
+                    end
+                end
+            end
+
+            i = i + 1
+        end
+
+        if bodyStarted and bodyBraceDepth == 0 then
+            return true
+        end
+
+        return false
+    end
+
+    if scan(firstLine) then
+        return table.concat(parts, "\n")
+    end
+
+    while true do
+        local nextLine = f:read("*l")
+        if not nextLine then
+            break
+        end
+
+        table.insert(parts, nextLine)
+
+        if scan(nextLine) then
+            break
+        end
+    end
+
+    return table.concat(parts, "\n")
+end
+
+local function stripFunctionBody(signature)
+    local out = {}
+
+    local parenDepth = 0
+    local angleDepth = 0
+    local initBraceDepth = 0
+    local sawParams = false
+
+    local s = signature:gsub("%s+", " ")
+
+    for i = 1, #s do
+        local ch = s:sub(i, i)
+
+        if ch == "(" then
+            parenDepth = parenDepth + 1
+            sawParams = true
+        elseif ch == ")" then
+            if parenDepth > 0 then
+                parenDepth = parenDepth - 1
+            end
+        elseif ch == "<" then
+            angleDepth = angleDepth + 1
+        elseif ch == ">" then
+            if angleDepth > 0 then
+                angleDepth = angleDepth - 1
+            end
+        elseif ch == "{" then
+            if parenDepth > 0 then
+                initBraceDepth = initBraceDepth + 1
+            elseif sawParams and parenDepth == 0 and initBraceDepth == 0 then
+                return table.concat(out):gsub("%s+$", "") .. ";"
+            end
+        elseif ch == "}" then
+            if initBraceDepth > 0 then
+                initBraceDepth = initBraceDepth - 1
+            end
+        end
+
+        table.insert(out, ch)
+    end
+
+    return table.concat(out):gsub("%s+$", "")
+end
 
 local function formatDocTable(doc, signature, insideClass, className)
     local formatted = {
         brief = "",
         params = {
             type = 0
+        },
+        tparams = {
+
         },
         ["return"] = "",
         note = "",
@@ -83,8 +277,20 @@ local function formatDocTable(doc, signature, insideClass, className)
         ::continue::
     end
 
+     -- Replaced all multiple spaces with one space
+    formatted.signature.full = signature:gsub("%s+", " ")
+    local parseSignature = stripTemplatePrefix(formatted.signature.full)
+
+    -- Skip aliases and forward declarations in generated docs
+    if parseSignature:match("^%s*using%s+") or parseSignature:match("^%s*using%s+namespace%s+") then
+        return nil
+    end
+    if parseSignature:match("^%s*class%s+[%w_]+%s*;%s*$") or parseSignature:match("^%s*struct%s+[%w_]+%s*;%s*$") then
+        return nil
+    end
+
     -- Get the type by using the word right *before* the title
-    local i, j = signature:find("[%w_:]+%s*[{=<(]")
+    local i, j = parseSignature:find("[%w_:]+%s*[{=<(]")
     local typeWord = ""
     if not i then
         -- Must be struct or enum, check first word in "one of the lines"
@@ -96,63 +302,55 @@ local function formatDocTable(doc, signature, insideClass, className)
             end
         end
     else
-        typeWord = signature:match("([%w_:]+)%s*")
+        typeWord = parseSignature:match("([%w_:]+)%s*")
         if typeWord == "inline" then
-            typeWord = signature:match("%g+%s*%g+%s*(%g+)")
+            typeWord = parseSignature:match("%g+%s*%g+%s*(%g+)")
         end
     end
     formatted.signature.type = typeWord or ""
 
-    -- Or, for enums and structs, the type is the first word in the full signature
+    -- For enums and structs, fall back to first word in full signature
     if formatted.signature.type == "" or formatted.signature.type == ":" then
-        formatted.signature.type = signature:match("^%s*([%w_]+)")
+        formatted.signature.type = parseSignature:match("^%s*([%w_]+)")
     end
-
-    -- Replaced all multiple spaces with one space
-    formatted.signature.full = signature:gsub("%s+", " ")
 
     -- Get title (word right before "{", "=", "(", or "<")
     if j then
-        if signature:match("^%s*inline") then
-            formatted.title = signature:match("%g+%s*%g+%s*([%w_]+)")
+        if parseSignature:match("^%s*inline") then
+            formatted.title = parseSignature:match("%g+%s*%g+%s*([%w_]+)")
         else
-            formatted.title = signature:match("%g+%s*([%w_]+)")
+            formatted.title = parseSignature:match("%g+%s*([%w_]+)")
         end
         if formatted.signature.type == "static" or formatted.signature.type:match("inline") then
             formatted.signature.type = formatted.title
-            formatted.title = signature:match("%g+%s*%g+%s*([%w_]+)")
+            formatted.title = parseSignature:match("%g+%s*%g+%s*([%w_]+)")
             if formatted.title:match("std") or formatted.title:match("size_t") then
-                formatted.title = signature:match("%g+%s*%g+%s*%g+%s*(%w+)")
+                formatted.title = parseSignature:match("%g+%s*%g+%s*%g+%s*(%w+)")
             end
         end
         --("Title:" .. formatted.title, "Type:" .. formatted.signature.type)
     else
         formatted.title = "No title found"
     end
+
     -- For enums/structs, the title is the word right after the type
     if formatted.signature.type and (formatted.signature.type:match("enum") or formatted.signature.type:match("struct")) then
         -- find line with actual enum/struct
         local sig = ""
         for _, line in ipairs(docstrings) do
-            if line:match("^(enum)") or line:match("^(struct)") then
+            if line:match("^%s*enum") or line:match("^%s*struct") then
                 sig = line
                 formatted.signature.full = sig:match("^(.-){") or sig
                 break
             end
         end
 
-        -- find the word immediately after enum/struct
+        -- find the declared type name
         if formatted.signature.type:match("enum") then
-            local _, _, _, typename = sig:find("^%s*(enum)%s+([%w_]+)")
-            formatted.title = typename
+            formatted.title = sig:match("^%s*enum%s+class%s+([%w_]+)")
+                or sig:match("^%s*enum%s+([%w_]+)")
         else
-            local _, _, _, typename = sig:find("^%s*(struct)%s+([%w_]+)")
-            formatted.title = typename
-        end
-        if formatted.title == "class" then
-            -- Enum class
-            local _, _, _, typename = sig:find("^%s*(enum class)%s+([%w_]+)")
-            formatted.title = typename
+            formatted.title = sig:match("^%s*struct%s+([%w_]+)")
         end
     elseif not formatted.signature.type then
         -- Discard docstring, end of struct
@@ -164,29 +362,29 @@ local function formatDocTable(doc, signature, insideClass, className)
     end
 
     -- Some special cases
-    if signature:match("delete;$") then
+    if parseSignature:match("delete;$") then
         --return nil
-        formatted.title = signature:match("^%s*([%w_:]+)")
+        formatted.title = parseSignature:match("^%s*([%w_:]+)")
         print("Destructor detected: " .. formatted.title)
     end
-    if signature:match("operator") then
-        formatted.title = "Operator " .. signature:match("operator%s*([%g]+)[(]") .. " overload"
+    if parseSignature:match("operator") then
+        formatted.title = "Operator " .. parseSignature:match("operator%s*([%g]+)[(]") .. " overload"
         formatted.signature.type = 4
     end
-    if signature:match("%s*[%w_:][(]") then
-        formatted.title = signature:match("%s*([%w_:]+)[(]")
+    if parseSignature:match("%s*[%w_:][(]") then -- Free function or constructor
+        formatted.title = parseSignature:match("%s*([%w_:]+)[(]")
     end
-    if signature:match("%s*[%w_:<()>]+%s*[%w_:]+%s*=%s*%S+%s*->%s*%w+%s*{};") then
-        formatted.title = signature:match("%s*[%w_:<()>]+%s*([%w_:]+)")
+     if parseSignature:match("%s*[%w_:<()>]+%s*[%w_:]+%s*=%s*%S+%s*->%s*%w+%s*{};") then -- Lambda assigned to variables
+        formatted.title = parseSignature:match("%s*[%w_:<()>]+%s*([%w_:]+)")
     end
 
     if formatted.signature.type == "enum" then
         formatted.params.type = 1
-        print("Enum detected: " .. formatted.title)
+        print("Enum detected: " .. (formatted.title or "<unknown>"))
     elseif formatted.signature.type == "struct" then
         formatted.params.type = 2
         if not formatted.title or formatted.title == "" then
-            formatted.title = signature:match("^%s*struct%s*([%w_]+)")
+            formatted.title = parseSignature:match("^%s*struct%s*([%w_]+)")
         end
     end
 
@@ -242,6 +440,19 @@ local function formatDocTable(doc, signature, insideClass, className)
             elseif firstWord == "block" then
                 formatted.block = true
                 goto continue
+            elseif firstWord == "tparam" then
+                local tparamName, tparamDesc = line:match("^%s*@tparam%s*(%g+)%s+(.*)")
+                if tparamName and tparamDesc then
+                    local tparamTable = {
+                        name = tparamName,
+                        description = tparamDesc
+                    }
+                    table.insert(formatted.tparams, tparamTable)
+                end
+                goto continue
+            elseif firstWord == "returns" then
+                formatted["return"] = line:sub(#firstWord + 2)
+                goto continue
             end
 
             -- Not anything that needs special case
@@ -291,7 +502,7 @@ function DocGen:ReadFile(path, name)
                 -- Match member variables
                 local comment = line:match("//*%s*(.*)")
                 -- Try to match enum/struct member with optional assignment and trailing comma
-                local type, name = "", ""
+                local type, name
                 if insideEnum then
                     name = line:match("^%s*([%w_]+)")
                     if not name then
@@ -301,13 +512,7 @@ function DocGen:ReadFile(path, name)
                         end
                     end
                 elseif insideStruct then
-                    type, name = line:match("^%s*(.-)%s+([%w_]+)%s*=")
-                    if not type then
-                        type, name = line:match("^%s*(.-)%s+([%w_]+)%s*;")
-                    end
-                    if not type then
-                        type, name = line:match("^%s*(.-)%s+([%w_]+)$")
-                    end
+                    type, name = parseStructMember(line)
                 else
                     -- Match optional 'static' or 'const', then type and name
                     type, name = line:match("^%s*static%s+([%w_:<>%*%&]+)%s+([%w_]+)")
@@ -335,19 +540,27 @@ function DocGen:ReadFile(path, name)
                     insideStruct = true
                 end
                 table.insert(currentDoc, line)
-            elseif line:match("^%s*class%s+[%w_]+%s*{") then
+            elseif line:match("^%s*class%s+[%w_]+[^{]*{") then
                 insideClass = true
-                className = line:match("^%s*class%s+([%w_]+)%s*{")
+                className = line:match("^%s*class%s+([%w_]+)[^{]*{")
             elseif collecting then
-                -- End of doc block, next line is function signature
-                nline = line
-                if not line:find(";") then
-                    -- Append following line
-                    local nextLine = f:read("*l")
-                    if nextLine then
-                        nline = nline .. nextLine
+                if insideEnum or insideStruct then
+                    -- Keep consuming documented enum/struct body until it closes.
+                    if line:match("^%s*};") then
+                        local doctable = formatDocTable(currentDoc, line, insideClass, className)
+                        if doctable then
+                            table.insert(docs, doctable)
+                        end
+                        currentDoc = {}
+                        collecting = false
+                        insideEnum = false
+                        insideStruct = false
                     end
+                    goto continue
                 end
+
+                -- End of doc block, next line is function signature
+                local nline = collectSignature(f, line)
 
                 if (insideEnum or insideStruct) and line:match("^%s*};") then
                     insideEnum = false
@@ -359,10 +572,13 @@ function DocGen:ReadFile(path, name)
 
                 --Utils.PrintTable(currentDoc)
                 local doctable = formatDocTable(currentDoc, nline, insideClass, className)
-                table.insert(docs, doctable)
+                if doctable then
+                    table.insert(docs, doctable)
+                end
                 currentDoc = {}
                 collecting = false
             end
+            ::continue::
         end
         f:close()
     end
@@ -378,7 +594,7 @@ function DocGen:ReadFile(path, name)
 
     -- Search for constructor and move to the top
     for i, doc in ipairs(docs) do
-        if doc.signature.type == 3 then
+        if doc and doc.signature and doc.signature.type == 3 then
             table.remove(docs, i)
             table.insert(docs, 1, doc)
             break
@@ -398,6 +614,9 @@ function DocGen:ReadFile(path, name)
         m:addListItem("[Member Variables](#member-variables)")
     end
     for _, doc in ipairs(docs) do
+        if not doc or not doc.signature then
+            goto continue
+        end
         if doc.signature.type == "class" then
             goto continue
         end
@@ -416,6 +635,9 @@ function DocGen:ReadFile(path, name)
     m:addLineBreak()
 
     for _, doc in ipairs(docs) do
+        if not doc or not doc.signature then
+            goto continue
+        end
         if doc.signature.type == "class" then
             goto continue
         end
@@ -470,16 +692,19 @@ function DocGen:ReadFile(path, name)
         --if doc.params.type == 0 then
             if doc.signature and #doc.signature.full > 0 then
                 m:addParagraph("Signature:")
-                local sig = doc.signature.full
-                if sig:sub(-1) == "}" then
-                    local i, j = sig:find("{[%g ]*}")
-                    if i and j then
-                        sig = sig:sub(1, i - 1) .. ";"
-                    end
-                end
+                local sig = stripFunctionBody(doc.signature.full)
                 m:addCodeBlock(sig, "cpp")
             end
         --end
+
+        if doc.tparams and #doc.tparams > 0 then
+            m = m + (m:inlBold("Template Parameters:"))
+            m:startList()
+            for _, tparam in ipairs(doc.tparams) do
+                m:addListItem(string.format("%s: %s", m:inlCode(tparam.name), tparam.description))
+            end
+            m:endList()
+        end
 
         if doc.params and #doc.params > 0 then
             -- We use md tables for enums and structs, lists for functions

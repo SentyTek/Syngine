@@ -211,7 +211,8 @@ class RigidbodyComponent : public Syngine::Component {
 
     /// @brief Add a force to the rigidbody
     /// @param force The force to add (vec3)
-    /// @param mode The mode of force application
+    /// @param mode The mode of force application. See ForceMode enum for details.
+    /// @threadsafety not-safe
     /// @note Force values for visible movement may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
@@ -230,7 +231,9 @@ class RigidbodyComponent : public Syngine::Component {
 
     /// @brief Add a torque to the rigidbody
     /// @param torque The torque to add (vec3)
-    /// @param mode The mode of torque application
+    /// @param mode The mode of torque application. Note that ACCELERATION and
+    /// VELOCITY_CHANGE modes are not well supported for torque, and will be
+    /// treated the same as FORCE and IMPULSE respectively. Use with caution.
     /// @note Torque values for visible rotation may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
