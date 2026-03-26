@@ -7,58 +7,52 @@ on:
     branches: ["main", "dev"]
 
 jobs:
-  build:
+  quick-build:
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev'
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # --- Fast path: non-main/dev branch pushes only ---
-          - os: ubuntu-latest
-            build_type: Debug
-            tier: quick
-
-          - os: windows-latest
-            build_type: Debug
-            tier: quick
-
-          # --- Full matrix: main/dev pushes + PRs ---
-          - os: ubuntu-latest
-            build_type: Debug
-            tier: full
-
-          - os: ubuntu-latest
-            build_type: Release
-            tier: full
-
-          - os: windows-latest
-            build_type: Debug
-            tier: full
-
-          - os: windows-latest
-            build_type: Release
-            tier: full
-
-          - os: macos-latest
-            build_type: Debug
-            tier: full
-
-          - os: macos-latest
-            build_type: Release
-            tier: full
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Debug]
 
     runs-on: ${{ matrix.os }}
 
-    # quick: branch pushes except main/dev
-    # full: main/dev pushes and all PRs targeting main/dev
-    if: |
-      (matrix.tier == 'quick' &&
-       github.event_name == 'push' &&
-       github.ref != 'refs/heads/main' &&
-       github.ref != 'refs/heads/dev') ||
-      (matrix.tier == 'full' &&
-       (github.event_name == 'pull_request' ||
-        github.ref == 'refs/heads/main' ||
-        github.ref == 'refs/heads/dev'))
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Init required submodules
+        run: >
+          git submodule update --init --recursive
+          third_party/SDL
+          third_party/bgfx.cmake
+          third_party/assimp
+          third_party/JoltPhysics
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
+
+      - name: Configure
+        run: >
+          cmake -B build -S .
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DSYNGINE_BUILD_TOOLS=OFF
+
+      - name: Build
+        run: cmake --build build
+
+  full-build:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        build_type: [Debug, Release]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - name: Checkout
