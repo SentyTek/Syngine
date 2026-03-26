@@ -291,7 +291,9 @@ class Core {
     static _internal     m_internal;     //* Internal state struct
     static _FrameCounter m_frameCounter; //* Frame counter for FPS/TPS tracking
 
-    /// @deprecated In favor of the new input system
+    /// @brief Handle key events for debug actions
+    /// @param event SDL_Event to handle
+    /// @deprecated
     void _HandleKeyEvent(const SDL_Event& event);
 
     friend class Renderer;

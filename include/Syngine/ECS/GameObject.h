@@ -144,14 +144,14 @@ class GameObject {
     Component* GetComponent(Syngine::ComponentTypeID type) const;
 
     /// @brief Get a component of the specified type
-    /// @param T Type of the component to get
+    /// @tparam T Type of the component to get
     /// @return Pointer to the component if it exists, nullptr otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
     template <typename T> T* GetComponent() const;
 
     /// @brief Add a component to the GameObject
-    /// @param T Type of the component to add
+    /// @tparam T Type of the component to add
     /// @param args Arguments to pass to the component constructor
     /// @return Pointer to the added component if successful, nullptr otherwise
     /// @threadsafety not-safe
