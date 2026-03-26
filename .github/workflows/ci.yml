@@ -36,7 +36,7 @@ jobs:
 
       - name: Setup MSVC Developer Command Prompt
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@latest
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Install Linux graphics deps
         if: runner.os == 'Linux'
@@ -95,7 +95,7 @@ jobs:
 
       - name: Setup MSVC Developer Command Prompt
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@latest
+        uses: ilammy/msvc-dev-cmd@v1
 
       - name: Install Linux graphics deps
         if: runner.os == 'Linux'
