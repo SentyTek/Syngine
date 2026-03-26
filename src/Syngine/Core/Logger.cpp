@@ -14,6 +14,7 @@
 #elif defined(__linux__) || defined(__APPLE__)
 #include <execinfo.h>
 #include <unistd.h>
+#include <csignal>
 #include <cxxabi.h>
 #endif
 
@@ -37,7 +38,6 @@
 #include <intrin.h>
 #define DEBUG_BREAK() __debugbreak()
 #elif __APPLE__
-#include <csignal>
 #define DEBUG_BREAK() raise(SIGABRT)
 #else
 #define DEBUG_BREAK() __builtin_trap()

@@ -21,6 +21,9 @@
 
 #endif
 
+#define SCL_IMPL
+#include "miniscl.hpp"
+
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
@@ -77,16 +80,24 @@ Core::Core(const EngineConfig config) {
 
 Core::~Core() {
     // Cleanup
+
+    // Destroy all game objects first. This ensures components (like Billboards, Meshes)
+    // release their BGFX resources (textures, buffers) before we shut down the renderer.
+    Syngine::Registry::Clear();
+
     if (m_app) {
-        if (m_app->window) {
-            m_app->window.reset();
+        if (m_app->synModels) {
+            // Don't call _UnloadAllMeshes() here because Registry::Clear() has
+            // already done it for us. Doing it again causes a
+            // BGFX assertion errors due to double-freeing. Please don't have
+            // orphaned meshes.
+            m_app->synModels.reset();
         }
         if (m_app->renderer) {
             m_app->renderer.reset();
         }
-        if (m_app->synModels) {
-            m_app->synModels->_UnloadAllMeshes();
-            m_app->synModels.reset();
+        if (m_app->window) {
+            m_app->window.reset();
         }
         if (m_app->physicsManager) {
             m_app->physicsManager->_Shutdown();
@@ -292,34 +303,33 @@ bool Core::Update() {
         }
     }
 
-    const bool* keystate = SDL_GetKeyboardState(NULL);
     if (m_internal.simulate) {
-        auto players =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_PLAYER);
-        for (auto go : players) {
+        // Polymorphic component update loop - iterate all GameObjects
+        auto& allGameObjects = Registry::GetAllGameObjects();
+        
+        // Update all components
+        for (auto& [id, go] : allGameObjects) {
             if (!go) continue;
-            PlayerComponent* pc = go->GetComponent<PlayerComponent>();
-            if (!pc) continue;
-            pc->Update(keystate, deltaTime);
-        }
-
-        for (auto go :
-             Registry::GetGameObjectsWithComponent(SYN_COMPONENT_RIGIDBODY)) {
-            if (!go) continue;
-            RigidbodyComponent* rb = go->GetComponent<RigidbodyComponent>();
-            if (!rb) continue;
-            rb->Update(m_internal.DEFAULT_PHYSICS_TIMESTEP);
+            const auto& components = go->GetComponents();
+            for (const auto& [typeId, component] : components) {
+                if (component && component->isEnabled) {
+                    component->Update(deltaTime);
+                }
+            }
         }
 
         // Update zones
         m_app->zoneManager->_UpdateZones();
 
-        // Post physics update (e.g. for player camera)
-        for (auto go : players) {
+        // Post physics update - call after physics step
+        for (auto& [id, go] : allGameObjects) {
             if (!go) continue;
-            PlayerComponent* pc = go->GetComponent<PlayerComponent>();
-            if (!pc) continue;
-            pc->_PostPhysicsUpdate();
+            const auto& components = go->GetComponents();
+            for (const auto& [typeId, component] : components) {
+                if (component && component->isEnabled) {
+                    component->PostPhysicsUpdate();
+                }
+            }
         }
     }
 
@@ -468,9 +478,16 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 
     // Get display size
     SDL_DisplayID dId = SDL_GetDisplayForWindow(m_app->window->_GetSDLWindow());
-    SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
-    specs.screenWidth       = disMode.w;
-    specs.screenHeight      = disMode.h;
+    if (dId == 0) {
+        Logger::Error("Failed to get display for window: " +
+                      std::string(SDL_GetError()));
+        specs.screenWidth  = 0;
+        specs.screenHeight = 0;
+    } else {
+        SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
+        specs.screenWidth       = disMode.w;
+        specs.screenHeight      = disMode.h;
+    }
 
     // Get window resolution
     int w, h;

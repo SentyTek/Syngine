@@ -1,0 +1,130 @@
+name: Syngine CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main", "dev"]
+
+jobs:
+  quick-build:
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main' && github.ref != 'refs/heads/dev'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Debug]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Init required submodules
+        run: >
+          git submodule update --init --recursive
+          third_party/SDL
+          third_party/bgfx.cmake
+          third_party/assimp
+          third_party/JoltPhysics
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
+
+      - name: Setup MSVC Developer Command Prompt
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Linux graphics deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang libx11-dev libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+
+      - name: Configure (Windows/MSVC)
+        if: runner.os == 'Windows'
+        run: >
+          cmake -B build -S .
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER=cl
+          -DCMAKE_CXX_COMPILER=cl
+          -DSYNGINE_BUILD_TOOLS=OFF
+
+      - name: Configure (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: >
+          cmake -B build -S .
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
+          -DSYNGINE_BUILD_TOOLS=OFF
+          ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
+
+      - name: Build
+        run: cmake --build build --target Syngine
+
+  full-build:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/dev'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        build_type: [Debug, Release]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Init required submodules
+        run: >
+          git submodule update --init --recursive
+          third_party/SDL
+          third_party/bgfx.cmake
+          third_party/assimp
+          third_party/JoltPhysics
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
+
+      - name: Setup MSVC Developer Command Prompt
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Linux graphics deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang libx11-dev libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+
+      - name: Configure (Windows/MSVC)
+        if: runner.os == 'Windows'
+        run: >
+          cmake -B build -S .
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER=cl
+          -DCMAKE_CXX_COMPILER=cl
+          -DSYNGINE_BUILD_TOOLS=OFF
+
+      - name: Configure (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: >
+          cmake -B build -S .
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
+          -DSYNGINE_BUILD_TOOLS=OFF
+          ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
+
+      - name: Build
+        run: cmake --build build --target Syngine

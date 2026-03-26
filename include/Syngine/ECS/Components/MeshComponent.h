@@ -10,6 +10,7 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/ModelLoader.h"
+#include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
 
@@ -31,7 +32,7 @@ class MeshComponent : public Syngine::Component {
     bool castShadows     = true; //* Whether the mesh casts shadows
     bool receiveSunLight = true; //* Whether the mesh receives sunlight
 
-    static constexpr Syngine::Components componentType =
+    static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_MESH; //* Mesh component type
 
     /// @brief Constructor for the MeshComponent class
@@ -53,13 +54,18 @@ class MeshComponent : public Syngine::Component {
     /// @return The component type as an enum value
     /// @threadsafety read-only
     /// @since v0.0.1
-    Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
 
     /// @brief Clone the MeshComponent
     /// @return A unique pointer to the cloned MeshComponent
     std::unique_ptr<Component> Clone() const override {
         return std::make_unique<MeshComponent>(*this);
     }
+
+    /// @brief Serializes the MeshComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// MeshComponent's state
+    Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the mesh component
     /// @param path Path to the model file
@@ -70,10 +76,11 @@ class MeshComponent : public Syngine::Component {
     /// @since v0.0.1
     void Init(const std::string& path = "", bool loadTextures = true);
 
-    /// @brief Update the mesh component
+    /// @brief Update the mesh component. Unused.
+    /// @param deltaTime Time elapsed since the last update in seconds
     /// @note There is no specific update logic for the mesh component
     /// @since v0.0.1
-    void Update() {};
+    void Update(float deltaTime) override {};
 
     /// @brief Load a mesh from a file
     /// @param path Path to the model file

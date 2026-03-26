@@ -19,15 +19,20 @@
 #include "Syngine/Utils/Version.h"
 #include "Syngine/Utils/Profiler.h"
 #include "Syngine/Core/Logger.h"
+
 #include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 #include "bx/math.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <vector>
+
 #if BX_PLATFORM_OSX
 #include "Syngine/Graphics/MetalBridge.h"
 #endif
+
+#define SYNINT_DEFAULT_SHADERBUNDLE_NAME "shaders/default_shaders.spk"
 
 #define SYN_INT_RENDEREXIT(program)                                            \
     Syngine::Logger::Error("Failed to create " #program " program");           \
@@ -159,53 +164,70 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         true; // Teehee. Temporarily set to true to allow shader loading.
 
     m_internalPrograms.skyProgram =
-        Renderer::AddProgram("shaders/default_sky", "skybox", VIEW_SKY);
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_sky", "skybox", VIEW_SKY);
     if (m_internalPrograms.skyProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("skybox")
     }
-    
-    m_internalPrograms.defaultProgram = Renderer::AddProgram("shaders/default", "default");
+
+    m_internalPrograms.defaultProgram = Renderer::AddProgram(
+        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default", "default");
     if (m_internalPrograms.defaultProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("default")
     }
 
-    m_internalPrograms.textureProgram = Renderer::AddProgram("shaders/default_texture", "texture");
+    m_internalPrograms.textureProgram = Renderer::AddProgram(
+        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_texture", "texture");
     if (m_internalPrograms.textureProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("texture")
     }
 
     m_internalPrograms.debugProgram =
-        Renderer::AddProgram("shaders/default_debug", "default_debugger", VIEW_DEBUG);
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "default_debug",
+                             "default_debugger",
+                             VIEW_DEBUG);
     if (m_internalPrograms.debugProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("debugger")
     }
-    
+
     m_internalPrograms.billboardProgram =
-        Renderer::AddProgram("shaders/default_billboard", "billboard", VIEW_BILLBOARD);
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "default_billboard",
+                             "billboard",
+                             VIEW_BILLBOARD);
     if (m_internalPrograms.billboardProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("billboard")
     }
 
     m_internalPrograms.shadowProgram =
-        Renderer::AddProgram("shaders/default_shadow", "shadow", VIEW_SHADOW);
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "default_shadow",
+                             "shadow",
+                             VIEW_SHADOW);
     if (m_internalPrograms.shadowProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("shadow")
     }
 
-    m_internalPrograms.ssaoProgram =
-        Renderer::AddProgram("shaders/ssao", "ssao", VIEW_POSTPROCESS);
+    m_internalPrograms.ssaoProgram = Renderer::AddProgram(
+        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao", "ssao", VIEW_POSTPROCESS);
     if (m_internalPrograms.ssaoProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("ssao")
     }
 
-    m_internalPrograms.ssaoBlurProgram = Renderer::AddProgram(
-        "shaders/ssao_blur", "ssao_blur", VIEW_POSTPROCESS);
+    m_internalPrograms.ssaoBlurProgram =
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "ssao_blur",
+                             "ssao_blur",
+                             VIEW_POSTPROCESS);
     if (m_internalPrograms.ssaoBlurProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("ssao_blur")
     }
 
-    m_internalPrograms.tonemapProgram = Renderer::AddProgram(
-        "shaders/tonemapping", "tonemapping", VIEW_POSTPROCESS);
+    m_internalPrograms.tonemapProgram =
+        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                             "tonemapping",
+                             "tonemapping",
+                             VIEW_POSTPROCESS);
     if (m_internalPrograms.tonemapProgram == (size_t)-1) {
         SYN_INT_RENDEREXIT("tonemapping")
     }
@@ -531,10 +553,20 @@ void RenderCore::_Shutdown() {
         bgfx::destroy(dummy);
         dummy = BGFX_INVALID_HANDLE;
     }
+    if(bgfx::isValid(m_fsQuadVbh)) {
+        bgfx::destroy(m_fsQuadVbh);
+        m_fsQuadVbh = BGFX_INVALID_HANDLE;
+    }
 
-    // Destroy scene buffers
-    m_buffers.ForEachFrameBuffer([](auto& fb) { if (bgfx::isValid(fb)) bgfx::destroy(fb); });
-    m_buffers.ForEachTexture([](auto& tex) { if (bgfx::isValid(tex)) bgfx::destroy(tex); });
+    // Framebuffers are created with destroyTextures=true, so they own and
+    // release attached textures on destroy.
+    m_buffers.ForEachFrameBuffer([](auto& fb) {
+        if (bgfx::isValid(fb)) {
+            bgfx::destroy(fb);
+        }
+        fb = BGFX_INVALID_HANDLE;
+    });
+    m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
     m_defaultUniformIds.clear();
 
     bgfx::shutdown();
@@ -633,9 +665,15 @@ bool RenderCore::_SetResolution(int width, int height) {
     bgfx::reset(uint32_t(width), uint32_t(height), m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
     bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
 
-    // Reset all frame buffers to new res
-    m_buffers.ForEachFrameBuffer([](auto& fb) { if (bgfx::isValid(fb)) bgfx::destroy(fb); });
-    m_buffers.ForEachTexture([](auto& tex) { if (bgfx::isValid(tex)) bgfx::destroy(tex); });
+    // Reset all frame buffers to new res. Framebuffer destroy also releases
+    // attached textures because those FBOs were created with destroyTextures=true.
+    m_buffers.ForEachFrameBuffer([](auto& fb) {
+        if (bgfx::isValid(fb)) {
+            bgfx::destroy(fb);
+        }
+        fb = BGFX_INVALID_HANDLE;
+    });
+    m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
     if (!_CreateSceneBuffers()) return false;
     return true;
 }

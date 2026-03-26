@@ -12,6 +12,10 @@ project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
 set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
 
+# Generate Version.h for all engine builds (including engine-only CI).
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/versioning.cmake)
+define_version()
+
 # Use static runtime on MSVC. Several libraries we use require this.
 # Please don't change this.
 if(MSVC)
@@ -74,6 +78,9 @@ add_library(Syngine STATIC
     src/Syngine/Utils/ModelLoader.cpp
     src/Syngine/Utils/FsUtils.cpp
     src/Syngine/Utils/Profiler.cpp
+    src/Syngine/Utils/Serializer.cpp
+    src/Syngine/Utils/Prefab.cpp
+    src/Syngine/ECS/ComponentRegistry.cpp
 
     # Physics
     src/Syngine/Physics/Physics.cpp
@@ -180,6 +187,17 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/t
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
+
+# Allow not building SynTools if not needed
+option(SYNGINE_BUILD_TOOLS "Build Syngine Tools (Shader Compiler, Asset Packager)" ON)
+if(SYNGINE_BUILD_TOOLS)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tools ${CMAKE_BINARY_DIR}/tools EXCLUDE_FROM_ALL)
+    if (WIN32)
+        set_target_properties(syntools PROPERTIES
+            WIN32_EXECUTABLE OFF
+        )
+    endif()
+endif()
 
 if(WIN32)
     # Since the root CMakeLists sets CMAKE_WIN32_EXECUTABLE, we need to ensure that

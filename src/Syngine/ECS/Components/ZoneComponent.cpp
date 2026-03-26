@@ -8,6 +8,8 @@
 
 #include "Syngine/ECS/Components/ZoneComponent.h"
 #include "Syngine/Core/Registry.h"
+#include "Syngine/ECS/Component.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
 
@@ -57,7 +59,20 @@ ZoneComponent& ZoneComponent::operator=(const ZoneComponent& other) {
 }
 
 ZoneComponent::~ZoneComponent() {}
-Components ZoneComponent::GetComponentType() { return componentType; }
+Syngine::ComponentTypeID ZoneComponent::GetComponentType() { return componentType; }
+
+Serializer::DataNode ZoneComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
+    node / "shape" = static_cast<int>(m_shape);
+    node / "position" = std::vector<float>{m_pos[0], m_pos[1], m_pos[2]};
+    node / "size" = std::vector<float>{m_size[0], m_size[1], m_size[2]};
+    node / "rotation" = std::vector<float>{m_rot[0], m_rot[1], m_rot[2]};
+    node / "active" = m_active;
+    node / "oneShot" = m_oneShot;
+    node / "tags" = m_tags;
+    return node;
+}
 
 void ZoneComponent::Init(ZoneShape   shape,
                          const float pos[3],
@@ -240,5 +255,52 @@ ZoneComponent::GetObjectsInZoneByTag(const std::string& tag) const {
 
     return objectsInZone;
 }
+
+static Syngine::ComponentRegistrar s_zoneRegistrar(
+    Syngine::SYN_COMPONENT_ZONE,
+
+    // ParseXml
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
+        for (const auto& attr : elem->attributes()) {
+            scl::string key = attr->tag();
+            scl::string value = attr->data();
+
+            if (key == "shape") {
+                node["shape"] = std::stoi(value.cstr());
+            } else if (key == "position") {
+                node["position"] = Serializer::_ParseFloatArray(value);
+            } else if (key == "size") {
+                node["size"] = Serializer::_ParseFloatArray(value);
+            } else if (key == "rotation") {
+                node["rotation"] = Serializer::_ParseFloatArray(value);
+            } else if (key == "active") {
+                node["active"] = (value == "true");
+            } else if (key == "oneShot") {
+                node["oneShot"] = (value == "true");
+            } else if (key == "tags") {
+                // tags are CSV in XML, convert back to array
+                std::vector<std::string> tags = Serializer::_ParseStringArray(value);
+                node["tags"] = tags;
+            }
+        }
+        return node;
+    },
+
+    // Instantiate
+    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+        ZoneShape shape = static_cast<ZoneShape>(data["shape"].As<int>(0));
+        std::vector<float> pos = data["position"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
+        std::vector<float> size = data["size"].As<std::vector<float>>({1.0f, 1.0f, 1.0f});
+        std::vector<float> rot = data["rotation"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
+        bool oneShot = data["oneShot"].As<bool>(false);
+        auto comp = std::make_unique<ZoneComponent>(owner, shape, pos.data(), size.data(), oneShot);
+        comp->SetRotation(rot.data());
+        comp->SetActive(data["active"].As<bool>(true));
+        comp->SetTags(data["tags"].As<std::vector<std::string>>({}));
+        return comp;
+    }
+);
 
 } // namespace Syngine

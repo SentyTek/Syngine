@@ -10,6 +10,7 @@
 #include "Syngine/Core/Logger.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/RigidbodyComponent.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
@@ -24,8 +25,10 @@
 
 #include "Jolt/Math/MathTypes.h"
 #include "Jolt/Physics/Body/MotionProperties.h"
+#include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 
+#include <memory>
 #include <vector>
 
 namespace Syngine {
@@ -73,8 +76,19 @@ RigidbodyComponent::~RigidbodyComponent() {
     Destroy();
 }
 
-Components RigidbodyComponent::GetComponentType() {
+Syngine::ComponentTypeID RigidbodyComponent::GetComponentType() {
     return SYN_COMPONENT_RIGIDBODY;
+}
+
+Serializer::DataNode RigidbodyComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_RIGIDBODY);
+    node / "mass" = mass;
+    node / "friction" = friction;
+    node / "restitution" = restitution;
+    node / "shape"       = static_cast<int>(shape);
+    node / "shapeParameters" = shapeParameters;
+    return node;
 }
 
 JPH::BodyID RigidbodyComponent::_GetBodyID() const { return bodyID; }
@@ -86,6 +100,13 @@ float RigidbodyComponent::GetRestitution() const { return restitution; }
 
 // Initialize the RigidbodyComponent with the given parameters.
 void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
+    pendingParams = params;
+    initPending = false;
+
+    if (initComplete && !bodyID.IsInvalid()) {
+        return;
+    }
+
     this->physicsManager = Syngine::Core::_GetApp()->physicsManager.get();
     this->transform      = this->m_owner->GetComponent<TransformComponent>();
     this->mass           = params.mass;
@@ -93,8 +114,14 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
     this->restitution    = params.restitution;
     this->shape          = params.shape;
     this->shapeParameters = params.shapeParameters;
+    if (!this->transform) {
+        initPending = true;
+        Syngine::Logger::Warn("RigidbodyComponent deferred initialization: waiting for TransformComponent");
+        return;
+    }
 
     if (!physicsManager || !transform) {
+        initPending = true;
         return;
     }
 
@@ -177,16 +204,52 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         // Set the body properties (mass set during body creation)
         if (friction > 0) bodyInterface.SetFriction(bodyID, friction);
         if (restitution > 0) bodyInterface.SetRestitution(bodyID, restitution);
+        initComplete = true;
+        initPending = false;
+    } else {
+        initPending = true;
     }
 }
 
-void RigidbodyComponent::Update(bool simulate) {
+void RigidbodyComponent::RetryInitIfPending() {
+    if (!initPending || initComplete) {
+        return;
+    }
+
+    Syngine::Logger::LogF(LogLevel::INFO, "RigidbodyComponent: Retrying initialization for GameObject '%s'", m_owner->name.c_str());
+    Init(pendingParams);
+}
+
+void RigidbodyComponent::SyncBodyToTransform() {
+    if (initPending && !initComplete) {
+        RetryInitIfPending();
+    }
+
     if (!physicsManager || !transform || bodyID.IsInvalid()) {
         return;
     }
-    if (!physicsManager || !transform || bodyID.IsInvalid()) return;
 
     BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    float* curPos = transform->GetPosition();
+    float  curRot[4];
+    transform->GetRotationQuaternion(curRot[0], curRot[1], curRot[2], curRot[3]);
+
+    Vec3 pos(curPos[0], curPos[1], curPos[2]);
+    Quat rot(curRot[0], curRot[1], curRot[2], curRot[3]);
+    bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
+}
+
+void RigidbodyComponent::Update(float deltaTime) {
+    if (initPending && !initComplete) {
+        RetryInitIfPending();
+    }
+
+    if (!physicsManager || !transform || bodyID.IsInvalid()) {
+        return;
+    }
+
+    BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    bool simulate = Syngine::Core::Get()->GetSimulationState();
 
     if (simulate) {
         // Smoothly lerp the TransformComponent towards the physics body's
@@ -438,5 +501,44 @@ void RigidbodyComponent::_MatrixToQuat(float* outQuat, const float* mtx) {
         }
     }
 }
+
+static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
+    Syngine::SYN_COMPONENT_RIGIDBODY,
+
+    // ParseXml
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_RIGIDBODY);
+        for (const auto& attr : elem->attributes()) {
+            std::string key = attr->tag().cstr();
+            std::string value = attr->data().cstr();
+
+            if (key == "mass")
+                node["mass"] = std::stof(value);
+            else if (key == "friction")
+                node["friction"] = std::stof(value);
+            else if (key == "restitution")
+                node["restitution"] = std::stof(value);
+            else if (key == "shape")
+                node["shape"] = static_cast<int>(std::stoi(value));
+            else if (key == "shapeParameters") {
+                scl::string v = attr->data();
+                node["shapeParameters"] = Serializer::_ParseFloatArray(v);
+            }
+        }
+        return node;
+    },
+
+    // Instantiate
+    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+        RigidbodyParameters params;
+        params.mass = data["mass"].As(1.0f);
+        params.friction = data["friction"].As(0.5f);
+        params.restitution = data["restitution"].As(0.0f);
+        params.shape = static_cast<PhysicsShapes>(data["shape"].As(0));
+        params.shapeParameters = data["shapeParameters"].As<std::vector<float>>({});
+        return std::make_unique<RigidbodyComponent>(owner, params);
+    }
+);
 
 } // namespace Syngine

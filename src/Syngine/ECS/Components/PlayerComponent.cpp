@@ -8,6 +8,7 @@
 
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/ECS/Components/PlayerComponent.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
@@ -33,6 +34,7 @@
 #include "bx/math.h"
 
 #include <cmath>
+#include <string>
 
 namespace Syngine {
 PlayerComponent::PlayerComponent(GameObject*               owner,
@@ -101,6 +103,23 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
     }
 }
 
+Serializer::DataNode PlayerComponent::Serialize() const {
+    Serializer::DataNode node;
+    node["type"] = static_cast<int>(Syngine::SYN_COMPONENT_PLAYER);
+    node["moveSpeed"] = moveSpeed;
+    node["sprintMult"] = sprintMult;
+    node["crouchSpeed"] = crouchSpeed;
+    node["enableSprinting"] = enableSprinting;
+    node["enableCrouching"] = enableCrouching;
+    node["enableSliding"] = enableSliding;
+    node["standHeight"] = standHeight;
+    node["crouchHeight"] = crouchHeight;
+    node["playerRadius"] = playerRadius;
+    node["mouseSens"] = mouseSens;
+    node["maxPitchAngle"] = maxPitchAngle;
+    return node;
+}
+
 void PlayerComponent::Init(Syngine::CameraComponent* camera) {
     m_transform   = m_owner->GetComponent<TransformComponent>();
 
@@ -142,7 +161,7 @@ PlayerComponent::~PlayerComponent() {
     }
 }
 
-Syngine::Components PlayerComponent::GetComponentType() {
+Syngine::ComponentTypeID PlayerComponent::GetComponentType() {
     return SYN_COMPONENT_PLAYER;
 }
 
@@ -176,11 +195,15 @@ void PlayerComponent::_HandleInput(const SDL_Event& event) {
     }
 }
 
-void PlayerComponent::Update(const bool* keystate, float deltaTime) {
+void PlayerComponent::Update(float deltaTime) {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
     }
+    
+    // Fetch keyboard state internally
+    const bool* keystate = SDL_GetKeyboardState(NULL);
+    
     m_prevPlayerState = m_playerState;
     m_deltaTime = deltaTime;
 
@@ -329,7 +352,7 @@ void PlayerComponent::Update(const bool* keystate, float deltaTime) {
     m_realMoveSpeed = bx::lerp(m_realMoveSpeed, m_targetMoveSpeed, 1.0f - bx::exp(-moveSpeedLerpSpeed * m_deltaTime));
 }
 
-void PlayerComponent::_PostPhysicsUpdate() {
+void PlayerComponent::PostPhysicsUpdate() {
     if (!m_transform || !m_camera) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
@@ -380,5 +403,62 @@ void PlayerComponent::SetRotation(float yaw, float pitch) {
     m_currentYaw = yaw;
     m_currentPitch = pitch;
 }
+
+static Syngine::ComponentRegistrar s_playerRegistrar(
+    Syngine::SYN_COMPONENT_PLAYER,
+
+    // ParseXml
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node["type"] = static_cast<int>(Syngine::SYN_COMPONENT_PLAYER);
+        // Just collapse this loop please
+        for (const auto& attr : elem->attributes()) {
+            const std::string key = attr->tag().cstr();
+            const std::string value = attr->data().cstr();
+
+            if (key == "moveSpeed") {
+                node[key] = std::stof(value);
+            } else if (key == "sprintMult") {
+                node[key] = std::stof(value);
+            } else if (key == "crouchSpeed") {
+                node[key] = std::stof(value);
+            } else if (key == "enableSprinting") {
+                node[key] = value == "true";
+            } else if (key == "enableCrouching") {
+                node[key] = value == "true";
+            } else if (key == "enableSliding") {
+                node[key] = value == "true";
+            } else if (key == "standHeight") {
+                node[key] = std::stof(value);
+            } else if (key == "crouchHeight") {
+                node[key] = std::stof(value);
+            } else if (key == "playerRadius") {
+                node[key] = std::stof(value);
+            } else if (key == "mouseSens") {
+                node[key] = std::stof(value);
+            } else if (key == "maxPitchAngle") {
+                node[key] = std::stof(value);
+            }
+        }
+        return node;
+    },
+
+    // Instantiate
+    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+        auto playerComp = std::make_unique<PlayerComponent>(owner, nullptr);
+        playerComp->moveSpeed = data["moveSpeed"].As<float>(5.0f);
+        playerComp->sprintMult = data["sprintMult"].As<float>(1.5f);
+        playerComp->crouchSpeed = data["crouchSpeed"].As<float>(0.5f);
+        playerComp->enableSprinting = data["enableSprinting"].As<bool>(true);
+        playerComp->enableCrouching = data["enableCrouching"].As<bool>(true);
+        playerComp->enableSliding = data["enableSliding"].As<bool>(true);
+        playerComp->standHeight = data["standHeight"].As<float>(1.8f);
+        playerComp->crouchHeight = data["crouchHeight"].As<float>(1.0f);
+        playerComp->playerRadius = data["playerRadius"].As<float>(0.3f);
+        playerComp->mouseSens = data["mouseSens"].As<float>(0.1f);
+        playerComp->maxPitchAngle = data["maxPitchAngle"].As<float>(89.0f);
+        return playerComp;
+    }
+);
 
 } // namespace Syngine

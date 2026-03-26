@@ -13,6 +13,8 @@
 
 #include "SDL3/SDL_events.h"
 
+#include <algorithm>
+
 // MARK: Initialize InputAction's static members
 
 std::vector<Syngine::InputAction*> Syngine::InputAction::_Registry;
@@ -138,6 +140,8 @@ Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     case KeybindType::SEQUENCE:
         return std::get<KeySequence>(this->binding)._isTriggeredByEvent(event);
     }
+
+    return false;
 }
 
 bool

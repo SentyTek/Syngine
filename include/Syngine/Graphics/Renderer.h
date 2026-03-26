@@ -103,24 +103,6 @@ class Renderer {
     Renderer(int width, int height, const RendererConfig& config);
     ~Renderer();
 
-    /// @brief Load a shader from vertex and fragment shader file paths and
-    /// create a shader program
-    /// @param vsPath Path to the vertex shader file
-    /// @param fsPath Path to the fragment shader file
-    /// @param name Name of the shader program
-    /// @param viewId View ID for the shader program, defaults to VIEW_FORWARD
-    /// @return The ID of the newly created program on success, -1 on failure
-    /// @threadsafety not-safe
-    /// @note Path to each is literal, no automatic suffixes added. Compiler
-    /// outputs .bin files, so be sure to add this suffix instead of .shader or
-    /// .sc or whatever the src file is.
-    /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
-    /// @since v0.0.1
-    static size_t AddProgram(const std::string& vsPath,
-                          const std::string& fsPath,
-                          const std::string& name,
-                          Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
-
     /// @brief Load a shader from a single file path and create a shader program
     /// @param path Path to the shader file
     /// @param name Name of the shader program
@@ -132,8 +114,24 @@ class Renderer {
     /// @threadsafety not-safe
     /// @since v0.0.1
     static size_t AddProgram(const std::string& path,
-                          const std::string& name,
-                          Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
+                             const std::string& name,
+                             Syngine::ViewID    viewId = Syngine::VIEW_FORWARD);
+
+    /// @brief Load a shader from a bundle file and create a shader program
+    /// @param bundlePath Path to the bundle file containing the shader
+    /// @param path Path to the shader file within the bundle (without .vert.bin or .frag.bin suffix)
+    /// @param name Name of the shader program
+    /// @param viewId View ID for the shader program, defaults to VIEW_FORWARD
+    /// @return The index of the newly created program on success, -1 on failure
+    /// @note Assumes the vertex shader is named "{path}.vert.bin" and fragment
+    /// shader "{path}.frag.bin" within the bundle
+    /// @pre Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static size_t AddProgram(const std::string& bundlePath,
+                             const std::string& path,
+                             const std::string& name,
+                             Syngine::ViewID    viewId = Syngine::VIEW_FORWARD);
 
     /// @brief Get a shader program by name. Returns first matching program
     /// @param name Name of the shader program

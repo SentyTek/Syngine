@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Logger.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/FsUtils.h"
@@ -14,8 +15,13 @@
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/Profiler.h"
 
+#include "Syngine/Utils/Serializer.h"
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
+#include "miniscl.hpp"
+
+#include <cfloat>
+#include <string>
 
 namespace Syngine {
 MeshComponent::MeshComponent(GameObject*        owner,
@@ -44,8 +50,17 @@ MeshComponent::~MeshComponent() {
     this->UnloadMesh();
 }
 
-Syngine::Components MeshComponent::GetComponentType() {
+Syngine::ComponentTypeID MeshComponent::GetComponentType() {
     return SYN_COMPONENT_MESH;
+}
+
+Serializer::DataNode MeshComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
+    node / "path" = _MakeRelativeToRoot(this->meshData.path);
+    node / "hasTextures" = this->meshData.hasTextures;
+    //TODO: mats will need to be serialized at some point
+    return node;
 }
 
 void MeshComponent::Init(const std::string& path, bool loadTextures) {
@@ -60,7 +75,7 @@ bool MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
             this->meshData, path.c_str(), loadTextures)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to load mesh from %s",
-                              _ResolveOSPath(path.c_str()).c_str());
+                              _MakeRelativeToRoot(path).c_str());
         return false; // Error loading mesh
     }
     return true; // Success
@@ -69,11 +84,11 @@ bool MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
 bool MeshComponent::UnloadMesh() {
     // Unload the mesh data
     if (bgfx::isValid(this->meshData.vbh)) {
-        // bgfx::destroy(this->meshData.vbh);
+        bgfx::destroy(this->meshData.vbh);
         this->meshData.vbh = BGFX_INVALID_HANDLE;
     }
     if (bgfx::isValid(this->meshData.ibh)) {
-        // bgfx::destroy(this->meshData.ibh);
+        bgfx::destroy(this->meshData.ibh);
         this->meshData.ibh = BGFX_INVALID_HANDLE;
     }
     for (auto& mat : this->meshData.materials) {
@@ -104,10 +119,10 @@ bool MeshComponent::ReloadMesh() {
     if (!loader._ReloadModel(this->meshData, this->meshData.id)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to reload mesh from %s",
-                              this->meshData.path.c_str());
-        return 1; // Error reloading mesh
+                              _MakeRelativeToRoot(this->meshData.path).c_str());
+        return false; // Error reloading mesh
     }
-    return 0; // Success
+    return true; // Success
 }
 
 bool MeshComponent::UploadMesh(std::vector<float>    vertices,
@@ -292,5 +307,32 @@ MeshAABB& MeshComponent::GetAABB() {
     m_aabb = result;
     return m_aabb;
 }
+
+static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH, 
+    // ParseXML: XML element -> DataNode
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
+        for (const auto& attr : elem->attributes()) {
+            scl::string key = attr->tag();
+            scl::string value = attr->data();
+            if (key == "path") {
+                std::string svalue = std::string(value.cstr());
+                node / "path" = svalue;
+            } else if (key == "hasTextures") {
+                node / "hasTextures" = (value == "true");
+            }
+        }
+        return node;
+    },
+
+    // Instantiate: DataNode -> Component instance
+    [](Syngine::GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+        std::string path = data.Has("path") ? data["path"].As<std::string>() : "";
+        bool hasTextures = data.Has("hasTextures") ? data["hasTextures"].As<bool>() : false;
+        auto meshComp = std::make_unique<MeshComponent>(owner, path, hasTextures);
+        return meshComp;
+    }
+);
 
 } // namespace Syngine

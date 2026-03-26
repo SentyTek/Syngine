@@ -36,7 +36,7 @@ struct Camera {
 /// @since v0.0.1
 class CameraComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::Components componentType = Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
+    static constexpr Syngine::ComponentTypeID componentType = Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
 
     /// @brief Constructor for the CameraComponent class
     /// @param owner Pointer to the GameObject that owns this component
@@ -54,7 +54,7 @@ class CameraComponent : public Syngine::Component {
     /// @return The component type as an enum value
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
 
     /// @brief Clone the CameraComponent
     /// @return A unique pointer to the cloned CameraComponent
@@ -63,11 +63,16 @@ class CameraComponent : public Syngine::Component {
         return std::make_unique<CameraComponent>(*this);
     }
 
+    /// @brief Serializes the CameraComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// CameraComponent's state
+    Serializer::DataNode Serialize() const override;
+
     /// @brief Initialize the camera component
     /// @note This should only be called when the component is added to a GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void Init() {}; // No specific initialization needed
+    void Init() override {} // No specific initialization needed
 
     /// @brief Update the camera component
     /// @param viewId ID of the view to update

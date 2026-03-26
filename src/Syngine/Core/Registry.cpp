@@ -11,6 +11,7 @@
 #include "Syngine/Core/ZoneManager.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
+#include "Syngine/ECS/Components/RigidbodyComponent.h"
 
 #include <string>
 
@@ -81,12 +82,27 @@ int Registry::RemoveGameObject(GameObject* gameObject) noexcept {
 }
 
 void Registry::Clear() noexcept {
-    // Clear all GameObjects and indexed sublists
+    // Collect all objects into a temporary vector to avoid iterator
+    // invalidation during deletion
+    std::vector<GameObject*> objectsToDelete;
+    objectsToDelete.reserve(m_AllObjects.size());
+    for (auto& pair : m_AllObjects) {
+        objectsToDelete.push_back(pair.second);
+    }
+
+    // Clear all internal maps/lists so that when ~GameObject calls
+    // RemoveGameObject, it returns early (object not found) instead of trying
+    // to erase from these containers.
     m_AllObjects.clear();
     m_PhysicsObjects.clear();
     m_RenderableObjects.clear();
     m_ScriptedObjects.clear();
     m_Gizmos.clear();
+
+    // Delete the objects (invokes destructors, which cleans up components/resources)
+    for (GameObject* obj : objectsToDelete) {
+        delete obj;
+    }
 }
 
 int Registry::RemoveGameObjectById(int id) noexcept {
@@ -131,7 +147,7 @@ GameObject* Registry::GetGameObjectById(int id) noexcept {
 }
 
 std::vector<GameObject*>
-Registry::GetGameObjectsWithComponent(Syngine::Components type) noexcept {
+Registry::GetGameObjectsWithComponent(Syngine::ComponentTypeID type) noexcept {
     std::vector<GameObject*> result;
     for (const auto& pair : m_AllObjects) {
         if (pair.second->HasComponent(type)) {
@@ -143,7 +159,7 @@ Registry::GetGameObjectsWithComponent(Syngine::Components type) noexcept {
 
 // Internal notifications
 void Registry::_NotifyComponentAdded(GameObject*         gameobject,
-                                    Syngine::Components type) noexcept {
+                                    Syngine::ComponentTypeID type) noexcept {
     if (!gameobject) return;
 
     switch (type) {
@@ -155,6 +171,15 @@ void Registry::_NotifyComponentAdded(GameObject*         gameobject,
                 // Check if already in the list
                 if (std::find(m_RenderableObjects.begin(), m_RenderableObjects.end(), gameobject) == m_RenderableObjects.end()) {
                     m_RenderableObjects.push_back(gameobject);
+                }
+            }
+
+            // If a rigidbody was added before transform, retry deferred init now.
+            if (type == Syngine::SYN_COMPONENT_TRANSFORM &&
+                gameobject->HasComponent(Syngine::SYN_COMPONENT_RIGIDBODY)) {
+                auto* rb = gameobject->GetComponent<Syngine::RigidbodyComponent>();
+                if (rb) {
+                    rb->RetryInitIfPending();
                 }
             }
             break;
@@ -184,7 +209,7 @@ void Registry::_NotifyComponentAdded(GameObject*         gameobject,
 }
 
 void Registry::_NotifyComponentRemoved(GameObject*         gameobject,
-                                      Syngine::Components type) noexcept {
+                                      Syngine::ComponentTypeID type) noexcept {
     if (!gameobject) return;
 
     auto removeFrom = [&](std::vector<GameObject*>& vec) {

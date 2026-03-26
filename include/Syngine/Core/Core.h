@@ -7,7 +7,6 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Jolt/Core/Core.h"
 
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Graphics/Renderer.h"
@@ -19,6 +18,7 @@
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Physics/Physics.h"
 #include "Syngine/Utils/Profiler.h"
+
 #include <cstdint>
 #include <memory>
 
@@ -300,6 +300,7 @@ class Core {
     friend class RigidbodyComponent;
     friend class PlayerComponent;
     friend class Registry;
+    friend class Serializer;
 #ifndef SYN_DEBUG_GRAPHICS
     friend class Syngine::Profiler;
 #endif

@@ -84,7 +84,7 @@ struct RigidbodyParameters {
  */
 class RigidbodyComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::Components componentType = SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type
+    static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type
 
     /// @brief Constructor for the RigidbodyComponent class
     /// @param owner Pointer to the GameObject that owns this component
@@ -103,13 +103,18 @@ class RigidbodyComponent : public Syngine::Component {
     /// @return The component type as an enum value
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
 
     /// @brief Clone the RigidbodyComponent
     /// @return A unique pointer to the cloned RigidbodyComponent
     std::unique_ptr<Component> Clone() const override {
         return std::make_unique<RigidbodyComponent>(*this);
     }
+
+    /// @brief Serializes the RigidbodyComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// RigidbodyComponent's state
+    Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the RigidbodyComponent
     /// @param params Rigidbody parameters to initialize the component
@@ -118,12 +123,23 @@ class RigidbodyComponent : public Syngine::Component {
     /// @since v0.0.1
     void Init(Syngine::RigidbodyParameters params);
 
+    /// @brief Retry deferred initialization when dependencies (like Transform) become available.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void RetryInitIfPending();
+
+    /// @brief Push the current TransformComponent world pose into the physics body.
+    /// Useful after runtime re-parenting or prefab child attachment.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SyncBodyToTransform();
+
     /// @brief Update the RigidbodyComponent
-    /// @param simulate Whether to simulate physics or not
+    /// @param deltaTime The physics timestep
     /// @note This is called every frame to update the physics body
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void Update(bool simulate);
+    void Update(float deltaTime) override;
 
     /// @brief Destroys the RigidbodyComponent and its associated physics body
     /// @note This is called when the component is removed or the GameObject is
@@ -221,8 +237,8 @@ class RigidbodyComponent : public Syngine::Component {
     void AddTorque(const float* torque, ForceMode mode = ForceMode::FORCE);
 
   private:
-    TransformComponent*   transform; // Reference to the transform component
-    Syngine::Phys* physicsManager; // Reference to the physics manager
+        TransformComponent*   transform = nullptr; // Reference to the transform component
+        Syngine::Phys* physicsManager = nullptr; // Reference to the physics manager
     JPH::BodyID           bodyID;         // ID of the physics body
     PhysicsShapes         shape;          // Shape of the physics body
     float                 mass = 0.0f;    // Mass of the physics body
@@ -230,6 +246,9 @@ class RigidbodyComponent : public Syngine::Component {
     float restitution = 0.5f; // Restitution of the physics body, default to 0.5
     std::vector<float> shapeParameters; // Parameters for the shape, e.g., radius for sphere,
                          // half extents for box
+    RigidbodyParameters pendingParams{};
+    bool initPending = false;
+    bool initComplete = false;
 
     void _MatrixToQuat(float* outQuat, const float* mtx);
 };

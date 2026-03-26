@@ -9,6 +9,7 @@
 #pragma once
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
+#include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
 
@@ -46,9 +47,8 @@ class TransformComponent : public Syngine::Component {
     static void _QuatFromEulerDeg(float x, float y, float z, float* outQuat);
     static void _QuatNormalize(float* quat);
     static void _QuatMultiply(const float* q1, const float* q2, float* outQuat);
-
   public:
-    static constexpr Syngine::Components componentType =
+    static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_TRANSFORM; //* Transform component type
 
     /// @brief Constructor for the TransformComponent class
@@ -65,6 +65,11 @@ class TransformComponent : public Syngine::Component {
     std::unique_ptr<Component> Clone() const override {
         return std::make_unique<TransformComponent>(*this);
     }
+
+    /// @brief Serializes the TransformComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// TransformComponent's state
+    Serializer::DataNode Serialize() const override;
 
     /// @brief Initializes the transform component with default values.
     /// @param position Initial position of the GameObject
@@ -88,7 +93,7 @@ class TransformComponent : public Syngine::Component {
     /// @return The component type as an enum value
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
 
     /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in
     /// radians)

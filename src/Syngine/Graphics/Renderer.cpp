@@ -74,36 +74,23 @@ Renderer::~Renderer() {
     }
     m_uniformRegistry.clear();
 
-    // Destroy all programs and uniforms (if not already destroyed)
-    for (auto& view : Renderer::viewPrograms) {
+    // Destroy all programs. Uniforms are already destroyed above via m_uniformRegistry
+    // (RegisterUniform copies the same handle/data pointer into both stores, so only
+    // destroy from one of them).
+    for (auto& view : viewPrograms) {
         for (auto& prog : view.second) {
-            for (auto& uniform : prog.uniforms) {
-                if (bgfx::isValid(uniform.handle)) {
-                    bgfx::destroy(uniform.handle);
-                }
-                if (uniform.data) {
-                    free(uniform.data);
-                    uniform.data = nullptr;
-                }
-            }
             bgfx::destroy(prog.program);
         }
     }
-    Renderer::viewPrograms.clear();
-    // TODO: loop through renderer::viewprograms effectively (note each program
-    // stores uniforms)
+    viewPrograms.clear();
 
     // Clear gizmos
     for (auto& [tag, gizmo] : m_gizmoRegistry) {
-        bgfx::TextureHandle tex = gizmo->_GetTexture();
-        if (bgfx::isValid(tex)) {
-            bgfx::destroy(tex);
-        }
         delete gizmo;
     }
     m_gizmoRegistry.clear();
 
-    bgfx::shutdown(); // Shut down bgfx BEFORE destroying the window
+    RenderCore::_Shutdown(); // Destroys RenderCore buffers/textures/VBs and calls bgfx::shutdown()
 }
 
 bool Renderer::_CreateRenderer(const RendererConfig& config) {
@@ -132,8 +119,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     return true;
 }
 
-size_t Renderer::AddProgram(const std::string& vsPath,
-                            const std::string& fsPath,
+size_t Renderer::AddProgram(const std::string& path,
                             const std::string& name,
                             Syngine::ViewID    viewId) {
     if (!Renderer::IsReady())
@@ -150,6 +136,9 @@ size_t Renderer::AddProgram(const std::string& vsPath,
                               name.c_str());
         return -1;
     }
+
+    std::string vsPath = path + ".vert.bin";
+    std::string fsPath = path + ".frag.bin";
 
     bgfx::ShaderHandle vs = _LoadShader(vsPath.c_str());
     bgfx::ShaderHandle fs = _LoadShader(fsPath.c_str());
@@ -178,10 +167,62 @@ size_t Renderer::AddProgram(const std::string& vsPath,
     return prog.id;
 }
 
-size_t Renderer::AddProgram(const std::string& path,
-                            const std::string& name,
-                            Syngine::ViewID    viewId) {
-    return AddProgram(path + ".vert.sc.bin", path + ".frag.sc.bin", name, viewId);
+size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& path, const std::string& name, Syngine::ViewID viewId) {
+    if (!Renderer::IsReady()) {
+        Syngine::Logger::Fatal("Cannot add program before renderer is ready");
+        return -1;
+    }
+    if (name.empty() || path.empty() || bundlePath.empty()) {
+         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Invalid parameters for AddProgram from bundle");
+        return -1;
+    }
+    if (GetProgram(name).id != 0) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Program with name \"%s\" already exists",
+                              name.c_str());
+        return -1;
+    }
+
+    // Fallback if bundle doesn't exist
+    if (!_FileExists(bundlePath.c_str())) {
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                              "Bundle %s not found, falling back to regular AddProgram",
+                              bundlePath.c_str());
+        return AddProgram(path, name, viewId);
+    }
+
+    bgfx::ShaderHandle vs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".vert.bin").c_str());
+    bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".frag.bin").c_str());
+    bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
+    if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Failed to load shaders for program %s from bundle",
+                              name.c_str());
+        if (bgfx::isValid(vs)) bgfx::destroy(vs);
+        if (bgfx::isValid(fs)) bgfx::destroy(fs);
+        return -1;
+    }
+    programHandle = bgfx::createProgram(vs, fs, true);
+
+    if (!bgfx::isValid(programHandle)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create program %s from bundle", name.c_str());
+        bgfx::destroy(vs);
+        bgfx::destroy(fs);
+        return -1;
+    }
+
+    Program prog;
+    prog.program = programHandle;
+    prog.name    = name;
+    prog.viewId  = viewId;
+    prog.vsPath  = bundlePath + ":" + path + ".vert.bin";
+    prog.fsPath  = bundlePath + ":" + path + ".frag.bin";
+    prog.id      = programHandle.idx;
+
+    viewPrograms[viewId].push_back(prog); // Store program by viewId
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully from bundle", name.c_str());
+    return prog.id;
 }
 
 Program Renderer::GetProgram(const std::string_view& name) {
@@ -215,8 +256,8 @@ Program* Renderer::_GetProgram(size_t id) {
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& name) {
     for (int i = 0; i < viewPrograms[viewId].size(); ++i) {
         if (viewPrograms[viewId][i].name == name) {
-            // Destroy all uniforms associated with this program
             for (auto& uniform : viewPrograms[viewId][i].uniforms) {
+                m_uniformRegistry.erase(uniform.handle.idx);
                 bgfx::destroy(uniform.handle);
                 if (uniform.data) {
                     free(uniform.data);
@@ -231,8 +272,8 @@ bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& nam
 }
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, size_t id) {
     if (id < viewPrograms[viewId].size()) {
-        // Destroy all uniforms associated with this program
         for (auto& uniform : viewPrograms[viewId][id].uniforms) {
+            m_uniformRegistry.erase(uniform.handle.idx);
             bgfx::destroy(uniform.handle);
             if (uniform.data) {
                 free(uniform.data);
@@ -248,8 +289,8 @@ bool Renderer::RemoveProgram(Syngine::ViewID viewId, size_t id) {
 bool Renderer::RemoveAllPrograms() {
     for (auto& programs : viewPrograms) {
         for (auto& program : programs.second) {
-            // Destroy all uniforms associated with this program
             for (auto& uniform : program.uniforms) {
+                m_uniformRegistry.erase(uniform.handle.idx);
                 bgfx::destroy(uniform.handle);
                 if (uniform.data) {
                     free(uniform.data);
