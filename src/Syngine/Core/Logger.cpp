@@ -30,9 +30,11 @@
 #include <chrono>
 #include <ctime>
 #include <cstdarg>
+#include <cstring>
 #include <string_view>
 #include <vector>
 #include <cstdlib>
+#include <exception>
 
 #ifdef _WIN32
 #include <intrin.h>
@@ -45,17 +47,92 @@
 
 namespace Syngine {
 
+static std::string DescribeCurrentException() {
+    try {
+        throw; // Re-throw the current exception to capture its type and message
+    } catch (const std::exception& e) {
+        return std::string("std::exception: ") + e.what();
+    } catch (...) {
+        return "Unhandled non-std exception.";
+    }
+}
+
+static void LoggerTerminateHandler() {
+    // If terminate was triggered by an unhandled exception, try to log its
+    // details
+    std::string msg = "std::terminate called";
+    if (std::current_exception()) {
+        try {
+            std::rethrow_exception(std::current_exception());
+        } catch (...) {
+            msg += " ";
+            msg += DescribeCurrentException();
+        }
+    }
+
+    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR);
+    Logger::Log(msg, LogLevel::ERR);
+    Logger::PrintStackTrace();
+    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR);
+    Logger::Flush();
+    std::_Exit(EXIT_FAILURE);
+}
+
+#ifdef _WIN32
+const char* SehCodeToString(DWORD code) {
+    switch (code) {
+        case EXCEPTION_ACCESS_VIOLATION:         return "EXCEPTION_ACCESS_VIOLATION";
+        case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:    return "EXCEPTION_ARRAY_BOUNDS_EXCEEDED";
+        case EXCEPTION_BREAKPOINT:               return "EXCEPTION_BREAKPOINT";
+        case EXCEPTION_DATATYPE_MISALIGNMENT:    return "EXCEPTION_DATATYPE_MISALIGNMENT";
+        case EXCEPTION_FLT_DENORMAL_OPERAND:     return "EXCEPTION_FLT_DENORMAL_OPERAND";
+        case EXCEPTION_FLT_DIVIDE_BY_ZERO:       return "EXCEPTION_FLT_DIVIDE_BY_ZERO";
+        case EXCEPTION_FLT_INEXACT_RESULT:       return "EXCEPTION_FLT_INEXACT_RESULT";
+        case EXCEPTION_FLT_INVALID_OPERATION:    return "EXCEPTION_FLT_INVALID_OPERATION";
+        case EXCEPTION_FLT_OVERFLOW:             return "EXCEPTION_FLT_OVERFLOW";
+        case EXCEPTION_FLT_STACK_CHECK:          return "EXCEPTION_FLT_STACK_CHECK";
+        case EXCEPTION_FLT_UNDERFLOW:            return "EXCEPTION_FLT_UNDERFLOW";
+        case EXCEPTION_ILLEGAL_INSTRUCTION:      return "EXCEPTION_ILLEGAL_INSTRUCTION";
+        case EXCEPTION_IN_PAGE_ERROR:            return "EXCEPTION_IN_PAGE_ERROR";
+        case EXCEPTION_INT_DIVIDE_BY_ZERO:       return "EXCEPTION_INT_DIVIDE_BY_ZERO";
+        case EXCEPTION_INT_OVERFLOW:             return "EXCEPTION_INT_OVERFLOW";
+        case EXCEPTION_INVALID_DISPOSITION:      return "EXCEPTION_INVALID_DISPOSITION";
+        case EXCEPTION_NONCONTINUABLE_EXCEPTION: return "EXCEPTION_NONCONTINUABLE_EXCEPTION";
+        case EXCEPTION_PRIV_INSTRUCTION:         return "EXCEPTION_PRIV_INSTRUCTION";
+        case EXCEPTION_SINGLE_STEP:              return "EXCEPTION_SINGLE_STEP";
+        case EXCEPTION_STACK_OVERFLOW:           return "EXCEPTION_STACK_OVERFLOW";
+        case EXCEPTION_GUARD_PAGE:               return "EXCEPTION_GUARD_PAGE";
+        default:                                 return "UNKNOWN_SEH_EXCEPTION";
+    }
+}
+#endif
+
 void Logger::SetupCrashHandler() {
-    // Setup common signal handlers
+    // Setup common signal handlers for crashes
+#if defined(__linux__) || defined(__APPLE__)
+    struct sigaction signalAction {};
+    signalAction.sa_handler = _CrashHandler;
+    sigemptyset(&signalAction.sa_mask);
+    signalAction.sa_flags = SA_RESTART;
+
+    sigaction(SIGSEGV, &signalAction, nullptr);
+    sigaction(SIGABRT, &signalAction, nullptr);
+    sigaction(SIGFPE, &signalAction, nullptr);
+    sigaction(SIGILL, &signalAction, nullptr);
+    sigaction(SIGTERM, &signalAction, nullptr);
+#else
     signal(SIGSEGV, _CrashHandler);
     signal(SIGABRT, _CrashHandler);
     signal(SIGFPE, _CrashHandler);
     signal(SIGILL, _CrashHandler);
     signal(SIGTERM, _CrashHandler);
+#endif
+
+    std::set_terminate(LoggerTerminateHandler);
+
 #ifdef _WIN32
     // Setup Windows exception handler
     SetUnhandledExceptionFilter(_WindowsExceptionHandler);
-
     SymInitialize(GetCurrentProcess(), NULL, TRUE);
     SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS);
 #endif
@@ -87,9 +164,20 @@ void Logger::_CrashHandler(int signal) {
 }
 
 #ifdef _WIN32
-LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo) {
+LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
+    const DWORD code = ep->ExceptionRecord->ExceptionCode;
     Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR);
-    Logger::Log("Exception Code: " + std::to_string(ExceptionInfo->ExceptionRecord->ExceptionCode), LogLevel::ERR);
+    Logger::Log("Exception Code: " + std::to_string(code), LogLevel::ERR);
+    Logger::Log("Exception Address: " + std::to_string((uintptr_t)ep->ExceptionRecord->ExceptionAddress), LogLevel::ERR);
+    Logger::Log("Exception Type: " + std::string(SehCodeToString(code)), LogLevel::ERR);
+
+    if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2) {
+        const auto mode = ep->ExceptionRecord->ExceptionInformation[0]; // 0 read, 1 write, 8 execute
+        const auto addr = ep->ExceptionRecord->ExceptionInformation[1];
+        Logger::LogF(LogLevel::ERR, "Access violation: mode=%llu address=0x%llX",
+                     (unsigned long long)mode, (unsigned long long)addr);
+    }
+    
     Logger::Log("Generating stack trace...", LogLevel::ERR);
 
     PrintStackTrace();
