@@ -132,11 +132,10 @@ compile_commands.json
 
 cd game/src
 touch main.cpp
-echo "
+cat > main.cpp <<EOF
+
 #include "Syngine/Syngine.h"
-
 #include <string>
-
 using namespace Syngine;
 
 int AppMain(int argc, char* argv[]) {
@@ -159,7 +158,7 @@ int AppMain(int argc, char* argv[]) {
     engine.Initialize(rConfig);
 
     // Create default camera
-    Syngine::GameObject* camera = new Syngine::GameObject(\"MainCamera\");
+    Syngine::GameObject* camera = new Syngine::GameObject("MainCamera");
     Syngine::CameraComponent* cameraComp = camera->AddComponent<Syngine::CameraComponent>();
 
 
@@ -180,7 +179,7 @@ int AppMain(int argc, char* argv[]) {
     Syngine::Logger::Shutdown();
     return 0;
 }
-" > main.cpp
+EOF
 cd ../../
 
 echo "Syngine project '$PROJECT_NAME' created successfully!"
