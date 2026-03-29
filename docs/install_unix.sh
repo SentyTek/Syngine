@@ -1,6 +1,7 @@
+#!/bin/sh
 echo "Enter name of the project (no spaces): "
 read PROJECT_NAME
-echo "Creating new Syngine project: $PROJECT_NAME. This may take a few moments..."
+echo "Creating new Syngine project '$PROJECT_NAME'. This may take a few moments..."
 
 cd ../../
 mkdir -p game
@@ -182,4 +183,8 @@ int AppMain(int argc, char* argv[]) {
 EOF
 cd ../../
 
-echo "Syngine project '$PROJECT_NAME' created successfully!"
+echo "\\033[0;32mSyngine project '$PROJECT_NAME' created successfully!\\033[0m"
+
+if [ "$(uname -s)" == "Darwin" ]; then
+    echo "\\033[0;33mPlease make sure to run \\033[1;33massets_xcassets.sh\\033[0;33m to create macOS asset placeholders\\033[0m"
+fi

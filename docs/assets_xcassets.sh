@@ -1,3 +1,4 @@
+#!/bin/sh
 # Creates an Xcode asset catalog.
 
 cd ../../system/assets
