@@ -1,3 +1,4 @@
+#!/bin/sh
 # Creates an Xcode asset catalog.
 
 cd ../../system/assets
@@ -13,7 +14,7 @@ for folder in ../*/; do
 done
 
 mkdir -p AccentColor.colorset
-mkdir -p $trimmed_name.iconset
+mkdir -p $trimmed_name.appiconset
 
 touch Contents.json
 echo '{
@@ -46,7 +47,7 @@ echo '{
   }
 }' > Contents.json
 
-cd ../$trimmed_name.iconset
+cd ../$trimmed_name.appiconset
 touch Contents.json
 echo '
 {

@@ -120,10 +120,10 @@ echo 	^<string^>1^</string^>
 echo 	^<key^>CFBundleVersion^</key^>
 echo 	^<string^>1^</string^>
 echo 	^<key^>NSHumanReadableCopyright^</key^>
-echo 	^<string^>Copyright 2025-${CURRENT_YEAR} SentyTek. All rights reserved.^</string^>
+echo 	^<string^>Placeholder Copyright ${CURRENT_YEAR}. Please update this to your own project copyright^</string^>
 echo ^</dict^>
 echo ^</plist^>
-) > info.plist.in
+) > Info.plist.in
 
 if not exist assets mkdir assets
 cd ..
@@ -158,32 +158,32 @@ echo                                          .shadowDist      = 500.0f,
 echo                                          .vsync           = true,
 echo                                          .usePseudoCamera = false };
 echo.
-echo     Syngine::Logger::Init(gameName);
-echo     Syngine::Logger::Log("Starting " + gameName);
+echo     Syngine::Logger::Init^(gameName^);
+echo     Syngine::Logger::Log^("Starting " + gameName^);
 echo.
 echo     // Create game
-echo     Syngine::Core engine(config);
-echo     engine.Initialize(rConfig);
+echo     Syngine::Core engine^(config^);
+echo     engine.Initialize^(rConfig^);
 echo.
 echo     // Create default camera
-echo     Syngine::GameObject* camera = new Syngine::GameObject(\"MainCamera\");
-echo     Syngine::CameraComponent* cameraComp = camera->AddComponent<Syngine::CameraComponent>();
+echo     Syngine::GameObject* camera = new Syngine::GameObject^("MainCamera"^);
+echo     Syngine::CameraComponent* cameraComp = camera-^>AddComponent^<Syngine::CameraComponent^>^(^);
 echo.
-echo     Logger::Info("Starting event loop");
-echo     while (engine.IsRunning()) {
-echo         Profiler::Reset();
+echo     Logger::Info^("Starting event loop"^);
+echo     while ^(engine.IsRunning^(^)^) {
+echo         Profiler::Reset^(^);
 echo         {
-echo             SYN_PROFILE_SCOPE("MainLoop")
-echo             engine.HandleEvents();
-echo             engine.Update();
-echo             engine.Render(cameraComp);
+echo             SYN_PROFILE_SCOPE^("MainLoop"^)
+echo             engine.HandleEvents^(^);
+echo             engine.Update^(^);
+echo             engine.Render^(cameraComp^);
 echo         }
 echo     }
 echo.
 echo     // Cleanup
-echo     Syngine::Registry::Clear();
-echo     Renderer::RemoveAllPrograms();
-echo     Syngine::Logger::Shutdown();
+echo     Syngine::Registry::Clear^(^);
+echo     Renderer::RemoveAllPrograms^(^);
+echo     Syngine::Logger::Shutdown^(^);
 echo     return 0;
 echo }
 ) > main.cpp

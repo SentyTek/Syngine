@@ -1,6 +1,7 @@
+#!/bin/sh
 echo "Enter name of the project (no spaces): "
 read PROJECT_NAME
-echo "Creating new Syngine project: $PROJECT_NAME. This may take a few moments..."
+echo "Creating new Syngine project '$PROJECT_NAME'. This may take a few moments..."
 
 cd ../../
 mkdir -p game
@@ -89,7 +90,7 @@ Exec=@EXEC_PATH@
 Icon=@ICON_NAME@
 Type=Application
 Categories=Game;" > $PROJECT_NAME.desktop.in
-touch info.plist.in
+touch Info.plist.in
 echo '<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -113,7 +114,7 @@ echo '<?xml version="1.0" encoding="UTF-8"?>
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>Copyright 2025-${CURRENT_YEAR} SentyTek. All rights reserved.</string>
+	<string>Placeholder Copyright ${CURRENT_YEAR}. Please update this to your own project copyright</string>
 </dict>
 </plist>
 ' > info.plist.in
@@ -132,11 +133,10 @@ compile_commands.json
 
 cd game/src
 touch main.cpp
-echo "
+cat > main.cpp <<EOF
+
 #include "Syngine/Syngine.h"
-
 #include <string>
-
 using namespace Syngine;
 
 int AppMain(int argc, char* argv[]) {
@@ -159,7 +159,7 @@ int AppMain(int argc, char* argv[]) {
     engine.Initialize(rConfig);
 
     // Create default camera
-    Syngine::GameObject* camera = new Syngine::GameObject(\"MainCamera\");
+    Syngine::GameObject* camera = new Syngine::GameObject("MainCamera");
     Syngine::CameraComponent* cameraComp = camera->AddComponent<Syngine::CameraComponent>();
 
 
@@ -180,7 +180,11 @@ int AppMain(int argc, char* argv[]) {
     Syngine::Logger::Shutdown();
     return 0;
 }
-" > main.cpp
+EOF
 cd ../../
 
-echo "Syngine project '$PROJECT_NAME' created successfully!"
+echo "\\033[0;32mSyngine project '$PROJECT_NAME' created successfully!\\033[0m"
+
+if [ "$(uname -s)" == "Darwin" ]; then
+    echo "\\033[0;33mPlease make sure to run \\033[1;33massets_xcassets.sh\\033[0;33m to create macOS asset placeholders\\033[0m"
+fi
