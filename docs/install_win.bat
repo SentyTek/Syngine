@@ -2,9 +2,21 @@
 setlocal enabledelayedexpansion
 
 set /p PROJECT_NAME="Enter name of the project (no spaces): "
+set /p INIT_GIT="Initialize a git repository? (Y/N): "
 echo Creating new Syngine project: %PROJECT_NAME%. This may take a few moments...
 
 cd ..\..\
+if /I "%INIT_GIT%"=="Y" (
+    git init
+    git submodule add https://github.com/SentyTek/SyngineStudio editor
+    git submodule add https://github.com/SentyTek/Syngine engine
+) else (
+    if not exist editor mkdir editor
+    cd editor
+    git clone https://github.com/SentyTek/SyngineStudio.git .
+    cd ..
+)
+
 if not exist game mkdir game
 if not exist game\src mkdir game\src
 if not exist assets mkdir assets
@@ -12,12 +24,7 @@ if not exist assets\meshes mkdir assets\meshes
 if not exist assets\shaders mkdir assets\shaders
 if not exist assets\shaders\varying mkdir assets\shaders\varying
 if not exist system mkdir system
-if not exist editor mkdir editor
 if not exist build mkdir build
-
-cd editor
-git clone https://github.com/SentyTek/SyngineStudio.git .
-cd ..
 
 (
 echo # root/CMakeLists.txt
@@ -193,8 +200,10 @@ copy .clang-format ..\
 copy .editorconfig ..\
 copy .pre-commit-config.yaml ..\
 cd ..\
-pip install pre-commit
-pre-commit install
+if /I "%INIT_GIT%"=="Y" (
+    pip install pre-commit
+    pre-commit install
+)
 
 echo Syngine project '%PROJECT_NAME%' created successfully!
 
