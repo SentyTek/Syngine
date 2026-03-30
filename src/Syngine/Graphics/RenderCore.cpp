@@ -3,7 +3,7 @@
 // │ Created 2026-01-02                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Graphics/RenderCore.h"
@@ -91,7 +91,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         Syngine::Logger::Fatal("No window to create renderer in");
         return false;
     }
-    
+
     // Initialize bgfx
     bgfx::Init bgInit;
     SDL_PropertiesID sdlProps = SDL_GetWindowProperties(win);
@@ -101,7 +101,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         SDL_Quit();
         return false;
     }
-    
+
     // Set platform data
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
     // This assumes X11
@@ -138,7 +138,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     bgInit.platformData.ndt = NULL;
     bgInit.platformData.nwh = NULL;
 #endif
-    
+
     bgInit.resolution.width = Renderer::width;
     bgInit.resolution.height = Renderer::height;
     bgInit.resolution.reset |= BGFX_RESET_VSYNC; // Enable vsync
@@ -150,11 +150,11 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         SDL_Quit();
         return false;
     }
-    
+
     // Reset view 0 to the dimensions of the window and clear it
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0, 0, 1, 0);
     bgfx::setViewRect(0, 0, 0, uint16_t(Renderer::width), uint16_t(Renderer::height));
-    
+
     bgfx::touch(0); // touch the view to clear it
     bgfx::frame(); // submit the frame
     SDL_ShowWindow(win); // show the window
@@ -286,7 +286,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         { "u_default_horizonColor",
           Renderer::RegisterUniform(
               m_internalPrograms.skyProgram, "u_horizonColor", UniformType::UNIFORM_VEC4) });
-    
+
     m_defaultUniformIds.insert(
         { "u_default_shadowMap",
           Renderer::RegisterUniform(
@@ -487,14 +487,14 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         .end();
 
     // CCW Winding: (-1, 3), (3, -1), (-1, -1)
-    static const float fsQuadVertices[] = { 
+    static const float fsQuadVertices[] = {
         -1.0f,  3.0f, 0.99999f, 0.0f, -1.0f, // Top-Left (extended above)
          3.0f, -1.0f, 0.99999f, 2.0f,  1.0f, // Bottom-Right (extended right)
         -1.0f, -1.0f, 0.99999f, 0.0f,  1.0f  // Bottom-Left
     };
     m_fsQuadVbh                         = bgfx::createVertexBuffer(
         bgfx::copy(fsQuadVertices, sizeof(fsQuadVertices)), fsQuadLayout);
-    
+
     // Dummy buffer to make metal happy
 #if BX_PLATFORM_OSX
     static bgfx::VertexBufferHandle fullscreenDummyVBH = BGFX_INVALID_HANDLE;
@@ -523,7 +523,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     float skyColorMidnight[4] = { 0.05f, 0.05f, 0.1f, 1.0f };
     float sunColor[4] = { 1.0f, 0.956f, 0.839f, 1.0f };
     float scatterColor[4]     = { 0.8f, 0.5f, 0.3f, 1.0f };
-    
+
     Renderer::SetUniform(m_defaultUniformIds["u_skyColorZenith"], skyColorZenith);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"], skyColorZenith);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"], skyColorZenith);
@@ -535,7 +535,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     Renderer::SetUniform(m_defaultUniformIds["u_default_horizonColor"], scatterColor);
 
     Window::_SetContextCreated(true);
-    
+
     return true;
 }
 
@@ -697,7 +697,7 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
     float lightDir[3];
     Renderer::GetSunDirection(lightDir);
     const bx::Vec3 lightDirVec = bx::normalize(bx::Vec3(lightDir[0], lightDir[1], lightDir[2]));
-    
+
     const float* camPos = camera->GetPosition();
 
     float cascadeDistances[NUM_CASCADES];
@@ -713,7 +713,7 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
     bx::Vec3 zero = { 0.0f, 0.0f, 0.0f };
     float    lightViewRaw[16];
     bx::mtxLookAt(lightViewRaw, zero, lightDirVec);
-    
+
     for (uint32_t i = 0; i < NUM_CASCADES; i++) {
         float size = m_cascadeSizes[i];
 
@@ -736,7 +736,7 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
             camPos[2] + lightDirVec.z * lightDistance
         };
 
-        if (Core::_GetApp()->debug.CSMBounds) { 
+        if (Core::_GetApp()->debug.CSMBounds) {
             // Draw line from light to target
             float from[3] = { lightPosSnapped.x, lightPosSnapped.y, lightPosSnapped.z };
             float to[3] = { target.x, target.y, target.z };
@@ -763,7 +763,7 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
         outCascadeSplits[i] = cascadeDistances[i];
         bx::mtxMul(&lightViewProj[i * 16], &outLightView[i * 16], &outLightProj[i * 16]);
     }
-    
+
     Renderer::SetUniform(m_defaultUniformIds["u_default_csmLightViewProj"], lightViewProj, NUM_CASCADES);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_csmLightViewProj"], lightViewProj, NUM_CASCADES);
 }
@@ -772,51 +772,51 @@ CameraComponent::Frustum RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraC
     CameraComponent::Frustum cascadeFrustum;
     float lightView[16 * NUM_CASCADES], lightProj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
     _CalculateCascadeMatrices(camera, lightView, lightProj, outCascadeSplits);
-    
+
     // Get the view-projection matrix for this cascade
     float* cascadeView = &lightView[cascade * 16];
     float* cascadeProj = &lightProj[cascade * 16];
     float cascadeViewProj[16];
     bx::mtxMul(cascadeViewProj, cascadeView, cascadeProj);
-    
+
     // Extract frustum planes from view-projection matrix
     // For orthographic projection, we extract planes differently than perspective
-    
+
     // Left plane: row4 + row1
     cascadeFrustum.left.normal[0] = cascadeViewProj[3] + cascadeViewProj[0];
     cascadeFrustum.left.normal[1] = cascadeViewProj[7] + cascadeViewProj[4];
     cascadeFrustum.left.normal[2] = cascadeViewProj[11] + cascadeViewProj[8];
     cascadeFrustum.left.distance = cascadeViewProj[15] + cascadeViewProj[12];
     CameraComponent::_normalizePlane(cascadeFrustum.left);
-    
+
     // Right plane: row4 - row1
     cascadeFrustum.right.normal[0] = cascadeViewProj[3] - cascadeViewProj[0];
     cascadeFrustum.right.normal[1] = cascadeViewProj[7] - cascadeViewProj[4];
     cascadeFrustum.right.normal[2] = cascadeViewProj[11] - cascadeViewProj[8];
     cascadeFrustum.right.distance = cascadeViewProj[15] - cascadeViewProj[12];
     CameraComponent::_normalizePlane(cascadeFrustum.right);
-    
+
     // Bottom plane: row4 + row2
     cascadeFrustum.bottom.normal[0] = cascadeViewProj[3] + cascadeViewProj[1];
     cascadeFrustum.bottom.normal[1] = cascadeViewProj[7] + cascadeViewProj[5];
     cascadeFrustum.bottom.normal[2] = cascadeViewProj[11] + cascadeViewProj[9];
     cascadeFrustum.bottom.distance = cascadeViewProj[15] + cascadeViewProj[13];
     CameraComponent::_normalizePlane(cascadeFrustum.bottom);
-    
+
     // Top plane: row4 - row2
     cascadeFrustum.top.normal[0] = cascadeViewProj[3] - cascadeViewProj[1];
     cascadeFrustum.top.normal[1] = cascadeViewProj[7] - cascadeViewProj[5];
     cascadeFrustum.top.normal[2] = cascadeViewProj[11] - cascadeViewProj[9];
     cascadeFrustum.top.distance = cascadeViewProj[15] - cascadeViewProj[13];
     CameraComponent::_normalizePlane(cascadeFrustum.top);
-    
+
     // Near plane: row4 + row3
     cascadeFrustum.n.normal[0] = cascadeViewProj[3] + cascadeViewProj[2];
     cascadeFrustum.n.normal[1] = cascadeViewProj[7] + cascadeViewProj[6];
     cascadeFrustum.n.normal[2] = cascadeViewProj[11] + cascadeViewProj[10];
     cascadeFrustum.n.distance = cascadeViewProj[15] + cascadeViewProj[14];
     CameraComponent::_normalizePlane(cascadeFrustum.n);
-    
+
     // Far plane: row4 - row3
     cascadeFrustum.f.normal[0] = cascadeViewProj[3] - cascadeViewProj[2];
     cascadeFrustum.f.normal[1] = cascadeViewProj[7] - cascadeViewProj[6];
@@ -874,13 +874,13 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject* go, CameraComponent* camera
     if (!meshComp || !meshComp->isEnabled) return false;
 
     MeshAABB aabb = meshComp->GetAABB();
-    
+
     // Get light position for this cascade
     float lightDir[3];
     Renderer::GetSunDirection(lightDir);
     const float* camPos = camera->GetPosition();
     float lightDistance = 100.0f; // Same as in _CalculateCascadeMatrices
-    
+
     float lightPos[3] = {
         camPos[0] + lightDir[0] * lightDistance,
         camPos[1] + lightDir[1] * lightDistance,
@@ -900,17 +900,17 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject* go, CameraComponent* camera
 
     // Don't cull very close objects to light, nor close to the camera
     if (distance < 10.0f || camDistance < 20.0f) return false;
-    
+
     // For orthographic projection, objects far from light contribute less to shadows
     // Get object size
     float maxExtent = std::max({
         aabb.halfExtents[0], aabb.halfExtents[1], aabb.halfExtents[2]
     }) * 2.0f;
-    
+
     // For ortho shadows, cull based on shadow contribution
     // Objects that are very small relative to the cascade size won't contribute meaningful shadows
     float cascadeSize = m_cascadeSizes[cascade];
-    
+
     // If object is smaller than 1.5% of cascade size, cull it
     return maxExtent < (cascadeSize * 0.015f);
 }
@@ -945,7 +945,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
         float modelMtx[16];
         go->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
-        
+
         float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));
         float sy = bx::length(bx::Vec3(modelMtx[4], modelMtx[5], modelMtx[6]));
         float sz = bx::length(bx::Vec3(modelMtx[8], modelMtx[9], modelMtx[10]));
@@ -1015,23 +1015,23 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
             // Textures
             matInst.textures.push_back({
-                0, 
-                Renderer::GetUniform(m_defaultUniformIds.at("u_texture_albedo"))->handle, 
-                mat.albedo, 
+                0,
+                Renderer::GetUniform(m_defaultUniformIds.at("u_texture_albedo"))->handle,
+                mat.albedo,
                 samplerFlags
             });
 
             matInst.textures.push_back({
-                1, 
-                Renderer::GetUniform(m_defaultUniformIds.at("u_normalMap"))->handle, 
-                mat.normalMap, 
+                1,
+                Renderer::GetUniform(m_defaultUniformIds.at("u_normalMap"))->handle,
+                mat.normalMap,
                 samplerFlags
             });
 
             matInst.textures.push_back({
-                2, 
-                Renderer::GetUniform(m_defaultUniformIds.at("u_heightMap"))->handle, 
-                mat.heightMap, 
+                2,
+                Renderer::GetUniform(m_defaultUniformIds.at("u_heightMap"))->handle,
+                mat.heightMap,
                 samplerFlags
             });
         }
@@ -1246,13 +1246,13 @@ void RenderCore::_DrawBillboard(const Program& program) {
     for (auto go : billboards) {
         auto* comp = go->GetComponent<BillboardComponent>();
         if (!comp || !comp->isEnabled) continue;
-        
+
         const float* pos = go->GetComponent<TransformComponent>()->GetPosition();
-        
+
         // Pack center position and size into a vec4 and send it off
         float billboardData[4] = { pos[0], pos[1], pos[2], comp->size };
         Renderer::SetUniform(m_defaultUniformIds["u_billboard"], billboardData);
-        
+
         // In addition, send the mode and rot as a vec4
         float* rot = comp->GetRot();
         float  billboardExtra[4] = {
@@ -1265,7 +1265,7 @@ void RenderCore::_DrawBillboard(const Program& program) {
                                    0.0f,
                                    0.0f };
         Renderer::SetUniform(m_defaultUniformIds["u_billboard_lighting"], lightingFlags);
-        
+
         // Dummy model matrix for the billboard
         float modelMtx[16];
         bx::mtxIdentity(modelMtx);
@@ -1458,14 +1458,14 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
     float lightDirUniform[4] = { sunDir[0], sunDir[1], sunDir[2], 0.0f };
     Renderer::SetUniform(m_defaultUniformIds["u_default_lightDir"], lightDirUniform);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_lightDir"], lightDirUniform);
-    
+
     float lightView[NUM_CASCADES * 16];
     float lightProj[NUM_CASCADES * 16];
     if (m_config.useShadows) {
         // Calculate the cascade matrices for shadow mapping and send to GPU
         float cascadeSplits[NUM_CASCADES];
         _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
-        
+
         float farClip = m_config.shadowDist;
         float splits[4] = { cascadeSplits[0],
                             cascadeSplits[1],
@@ -1490,7 +1490,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
         switch (view) {
         case ViewID::VIEW_SHADOW: {
             if (!m_config.useShadows) break; // Skip if shadows are disabled
-            
+
             for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
                 bgfx::ViewId cascadeViewId = view + i;
                 bgfx::setViewFrameBuffer(cascadeViewId, m_buffers.shadowFB);
@@ -1505,7 +1505,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                 bgfx::setViewTransform(
                     cascadeViewId, &lightView[i * 16], &lightProj[i * 16]);
             }
-            
+
             break;
         }
         case ViewID::VIEW_SKY: {
@@ -1578,21 +1578,21 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     SYN_PROFILE_FUNCTION();
     if (m_isFirstFrame) {
         m_isFirstFrame = false;
-        if (Core::IsPhysicsEnabled()) 
+        if (Core::IsPhysicsEnabled())
             m_drender = Core::_GetApp()->physicsManager->_GetDebugRenderer();
     }
 
     if (!_PrepareRenderViews(camera)) return false;
     _CollectRenderPackets(camera);
-    
+
     // Main render loop
     for (auto view : _allViews) {
         auto progListIt = Renderer::viewPrograms.find(view);
         if (progListIt == Renderer::viewPrograms.end()) continue;
-        
+
         for (auto& program : progListIt->second) {
             if (!bgfx::isValid(program.program)) continue;
-            
+
             // Draw logic based on view type
             switch (view) {
             case VIEW_SHADOW:

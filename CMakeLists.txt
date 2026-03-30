@@ -80,7 +80,6 @@ add_library(Syngine STATIC
     src/Syngine/Utils/Profiler.cpp
     src/Syngine/Utils/Serializer.cpp
     src/Syngine/Utils/Prefab.cpp
-    src/Syngine/ECS/ComponentRegistry.cpp
 
     # Physics
     src/Syngine/Physics/Physics.cpp
@@ -94,6 +93,7 @@ add_library(Syngine STATIC
     src/Syngine/ECS/Components/CameraComponent.cpp
     src/Syngine/ECS/Components/ZoneComponent.cpp
     src/Syngine/ECS/Components/BillboardComponent.cpp
+    src/Syngine/ECS/ComponentRegistry.cpp
 )
 
 # Uncomment to enable graphics debugging.
@@ -233,7 +233,7 @@ target_include_directories(Syngine
     PUBLIC
         # Engine public headers directory
         ${CMAKE_CURRENT_LIST_DIR}/include
-        
+
         # Third-party headers needed by engine's public headers
         ${CMAKE_CURRENT_LIST_DIR}/third_party/SDL/include
         ${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bgfx/include
@@ -263,6 +263,6 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
 clangd(Syngine
     EXCLUDE_PATHS "third_party/*"
     OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    INLAY_HINTS 
-    INLAY_DEDUCED_TYPES 
+    INLAY_HINTS
+    INLAY_DEDUCED_TYPES
     INLAY_PARAMETER_NAMES)

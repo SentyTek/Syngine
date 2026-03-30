@@ -3,7 +3,7 @@
 // │ Created 2026-01-04                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #ifndef SYN_DEBUG_GRAPHICS
@@ -33,19 +33,19 @@ void Profiler::ProfilerUI::SaveCapture(const std::string& filepath) {
 
     // Flush all thread buffers
     // (In a real engine, you'd iterate over all registered thread buffers)
-    const auto& events = m_lastFrameData; 
+    const auto& events = m_lastFrameData;
 
     for (size_t i = 0; i < events.size(); ++i) {
         const auto& e = events[i];
-        
+
         // Convert your internal Type to Chrome's "phase"
-        char phase = (e.type == 0) ? 'B' : 'E'; 
+        char phase = (e.type == 0) ? 'B' : 'E';
 
         out << "{"
             << "\"name\":\"" << (e.name ? e.name : "") << "\","
             << "\"cat\":\"PERF\","
             << "\"ph\":\"" << phase << "\","
-            << "\"pid\":0," 
+            << "\"pid\":0,"
             << "\"tid\":" << e.threadID << ","
             << "\"ts\":" << e.timestamp // Microseconds works best
             << "}";

@@ -3,7 +3,7 @@
 # │ Created 2026-03-24                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2026     │
-# │ Placeholder License                  │
+# │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
 # root/engine/cmake/FileBundle.cmake
 
@@ -75,4 +75,3 @@ function(create_file_bundle)
 
 	set(${ARG_BUNDLE_FILE_OUTPUT_VAR} "${bundle_output_path}" PARENT_SCOPE)
 endfunction()
-

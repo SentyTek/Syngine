@@ -3,7 +3,7 @@
 // │ Created 2025-06-10                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/Components/CameraComponent.h"
@@ -206,7 +206,7 @@ bool CameraComponent::_aabbInsidePlane(const Plane& plane, const bx::Vec3& min, 
     bx::Vec3 v = { (plane.normal[0] >= 0.0f) ? max.x : min.x,
                    (plane.normal[1] >= 0.0f) ? max.y : min.y,
                    (plane.normal[2] >= 0.0f) ? max.z : min.z };
-    
+
     const float distance = bx::dot(bx::Vec3(plane.normal[0], plane.normal[1], plane.normal[2]), v) + plane.distance;
 
     return distance >= 0;

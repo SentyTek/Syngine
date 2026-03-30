@@ -1,6 +1,6 @@
 $input v_texcoord0, v_worldPos
 #include <bgfx_shader.sh>
-#include <shadow.sh>
+#include <shadow.bgsl>
 
 SAMPLER2D(s_albedo, 0);
 
@@ -25,11 +25,11 @@ void main() {
         vec3 lightDir = normalize(u_lightDir.xyz);
         float diffuse = max(0.0, lightDir.y); // Simplified lighting based on sun elevation
         float ambient = 0.2;
-        
+
         float lightFactor = ambient + diffuse * 0.8;
         float nightFactor = clamp(smoothstep(-0.05, 0.05, lightDir.y), 0.2, 1.0);
         lightFactor *= nightFactor;
-        
+
         // Apply shadow if enabled
         if (u_billboard_lighting.y > 0.5) {
             // Calculate view depth (distance from camera)
@@ -38,7 +38,7 @@ void main() {
             float shadowFactor = getShadowFactor(v_worldPos, vec3(0.0, 1.0, 0.0), fakeNormal, u_lightDir, viewDepth);
             lightFactor *= shadowFactor;
         }
-        
+
         finalColor *= lightFactor;
     }
 

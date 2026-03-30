@@ -81,24 +81,24 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
     float currentTexelSize = u_csmTexelSize.x;
 
     // Better cascade selection with smoother transition zones
-    if (viewDepth > u_csmSplits.x) { 
-        c = 1; 
+    if (viewDepth > u_csmSplits.x) {
+        c = 1;
         currentTexelSize = u_csmTexelSize.y;
-        fade = smoothstep(u_csmSplits.x, u_csmSplits.x + blend, viewDepth); 
+        fade = smoothstep(u_csmSplits.x, u_csmSplits.x + blend, viewDepth);
     }
-    
-    if (viewDepth > u_csmSplits.y) { 
-        c = 2; 
+
+    if (viewDepth > u_csmSplits.y) {
+        c = 2;
         currentTexelSize = u_csmTexelSize.z;
-        fade = smoothstep(u_csmSplits.y, u_csmSplits.y + blend, viewDepth); 
+        fade = smoothstep(u_csmSplits.y, u_csmSplits.y + blend, viewDepth);
     }
-    
-    if (viewDepth > u_csmSplits.z) { 
-        c = 3; 
+
+    if (viewDepth > u_csmSplits.z) {
+        c = 3;
         currentTexelSize = u_csmTexelSize.w;
-        fade = smoothstep(u_csmSplits.z, u_csmSplits.z + blend, viewDepth); 
+        fade = smoothstep(u_csmSplits.z, u_csmSplits.z + blend, viewDepth);
     }
-    
+
     // Normal offset to reduce shadow acne
     vec3 lightDirNorm = normalize(lightDir.xyz);
     vec3 geomN = normalize(geomNormal);
@@ -106,13 +106,13 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
     // Clamp NdotL to avoid extreme angles
     float NdotL = dot(geomN, lightDirNorm);
     NdotL = clamp(NdotL, 0.01, 1.0);
-    
+
     // Offset along normal based on angle to light - balanced to prevent both acne and peter-panning
     float normalOffset = currentTexelSize * 0.2 * (1.0 - NdotL);
     vec3 offsetWorldPos = worldPos + geomN * normalOffset;
-    
+
     vec4 sc = mul(u_csmLightViewProj[c], vec4(offsetWorldPos, 1.0));
-    
+
     if (abs(sc.w) < 0.001) {
         return 1.0; // Avoid division by zero
     }
@@ -125,7 +125,7 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
     float normalizedZ = proj.z;
 
     // Cull out of bounds
-    if (any(lessThan(projXY, vec2_splat(0.0))) || any(greaterThan(projXY, vec2_splat(1.0))) || 
+    if (any(lessThan(projXY, vec2_splat(0.0))) || any(greaterThan(projXY, vec2_splat(1.0))) ||
         normalizedZ < 0.0 || normalizedZ > 1.0) {
         return 1.0;
     }
@@ -136,7 +136,7 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
     else if (c == 1) uvOffset = vec2(0.5, 0.0);
     else if (c == 2) uvOffset = vec2(0.0, 0.5);
     else uvOffset = vec2(0.5, 0.5);
-    
+
     vec2 uv = projXY * 0.5 + uvOffset;
 
     float cascadeShadowMapSize = 1024.0;
@@ -155,7 +155,7 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
 
     float texelSize = 1.0 / cascadeShadowMapSize;
     float shadow = 0.0;
-    
+
     // Sample current cascade
     if (c == 0) {
         shadow = sampleShadowPoisson16(uv, normalizedZ, totalBias, texelSize);
@@ -172,14 +172,14 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec3 shadeNormal, vec4 lig
         vec3 prevProj = prevSC.xyz / prevSC.w;
         vec2 prevProjXY = prevProj.xy * 0.5 + 0.5;
         prevProjXY.y = 1.0 - prevProjXY.y;
-        
+
         vec2 prevUvOffset;
         if (c - 1 == 0) prevUvOffset = vec2(0.0, 0.0);
         else if (c - 1 == 1) prevUvOffset = vec2(0.5, 0.0);
         else prevUvOffset = vec2(0.0, 0.5);
-        
+
         vec2 prevUv = prevProjXY * 0.5 + prevUvOffset;
-        
+
         // Check if previous cascade UV is valid
         if (all(greaterThanEqual(prevProjXY, vec2_splat(0.0))) && all(lessThanEqual(prevProjXY, vec2_splat(1.0)))) {
             float prevShadow;

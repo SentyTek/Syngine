@@ -16,6 +16,6 @@ void main() {
     v_viewDepth = mul(u_view, worldPos).z;
     v_normal = normalize(mul(u_normalMatrix, a_normal));
     v_vertexColor = a_color0;
-    
+
     gl_Position = mul(u_viewProj, worldPos);
 }

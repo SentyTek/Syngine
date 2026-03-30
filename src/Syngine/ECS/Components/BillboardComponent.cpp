@@ -3,7 +3,7 @@
 // │ Created 2025-12-16                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/Components/BillboardComponent.h"
@@ -13,7 +13,7 @@
 #include "Syngine/Graphics/TextureHelpers.h"
 
 namespace Syngine {
-BillboardComponent::BillboardComponent(GameObject* owner, 
+BillboardComponent::BillboardComponent(GameObject* owner,
                                        std::string texturePath,
                                        BillboardMode mode,
                                        float size) {

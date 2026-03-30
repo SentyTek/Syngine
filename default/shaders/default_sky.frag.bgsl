@@ -1,6 +1,6 @@
 $input v_worldViewRay
 #include <bgfx_shader.sh>
-#include "common.sh"
+#include "common.bgsl"
 
 uniform vec4 u_lightDir;
 uniform vec4 u_skyColorZenith; // Zenith sky color during the day

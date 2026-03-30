@@ -3,7 +3,7 @@
 // │ Created 2025-10-03                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/Components/ZoneComponent.h"

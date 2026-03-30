@@ -19,7 +19,7 @@ void main() {
     float ao = 0.0;
     float weightSum = 0.0;
 
-    vec2 texelSize = u_viewTexel.xy; 
+    vec2 texelSize = u_viewTexel.xy;
     vec2 direction = vec2(0.0, 1.0);
     if (u_floats.y < 0.5) {
         direction = vec2(1.0, 0.0);

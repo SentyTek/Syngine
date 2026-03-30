@@ -3,7 +3,7 @@
 // │ Created 2025-04-22                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #ifdef _WIN32
@@ -32,7 +32,7 @@
 
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
-#include "Syngine/Graphics/RenderCore.h" 
+#include "Syngine/Graphics/RenderCore.h"
 
 #include "Syngine/Physics/Physics.h"
 
@@ -127,9 +127,9 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
         if (!m_app->renderer) {
             Logger::Error("Failed to create renderer. Check the log for more details.");
         }
-        
+
         Syngine::Logger::LogHardwareInfo();
-            
+
         m_app->synModels = std::make_unique<AssimpLoader>();
         if (!m_app->synModels) {
             Logger::Error("Failed to create AssimpLoader. Check the log for more details.");
@@ -306,7 +306,7 @@ bool Core::Update() {
     if (m_internal.simulate) {
         // Polymorphic component update loop - iterate all GameObjects
         auto& allGameObjects = Registry::GetAllGameObjects();
-        
+
         // Update all components
         for (auto& [id, go] : allGameObjects) {
             if (!go) continue;

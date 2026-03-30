@@ -181,7 +181,14 @@ int AppMain(int argc, char* argv[]) {
     return 0;
 }
 EOF
-cd ../../
+
+cd ../../engine
+cp .clang-format ../
+cp .editorconfig ../
+cp .pre-commit-config.yaml ../
+cd ../
+pip install pre-commit
+pre-commit install
 
 echo "\\033[0;32mSyngine project '$PROJECT_NAME' created successfully!\\033[0m"
 

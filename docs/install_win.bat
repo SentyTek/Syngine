@@ -188,7 +188,14 @@ echo     return 0;
 echo }
 ) > main.cpp
 
-cd ..\..
+cd ..\..\engine
+copy .clang-format ..\
+copy .editorconfig ..\
+copy .pre-commit-config.yaml ..\
+cd ..\
+pip install pre-commit
+pre-commit install
 
 echo Syngine project '%PROJECT_NAME%' created successfully!
+
 endlocal

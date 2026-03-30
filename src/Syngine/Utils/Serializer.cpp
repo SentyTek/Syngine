@@ -3,7 +3,7 @@
 // │ Created 2026-01-29                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Utils/Serializer.h"
@@ -34,7 +34,7 @@ Serializer::DataNode::Type Serializer::DataNode::GetType() const {
     if (std::holds_alternative<bool>(m_data)) return Type::Boolean;
     if (std::holds_alternative<std::string>(m_data)) return Type::String;
     if (std::holds_alternative<NodeMap>(m_data)) return Type::Object;
-    if (std::holds_alternative<NodeArray>(m_data)) return Type::Array;  
+    if (std::holds_alternative<NodeArray>(m_data)) return Type::Array;
     throw std::runtime_error("Unknown DataNode type");
 }
 

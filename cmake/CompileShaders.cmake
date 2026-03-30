@@ -3,7 +3,7 @@
 # │ Created 2025-06-05                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2026     │
-# │ Placeholder License                  │
+# │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
 # root/engine/cmake/CompileShaders.cmake
 
@@ -21,9 +21,9 @@
 #       BGFX_SRC_INCLUDE_DIRS ${MY_BGFX_INCLUDE_DIR}
 #       SHADER_FILES_OUTPUT_VAR ALL_COMPILED_BINS
 #       # OPTIONAL SUFFIXES:
-#       # VARYING_SUFFIX ".custom_vary.sc"
-#       # VERTEX_SUFFIX ".custom_vert.sc"
-#       # FRAGMENT_SUFFIX ".custom_frag.sc"
+#       # VARYING_SUFFIX ".custom_vary.bgsl"
+#       # VERTEX_SUFFIX ".custom_vert.bgsl"
+#       # FRAGMENT_SUFFIX ".custom_frag.bgsl"
 #   )
 #
 #   if(ALL_COMPILED_BINS)
@@ -40,16 +40,16 @@ function(compile_all_shaders)
         BUNDLE_BY_TOP_LEVEL_DIR      # If set, generate one bundle per top-level source folder
     )
     set(oneValueArgs
-        SOURCE_DIRECTORY            # Directory where original .sc files are located
+        SOURCE_DIRECTORY            # Directory where original .bgsl files are located
         OUTPUT_DIRECTORY            # Directory where compiled shader .bin files are written
         BGFX_SRC_INCLUDE_DIRS       # Include directory for bgfx (e.g., bgfx/src)
         SHADER_FILES_OUTPUT_VAR     # Variable name to store the list of all compiled .bin files
         BUNDLE_OUTPUT_DIRECTORY     # Directory where generated .spk bundles are written
         SINGLE_BUNDLE_NAME          # If provided, all compiled outputs are packed into this bundle
         BUNDLE_FILES_OUTPUT_VAR     # Variable name to store generated bundle file paths
-        VARYING_SUFFIX              # Suffix for varying definition files (e.g., .vary.sc)
-        VERTEX_SUFFIX               # Suffix for vertex shader files (e.g., .vert.sc)
-        FRAGMENT_SUFFIX             # Suffix for fragment shader files (e.g., .frag.sc)
+        VARYING_SUFFIX              # Suffix for varying definition files (e.g., .vary.bgsl)
+        VERTEX_SUFFIX               # Suffix for vertex shader files (e.g., .vert.bgsl)
+        FRAGMENT_SUFFIX             # Suffix for fragment shader files (e.g., .frag.bgsl)
     )
     set(multiValueArgs "") # No multi value arguments
 
@@ -78,7 +78,7 @@ function(compile_all_shaders)
     else()
         message(FATAL "compile_all_shaders: 'shaderc' target not found. Ensure it is built before this function is called.")
     endif()
-    
+
     # Compile shaders into a single shared directory regardless of config.
     if(NOT ARG_OUTPUT_DIRECTORY)
         set(ARG_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/shaders")
@@ -88,11 +88,11 @@ function(compile_all_shaders)
     if(NOT ARG_BUNDLE_OUTPUT_DIRECTORY)
         set(ARG_BUNDLE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders")
     endif()
-    
+
     # --- Set defaults for suffixes if not provided ---
-    set(resolved_varying_suffix  ".vary.sc")
-    set(resolved_vertex_suffix   ".vert.sc")
-    set(resolved_fragment_suffix ".frag.sc")
+    set(resolved_varying_suffix  ".vary.bgsl")
+    set(resolved_vertex_suffix   ".vert.bgsl")
+    set(resolved_fragment_suffix ".frag.bgsl")
 
     if(DEFINED ARG_VARYING_SUFFIX  AND NOT "${ARG_VARYING_SUFFIX}" STREQUAL "")
         set(resolved_varying_suffix "${ARG_VARYING_SUFFIX}")
@@ -104,7 +104,7 @@ function(compile_all_shaders)
         set(resolved_fragment_suffix "${ARG_FRAGMENT_SUFFIX}")
     endif()
 
-    # --- Find all fragment shader files ending in .sc ---
+    # --- Find all fragment shader files ending in .bgsl ---
     file(GLOB_RECURSE ALL_FRAG_FILES
         RELATIVE "${ARG_SOURCE_DIRECTORY}"
         "${ARG_SOURCE_DIRECTORY}/*${resolved_fragment_suffix}"
@@ -113,17 +113,17 @@ function(compile_all_shaders)
     set(compiled_shader_list_accumulator "")
     set(bundle_group_ids "")
     foreach(frag_shader_relative_path ${ALL_FRAG_FILES})
-        # Skip files not ending in .sc
-        if(NOT frag_shader_relative_path MATCHES "\\.sc$")
+        # Skip files not ending in .bgsl
+        if(NOT frag_shader_relative_path MATCHES "\\.bgsl$")
             continue()
         endif()
-        
+
         get_filename_component(frag_filename ${frag_shader_relative_path} NAME)
         get_filename_component(shader_dir_relative ${frag_shader_relative_path} DIRECTORY)
-        
-        # Extract base name (e.g., "terrain" from "terrain.frag.sc")
+
+        # Extract base name (e.g., "terrain" from "terrain.frag.bgsl")
         string(REPLACE "${resolved_fragment_suffix}" "" shader_base_name ${frag_filename})
-        
+
         # Look for corresponding vertex shader
         set(vert_filename "${shader_base_name}${resolved_vertex_suffix}")
         set(vert_shader_path "${ARG_SOURCE_DIRECTORY}/${shader_dir_relative}/${vert_filename}")
@@ -132,7 +132,7 @@ function(compile_all_shaders)
         else()
             set(vert_shader_path "${ARG_SOURCE_DIRECTORY}/${vert_filename}")
         endif()
-        
+
         if(NOT EXISTS "${vert_shader_path}")
             message(WARNING "No matching vertex shader found for ${frag_shader_relative_path}. Skipping.")
             continue()
@@ -147,21 +147,21 @@ function(compile_all_shaders)
         if(shader_dir_relative)
             string(REPLACE "/" "_" output_base_name "${shader_dir_relative}_${shader_base_name}")
         endif()
-        
+
         set(output_path_final "${ARG_OUTPUT_DIRECTORY}/${output_base_name}")
         set(output_vert_file "${output_path_final}.vert.bin")
         set(output_frag_file "${output_path_final}.frag.bin")
 
         set(output_vert_file_rel "${output_base_name}.vert.bin")
         set(output_frag_file_rel "${output_base_name}.frag.bin")
-        
+
         # --- Build syntools command ---
-        set(syntools_cmd $<TARGET_FILE:syntools> shader "${shader_base_name}" "s" "${output_path_final}" "--compiler=$<TARGET_FILE:shaderc>" "--src-ext=.sc")
+        set(syntools_cmd $<TARGET_FILE:syntools> shader "${shader_base_name}" "s" "${output_path_final}" "--compiler=$<TARGET_FILE:shaderc>" "--src-ext=.bgsl")
         set(syntools_cmd ${syntools_cmd} "--src-dir=${ARG_SOURCE_DIRECTORY}")
         if(ARG_BGFX_SRC_INCLUDE_DIRS)
             set(syntools_cmd ${syntools_cmd} "--include=${ARG_BGFX_SRC_INCLUDE_DIRS}")
         endif()
-        
+
         # --- Create custom command to compile shaders ---
         add_custom_command(
             OUTPUT ${output_vert_file} ${output_frag_file}
@@ -172,7 +172,7 @@ function(compile_all_shaders)
             COMMENT "Compiling shader pair: ${shader_base_name}"
             VERBATIM
         )
-        
+
         list(APPEND compiled_shader_list_accumulator ${output_vert_file} ${output_frag_file})
 
         # Group compiled shaders for optional bundle generation.

@@ -3,7 +3,7 @@
 // │ Created 2025-07-14                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #ifdef _WIN32
@@ -177,7 +177,7 @@ LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
         Logger::LogF(LogLevel::ERR, "Access violation: mode=%llu address=0x%llX",
                      (unsigned long long)mode, (unsigned long long)addr);
     }
-    
+
     Logger::Log("Generating stack trace...", LogLevel::ERR);
 
     PrintStackTrace();
@@ -428,7 +428,7 @@ void Logger::Log(const std::string_view message, LogLevel level, bool toConsole)
             case LogLevel::WARN:
                 SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
                 break;
-            case LogLevel::ERR: 
+            case LogLevel::ERR:
                 SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
                 break;
             case LogLevel::FATAL:
@@ -460,7 +460,7 @@ void Logger::Log(const std::string_view message, LogLevel level, bool toConsole)
 #ifdef _DEBUG
         DEBUG_BREAK();
 #endif
-        
+
         exit(EXIT_FAILURE);
     }
 }
@@ -481,12 +481,12 @@ void Logger::LogHardwareInfo() {
         "\tNumber of processors: " + std::to_string(specs.cpuCores) + "\n";
     specsStr +=
         "\tTotal Physical Memory (MB): " + std::to_string(specs.ramMB) + "\n";
-    
+
     specsStr += "\tDisplay Resolution: " + std::to_string(specs.screenWidth) +
                 "x" + std::to_string(specs.screenHeight) + "\n";
     specsStr += "\tWindow Resolution: " + std::to_string(specs.winWidth) + "x" +
                 std::to_string(specs.winHeight) + "\n";
-    
+
     specsStr += "\tGPU Vendor ID: " + std::to_string(specs.gpuVendorID) + "\n";
     specsStr += "\tGPU Device ID: " + std::to_string(specs.gpuDeviceID) + "\n";
 

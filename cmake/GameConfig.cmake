@@ -3,7 +3,7 @@
 # │ Created 2025-08-05                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2026     │
-# │ Placeholder License                  │
+# │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
 # Adds several functions to compile shaders, add assets, and configure the game target (root/engine/cmake/GameConfig.cmake)
 
@@ -258,7 +258,7 @@ function(add_assets target)
             SOURCE "${FINAL_PLIST_PATH}"
             PROPERTY MACOSX_PACKAGE_LOCATION "Contents/"
         )
-        
+
         # tell Xcode this is the bundle Info.plist
         set_target_properties(${target} PROPERTIES
             XCODE_ATTRIBUTE_INFOPLIST_FILE ${FINAL_PLIST_PATH}

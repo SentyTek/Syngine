@@ -3,7 +3,7 @@
 // │ Created 2025-05-21                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Physics/Physics.h"
@@ -92,7 +92,7 @@ void Phys::_Init() {
 
     mPhysicsSystem.Init(cMaxBodies, 0 /*numBodyMutexes, 0 means default*/, cMaxBodyPairs, cMaxContactConstraints,
         mBroadPhaseLayerInterface, mObjectVsBroadPhaseLayerFilter, mObjectLayerPairFilter);
-    
+
     //activate listeners
     mPhysicsSystem.SetBodyActivationListener(&mBodyActivationListener);
     mPhysicsSystem.SetContactListener(&mContactListener);
@@ -257,7 +257,7 @@ BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData
     }
 
     MeshShapeSettings meshShapeSettings(vertices, triangles);
-    
+
     ShapeSettings::ShapeResult meshShapeResult = meshShapeSettings.Create();
     if (meshShapeResult.HasError()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateMeshBody: Failed to create mesh shape: %s", meshShapeResult.GetError().c_str());
@@ -303,14 +303,14 @@ BodyID Phys::_CreateCapsule(RVec3Arg position, float radius, float halfHeight, E
     ShapeSettings::ShapeResult capsuleShapeResult = capsuleShapeSettings.Create();
     if (capsuleShapeResult.HasError()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCapsule: Failed to create capsule shape: %s", capsuleShapeResult.GetError().c_str());
-        return BodyID(); 
+        return BodyID();
     }
     ShapeRefC capsuleShape = capsuleShapeResult.Get();
 
     BodyCreationSettings capsuleSettings(
         capsuleShape, position, Quat::sIdentity(), motionType, layer);
-    
-    capsuleSettings.mAllowSleeping = false; 
+
+    capsuleSettings.mAllowSleeping = false;
 
     if (motionType == EMotionType::Dynamic && mass > 0.0f) {
         capsuleSettings.mMassPropertiesOverride = capsuleShape->GetMassProperties();
@@ -321,7 +321,7 @@ BodyID Phys::_CreateCapsule(RVec3Arg position, float radius, float halfHeight, E
     Body* capsule = bodyInterface.CreateBody(capsuleSettings);
     if (!capsule) {
         Syngine::Logger::Error("SynginePhys::CreateCapsule: Failed to create capsule body.");
-        return BodyID(); 
+        return BodyID();
     }
     bodyInterface.AddBody(capsule->GetID(), EActivation::Activate);
     return capsule->GetID();
@@ -344,7 +344,7 @@ BodyID Phys::_CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeig
         cylinderSettings.mMassPropertiesOverride.ScaleToMass(mass);
         cylinderSettings.mOverrideMassProperties = EOverrideMassProperties::MassAndInertiaProvided;
     }
-    
+
     // cylinderSettings.mAllowSleeping = false; // Optional: if cylinders are often characters or active objects
 
     Body* cylinder = bodyInterface.CreateBody(cylinderSettings);
@@ -456,5 +456,5 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
     }
     bodyInterface.AddBody(body->GetID(), EActivation::Activate);
     return body->GetID();
-        
+
 }

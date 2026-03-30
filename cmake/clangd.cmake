@@ -3,7 +3,7 @@
 # │ Created 2025-06-05                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2026     │
-# │ Placeholder License                  │
+# │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
 # Configure for active languages, prioritizing CXX
 get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
@@ -41,7 +41,7 @@ message(STATUS "${CLANGD_LANG} standard: ${CLANGD_LANG_STANDARD}")
 #   [INLAY_PARAMETER_NAMES]
 #   [INLAY_DEDUCED_TYPES]
 #   [INLAY_TYPENAME_LIMIT <length>]
-#  
+#
 # Requires any target to be passed as <target>
 # OUTPUT_DIRECTORY: Path to a directory where .clangd will be written to. Defaults to CMAKE_CURRENT_LISTS_DIR
 # EXCLUDE_PATHS: optional, adds paths that clangd excludes from processing
@@ -73,7 +73,7 @@ function(clangd target)
   PathMatch: [${CLANGD_PATH_FILTER}]")
   set(CLANGD_CONFIG_EXCLUDE "")
   if (DEFINED arg_EXCLUDE_PATHS)
-    set(CLANGD_CONFIG_EXCLUDE 
+    set(CLANGD_CONFIG_EXCLUDE
 "  PathExclude: [")
     foreach(exclude_path ${arg_EXCLUDE_PATHS})
       string(APPEND CLANGD_CONFIG_EXCLUDE "${exclude_path},")
@@ -94,20 +94,20 @@ function(clangd target)
   Remove: [-std:*]
   Compiler: clang${CLANG_LANG_POSTFIX}")
 
-  set(CLANGD_CONFIG_INLAY_HINTS 
+  set(CLANGD_CONFIG_INLAY_HINTS
 "InlayHints:
   Enabled: false")
   if (arg_INLAY_HINTS)
-    set(CLANGD_CONFIG_INLAY_HINTS 
+    set(CLANGD_CONFIG_INLAY_HINTS
 "InlayHints:
   Enabled: true
 ")
     if (arg_INLAY_TYPENAME_LIMIT)
-      string(APPEND CLANGD_CONFIG_INLAY_HINTS 
+      string(APPEND CLANGD_CONFIG_INLAY_HINTS
 "  TypeNameLimit: ${arg_INLAY_TYPENAME_LIMIT}
 ")
     else()
-    string(APPEND CLANGD_CONFIG_INLAY_HINTS 
+    string(APPEND CLANGD_CONFIG_INLAY_HINTS
 "  TypeNameLimit: 24
 ")
     endif()
@@ -151,14 +151,14 @@ function(clangd target)
 "  DeducedTypes: false
 ")
     endif()
-    
+
   endif()
 
   if (NOT DEFINED arg_OUTPUT_DIRECTORY)
     set(arg_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
   endif()
 
-  file(WRITE "${arg_OUTPUT_DIRECTORY}/.clangd" 
+  file(WRITE "${arg_OUTPUT_DIRECTORY}/.clangd"
 "${CLANGD_CONFIG_HEADER}
 ${CLANGD_CONFIG_EXCLUDE}
 ${CLANGD_CONFIG_COMPILE_STUFF}
