@@ -61,7 +61,7 @@ class PlayerComponent : public Syngine::Component {
 
     // No assignment operator because the copy is bad enough
     PlayerComponent(const PlayerComponent& other);
-    
+
     ~PlayerComponent();
 
     /// @brief Gets the component type
@@ -136,9 +136,9 @@ class PlayerComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetRotation(float yaw, float pitch);
-   
+
     float maxPitchAngle = 89.0f; //* Max vertical angle for the camera pitch (in degrees).
-    
+
     float sprintMult    = 2.0f; //* Multiplier for sprinting speed.
     float crouchSpeed   = 0.5f; //* Speed when crouching.
     float moveSpeed     = 1.5f; //* Default movement speed of the player.

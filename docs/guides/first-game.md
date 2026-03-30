@@ -47,7 +47,7 @@ myObject->AddComponent<Syngine::RigidbodyComponent>(params);
 ---
 
 ## Interacting with the Game: The Input System
-To control your GameObjects or manage game states, you interact with Syngine's Input system. Input actions map key bindings (like `W`, `Space`, or mouse buttons) to C++ callbacks. 
+To control your GameObjects or manage game states, you interact with Syngine's Input system. Input actions map key bindings (like `W`, `Space`, or mouse buttons) to C++ callbacks.
 
 ### Registering Input Actions
 Every input action needs a **unique identifier**. You can set a display name, an action category, the key to bind, and most importantly, the `Callbacks` object indicating what happens when the button is pressed, held, or released.
@@ -64,7 +64,7 @@ Syngine::InputAction::RegisterAction(
     "player.jump",                           // Unique Identifier
     "Jump",                                  // Display Name
     "Player Controls",                       // Category
-    Syngine::KeyBinding(Syngine::Keycode::SPACE), 
+    Syngine::KeyBinding(Syngine::Keycode::SPACE),
     { .onPressed = OnJumpPressed }           // Callbacks
 );
 ```

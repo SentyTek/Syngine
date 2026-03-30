@@ -3,7 +3,7 @@
 // │ Created 2025-05-22                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Core.h"
@@ -35,14 +35,14 @@ namespace Syngine {
 RigidbodyComponent::RigidbodyComponent(GameObject*                  owner,
                                        Syngine::RigidbodyParameters params) {
     if (!Core::IsPhysicsEnabled()) return;
-    
+
     this->m_owner = owner;
     this->Init(params);
 }
 
 RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
     if (!Core::IsPhysicsEnabled()) return;
-    
+
     this->m_owner = other.m_owner;
     this->physicsManager = other.physicsManager;
     this->transform = other.transform;
@@ -57,7 +57,7 @@ RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
 RigidbodyComponent&
 RigidbodyComponent::operator=(const RigidbodyComponent& other) {
     if (!Core::IsPhysicsEnabled()) return *this;
-    
+
     if (this != &other) {
         this->m_owner = other.m_owner;
         this->physicsManager = other.physicsManager;
@@ -263,7 +263,7 @@ void RigidbodyComponent::Update(float deltaTime) {
         float curRot[4];
         transform->GetRotationQuaternion(
             curRot[0], curRot[1], curRot[2], curRot[3]);
-        
+
         Vec3 currentPos(curPos[0], curPos[1], curPos[2]);
         Quat currentRot(curRot[0], curRot[1], curRot[2], curRot[3]);
 
@@ -284,7 +284,7 @@ void RigidbodyComponent::Update(float deltaTime) {
             curRot[0], curRot[1], curRot[2], curRot[3]);
         Vec3 pos(curPos[0], curPos[1], curPos[2]);
         Quat rot(curRot[0], curRot[1], curRot[2], curRot[3]);
-        
+
         bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
     }
 }

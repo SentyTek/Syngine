@@ -53,14 +53,14 @@ struct CompoundShapePart; // Forward declaration
     namespace Layers {
         static constexpr ObjectLayer NON_MOVING = 0;
         static constexpr ObjectLayer MOVING = 1;
-        static constexpr ObjectLayer NUM_LAYERS = 2; 
+        static constexpr ObjectLayer NUM_LAYERS = 2;
     };
 
     // BroadPhaseLayer definitions for Jolt
     namespace BroadPhaseLayers {
         static constexpr BroadPhaseLayer NON_MOVING(0);
         static constexpr BroadPhaseLayer MOVING(1);
-        static constexpr uint32_t NUM_BP_LAYERS = 2; 
+        static constexpr uint32_t NUM_BP_LAYERS = 2;
     };
 
     // BroadPhaseLayerInterface implementation

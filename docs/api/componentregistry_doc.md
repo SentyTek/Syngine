@@ -38,7 +38,7 @@ Signature:
 
  Register a component type with its XML parsing and instantiation functions
 
-**Example:** static Syngine::ComponentRegistrar s_compRegistrar(MY_COMPONENT_TYPE_ID,  // ParseXML: XML element -> DataNode [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {}, // Instantiate: DataNode -> Component instance [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {} );
+**Example:** static Syngine::ComponentRegistrar s_compRegistrar(MY_COMPONENT_TYPE_ID, // ParseXML: XML element -> DataNode [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {}, // Instantiate: DataNode -> Component instance [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {} );
 
 Signature:
 

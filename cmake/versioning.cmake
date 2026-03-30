@@ -3,7 +3,7 @@
 # │ Created YYYY-MM-DD                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2026     │
-# │ Placeholder License                  │
+# │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
 
 # Adds a function to handle versioning of the game engine. Generates a header file with version information, in src/Syngine/Utils/Version.h
@@ -20,7 +20,7 @@ function(define_version)
         RESULT_VARIABLE GIT_RESULT
         ERROR_QUIET
     )
-    
+
     # Use default if git command failed
     if(NOT GIT_RESULT EQUAL 0)
         set(COMMIT "000")

@@ -167,7 +167,7 @@ class RenderCore {
                                          uint8_t          cascade);
 
     static void _ScreenSpaceQuad(ViewID view, Program program);
-                                         
+
     // Static members
     struct RenderCoreBuffers {
         bgfx::FrameBufferHandle sceneFB; //* Framebuffer for scene rendering
@@ -203,7 +203,7 @@ class RenderCore {
         }
     };
     static RenderCoreBuffers m_buffers;
-    
+
     static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
 
     static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;

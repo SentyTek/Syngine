@@ -3,7 +3,7 @@
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/Components/TransformComponent.h"
@@ -205,7 +205,7 @@ void TransformComponent::_UpdateWorldMatrix() const {
         std::copy(std::begin(m_localMtx),
                   std::end(m_localMtx),
                   std::begin(m_worldMtx));
-        
+
         std::copy(std::begin(m_rotation),
                   std::end(m_rotation),
                   std::begin(m_worldRotation));
@@ -287,7 +287,7 @@ void TransformComponent::SetRotationEuler(float x, float y, float z) {
     m_rotation[2] = cr * cp * sy - sr * sp * cy; // z
     m_rotation[3] = cr * cp * cy + sr * sp * sy; // w
     _QuatNormalize(m_rotation);
-    
+
    _MarkLocalDirty();
 }
 

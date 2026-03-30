@@ -2638,11 +2638,11 @@ void packTerminate();
  */
 
 #include <mutex>
-/* #include "sclcore.hpp" */ 
+/* #include "sclcore.hpp" */
 
-/* #include "sclpath.hpp" */ 
+/* #include "sclpath.hpp" */
 
-/* #include "sclpack.hpp" */ 
+/* #include "sclpack.hpp" */
 
 
 #ifdef _WIN32
@@ -3625,7 +3625,7 @@ void terminate() {
  *  Path class definitions for SCL
  */
 
-/* #include "sclpath.hpp" */ 
+/* #include "sclpath.hpp" */
 
 #include <sys/stat.h>
 
@@ -4245,7 +4245,7 @@ path path::operator/(const path& rhs) const {
  *  SCL work multithreading library
  */
 
-/* #include "scljobs.hpp" */ 
+/* #include "scljobs.hpp" */
 
 #ifdef _WIN32
 #  ifndef WIN32_LEAN_AND_MEAN
@@ -4551,7 +4551,7 @@ void JobServer::Multithread(std::function<void(int id, int workers)> func,
  *  SCL package manager
  */
 
-/* #include "sclpack.hpp" */ 
+/* #include "sclpack.hpp" */
 
 #include <cassert>
 
@@ -5130,10 +5130,10 @@ void packTerminate() {
 /*  sclreduce.cpp
  */
 
-/* #include "sclreduce.hpp" */ 
+/* #include "sclreduce.hpp" */
 
 #define LZ4F_STATIC_LINKING_ONLY
-/* #include "lz4/lz4frame.h" */ 
+/* #include "lz4/lz4frame.h" */
 
 /*
    LZ4F - LZ4-Frame library
@@ -6371,7 +6371,7 @@ void reduce_stream::close() {
 #ifndef LZ4_STATIC_LINKING_ONLY
 #  define LZ4_STATIC_LINKING_ONLY
 #endif
-/* #include "lz4.h" */ 
+/* #include "lz4.h" */
 
 /*
  *  LZ4 - Fast LZ compression algorithm
@@ -10043,13 +10043,13 @@ char* LZ4_slideInputBuffer (void* state)
 *  Library declarations
 **************************************/
 #define LZ4F_STATIC_LINKING_ONLY
-/* #include "lz4frame.h" */ 
+/* #include "lz4frame.h" */
 
 #define LZ4_STATIC_LINKING_ONLY
-/* #include "lz4.h" */ 
+/* #include "lz4.h" */
 
 #define LZ4_HC_STATIC_LINKING_ONLY
-/* #include "lz4hc.h" */ 
+/* #include "lz4hc.h" */
 
 /*
    LZ4 HC - High Compression Mode of LZ4
@@ -10396,7 +10396,7 @@ LZ4LIB_API void LZ4_resetStreamHC (LZ4_streamHC_t* streamHCPtr, int compressionL
 #define LZ4_HC_SLO_098092834
 
 #define LZ4_STATIC_LINKING_ONLY   /* LZ4LIB_STATIC_API */
-/* #include "lz4.h" */ 
+/* #include "lz4.h" */
 
 
 #if defined (__cplusplus)
@@ -10470,7 +10470,7 @@ LZ4LIB_STATIC_API int LZ4_compress_HC_extStateHC_fastReset (
 /* lz4frame.c */
 
 #define XXH_STATIC_LINKING_ONLY
-/* #include "xxhash.h" */ 
+/* #include "xxhash.h" */
 
 /*
    xxHash - Extremely Fast Hash algorithm
@@ -12917,7 +12917,7 @@ size_t LZ4F_decompress_usingDict(LZ4F_dctx* dctx,
 
 /*===    Dependency    ===*/
 #define LZ4_HC_STATIC_LINKING_ONLY
-/* #include "lz4hc.h" */ 
+/* #include "lz4hc.h" */
 
 #include <limits.h>
 
@@ -15175,7 +15175,7 @@ static void* XXH_memcpy(void* dest, const void* src, size_t size) { return memcp
 #include <assert.h>   /* assert */
 
 #define XXH_STATIC_LINKING_ONLY
-/* #include "xxhash.h" */ 
+/* #include "xxhash.h" */
 
 
 

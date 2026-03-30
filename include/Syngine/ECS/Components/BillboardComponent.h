@@ -32,7 +32,7 @@ enum class BillboardMode {
 /// @section BillboardComponent
 
 class BillboardComponent : public Syngine::Component {
-    
+
     BillboardMode m_mode = BillboardMode::CAMERA_ALIGNED; //* Billboard rendering mode
 
     bgfx::TextureHandle m_texture =
@@ -43,11 +43,11 @@ class BillboardComponent : public Syngine::Component {
 
     float m_rot[3] = { 0.0f, 0.0f, 0.0f }; //* Rotation of the billboard
   public:
-    
+
     float size = 1.0f; //* Size of the billboard
     bool  receiveShadows = true; //* Whether the billboard receives shadows
     bool  receiveSunLight = true; //* Whether the billboard receives sunlight
-    
+
     static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_BILLBOARD; //* Billboard component type
 
@@ -63,7 +63,7 @@ class BillboardComponent : public Syngine::Component {
                        std::string   texturePath,
                        BillboardMode mode = BillboardMode::CAMERA_ALIGNED,
                        float         size = 1.0f);
-    
+
     BillboardComponent(const BillboardComponent& other);
     BillboardComponent& operator=(const BillboardComponent& other);
 

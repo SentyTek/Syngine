@@ -96,7 +96,7 @@ inline bool _CheckRequiredFolders();
 
  Take an absolute path and make it relative to the root of the game directory
 
-**Note:** Assumes the input path is to something within the game directory. If it's not, the behavior is undefined. 
+**Note:** Assumes the input path is to something within the game directory. If it's not, the behavior is undefined.
 
 Signature:
 
@@ -117,7 +117,7 @@ static inline std::string _MakeRelativeToRoot(std::string path);
 #### **`Syngine::_FileExists`**
 
 
- Check if a file exists at the given path, taking into account platform-specific path resolution 
+ Check if a file exists at the given path, taking into account platform-specific path resolution
 
 Signature:
 

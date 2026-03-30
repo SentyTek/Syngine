@@ -3,7 +3,7 @@
 // │ Created 2026-03-12                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/GameObject.h"
@@ -28,7 +28,7 @@ Serializer::Prefab::Prefab(const std::string& path) : rootGameObjectData(DataNod
 
 void Serializer::Prefab::WriteGameObject(const DataNode&        node,
                                          scl::xml::XmlDocument& doc,
-                                         scl::xml::XmlElem*     parent) const {    
+                                         scl::xml::XmlElem*     parent) const {
     // Convert DataNode data to XML attributes
     // Defines a lambda function named `ConvertData` that takes a `DataNode`
     // object as input and returns a `std::string`. Within this lambda function,
@@ -61,7 +61,7 @@ void Serializer::Prefab::WriteGameObject(const DataNode&        node,
                         if (i == 0 &&
                             arr[i].GetType() == DataNode::Type::String &&
                             arr[i].As<std::string>() == "") {
-                            valueStr = "null"; 
+                            valueStr = "null";
                             break;
                         };
                         if (i > 0) valueStr += ",";
@@ -83,7 +83,7 @@ void Serializer::Prefab::WriteGameObject(const DataNode&        node,
             std::string valueStr = ConvertData(value);
             if (valueStr == "null") continue; // Skip null values to avoid cluttering XML with empty attributes
             scl::xml::XmlAttr* attr = doc.new_attr(key, valueStr);
-            
+
             if (!attr) {
                 Logger::Error("Failed to create XML attribute for key: " + key);
                 continue;

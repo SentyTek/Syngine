@@ -3,7 +3,7 @@
 // │ Created 2025-04-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Logger.h"
@@ -108,7 +108,7 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
 
     // y = +sin(pitch) when pitch is above horizon. (Ensure convention matches UI)
     bx::Vec3 dirVec = { cp * sy, sp, cp * cy };
-    
+
     dirVec = bx::normalize(dirVec);
 
     float final[3] = { dirVec.x, dirVec.y, dirVec.z };

@@ -39,7 +39,7 @@ class ComponentRegistry {
       /// DataNode, and returns a unique pointer to a new instance of the
       /// component initialized with the data
       /// @example
-      /// static Syngine::ComponentRegistrar s_compRegistrar(MY_COMPONENT_TYPE_ID, 
+      /// static Syngine::ComponentRegistrar s_compRegistrar(MY_COMPONENT_TYPE_ID,
       /// // ParseXML: XML element -> DataNode
       /// [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {},
       /// // Instantiate: DataNode -> Component instance

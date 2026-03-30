@@ -3,7 +3,7 @@
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Logger.h"
@@ -182,7 +182,7 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         }
     }
     meshData.indices = indices;
-    
+
     //create bgfx vertex layout
     bgfx::VertexLayout layout;
     layout.begin()
@@ -193,13 +193,13 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
         .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
         .end(); // stride = 72 bytes
-    
+
     // create buffers
     const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.numVertices * sizeof(Vertex)));
     memcpy(mem->data, meshData.vertices.data(), meshData.numVertices * sizeof(Vertex));
     bgfx::VertexBufferHandle vbh =
     bgfx::createVertexBuffer(mem, layout);
-    
+
     mem = bgfx::alloc(meshData.numIndices * sizeof(uint32_t));
     memcpy(mem->data, meshData.indices.data(), meshData.numIndices * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh =
@@ -213,13 +213,13 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
     mat.baseColor[3] = 1.0f;
     mat.useVertexColor = true;
     meshData.materials.push_back(mat);
-    
+
     // checks
     if (!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create vertex/index buffer");
         return false;
     }
-    
+
     // assign to meshData
     meshData.valid     = true;
     this->meshData = meshData;
@@ -308,7 +308,7 @@ MeshAABB& MeshComponent::GetAABB() {
     return m_aabb;
 }
 
-static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH, 
+static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH,
     // ParseXML: XML element -> DataNode
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;

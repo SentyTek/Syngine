@@ -3,7 +3,7 @@
 // │ Created 2025-05-29                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Core.h"
@@ -40,7 +40,7 @@ namespace Syngine {
 PlayerComponent::PlayerComponent(GameObject*               owner,
                                  Syngine::CameraComponent* camera) {
     if (!Core::IsPhysicsEnabled()) return;
-    
+
     this->m_owner = owner;
     this->Init(camera);
 }
@@ -50,7 +50,7 @@ PlayerComponent::PlayerComponent(GameObject*               owner,
 // I do not like it, Sam-I-Am.
 PlayerComponent::PlayerComponent(const PlayerComponent& other) {
     if (!Core::IsPhysicsEnabled()) return;
-    
+
     this->m_owner = other.m_owner;
     this->m_camera = other.m_camera;
     this->m_window = other.m_window;
@@ -200,10 +200,10 @@ void PlayerComponent::Update(float deltaTime) {
         Syngine::Logger::Error("PlayerComponent is missing a required component");
         return;
     }
-    
+
     // Fetch keyboard state internally
     const bool* keystate = SDL_GetKeyboardState(NULL);
-    
+
     m_prevPlayerState = m_playerState;
     m_deltaTime = deltaTime;
 
@@ -225,7 +225,7 @@ void PlayerComponent::Update(float deltaTime) {
             m_targetMoveSpeed = moveSpeed;
         }
         m_targetEyeHeight = 0.5f;
-        m_targetFov       = 70.0f;   
+        m_targetFov       = 70.0f;
         if (enableSprinting && keystate[SDL_SCANCODE_LSHIFT] && m_playerState != PlayerState::SLIDING) {
             m_targetMoveSpeed *= sprintMult;
             m_targetFov = 90.0f;
@@ -245,7 +245,7 @@ void PlayerComponent::Update(float deltaTime) {
             //m_targetEyeHeight = 0.7f;
             m_targetFov       = 100.0f;
         }
-        
+
         // Low friction when sliding
         if (m_playerState == PlayerState::SLIDING) {
             BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
@@ -269,8 +269,8 @@ void PlayerComponent::Update(float deltaTime) {
                 m_character->SetShape(new JPH::CapsuleShape(crouchHeight, playerRadius), 0.1f); // Half height and radius
             }
             m_targetEyeHeight = 0.2f; // Lower eye height when crouching or sliding
-            
-        } else { // Reset sizes only when state changes 
+
+        } else { // Reset sizes only when state changes
             if (m_prevPlayerState == PlayerState::CROUCHING || m_prevPlayerState == PlayerState::SLIDING) {
                 // Adjust position so collider actually changes size
                 float* pos = m_transform->GetPosition();
@@ -284,7 +284,7 @@ void PlayerComponent::Update(float deltaTime) {
             }
             m_targetEyeHeight = 0.5f; // Normal eye height
         }
-        
+
         // For ground movement, typically we want to ignore the Y component
         // Y gets applied separately for jumping or falling
         bx::Vec3 forward = bx::normalize(
@@ -308,7 +308,7 @@ void PlayerComponent::Update(float deltaTime) {
                     m_moveDirection = bx::sub(m_moveDirection, right);
                 }
             }
-            
+
             if (m_character) {
                 JPH::Vec3 desiredHorizontalVel(0, 0, 0);
                 if (bx::length(m_moveDirection) > 0.001f) {
@@ -320,24 +320,24 @@ void PlayerComponent::Update(float deltaTime) {
                         m_playerState = PlayerState::WALKING;
                     }
                 }
-                
+
                 // Get current velocity and preserve the vertical component (for gravity)
                 JPH::Vec3 currentVel = m_character->GetLinearVelocity();
                 m_newVelocity = JPH::Vec3(desiredHorizontalVel.GetX(),
                 currentVel.GetY(),
                 desiredHorizontalVel.GetZ());
-                
+
                 // JUMP! *van halen guitar solo*
                 if (enableJumping && keystate[SDL_SCANCODE_SPACE] && isGrounded && m_playerState != PlayerState::SLIDING) {
                     const float jumpForce = 4.0f;
                     m_newVelocity.SetY(jumpForce);
                 }
-                
+
             } else {
                 Syngine::Logger::Error("PlayerComponent has no character object!");
             }
     }
-        
+
     // Update the character
     m_character->SetLinearVelocity(m_newVelocity);
 

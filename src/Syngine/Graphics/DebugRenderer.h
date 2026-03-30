@@ -187,7 +187,7 @@ class DebugRender : public JPH::DebugRenderer {
     /// @post All debug lines are cleared
     /// @internal
     void ClearLines();
-    
+
   private:
     struct DebugLine {
         bx::Vec3 from;

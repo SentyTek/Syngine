@@ -54,7 +54,7 @@ class Serializer {
         // Internal data representation
         // std::monostate represents a null/empty state
         std::variant<std::monostate, int, uint64_t, float, bool, std::string, NodeMap, NodeArray> m_data;
-        
+
         friend class Serializer; // Allow Serializer to access private members for serialization
       public:
         /// @brief The type of data stored in the DataNode
@@ -212,7 +212,7 @@ class Serializer {
             bool     fullscreen = false; //* Windowed by default
             float    brightness = 1.0f; //* Normal brightness
             bool     vSync = true; //* V-Sync enabled by default
-            
+
             DataNode Serialize() const; //* Helper to serialize video settings
             void Deserialize(const DataNode& node); //* Helper to deserialize video settings
         } video;
@@ -222,7 +222,7 @@ class Serializer {
         struct Audio {
             float masterVolume = 1.0f; //* Master volume (0.0 to 1.0)
             float channels[8] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f}; //* Volume for 8 audio channels
-            
+
             DataNode Serialize() const; //* Helper to serialize audio settings
             void Deserialize(const DataNode& node); //* Helper to deserialize audio settings
         } audio;
@@ -233,16 +233,16 @@ class Serializer {
             float mouseSensitivity = 1.0f; //* Normal sensitivity
             bool  invertY          = false; //* Y-axis not inverted by default
             DataNode binds; //* Key bindings as a map of action -> key
-            
+
             DataNode Serialize() const; //* Helper to serialize control settings
             void Deserialize(const DataNode& node); //* Helper to deserialize control settings
         } controls;
-        
+
         DataNode customSettings; //* For game-specific settings as DataNode tree
-        
+
         DataNode Serialize() const; //* Helper to serialize core settings
         void Deserialize(const DataNode& node); //* Helper to deserialize core settings
-        
+
         static bool SaveToFile(const std::string& path, const CoreSettings& settings); //* Save settings to file
         static CoreSettings LoadFromFile(const std::string& path); //* Load settings from file
     };
@@ -257,17 +257,17 @@ class Serializer {
         GameObject* rootGameObject =
             nullptr; //* Pointer to the deserialized root GameObject (not
                      //serialized, used at runtime)
-        
+
         bool isValid =
             false; //* Indicates if the prefab was successfully loaded/created
 
         Prefab(GameObject*
                    root); // Construct prefab from a GameObject (serializes it)
         Prefab(const std::string& path); // Construct prefab by loading from file
-            
+
         bool SaveToFile(const std::string& path); //* Save prefab to file
         Prefab LoadFromFile(const std::string& path); //* Load prefab from file
-            
+
         private:
           Prefab();
           void WriteGameObject(const DataNode& node, scl::xml::XmlDocument& doc, scl::xml::XmlElem* parent) const; //* Helper to serialize prefab
@@ -281,10 +281,10 @@ class Serializer {
         std::string guid; //* Unique identifier for the scene
         DataNode gameObjects; //* Array of root GameObjects in the scene
         DataNode sceneSettings; //* Scene-specific settings (lighting, fog, skybox, etc.)
-        
+
         DataNode Serialize() const; //* Helper to serialize scene
         void Deserialize(const DataNode& node); //* Helper to deserialize scene
-        
+
         static bool SaveToFile(const std::string& path, const Scene& scene); //* Save scene to file
         static Scene LoadFromFile(const std::string& path); //* Load scene from file
     };
@@ -293,10 +293,10 @@ class Serializer {
     /// @since v0.0.1
     struct SaveData {
         DataNode state; //* Serialized game state (player data, world state, etc. Game sets this up)
-        
+
         DataNode Serialize() const; //* Helper to serialize save data
         void Deserialize(const DataNode& node); //* Helper to deserialize save data
-        
+
         static bool SaveToFile(const std::string& path, const SaveData& saveData); //* Save save data to file
         static SaveData LoadFromFile(const std::string& path); //* Load save data from file
     };

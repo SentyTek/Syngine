@@ -1,9 +1,23 @@
 #!/bin/sh
 echo "Enter name of the project (no spaces): "
 read PROJECT_NAME
+echo "Initialize a git repository? (Y/N): "
+read INIT_GIT
 echo "Creating new Syngine project '$PROJECT_NAME'. This may take a few moments..."
 
 cd ../../
+
+if [ "$INIT_GIT" = "Y" ] || [ "$INIT_GIT" = "y" ]; then
+    git init
+    git submodule add https://github.com/SentyTek/SyngineStudio editor
+    git submodule add https://github.com/SentyTek/Syngine engine
+else
+    mkdir -p editor
+    cd editor
+    git clone https://github.com/SentyTek/SyngineStudio.git .
+    cd ..
+fi
+
 mkdir -p game
 mkdir -p game/src
 mkdir -p assets
@@ -11,12 +25,7 @@ mkdir -p assets/meshes
 mkdir -p assets/shaders
 mkdir -p assets/shaders/varying
 mkdir -p system
-mkdir -p editor
 mkdir -p build
-
-cd editor
-git clone https://github.com/SentyTek/SyngineStudio.git .
-cd ..
 
 touch CMakeLists.txt
 echo "# root/CMakeLists.txt
@@ -181,7 +190,17 @@ int AppMain(int argc, char* argv[]) {
     return 0;
 }
 EOF
-cd ../../
+
+cd ../../engine
+cp .clang-format ../
+cp .editorconfig ../
+cp .pre-commit-config.yaml ../
+cd ../
+
+if [ "$INIT_GIT" = "Y" ] || [ "$INIT_GIT" = "y" ]; then
+    pip install pre-commit
+    pre-commit install
+fi
 
 echo "\\033[0;32mSyngine project '$PROJECT_NAME' created successfully!\\033[0m"
 

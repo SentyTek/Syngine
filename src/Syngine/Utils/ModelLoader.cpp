@@ -3,7 +3,7 @@
 // │ Created 2025-05-05                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Logger.h"
@@ -141,7 +141,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             vertex.tangent[0] = mesh->mTangents[i].x;
             vertex.tangent[1] = mesh->mTangents[i].y;
             vertex.tangent[2] = mesh->mTangents[i].z;
-            
+
             aiVector3D normal = mesh->mNormals[i];
             aiVector3D tangent = mesh->mTangents[i];
             aiVector3D bitangent = mesh->mBitangents[i];
@@ -287,7 +287,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             } else {
                 mat.normalMap = BGFX_INVALID_HANDLE;
             }
-            
+
             std::string heightPath = path.substr(0, path.find_last_of('.')) + "_height.png";
 
             if (std::filesystem::exists(heightPath)) {
@@ -318,7 +318,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
     } else { //if !loadTextures
         //Even if not loading textures, still might have multiple materials defined
         //with different base colors
-        
+
         if (scene->mNumMaterials > 0) {
             meshData.materials.reserve(scene->mNumMaterials);
             for(unsigned int i = 0; i < scene->mNumMaterials; ++i) {

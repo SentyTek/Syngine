@@ -211,7 +211,7 @@ T* GameObject::GetComponent() const {
     if (it == this->components.end()) {
         return nullptr; // Component not found
     }
-    
+
     return dynamic_cast<T*>(it->second.get());
 };
 

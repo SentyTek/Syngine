@@ -3,7 +3,7 @@
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Registry.h"
@@ -144,7 +144,7 @@ int GameObject::RemoveComponent(Syngine::ComponentTypeID type) {
     if (it == this->components.end()) {
         return -1; // Component not found
     }
-    
+
     this->components.erase(it);
     Registry::_NotifyComponentRemoved(this, type);
     return 0;
@@ -162,7 +162,7 @@ Component* GameObject::GetComponent(Syngine::ComponentTypeID type) const {
     if (it == this->components.end()) {
         return nullptr; // Component not found
     }
-    
+
     return it->second.get();
 }
 
@@ -228,7 +228,7 @@ GameObject* GameObject::GetParent() const {
             return parentT->m_owner;
         }
     }
-    return nullptr;    
+    return nullptr;
 }
 
 void GameObject::RemoveChild(GameObject* child) {
