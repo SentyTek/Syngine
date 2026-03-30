@@ -32,27 +32,30 @@ We have several pages of documentation available. Note the API reference is auto
 - [Input](api/input_doc.md)
 - [Logger](api/logger_doc.md)
 - [Registry](api/registry_doc.md)
+- [Zonemanager](api/zonemanager_doc.md)
 
 #### ECS
 
 
 - [Component](api/component_doc.md)
+- [Componentregistry](api/componentregistry_doc.md)
 - [Gameobject](api/gameobject_doc.md)
 
 #### ECS/Components
 
 
+- [Billboardcomponent](api/billboardcomponent_doc.md)
 - [Cameracomponent](api/cameracomponent_doc.md)
 - [Meshcomponent](api/meshcomponent_doc.md)
 - [Playercomponent](api/playercomponent_doc.md)
 - [Rigidbodycomponent](api/rigidbodycomponent_doc.md)
 - [Transformcomponent](api/transformcomponent_doc.md)
+- [Zonecomponent](api/zonecomponent_doc.md)
 
 #### Graphics
 
 
 - [Debugrenderer](api/debugrenderer_doc.md)
-- [Metalbridge](api/metalbridge_doc.md)
 - [Renderer](api/renderer_doc.md)
 - [Shaders](api/shaders_doc.md)
 - [Texturehelpers](api/texturehelpers_doc.md)
@@ -67,6 +70,7 @@ We have several pages of documentation available. Note the API reference is auto
 
 
 - [Fsutils](api/fsutils_doc.md)
-- [Helpers](api/helpers_doc.md)
 - [Modelloader](api/modelloader_doc.md)
+- [Profiler](api/profiler_doc.md)
+- [Serializer](api/serializer_doc.md)
 

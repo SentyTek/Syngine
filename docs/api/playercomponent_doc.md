@@ -13,23 +13,27 @@
 ## Goto: 
 
 
+- [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
-- [E](#synginee)
-- [GetComponentType](#synginegetcomponenttype)
-- [Init](#syngineinit)
-- [_HandleInput](#syngine_handleinput)
-- [Update](#syngineupdate)
-- [_PostPhysicsUpdate](#syngine_postphysicsupdate)
-- [GetPlayerState](#synginegetplayerstate)
-- [GetRotation](#synginegetrotation)
-- [SetRotation](#synginesetrotation)
+- [PlayerState](#syngineplayerstate)
+- [static](#playercomponentstatic)
+- [GetComponentType](#playercomponentgetcomponenttype)
+- [Clone](#playercomponentclone)
+- [Serialize](#playercomponentserialize)
+- [Init](#playercomponentinit)
+- [_HandleInput](#playercomponent_handleinput)
+- [Update](#playercomponentupdate)
+- [PostPhysicsUpdate](#playercomponentpostphysicsupdate)
+- [GetPlayerState](#playercomponentgetplayerstate)
+- [GetRotation](#playercomponentgetrotation)
+- [SetRotation](#playercomponentsetrotation)
 
 ---
 
 ## Class Constructor
 
 
-#### **`Syngine::PlayerComponent`**
+#### **`PlayerComponent::PlayerComponent`**
 
 
  Constructor for PlayerComponent
@@ -47,7 +51,6 @@ Signature:
 
 **Parameters:**
 
-- `static`: Player component type
 - `owner`: The GameObject that owns this component.
 - `camera`: The camera component to use for the player.
 - `win`: The SDL window for the player.
@@ -59,7 +62,7 @@ Signature:
 ## Class & Related Members
 
 
-#### **`Syngine::E`**
+#### **`Syngine::PlayerState`**
 
 
  Enum representing the different states a player can be in. Each state corresponds to a specific action or condition of the player
@@ -67,12 +70,25 @@ Signature:
 Signature:
 
 ```cpp
- IDLE = 0, WALKING = 1,
+enum class PlayerState
 ```
 
 ---
 
-#### **`Syngine::GetComponentType`**
+#### **`PlayerComponent::static`**
+
+
+ PlayerComponent is responsible for handling player input, movement, and state. It manages the player's position, rotation, and interactions with the game world.
+
+Signature:
+
+```cpp
+ public: static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_PLAYER; //* Player component type
+```
+
+---
+
+#### **`PlayerComponent::GetComponentType`**
 
 
  Gets the component type
@@ -80,7 +96,7 @@ Signature:
 Signature:
 
 ```cpp
- Syngine::Components GetComponentType() override;
+ Syngine::ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type of this component.
@@ -91,7 +107,37 @@ Signature:
 
 ---
 
-#### **`Syngine::Init`**
+#### **`PlayerComponent::Clone`**
+
+
+ Clone the PlayerComponent
+
+Signature:
+
+```cpp
+ std::unique_ptr<Component> Clone() const override;
+```
+
+**Returns:** A unique pointer to the cloned PlayerComponent
+
+---
+
+#### **`PlayerComponent::Serialize`**
+
+
+ Serializes the PlayerComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the PlayerComponent's state
+
+---
+
+#### **`PlayerComponent::Init`**
 
 
  Initializes the player component with camera, window, and physics manager.
@@ -119,7 +165,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_HandleInput`**
+#### **`PlayerComponent::_HandleInput`**
 
 
  Handles input events for the player component.
@@ -145,26 +191,21 @@ Signature:
 
 ---
 
-#### **`Syngine::Update`**
+#### **`PlayerComponent::Update`**
 
 
  Updates the player. Mostly handles movement, physics, and updating the state.
 
-#### This function is internal use only and not intended for public use!
-
-
-**Note:** This is called every frame to update the player's position, rotation, and state.
+**Note:** This is called every frame to update the player's position, rotation, and state. Fetches keyboard state internally.
 
 Signature:
 
 ```cpp
- void Update(const bool* keystate, float deltaTime);
+ void Update(float deltaTime) override;
 ```
 
 **Parameters:**
 
-- `keystate`: The current state of the keyboard.
-- `simulate`: Whether to simulate physics or not.
 - `deltaTime`: The time since the last update.
 
 **Thread Safety:** not-safe
@@ -173,7 +214,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_PostPhysicsUpdate`**
+#### **`PlayerComponent::PostPhysicsUpdate`**
 
 
  Updates position and camera after physics simulation.
@@ -186,7 +227,7 @@ Signature:
 Signature:
 
 ```cpp
- void _PostPhysicsUpdate();
+ void PostPhysicsUpdate() override;
 ```
 
 **Thread Safety:** not-safe
@@ -195,7 +236,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetPlayerState`**
+#### **`PlayerComponent::GetPlayerState`**
 
 
  Gets the current player state.
@@ -214,7 +255,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetRotation`**
+#### **`PlayerComponent::GetRotation`**
 
 
  Gets the player's world space rotation.
@@ -233,7 +274,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetRotation`**
+#### **`PlayerComponent::SetRotation`**
 
 
  Sets the player's world space rotation.
@@ -252,6 +293,27 @@ Signature:
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
+
+---
+
+## Member Variables
+
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `float` | `maxPitchAngle` | Max vertical angle for the camera pitch (in degrees). |
+| `float` | `sprintMult` | Multiplier for sprinting speed. |
+| `float` | `crouchSpeed` | Speed when crouching. |
+| `float` | `moveSpeed` | Default movement speed of the player. |
+| `float` | `mouseSens` | Mouse sensitivity for camera movement. |
+| `float` | `standHeight` | Height of the player when standing. |
+| `float` | `crouchHeight` | Height of the player when crouching. |
+| `float` | `playerRadius` | Radius of the player collider. |
+| `bool` | `enableMovement` | Whether player movement is enabled (on by default). |
+| `bool` | `enableSliding` | Whether player sliding is enabled (on by default). |
+| `bool` | `enableJumping` | Whether player jumping is enabled (on by default). |
+| `bool` | `enableSprinting` | Whether player sprinting is enabled (on by default). |
+| `bool` | `enableCrouching` | Whether player crouching is enabled (on by default). |
 
 ---
 

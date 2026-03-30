@@ -2,21 +2,29 @@
 // │ Syngine                              │
 // │ Created 2025-04-22                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Jolt/Core/Core.h"
-#include "Syngine/Core/Input.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
-#include "Syngine/Utils/ModelLoader.h"
+
+#include "Syngine/Core/Registry.h"
 #include "Syngine/Graphics/Renderer.h"
+#include "Syngine/ECS/Component.h"
+#include "Syngine/ECS/Components/CameraComponent.h"
+#include "Syngine/ECS/Components/PlayerComponent.h"
+#include "Syngine/ECS/Components/RigidbodyComponent.h"
 #include "Syngine/ECS/GameObject.h"
+#include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Physics/Physics.h"
+#include "Syngine/Utils/Profiler.h"
+
+#include <cstdint>
+#include <memory>
 
 namespace Syngine {
-// Forward declare Window
+// Forward declare
+class ZoneManager;
 class Window;
 
 /// @brief Struct to hold hardware specifications
@@ -45,10 +53,10 @@ struct HardwareSpecs {
 /// @section Core
 /// @since v0.0.1
 struct EngineConfig {
-    std::string windowTitle;  //* Title of the game window
-    int         windowWidth;  //* Width of the game window in pixels
-    int         windowHeight; //* Height of the game window in pixels
-    bool        vsync; //* Whether vertical sync is enabled
+    std::string windowTitle = "SyngineGame";  //* Title of the game window
+    int         windowWidth = 800;  //* Width of the game window in pixels
+    int         windowHeight = 600; //* Height of the game window in pixels
+    bool        usePhysics = true; //* Whether to initialize the physics system
 };
 
 /// @brief the various debug modes possible
@@ -56,21 +64,10 @@ struct EngineConfig {
 /// @since v0.0.1
 struct DebugModes {
     bool Enabled = true; //* Global debug toggle
-    bool PhysWireframes = true; //* Whether to draw physics wireframes
+    bool PhysWireframes = false; //* Whether to draw physics wireframes
     bool Gizmos = true; //* Gizmos such as cameras, lights, and audio sources
     bool CSMBounds = false; //* Cascading Shadow Map zone bounds.
-};
-
-/// @brief Struct to hold application state
-/// @section Core
-/// @since v0.0.1
-struct App {
-    EngineConfig                    config;    //* Engine configuration
-    std::unique_ptr<Window>         window;    //* Pointer to the window
-    std::unique_ptr<Renderer>       renderer;  //* Pointer to the render system
-    std::unique_ptr<SynModelLoader> synModels; //* Pointer to the model loader
-    std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
-    DebugModes debug;   //* Debug modes flags
+    bool DrawBoundingBoxes = false; //* Whether to draw mesh bounding boxes
 };
 
 /// @brief Core class to manage the application
@@ -79,7 +76,7 @@ struct App {
 class Core {
   public:
     /// @brief Constructor for the Core class
-    /// @param config Engine configuration options
+    /// @param config Engine configuration (Syngine::EngineConfig)
     /// @throws std::runtime_error if initialization fails (e.g., SDL_Init()
     /// fails or missing files)
     /// @since v0.0.1
@@ -90,26 +87,15 @@ class Core {
 
     /// @brief Initialize the core system. Creates a window, renderer, and other
     /// subsystems.
+    /// @param rendererConfig Renderer configuration options (Syngine::RendererConfig)
     /// @return True on success, false on failure
     /// @since v0.0.1
-    static bool Initialize();
+    static bool Initialize(const RendererConfig rendererConfig);
 
     /// @brief Get the global Core instance
     /// @return Pointer to the global Core instance
     /// @since v0.0.1
     static Core* Get();
-
-    /// @brief Get the global App instance
-    /// @return Pointer to the global App instance
-    /// @since v0.0.1
-    /// @internal
-    static App* _GetApp();
-
-    /// @brief Get the global game config
-    /// @return Pointer to the global game config
-    /// @since v0.0.1
-    /// @internal
-    static EngineConfig* _GetConfig();
 
     /// @brief Check if the application is running
     /// @return True if the application is running, false otherwise
@@ -140,15 +126,53 @@ class Core {
     /// @return Hardware specifications of the system
     /// @pre Renderer must be initialized (Core::Initialize() called or
     /// Renderer::IsReady() == true)
+    /// @since v0.0.1
     Syngine::HardwareSpecs GetSystemSpecifications();
 
     /// @brief Set the simulation state
     /// @param simulate True to enable simulation, false to disable
+    /// @since v0.0.1
     void SetSimulationState(bool simulate);
 
     /// @brief Get the simulation state
     /// @return True if simulation is enabled, false otherwise
+    /// @since v0.0.1
     bool GetSimulationState();
+
+    /// @brief Check if the Core is initialized
+    /// @return True if initialized, false otherwise
+    /// @since v0.0.1
+    static bool IsInitialized() noexcept { return m_instance != nullptr; };
+
+    /// @brief Check if physics is enabled in the engine config
+    /// @return True if physics is enabled, false otherwise
+    /// @since v0.0.1
+    static bool IsPhysicsEnabled() {
+        return m_instance && m_instance->m_app &&
+            m_instance->m_app->config.usePhysics;
+    }
+
+    /// @brief Set the current debug modes
+    /// @param mode DebugModes struct with desired debug settings
+    /// @return True on success, false otherwise
+    /// @since v0.0.1
+    static bool SetDebugMode(DebugModes mode) {
+        if (m_instance && m_instance->m_app) {
+            m_instance->m_app->debug = mode;
+            return true;
+        }
+        return false;
+    }
+
+    /// @brief Get the current debug modes
+    /// @return Current DebugModes struct
+    /// @since v0.0.1
+    static DebugModes GetDebugMode() {
+        if (m_instance && m_instance->m_app) {
+            return m_instance->m_app->debug;
+        }
+        return DebugModes();
+    }
 
   private:
     struct _internal {
@@ -174,6 +198,47 @@ class Core {
         bool mouseState = false;
     };
 
+    /// @brief Struct to hold application state
+    /// @section Core
+    /// @since v0.0.1
+    struct App {
+        EngineConfig                    config;         //* Engine configuration
+        std::unique_ptr<Window>         window;         //* Pointer to the window
+        std::unique_ptr<Renderer>       renderer;       //* Pointer to the render system
+        std::unique_ptr<SynModelLoader> synModels;      //* Pointer to the model loader
+        std::unique_ptr<Phys>           physicsManager; //* Pointer to the physics manager
+        std::unique_ptr<ZoneManager>    zoneManager;    //* Pointer to the zone manager
+        DebugModes                      debug;          //* Debug modes flags
+    };
+
+    /// @brief Get the global App instance
+    /// @return Pointer to the global App instance
+    /// @since v0.0.1
+    /// @internal
+    static App* _GetApp();
+
+    /// @brief Get the global game config
+    /// @return Pointer to the global game config
+    /// @since v0.0.1
+    /// @internal
+    static EngineConfig* _GetConfig();
+
+    struct FrameCounts {
+        struct DrawnObjectCount {
+            uint32_t shadows = 0;
+            uint32_t sky    = 0;
+            uint32_t forward = 0;
+            uint32_t debug   = 0;
+            uint32_t billboard = 0;
+            uint32_t ui        = 0;
+            uint32_t culledFrustum = 0;
+            uint32_t culledSize    = 0;
+        } drawnObjects;
+        uint32_t updates = 0;
+    };
+
+    static FrameCounts m_frameCounts;
+
     /// @brief Frame counter for FPS and TPS tracking
     /// @internal
     /// @since v0.0.1
@@ -189,27 +254,34 @@ class Core {
             oneSecond += deltaTime;
 
             if (oneSecond >= 1.0f) {
-                lastFPS      = frameCount;
+                lastFPS      = frameDisplay;
                 lastTPS      = physCounter;
                 frameDisplay = 0;
                 oneSecond    = 0.0f;
                 physCounter  = 0;
 
-                SDL_Log("Frame: %d, GameObjects: %zu, Sim: %s, FPS/TPS: %d/%d",
+                SDL_Log("Frame: %d, GameObjects: %zu, Sim: %s, FPS/TPS: %d/%d, "
+                        "Updates: %d, Drawn Objects - Shadows: %d, Forward: "
+                        "%d, Billboards: %d - Culled (Frustum/Size): %d/%d",
                         frameCount,
                         gameObjectCount,
                         simulate ? "ON" : "OFF",
                         lastFPS,
-                        lastTPS);
+                        lastTPS,
+                        m_frameCounts.updates,
+                        m_frameCounts.drawnObjects.shadows,
+                        m_frameCounts.drawnObjects.forward,
+                        m_frameCounts.drawnObjects.billboard,
+                        m_frameCounts.drawnObjects.culledFrustum,
+                        m_frameCounts.drawnObjects.culledSize);
+
+                m_frameCounts.updates = 0;
+                m_frameCounts.drawnObjects = FrameCounts::DrawnObjectCount();
             }
         }
     };
 
     // Debug keybind actions
-    static void _ToggleDebugEnabled();
-    static void _ToggleDebugWireframes();
-    static void _ToggleDebugGizmos();
-    static void _ToggleDebugShadows();
     static void _ReloadChangedAssets();
     static void _ReloadShaders();
 
@@ -219,8 +291,21 @@ class Core {
     static _internal     m_internal;     //* Internal state struct
     static _FrameCounter m_frameCounter; //* Frame counter for FPS/TPS tracking
 
-    /// @deprecated In favor of the new input system
+    /// @brief Handle key events for debug actions
+    /// @param event SDL_Event to handle
+    /// @deprecated
     void _HandleKeyEvent(const SDL_Event& event);
+
+    friend class Renderer;
+    friend class RenderCore;
+    friend class GameObject;
+    friend class RigidbodyComponent;
+    friend class PlayerComponent;
+    friend class Registry;
+    friend class Serializer;
+#ifndef SYN_DEBUG_GRAPHICS
+    friend class Syngine::Profiler;
+#endif
 };
 
 } // namespace Syngine

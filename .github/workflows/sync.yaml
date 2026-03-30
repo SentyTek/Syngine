@@ -6,7 +6,7 @@ on:
       types: [opened, edited, labeled, unlabeled]
     project_card:
       types: [created, moved]
-    
+
 jobs:
   sync-backlog:
     runs-on: ubuntu-latest

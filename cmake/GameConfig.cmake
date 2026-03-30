@@ -2,8 +2,8 @@
 # │ Syngine                              │
 # │ Created 2025-08-05                   │
 # ├──────────────────────────────────────┤
-# │ Copyright (c) SentyTek 2025-2025     │
-# │ Placeholder License                  │
+# │ Copyright (c) SentyTek 2025-2026     │
+# │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
 # Adds several functions to compile shaders, add assets, and configure the game target (root/engine/cmake/GameConfig.cmake)
 
@@ -12,42 +12,53 @@ include(${SYNGINE_SOURCE_DIR}/cmake/CompileShaders.cmake)
 # Function to compile all shaders in a directory
 function(compile_collect_shaders SHADER_SRC_DIR ALL_SHADERS_LIST)
     set(LOCAL_SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
+    set(LOCAL_SHADER_BUNDLE_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders")
     file(MAKE_DIRECTORY ${LOCAL_SHADER_OUTPUT_DIR}) # Ensure output directory exists
     set(LOCAL_BGFX_CORE_INCLUDE_DIR "${SYNGINE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src")
 
     set(COMPILED_SHADER_BINARIES) # Temp list for this call
-    compile_all_shaders(
-        SOURCE_DIRECTORY ${SHADER_SRC_DIR}
-        OUTPUT_DIRECTORY ${LOCAL_SHADER_OUTPUT_DIR}
-        BGFX_SRC_INCLUDE_DIRS ${LOCAL_BGFX_CORE_INCLUDE_DIR}
-        SHADER_FILES_OUTPUT_VAR COMPILED_SHADER_BINARIES
-    )
+    set(BUNDLED_SHADER_PACKS)     # Temp list for this call
 
-    if(COMPILED_SHADER_BINARIES)
+    if(SHADER_SRC_DIR STREQUAL "${SYNGINE_SOURCE_DIR}/default/shaders")
+        compile_all_shaders(
+            SOURCE_DIRECTORY ${SHADER_SRC_DIR}
+            OUTPUT_DIRECTORY ${LOCAL_SHADER_OUTPUT_DIR}
+            BGFX_SRC_INCLUDE_DIRS ${LOCAL_BGFX_CORE_INCLUDE_DIR}
+            SHADER_FILES_OUTPUT_VAR COMPILED_SHADER_BINARIES
+            BUNDLE_OUTPUT_DIRECTORY ${LOCAL_SHADER_BUNDLE_DIR}
+            SINGLE_BUNDLE_NAME default_shaders
+            BUNDLE_FILES_OUTPUT_VAR BUNDLED_SHADER_PACKS
+        )
+    else()
+        compile_all_shaders(
+            SOURCE_DIRECTORY ${SHADER_SRC_DIR}
+            OUTPUT_DIRECTORY ${LOCAL_SHADER_OUTPUT_DIR}
+            BGFX_SRC_INCLUDE_DIRS ${LOCAL_BGFX_CORE_INCLUDE_DIR}
+            SHADER_FILES_OUTPUT_VAR COMPILED_SHADER_BINARIES
+            BUNDLE_OUTPUT_DIRECTORY ${LOCAL_SHADER_BUNDLE_DIR}
+            BUNDLE_BY_TOP_LEVEL_DIR
+            BUNDLE_FILES_OUTPUT_VAR BUNDLED_SHADER_PACKS
+        )
+    endif()
+
+    if(BUNDLED_SHADER_PACKS)
         message(STATUS "Found shaders to compile in ${SHADER_SRC_DIR}")
-        # Append the new list to the main list in the parent scope
-        list(APPEND ${ALL_SHADERS_LIST} ${COMPILED_SHADER_BINARIES})
-        set(${ALL_SHADERS_LIST} "${${ALL_SHADERS_LIST}};${COMPILED_SHADER_BINARIES}" PARENT_SCOPE)
+        # Depend on bundles; they already depend on compiled shader binaries.
+        list(APPEND ${ALL_SHADERS_LIST} ${BUNDLED_SHADER_PACKS})
+        set(${ALL_SHADERS_LIST} "${${ALL_SHADERS_LIST}};${BUNDLED_SHADER_PACKS}" PARENT_SCOPE)
     endif()
 endfunction()
 
 # Asset handling helpers
 function(_add_assets_win_linux target)
-    if(WIN32)
-        set(SHADER_PLATFORM_SUBDIR "dx11")
-    else()
-        set(SHADER_PLATFORM_SUBDIR "spirv")
-    endif()
-
-    set(PLATFORM_SHADER_SUBDIR "${CMAKE_BINARY_DIR}/shaders/${SHADER_PLATFORM_SUBDIR}")
-    if(EXISTS "${PLATFORM_SHADER_SUBDIR}")
-        add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PLATFORM_SHADER_SUBDIR}"
-                "$<TARGET_FILE_DIR:${target}>/shaders"
-            COMMENT "Copying ${SHADER_PLATFORM_SUBDIR} shaders to executable directory"
-        )
-    endif()
+    set(BUNDLED_SHADER_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders")
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${target}>/shaders"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${BUNDLED_SHADER_DIR}"
+            "$<TARGET_FILE_DIR:${target}>/shaders"
+        COMMENT "Copying bundled shaders to executable directory"
+    )
 
     # Loop through the game asset directory (root/assets) and copy all folders into the executable directory
     if(EXISTS "${GAME_ASSET_DIR}")
@@ -100,20 +111,14 @@ function(_add_assets_mac target)
         endif()
     endmacro()
 
-    # Add shaders (metal)
-    set(SHADER_PLATFORM_DIR "${CMAKE_BINARY_DIR}/shaders/metal")
-    if(EXISTS "${SHADER_PLATFORM_DIR}")
-        file(GLOB_RECURSE SHADER_FILES RELATIVE "${SHADER_PLATFORM_DIR}" "${SHADER_PLATFORM_DIR}/*.bin")
-        foreach(SHADER_FILE ${SHADER_FILES})
-            set(ABS_SHADER_FILE "${SHADER_PLATFORM_DIR}/${SHADER_FILE}")
-            if(NOT IS_DIRECTORY "${ABS_SHADER_FILE}")
-                get_filename_component(SUBDIR "${SHADER_FILE}" DIRECTORY)
-                add_resource("${ABS_SHADER_FILE}" "shaders/${SUBDIR}")
-            endif()
-        endforeach()
-    else()
-        message(WARNING "Shader output directory does not exist: ${SHADER_PLATFORM_DIR}")
-    endif()
+    set(BUNDLED_SHADER_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders")
+    add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/shaders"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${BUNDLED_SHADER_DIR}"
+            "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/shaders"
+        COMMENT "Copying bundled shaders into app Resources"
+    )
 
     # --- Loop through the root/assets directory and copy all asset folders that aren't shaders ---
     if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
@@ -253,7 +258,7 @@ function(add_assets target)
             SOURCE "${FINAL_PLIST_PATH}"
             PROPERTY MACOSX_PACKAGE_LOCATION "Contents/"
         )
-        
+
         # tell Xcode this is the bundle Info.plist
         set_target_properties(${target} PROPERTIES
             XCODE_ATTRIBUTE_INFOPLIST_FILE ${FINAL_PLIST_PATH}

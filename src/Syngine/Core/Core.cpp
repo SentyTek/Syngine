@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-04-22                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #ifdef _WIN32
@@ -21,13 +21,18 @@
 
 #endif
 
+#define SCL_IMPL
+#include "miniscl.hpp"
+
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/Input.h"
+#include "Syngine/Core/ZoneManager.h"
 
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/Renderer.h"
+#include "Syngine/Graphics/RenderCore.h"
 
 #include "Syngine/Physics/Physics.h"
 
@@ -37,17 +42,10 @@
 
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Utils/Version.h"
+#include "Syngine/Utils/Profiler.h"
 
-#include "SDL3/SDL_events.h"
-#include "SDL3/SDL_keycode.h"
-#include "SDL3/SDL_mouse.h"
-#include "SDL3/SDL_timer.h"
-#include "SDL3/SDL_scancode.h"
-#include "SDL3/SDL_video.h"
+#include <SDL3/SDL.h>
 
-#include "bx/bx.h"
-#include "bx/constants.h"
-#include "bx/math.h"
 #include "bgfx/defines.h"
 
 #include <filesystem>
@@ -56,12 +54,13 @@
 using namespace Syngine;
 
 Syngine::Core*      Syngine::Core::m_instance = nullptr;
-Syngine::App*       Syngine::Core::m_app      = nullptr;
+Syngine::Core::App* Syngine::Core::m_app      = nullptr;
 Core::_internal     Syngine::Core::m_internal;
 Core::_FrameCounter Syngine::Core::m_frameCounter;
 
 float Syngine::Core::deltaTime     = 0.0f;
 bool  Syngine::Core::m_shouldClose = false;
+Core::FrameCounts Syngine::Core::m_frameCounts;
 
 Core::Core(const EngineConfig config) {
     if (m_instance) {
@@ -81,16 +80,24 @@ Core::Core(const EngineConfig config) {
 
 Core::~Core() {
     // Cleanup
+
+    // Destroy all game objects first. This ensures components (like Billboards, Meshes)
+    // release their BGFX resources (textures, buffers) before we shut down the renderer.
+    Syngine::Registry::Clear();
+
     if (m_app) {
-        if (m_app->window) {
-            m_app->window.reset();
+        if (m_app->synModels) {
+            // Don't call _UnloadAllMeshes() here because Registry::Clear() has
+            // already done it for us. Doing it again causes a
+            // BGFX assertion errors due to double-freeing. Please don't have
+            // orphaned meshes.
+            m_app->synModels.reset();
         }
         if (m_app->renderer) {
             m_app->renderer.reset();
         }
-        if (m_app->synModels) {
-            m_app->synModels->_UnloadAllMeshes();
-            m_app->synModels.reset();
+        if (m_app->window) {
+            m_app->window.reset();
         }
         if (m_app->physicsManager) {
             m_app->physicsManager->_Shutdown();
@@ -102,7 +109,7 @@ Core::~Core() {
     m_app = nullptr;
 }
 
-bool Core::Initialize() {
+bool Core::Initialize(const RendererConfig rendererConfig) {
     if (!m_app) {
         Syngine::Logger::Fatal("Core not initialized properly. App is null.");
         return false;
@@ -114,25 +121,37 @@ bool Core::Initialize() {
             Logger::Error("Failed to create window. Check the log for more details.");
         }
 
-        m_app->renderer = std::make_unique<Renderer>(
-            m_app->config.windowWidth, m_app->config.windowHeight);
+        m_app->renderer = std::make_unique<Renderer>(m_app->config.windowWidth,
+                                                     m_app->config.windowHeight,
+                                                     rendererConfig);
         if (!m_app->renderer) {
             Logger::Error("Failed to create renderer. Check the log for more details.");
         }
-        
+
         Syngine::Logger::LogHardwareInfo();
-            
+
         m_app->synModels = std::make_unique<AssimpLoader>();
         if (!m_app->synModels) {
             Logger::Error("Failed to create AssimpLoader. Check the log for more details.");
         }
 
-        m_app->physicsManager = std::make_unique<Phys>();
-        if (!m_app->physicsManager) {
-            Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
+        if (m_app->config.usePhysics) {
+            m_app->physicsManager = std::make_unique<Phys>();
+            if (!m_app->physicsManager) {
+                Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
+            }
+        } else {
+            m_app->physicsManager = nullptr;
         }
 
-        m_app->physicsManager->_Init();
+        m_app->zoneManager = std::make_unique<ZoneManager>();
+        if (!m_app->zoneManager) {
+            Logger::Error("Failed to create ZoneManager. Check the log for more details.");
+        }
+
+        if (m_app->config.usePhysics && m_app->physicsManager) {
+            m_app->physicsManager->_Init();
+        }
     } catch(const std::exception& e) {
         Syngine::Logger::LogF(
             LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
@@ -149,22 +168,49 @@ bool Core::Initialize() {
                                     "Debug",
                                     KeyBinding(Keycode::F1),
                                     { .onPressed = Core::_ToggleDebugEnabled });*/
-        InputAction::RegisterAction(
-            "syngine.debugWireframes",
-            "Toggle debug wireframes",
-            "Debug",
-            KeyBinding(Keycode::F1),
-            { .onPressed = Core::_ToggleDebugWireframes });
+        InputAction::RegisterAction("syngine.debugWireframes",
+                                    "Toggle debug wireframes",
+                                    "Debug",
+                                    KeyBinding(Keycode::F1),
+                                    { .onPressed = []() {
+                                        Syngine::DebugModes m =
+                                            Core::GetDebugMode();
+                                        m.PhysWireframes = !m.PhysWireframes;
+                                        Core::SetDebugMode(m);
+                                    } });
+
         InputAction::RegisterAction("syngine.debugGizmos",
                                     "Toggle debug gizmos",
                                     "Debug",
                                     KeyBinding(Keycode::F2),
-                                    { .onPressed = Core::_ToggleDebugGizmos });
+                                    { .onPressed = []() {
+                                        Syngine::DebugModes m =
+                                            Core::GetDebugMode();
+                                        m.Gizmos = !m.Gizmos;
+                                        Core::SetDebugMode(m);
+                                    } });
+
         InputAction::RegisterAction("syngine.debugShadows",
                                     "Toggle debug shadows",
                                     "Debug",
                                     KeyBinding(Keycode::F3),
-                                    { .onPressed = Core::_ToggleDebugShadows });
+                                    { .onPressed = []() {
+                                        Syngine::DebugModes m =
+                                            Core::GetDebugMode();
+                                        m.CSMBounds = !m.CSMBounds;
+                                        Core::SetDebugMode(m);
+                                    } });
+
+        InputAction::RegisterAction("syngine.debugBoundingBoxes",
+                                    "Toggle debug bounding boxes",
+                                    "Debug",
+                                    KeyBinding(Keycode::F4),
+                                    { .onPressed = []() {
+                                        Syngine::DebugModes m =
+                                            Core::GetDebugMode();
+                                        m.DrawBoundingBoxes = !m.DrawBoundingBoxes;
+                                        Core::SetDebugMode(m);
+                                    } });
 
         InputAction::RegisterAction(
             "syngine.reloadAssets",
@@ -184,7 +230,7 @@ bool Core::Initialize() {
 }
 
 Syngine::Core* Syngine::Core::Get() { return m_instance; }
-Syngine::App*  Syngine::Core::_GetApp() {
+Syngine::Core::App*  Syngine::Core::_GetApp() {
     return m_instance ? m_instance->m_app : nullptr;
 }
 
@@ -199,6 +245,7 @@ void Core::SetSimulationState(bool simulate) { m_internal.simulate = simulate; }
 bool Core::GetSimulationState() { return m_internal.simulate; }
 
 bool Core::HandleEvents() {
+    SYN_PROFILE_FUNCTION();
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
@@ -212,12 +259,9 @@ bool Core::HandleEvents() {
                 SDL_GetWindowFromID(event.window.windowID);
             SDL_GetWindowSize(resizedWindow, &w, &h);
 
-            m_app->renderer->width  = w;
-            m_app->renderer->height = h;
-            bgfx::reset(
-                w, h, BGFX_RESET_VSYNC); // reset bgfx with new window size
-            bgfx::setViewRect(
-                0, 0, 0, uint16_t(w), uint16_t(h)); // reset view rect
+            if (!RenderCore::_SetResolution(w, h)) {
+                Logger::Error("Failed to reset resolution");
+            }
             break;
         }
         }
@@ -240,10 +284,12 @@ bool Core::HandleEvents() {
 }
 
 bool Core::Update() {
+    SYN_PROFILE_FUNCTION();
     m_internal.last = m_internal.now;
     m_internal.now  = SDL_GetPerformanceCounter();
     deltaTime       = (m_internal.now - m_internal.last) /
                 (float)SDL_GetPerformanceFrequency();
+    m_frameCounts.updates++;
 
     // Simulate physics
     if (m_app->physicsManager && m_internal.simulate) {
@@ -257,32 +303,33 @@ bool Core::Update() {
         }
     }
 
-    const bool* keystate = SDL_GetKeyboardState(NULL);
     if (m_internal.simulate) {
-        auto players =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_PLAYER);
-        for (auto go : players) {
+        // Polymorphic component update loop - iterate all GameObjects
+        auto& allGameObjects = Registry::GetAllGameObjects();
+
+        // Update all components
+        for (auto& [id, go] : allGameObjects) {
             if (!go) continue;
-            PlayerComponent* pc = go->GetComponent<PlayerComponent>();
-            if (!pc) continue;
-            pc->Update(keystate, deltaTime);
+            const auto& components = go->GetComponents();
+            for (const auto& [typeId, component] : components) {
+                if (component && component->isEnabled) {
+                    component->Update(deltaTime);
+                }
+            }
         }
 
-        auto rigidbodies =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_RIGIDBODY);
-        for (auto go : rigidbodies) {
-            if (!go) continue;
-            RigidbodyComponent* rb = go->GetComponent<RigidbodyComponent>();
-            if (!rb) continue;
-            rb->Update(m_internal.DEFAULT_PHYSICS_TIMESTEP);
-        }
+        // Update zones
+        m_app->zoneManager->_UpdateZones();
 
-        // Player mode: update player camera
-        for (auto go : players) {
+        // Post physics update - call after physics step
+        for (auto& [id, go] : allGameObjects) {
             if (!go) continue;
-            PlayerComponent* pc = go->GetComponent<PlayerComponent>();
-            if (!pc) continue;
-            pc->_PostPhysicsUpdate();
+            const auto& components = go->GetComponents();
+            for (const auto& [typeId, component] : components) {
+                if (component && component->isEnabled) {
+                    component->PostPhysicsUpdate();
+                }
+            }
         }
     }
 
@@ -293,11 +340,22 @@ bool Core::Update() {
 }
 
 bool Core::Render(CameraComponent* camera) {
+    SYN_PROFILE_FUNCTION();
     // Render the application
     if (Renderer::IsReady()) {
         m_frameCounter.frameCount++;
+        m_frameCounter.frameDisplay++;
 
         m_app->renderer->_RenderFrame(camera, m_app->debug);
+        m_frameCounts.drawnObjects.debug = RenderCore::m_drawnCounts.debug;
+        m_frameCounts.drawnObjects.sky   = RenderCore::m_drawnCounts.sky;
+        m_frameCounts.drawnObjects.forward = RenderCore::m_drawnCounts.forward;
+        m_frameCounts.drawnObjects.shadows = RenderCore::m_drawnCounts.shadows;
+        m_frameCounts.drawnObjects.billboard =
+            RenderCore::m_drawnCounts.billboard;
+        m_frameCounts.drawnObjects.ui = RenderCore::m_drawnCounts.ui;
+        m_frameCounts.drawnObjects.culledFrustum = RenderCore::m_drawnCounts.culledFrustum;
+        m_frameCounts.drawnObjects.culledSize = RenderCore::m_drawnCounts.culledSize;
     }
     return true;
 }
@@ -420,9 +478,16 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 
     // Get display size
     SDL_DisplayID dId = SDL_GetDisplayForWindow(m_app->window->_GetSDLWindow());
-    SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
-    specs.screenWidth       = disMode.w;
-    specs.screenHeight      = disMode.h;
+    if (dId == 0) {
+        Logger::Error("Failed to get display for window: " +
+                      std::string(SDL_GetError()));
+        specs.screenWidth  = 0;
+        specs.screenHeight = 0;
+    } else {
+        SDL_DisplayMode disMode = *SDL_GetCurrentDisplayMode(dId);
+        specs.screenWidth       = disMode.w;
+        specs.screenHeight      = disMode.h;
+    }
 
     // Get window resolution
     int w, h;
@@ -449,28 +514,12 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     return specs;
 }
 
-// copied the internals of _HandleKeyEvents into these two functions to make
-// it a bit nicer to call with the new keybind system
-void Core::_ToggleDebugEnabled() {
-    m_app->debug.Enabled = !m_app->debug.Enabled;
-}
-
-void Core::_ToggleDebugWireframes() {
-    m_app->debug.PhysWireframes = !m_app->debug.PhysWireframes;
-}
-
-void Core::_ToggleDebugGizmos() { m_app->debug.Gizmos = !m_app->debug.Gizmos; }
-
-void Core::_ToggleDebugShadows() {
-    m_app->debug.CSMBounds = !m_app->debug.CSMBounds;
-}
-
 void Core::_ReloadChangedAssets() {
     for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
         MeshComponent* mc = go->GetComponent<MeshComponent>();
         if (!mc) continue;
         MeshData& mesh = mc->meshData;
-        if (!mesh.valid) continue;
+        if (!mesh.valid || mesh.path.empty()) continue;
         if (mesh.lastWriteTime != std::filesystem::last_write_time(mesh.path)) {
             mc->ReloadMesh();
         }

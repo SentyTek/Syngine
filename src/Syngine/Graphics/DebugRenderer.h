@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-06-19                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -136,14 +136,36 @@ class DebugRender : public JPH::DebugRenderer {
                         const JPH::uint32* inIndices,
                         int                inIndexCount) override;
 
-    /// @brief Draw a frustum
+    /// @brief Draw a frustum from a camera object
     /// @param camera Camera to draw the frustum for
     /// @pre Camera must be initialized
     /// @since v0.0.1
     /// @internal
     void DrawFrustum(Syngine::Camera camera);
 
-    void DrawOtherFrustum(const float* view, const float* proj);
+    /// @brief Draw a frustum from given view and projection matrices
+    /// @param view View matrix
+    /// @param proj Projection matrix
+    /// @pre View and projection matrices must be valid
+    /// @since v0.0.1
+    /// @internal
+    void DrawFrustum(const float* view, const float* proj);
+
+    /// @brief Draw a box given min and max points
+    /// @param min Minimum point of the box
+    /// @param max Maximum point of the box
+    /// @param color Color of the box
+    /// @since v0.0.1
+    /// @internal
+    void DrawBox(const float* min, const float* max, JPH::ColorArg color);
+
+    /// @brief Draw a sphere given center and radius
+    /// @param center Center of the sphere
+    /// @param radius Radius of the sphere
+    /// @param color Color of the sphere
+    /// @since v0.0.1
+    /// @internal
+    void DrawSphere(JPH::RVec3Arg center, float radius, JPH::ColorArg color);
 
     /// @brief Render debug lines
     /// @param view View matrix
@@ -165,7 +187,7 @@ class DebugRender : public JPH::DebugRenderer {
     /// @post All debug lines are cleared
     /// @internal
     void ClearLines();
-    
+
   private:
     struct DebugLine {
         bx::Vec3 from;

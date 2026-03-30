@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-05-05                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -42,7 +42,8 @@ struct Material {
     float heightScale = 0.01f; //* Matches blender displacement
     float mixFactor = 0.7f; //* Mix between detail and macro maps
     float ambient = 0.2f; //* Ambient floor
-    float baseColor[4] = {1.0f, 1.0f, 1.0f, 1.0f}; //* RGBA base color
+    float baseColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f }; //* RGBA base color
+    bool  useVertexColor = false; //* Whether to use vertex color or base color
 };
 
 /// @brief MeshData structure for storing mesh information

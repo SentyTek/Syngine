@@ -14,15 +14,15 @@
 
 
 - [Vertex](#synginevertex)
-- [tileDetail](#synginetiledetail)
+- [Material](#synginematerial)
 - [MeshData](#synginemeshdata)
 - [static](#synmodelloaderstatic)
 - [_UnloadAllMeshes](#synmodelloader_unloadallmeshes)
 - [_GetMeshes](#synmodelloader_getmeshes)
 - [_GetMeshById](#synmodelloader_getmeshbyid)
-- [_LoadModel](#synmodelloader_loadmodel)
-- [_ReloadModel](#synmodelloader_reloadmodel)
-- [processScene](#synmodelloaderprocessscene)
+- [_LoadModel](#assimploader_loadmodel)
+- [_ReloadModel](#assimploader_reloadmodel)
+- [processScene](#assimploaderprocessscene)
 
 ---
 
@@ -34,14 +34,14 @@
 Signature:
 
 ```cpp
-struct Vertex 
+struct Vertex
 ```
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Syngine::tileDetail`**
+#### **`Syngine::Material`**
 
 
  Material structure for mesh data
@@ -49,15 +49,23 @@ struct Vertex
 Signature:
 
 ```cpp
- float tileDetail = 30.0f; //* How many repeats of detail maps
+struct Material
 ```
 
-**Parameters:**
+**Members:**
 
-- `std::string`: name Name of the material
-- `bgfx::TextureHandle`: albedo Albedo texture handle
-- `bgfx::TextureHandle`: normalMap Normal map texture handle
-- `bgfx::TextureHandle`: heightMap Height map texture handle
+| Type | Name | Description |
+| --- | --- | --- | 
+| `std::string` | `name` | Name of the material |
+| `bgfx::TextureHandle` | `albedo` | Albedo texture handle |
+| `bgfx::TextureHandle` | `normalMap` | Normal map texture handle |
+| `bgfx::TextureHandle` | `heightMap` | Height map texture handle |
+| `float` | `tileDetail` | How many repeats of detail maps |
+| `float` | `heightScale` | Matches blender displacement |
+| `float` | `mixFactor` | Mix between detail and macro maps |
+| `float` | `ambient` | Ambient floor |
+| `float[4]` | `baseColor` | RGBA base color |
+| `bool` | `useVertexColor` | Whether to use vertex color or base color |
 
 **This function has been available since:** v0.0.1
 
@@ -71,17 +79,13 @@ Signature:
 Signature:
 
 ```cpp
-struct MeshData 
+struct MeshData
 ```
 
 **Members:**
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float` | `heightScale` | Matches blender displacement |
-| `float` | `mixFactor` | Mix between detail and macro maps |
-| `float` | `ambient` | Ambient floor |
-| `float` | `baseColor[4]` | = {1.0f, 1.0f, 1.0f, 1.0f}; //* RGBA base color RGBA base color |
 | `std::vector<Vertex>` | `vertices` | Vertices of the mesh |
 | `std::vector<uint32_t>` | `indices` | Indices of the mesh |
 | `std::vector<Material>` | `materials` | Materials of the mesh |
@@ -187,35 +191,22 @@ Signature:
 
 ---
 
-#### **`SynModelLoader::_LoadModel`**
+#### **`AssimpLoader::_LoadModel`**
 
 
- Loads a model from the specified path, returns true if successful
-
-#### This function is internal use only and not intended for public use!
-
+ AssimpLoader class for loading 3D models using Assimp
 
 Signature:
 
 ```cpp
- bool _LoadModel(MeshData& out, const std::string& path,
+ public: /// @brief Loads a model from the specified path, returns true if /// successful /// @param out MeshData to fill with the loaded model /// @param path Path to the model file /// @param loadTextures Whether to load textures for the model /// @return true if the model was loaded successfully, false otherwise /// @threadsafety not-safe /// @since v0.0.1 /// @internal bool _LoadModel(MeshData& out, const std::string& path, bool loadTextures) override;
 ```
-
-**Parameters:**
-
-- `out`: MeshData to fill with the loaded model
-- `path`: Path to the model file
-- `loadTextures`: Whether to load textures for the model
-
-**Returns:** true if the model was loaded successfully, false otherwise
-
-**Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`SynModelLoader::_ReloadModel`**
+#### **`AssimpLoader::_ReloadModel`**
 
 
  Reloads a model by its ID, returns true if successful
@@ -240,7 +231,7 @@ Signature:
 
 ---
 
-#### **`SynModelLoader::processScene`**
+#### **`AssimpLoader::processScene`**
 
 
  Processes the Assimp scene and fills the MeshData structure

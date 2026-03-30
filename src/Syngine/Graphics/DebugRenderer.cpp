@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-06-19                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Graphics/Renderer.h"
@@ -72,6 +72,44 @@ void DebugRender::DrawGeometry(JPH::RMat44Arg     modelMatrix,
             DrawLine(v1, v2, modelColor);
             DrawLine(v2, v0, modelColor);
         }
+    }
+}
+
+void DebugRender::DrawSphere(JPH::RVec3Arg center, float radius, JPH::ColorArg color) {
+    const int segments = 32; // Number of segments for the circle approximation
+    const float step   = (2.0f * 3.14159265f) / segments;
+
+    // Draw circles in XY, YZ, and XZ planes
+    for (int i = 0; i < segments; ++i) {
+        float theta1 = i * step;
+        float theta2 = (i + 1) * step;
+
+        // XY plane
+        DrawLine(JPH::RVec3(center.GetX() + radius * cosf(theta1),
+                            center.GetY() + radius * sinf(theta1),
+                            center.GetZ()),
+                 JPH::RVec3(center.GetX() + radius * cosf(theta2),
+                            center.GetY() + radius * sinf(theta2),
+                            center.GetZ()),
+                 color);
+
+        // YZ plane
+        DrawLine(JPH::RVec3(center.GetX(),
+                            center.GetY() + radius * cosf(theta1),
+                            center.GetZ() + radius * sinf(theta1)),
+                 JPH::RVec3(center.GetX(),
+                            center.GetY() + radius * cosf(theta2),
+                            center.GetZ() + radius * sinf(theta2)),
+                 color);
+
+        // XZ plane
+        DrawLine(JPH::RVec3(center.GetX() + radius * cosf(theta1),
+                            center.GetY(),
+                            center.GetZ() + radius * sinf(theta1)),
+                 JPH::RVec3(center.GetX() + radius * cosf(theta2),
+                            center.GetY(),
+                            center.GetZ() + radius * sinf(theta2)),
+                 color);
     }
 }
 
@@ -158,7 +196,7 @@ void DebugRender::DrawFrustum(Syngine::Camera camera) {
     DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[7]), JPH::Color::sWhite);
 }
 
-void DebugRender::DrawOtherFrustum(const float* view, const float* proj) {
+void DebugRender::DrawFrustum(const float* view, const float* proj) {
     float viewMtx[16], projMtx[16];
 
     memcpy(&viewMtx, view, sizeof(float) * 16);
@@ -211,6 +249,36 @@ void DebugRender::DrawOtherFrustum(const float* view, const float* proj) {
     DrawLine(toJolt(worldCorners[3]), toJolt(worldCorners[7]), JPH::Color::sPurple);
 }
 
+void DebugRender::DrawBox(const float*  min,
+                          const float*  max,
+                          JPH::ColorArg color) {
+    bx::Vec3 v0 = { min[0], min[1], min[2] };
+    bx::Vec3 v1 = { max[0], min[1], min[2] };
+    bx::Vec3 v2 = { max[0], max[1], min[2] };
+    bx::Vec3 v3 = { min[0], max[1], min[2] };
+    bx::Vec3 v4 = { min[0], min[1], max[2] };
+    bx::Vec3 v5 = { max[0], min[1], max[2] };
+    bx::Vec3 v6 = { max[0], max[1], max[2] };
+    bx::Vec3 v7 = { min[0], max[1], max[2] };
+
+    auto toJolt = [](const bx::Vec3& v) { return JPH::RVec3(v.x, v.y, v.z); };
+
+    // Bottom face
+    DrawLine(toJolt(v0), toJolt(v1), color);
+    DrawLine(toJolt(v1), toJolt(v2), color);
+    DrawLine(toJolt(v2), toJolt(v3), color);
+    DrawLine(toJolt(v3), toJolt(v0), color);
+    // Top face
+    DrawLine(toJolt(v4), toJolt(v5), color);
+    DrawLine(toJolt(v5), toJolt(v6), color);
+    DrawLine(toJolt(v6), toJolt(v7), color);
+    DrawLine(toJolt(v7), toJolt(v4), color);
+    // Vertical edges
+    DrawLine(toJolt(v0), toJolt(v4), color);
+    DrawLine(toJolt(v1), toJolt(v5), color);
+    DrawLine(toJolt(v2), toJolt(v6), color);
+    DrawLine(toJolt(v3), toJolt(v7), color);
+}
 
 void DebugRender::RenderLines(const float*        view,
                               const float*        proj,
@@ -226,7 +294,7 @@ void DebugRender::RenderLines(const float*        view,
 
     bgfx::TransientVertexBuffer tvb;
     bgfx::allocTransientVertexBuffer(
-        &tvb, debugLines.size() * 2, DebugVertexLayout);
+        &tvb, static_cast<uint32_t>(debugLines.size() * 2), DebugVertexLayout);
 
     DebugVertex* vertex = (DebugVertex*)tvb.data;
     for (size_t i = 0; i < debugLines.size(); ++i) {

@@ -13,15 +13,13 @@
 ## Goto: 
 
 
-- [Constructor](#class-constructor)
+- [Member Variables](#member-variables)
 - [HardwareSpecs](#synginehardwarespecs)
 - [EngineConfig](#syngineengineconfig)
 - [DebugModes](#synginedebugmodes)
-- [App](#syngineapp)
+- [SDL_Init](#coresdl_init)
 - [Initialize](#coreinitialize)
 - [Get](#coreget)
-- [_GetApp](#core_getapp)
-- [_GetConfig](#core_getconfig)
 - [IsRunning](#coreisrunning)
 - [HandleEvents](#corehandleevents)
 - [Update](#coreupdate)
@@ -30,37 +28,17 @@
 - [GetSystemSpecifications](#coregetsystemspecifications)
 - [SetSimulationState](#coresetsimulationstate)
 - [GetSimulationState](#coregetsimulationstate)
-- [oneSecond](#coreonesecond)
+- [IsInitialized](#coreisinitialized)
+- [IsPhysicsEnabled](#coreisphysicsenabled)
+- [SetDebugMode](#coresetdebugmode)
+- [GetDebugMode](#coregetdebugmode)
+- [App](#coreapp)
+- [_GetApp](#core_getapp)
+- [_GetConfig](#core_getconfig)
+- [_FrameCounter](#core_framecounter)
 - [_HandleKeyEvent](#core_handlekeyevent)
 
 ---
-
-## Class Constructor
-
-
-#### **`Core::Core`**
-
-
-
-
-Signature:
-
-```cpp
- Core(const EngineConfig config);
-```
-
-**Parameters:**
-
-- `config`: Engine configuration options
-
-**This function has been available since:** v0.0.1
-
-**Throws:** std::runtime_error if initialization fails (e.g., SDL_Init() fails or missing files)
-
----
-
-## Class & Related Members
-
 
 #### **`Syngine::HardwareSpecs`**
 
@@ -72,7 +50,7 @@ Signature:
 Signature:
 
 ```cpp
-struct HardwareSpecs 
+struct HardwareSpecs
 ```
 
 **Members:**
@@ -106,7 +84,7 @@ struct HardwareSpecs
 Signature:
 
 ```cpp
-struct EngineConfig 
+struct EngineConfig
 ```
 
 **Members:**
@@ -116,7 +94,7 @@ struct EngineConfig
 | `std::string` | `windowTitle` | Title of the game window |
 | `int` | `windowWidth` | Width of the game window in pixels |
 | `int` | `windowHeight` | Height of the game window in pixels |
-| `bool` | `vsync` | Whether vertical sync is enabled |
+| `bool` | `usePhysics` | Whether to initialize the physics system |
 
 **This function has been available since:** v0.0.1
 
@@ -130,7 +108,7 @@ struct EngineConfig
 Signature:
 
 ```cpp
-struct DebugModes 
+struct DebugModes
 ```
 
 **Members:**
@@ -141,32 +119,22 @@ struct DebugModes
 | `bool` | `PhysWireframes` | Whether to draw physics wireframes |
 | `bool` | `Gizmos` | Gizmos such as cameras, lights, and audio sources |
 | `bool` | `CSMBounds` | Cascading Shadow Map zone bounds. |
+| `bool` | `DrawBoundingBoxes` | Whether to draw mesh bounding boxes |
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Syngine::App`**
+#### **`Core::SDL_Init`**
 
 
- Struct to hold application state
+ Core class to manage the application
 
 Signature:
 
 ```cpp
-struct App 
+ public: /// @brief Constructor for the Core class /// @param config Engine configuration (Syngine::EngineConfig) /// @throws std::runtime_error if initialization fails (e.g., SDL_Init() /// fails or missing files) /// @since v0.0.1 Core(const EngineConfig config);
 ```
-
-**Members:**
-
-| Type | Name | Description |
-| --- | --- | --- | 
-| `EngineConfig` | `config` | Engine configuration |
-| `std::unique_ptr<Window>` | `window` | Pointer to the window |
-| `std::unique_ptr<Renderer>` | `renderer` | Pointer to the render system |
-| `std::unique_ptr<SynModelLoader>` | `synModels` | Pointer to the model loader |
-| `std::unique_ptr<Phys>` | `physicsManager` | Pointer to the physics manager |
-| `DebugModes` | `debug` | Debug modes flags |
 
 **This function has been available since:** v0.0.1
 
@@ -180,8 +148,12 @@ struct App
 Signature:
 
 ```cpp
- static bool Initialize();
+ static bool Initialize(const RendererConfig rendererConfig);
 ```
+
+**Parameters:**
+
+- `rendererConfig`: Renderer configuration options (Syngine::RendererConfig)
 
 **Returns:** True on success, false on failure
 
@@ -201,46 +173,6 @@ Signature:
 ```
 
 **Returns:** Pointer to the global Core instance
-
-**This function has been available since:** v0.0.1
-
----
-
-#### **`Core::_GetApp`**
-
-
- Get the global App instance
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- static App* _GetApp();
-```
-
-**Returns:** Pointer to the global App instance
-
-**This function has been available since:** v0.0.1
-
----
-
-#### **`Core::_GetConfig`**
-
-
- Get the global game config
-
-#### This function is internal use only and not intended for public use!
-
-
-Signature:
-
-```cpp
- static EngineConfig* _GetConfig();
-```
-
-**Returns:** Pointer to the global game config
 
 **This function has been available since:** v0.0.1
 
@@ -346,6 +278,8 @@ Signature:
 
 **Returns:** Hardware specifications of the system
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`Core::SetSimulationState`**
@@ -363,6 +297,8 @@ Signature:
 
 - `simulate`: True to enable simulation, false to disable
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`Core::GetSimulationState`**
@@ -378,9 +314,150 @@ Signature:
 
 **Returns:** True if simulation is enabled, false otherwise
 
+**This function has been available since:** v0.0.1
+
 ---
 
-#### **`Core::oneSecond`**
+#### **`Core::IsInitialized`**
+
+
+ Check if the Core is initialized
+
+Signature:
+
+```cpp
+ static bool IsInitialized() noexcept;
+```
+
+**Returns:** True if initialized, false otherwise
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::IsPhysicsEnabled`**
+
+
+ Check if physics is enabled in the engine config
+
+Signature:
+
+```cpp
+ static bool IsPhysicsEnabled();
+```
+
+**Returns:** True if physics is enabled, false otherwise
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::SetDebugMode`**
+
+
+ Set the current debug modes
+
+Signature:
+
+```cpp
+ static bool SetDebugMode(DebugModes mode);
+```
+
+**Parameters:**
+
+- `mode`: DebugModes struct with desired debug settings
+
+**Returns:** True on success, false otherwise
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::GetDebugMode`**
+
+
+ Get the current debug modes
+
+Signature:
+
+```cpp
+ static DebugModes GetDebugMode();
+```
+
+**Returns:** Current DebugModes struct
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::App`**
+
+
+ Struct to hold application state
+
+Signature:
+
+```cpp
+ struct App
+```
+
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `EngineConfig` | `config` | Engine configuration |
+| `std::unique_ptr<Window>` | `window` | Pointer to the window |
+| `std::unique_ptr<Renderer>` | `renderer` | Pointer to the render system |
+| `std::unique_ptr<SynModelLoader>` | `synModels` | Pointer to the model loader |
+| `std::unique_ptr<Phys>` | `physicsManager` | Pointer to the physics manager |
+| `std::unique_ptr<ZoneManager>` | `zoneManager` | Pointer to the zone manager |
+| `DebugModes` | `debug` | Debug modes flags |
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::_GetApp`**
+
+
+ Get the global App instance
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ static App* _GetApp();
+```
+
+**Returns:** Pointer to the global App instance
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::_GetConfig`**
+
+
+ Get the global game config
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ static EngineConfig* _GetConfig();
+```
+
+**Returns:** Pointer to the global game config
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::_FrameCounter`**
 
 
  Frame counter for FPS and TPS tracking
@@ -391,7 +468,7 @@ Signature:
 Signature:
 
 ```cpp
- float oneSecond = 0.0f;
+ struct _FrameCounter
 ```
 
 **This function has been available since:** v0.0.1
@@ -401,7 +478,7 @@ Signature:
 #### **`Core::_HandleKeyEvent`**
 
 
-~~~~
+~~Handle key events for debug actions~~
 
 **DEPRECATED**
 
@@ -413,11 +490,20 @@ Signature:
 
 **Parameters:**
 
-- `static`: Core* m_instance Pointer to the global Core instance
-- `static`: App* m_app Pointer to the global App instance
-- `static`: bool m_shouldClose Whether the application should close
-- `static`: _internal m_internal Internal state struct
-- `static`: _FrameCounter m_frameCounter Frame counter for FPS/TPS tracking
+- `event`: SDL_Event to handle
+
+---
+
+## Member Variables
+
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `Core*` | `m_instance` | Pointer to the global Core instance |
+| `App*` | `m_app` | Pointer to the global App instance |
+| `bool` | `m_shouldClose` | Whether the application should close |
+| `_internal` | `m_internal` | Internal state struct |
+| `_FrameCounter` | `m_frameCounter` | Frame counter for FPS/TPS tracking |
 
 ---
 

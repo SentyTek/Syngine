@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-07-28                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #ifndef SynInput_h

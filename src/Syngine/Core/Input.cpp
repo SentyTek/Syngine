@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-07-29                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Input.h"
@@ -12,6 +12,8 @@
 #include "InputHelpers.h"
 
 #include "SDL3/SDL_events.h"
+
+#include <algorithm>
 
 // MARK: Initialize InputAction's static members
 
@@ -138,6 +140,8 @@ Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     case KeybindType::SEQUENCE:
         return std::get<KeySequence>(this->binding)._isTriggeredByEvent(event);
     }
+
+    return false;
 }
 
 bool

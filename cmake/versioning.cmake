@@ -2,8 +2,8 @@
 # │ Syngine                              │
 # │ Created YYYY-MM-DD                   │
 # ├──────────────────────────────────────┤
-# │ Copyright (c) SentyTek 2025-2025     │
-# │ Placeholder License                  │
+# │ Copyright (c) SentyTek 2025-2026     │
+# │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
 
 # Adds a function to handle versioning of the game engine. Generates a header file with version information, in src/Syngine/Utils/Version.h
@@ -17,7 +17,14 @@ function(define_version)
         COMMAND git rev-parse --short HEAD
         OUTPUT_VARIABLE COMMIT
         OUTPUT_STRIP_TRAILING_WHITESPACE
+        RESULT_VARIABLE GIT_RESULT
+        ERROR_QUIET
     )
+
+    # Use default if git command failed
+    if(NOT GIT_RESULT EQUAL 0)
+        set(COMMIT "000")
+    endif()
 
     # Combine
     set(VERSION_STRING "${YEAR}w${WEEK}.${COMMIT}")

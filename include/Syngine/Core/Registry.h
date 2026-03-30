@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-07-24                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -79,7 +79,7 @@ class Registry {
     /// @threadsafety read-only
     /// @since v0.0.1
     static std::vector<GameObject*>
-    GetGameObjectsWithComponent(Syngine::Components type) noexcept;
+    GetGameObjectsWithComponent(Syngine::ComponentTypeID type) noexcept;
 
     /// @brief Get all GameObjects in the registry.
     /// @return std::unordered_map A reference to the unordered map of all
@@ -140,8 +140,8 @@ class Registry {
     /// @threadsafety safe
     /// @since v0.0.1
     /// @internal
-    static void _NotifyComponentAdded(GameObject*         gameobject,
-                                      Syngine::Components type) noexcept;
+    static void _NotifyComponentAdded(GameObject*              gameobject,
+                                      Syngine::ComponentTypeID type) noexcept;
 
     /// @brief Internal call to notify the registry that a component has been removed
     /// from a GameObject. This is used to update the indexed sublists.
@@ -150,8 +150,8 @@ class Registry {
     /// @threadsafety safe
     /// @since v0.0.1
     /// @internal
-    static void _NotifyComponentRemoved(GameObject*         gameobject,
-                                        Syngine::Components type) noexcept;
+    static void _NotifyComponentRemoved(GameObject*              gameobject,
+                                        Syngine::ComponentTypeID type) noexcept;
 
   private:
     // Could be worth using unordered_set for faster removals on the sublists.

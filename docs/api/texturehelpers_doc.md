@@ -13,16 +13,14 @@
 ## Goto: 
 
 
-- [Constructor](#class-constructor)
+- [LoadTextureFromMemory](#syngineloadtexturefrommemory)
 - [LoadTextureFromFile](#syngineloadtexturefromfile)
 - [CreateFlatTexture](#synginecreateflattexture)
+- [CreateNoiseTexture](#synginecreatenoisetexture)
 
 ---
 
-## Class Constructor
-
-
-#### **`Syngine::bgfx::TextureHandleLoadTextureFromMemory`**
+#### **`Syngine::LoadTextureFromMemory`**
 
 
  Loads a texture from memory
@@ -30,7 +28,7 @@
 Signature:
 
 ```cpp
-bgfx::TextureHandleLoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
+bgfx::TextureHandle LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
 ```
 
 **Parameters:**
@@ -42,9 +40,6 @@ bgfx::TextureHandleLoadTextureFromMemory(const uint8_t* data, size_t size, const
 **Returns:** A bgfx::TextureHandle representing the loaded texture
 
 ---
-
-## Class & Related Members
-
 
 #### **`Syngine::LoadTextureFromFile`**
 
@@ -77,6 +72,26 @@ bgfx::TextureHandle CreateFlatTexture();
 ```
 
 **Returns:** A bgfx::TextureHandle representing a flat texture
+
+---
+
+#### **`Syngine::CreateNoiseTexture`**
+
+
+ Creates a white noise texture
+
+Signature:
+
+```cpp
+bgfx::TextureHandle CreateNoiseTexture(uint16_t width, uint16_t height);
+```
+
+**Parameters:**
+
+- `width`: Width of the texture
+- `height`: Height of the texture
+
+**Returns:** A bgfx::TextureHandle representing the noise texture
 
 ---
 

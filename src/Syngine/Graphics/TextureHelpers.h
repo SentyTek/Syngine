@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-08-05                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "bgfx/bgfx.h"
@@ -28,5 +28,11 @@ bgfx::TextureHandle LoadTextureFromFile(const char* path);
 /// @brief Creates a flat texture, a 1x1 grey pixel texture
 /// @return A bgfx::TextureHandle representing a flat texture
 bgfx::TextureHandle CreateFlatTexture();
+
+/// @brief Creates a white noise texture
+/// @param width Width of the texture
+/// @param height Height of the texture
+/// @return A bgfx::TextureHandle representing the noise texture
+bgfx::TextureHandle CreateNoiseTexture(uint16_t width, uint16_t height);
 
 } // namespace Syngine

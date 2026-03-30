@@ -1,8 +1,8 @@
 # ╒═════════════════════ CMakeLists.txt ═╕
 # │ Syngine                              │
-# │ Created YYYY-MM-DD                   │
+# │ Created 2025-08-25                   │
 # ├──────────────────────────────────────┤
-# │ Copyright (c) SentyTek 2025-2025     │
+# │ Copyright (c) SentyTek 2025-2026     │
 # │ Placeholder License                  │
 # ╰──────────────────────────────────────╯
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
@@ -11,6 +11,10 @@ cmake_minimum_required(VERSION 3.16)
 project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
 set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
+
+# Generate Version.h for all engine builds (including engine-only CI).
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/versioning.cmake)
+define_version()
 
 # Use static runtime on MSVC. Several libraries we use require this.
 # Please don't change this.
@@ -61,16 +65,21 @@ add_library(Syngine STATIC
     src/Syngine/Core/Registry.cpp
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
+    src/Syngine/Core/ZoneManager.cpp
 
     # Graphics
     src/Syngine/Graphics/Renderer.cpp
     src/Syngine/Graphics/Windowing.cpp
     src/Syngine/Graphics/DebugRenderer.cpp
     src/Syngine/Graphics/TextureHelpers.cpp
+    src/Syngine/Graphics/RenderCore.cpp
 
     # Utils
     src/Syngine/Utils/ModelLoader.cpp
     src/Syngine/Utils/FsUtils.cpp
+    src/Syngine/Utils/Profiler.cpp
+    src/Syngine/Utils/Serializer.cpp
+    src/Syngine/Utils/Prefab.cpp
 
     # Physics
     src/Syngine/Physics/Physics.cpp
@@ -82,7 +91,15 @@ add_library(Syngine STATIC
     src/Syngine/ECS/Components/RigidbodyComponent.cpp
     src/Syngine/ECS/Components/PlayerComponent.cpp
     src/Syngine/ECS/Components/CameraComponent.cpp
+    src/Syngine/ECS/Components/ZoneComponent.cpp
+    src/Syngine/ECS/Components/BillboardComponent.cpp
+    src/Syngine/ECS/ComponentRegistry.cpp
 )
+
+# Uncomment to enable graphics debugging.
+# This is done because programs like RenderDoc do not work if window's `dbghelp.dll` is loaded, which we use for crash handling/logging.
+# And so this macro prevents those features from being compiled in. This also disables the Syngine Profiler, which may cause compile-time errors. Use at your own risk.
+# target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
 
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
@@ -171,6 +188,17 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
 
+# Allow not building SynTools if not needed
+option(SYNGINE_BUILD_TOOLS "Build Syngine Tools (Shader Compiler, Asset Packager)" ON)
+if(SYNGINE_BUILD_TOOLS)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tools ${CMAKE_BINARY_DIR}/tools EXCLUDE_FROM_ALL)
+    if (WIN32)
+        set_target_properties(syntools PROPERTIES
+            WIN32_EXECUTABLE OFF
+        )
+    endif()
+endif()
+
 if(WIN32)
     # Since the root CMakeLists sets CMAKE_WIN32_EXECUTABLE, we need to ensure that
     # shaderc (a CLI tool) is built as a console application, not a GUI application.
@@ -205,7 +233,7 @@ target_include_directories(Syngine
     PUBLIC
         # Engine public headers directory
         ${CMAKE_CURRENT_LIST_DIR}/include
-        
+
         # Third-party headers needed by engine's public headers
         ${CMAKE_CURRENT_LIST_DIR}/third_party/SDL/include
         ${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bgfx/include
@@ -235,6 +263,6 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
 clangd(Syngine
     EXCLUDE_PATHS "third_party/*"
     OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
-    INLAY_HINTS 
-    INLAY_DEDUCED_TYPES 
+    INLAY_HINTS
+    INLAY_DEDUCED_TYPES
     INLAY_PARAMETER_NAMES)

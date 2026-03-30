@@ -34,11 +34,14 @@
 - [SetUniform](#renderersetuniform)
 - [GetSunDirection](#renderergetsundirection)
 - [SetSunDirection](#renderersetsundirection)
-- [_RenderFrame](#renderer_renderframe)
+- [SetGizmoSize](#renderersetgizmosize)
+- [GetGizmoSize](#renderergetgizmosize)
 - [_RegisterGizmo](#renderer_registergizmo)
-- [](#renderer)
+- [GetUniform](#renderergetuniform)
+- [SetPseudoCamera](#renderersetpseudocamera)
 - [_CreateRenderer](#renderer_createrenderer)
 - [_RenderGizmos](#renderer_rendergizmos)
+- [_GetProgram](#renderer_getprogram)
 
 ---
 
@@ -53,7 +56,7 @@
 Signature:
 
 ```cpp
- Renderer(int width, int height, const RendererConfig& config = RendererConfig());
+ Renderer(int width, int height, const RendererConfig& config);
 ```
 
 **Parameters:**
@@ -81,7 +84,7 @@ Signature:
 Signature:
 
 ```cpp
-enum ViewID : bgfx::ViewId 
+enum ViewID : bgfx::ViewId
 ```
 
 **Members:**
@@ -94,6 +97,8 @@ enum ViewID : bgfx::ViewId
 | `VIEW_LIGHTING` | Lighting pass for deferred shading |
 | `VIEW_FORWARD` | Forward rendering pass for translucent objects |
 | `VIEW_BILLBOARD` | Billboard rendering |
+| `VIEW_AO` | Ambient occlusion passes (3 passes) |
+| `VIEW_POSTPROCESS` | Post-processing effects passes (Max 8 passes) |
 | `VIEW_DEBUG` | Debug rendering pass for debug rendering |
 | `VIEW_BILL_DBG` | Billboard debug rendering |
 | `VIEW_UI` | UI rendering |
@@ -111,7 +116,7 @@ enum ViewID : bgfx::ViewId
 Signature:
 
 ```cpp
-enum UniformType 
+enum UniformType
 ```
 
 **Members:**
@@ -136,7 +141,7 @@ enum UniformType
 Signature:
 
 ```cpp
-struct Uniform 
+struct Uniform
 ```
 
 **Members:**
@@ -161,7 +166,7 @@ struct Uniform
 Signature:
 
 ```cpp
-struct Program 
+struct Program
 ```
 
 **Members:**
@@ -186,7 +191,7 @@ struct Program
 Signature:
 
 ```cpp
-struct RendererConfig 
+struct RendererConfig
 ```
 
 **Members:**
@@ -195,34 +200,8 @@ struct RendererConfig
 | --- | --- | --- | 
 | `bool` | `useShadows` | Whether to use shadow mapping |
 | `float` | `shadowDist` | Distance for shadow rendering |
-
----
-
-#### **`Renderer::AddProgram`**
-
-
- Load a shader from vertex and fragment shader file paths and create a shader program
-
-**Preconditions:** Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
-
-Signature:
-
-```cpp
- static size_t AddProgram(const std::string& vsPath, const std::string& fsPath,
-```
-
-**Parameters:**
-
-- `vsPath`: Path to the vertex shader file
-- `fsPath`: Path to the fragment shader file
-- `name`: Name of the shader program
-- `viewId`: View ID for the shader program, defaults to VIEW_FORWARD
-
-**Returns:** The ID of the newly created program on success, -1 on failure
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
+| `bool` | `vsync` | Whether to enable vertical sync |
+| `bool` | `usePseudoCamera` | (only if DebugModes.Enabled == true) Pseudo camera is a separate camera that all rendering will use, but the main camera will still be the one drawn to the screen |
 
 ---
 
@@ -238,12 +217,42 @@ Signature:
 Signature:
 
 ```cpp
- static size_t AddProgram(const std::string& path, const std::string& name,
+ static size_t AddProgram(const std::string& path, const std::string& name, Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
 ```
 
 **Parameters:**
 
 - `path`: Path to the shader file
+- `name`: Name of the shader program
+- `viewId`: View ID for the shader program, defaults to VIEW_FORWARD
+
+**Returns:** The index of the newly created program on success, -1 on failure
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Renderer::AddProgram`**
+
+
+ Load a shader from a bundle file and create a shader program
+
+**Note:** Assumes the vertex shader is named "{path}.vert.bin" and fragment shader "{path}.frag.bin" within the bundle
+
+**Preconditions:** Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
+
+Signature:
+
+```cpp
+ static size_t AddProgram(const std::string& bundlePath, const std::string& path, const std::string& name, Syngine::ViewID viewId = Syngine::VIEW_FORWARD);
+```
+
+**Parameters:**
+
+- `bundlePath`: Path to the bundle file containing the shader
+- `path`: Path to the shader file within the bundle (without .vert.bin or .frag.bin suffix)
 - `name`: Name of the shader program
 - `viewId`: View ID for the shader program, defaults to VIEW_FORWARD
 
@@ -520,29 +529,37 @@ Signature:
 
 ---
 
-#### **`Renderer::_RenderFrame`**
+#### **`Renderer::SetGizmoSize`**
 
 
- Render a frame
-
-#### This function is internal use only and not intended for public use!
-
+ Set the default gizmo size
 
 Signature:
 
 ```cpp
- bool _RenderFrame(CameraComponent* camera, DebugModes debug);
+ static void SetGizmoSize(float size);
 ```
 
 **Parameters:**
 
-- `lightDir`: Direction of the light for lighting calculations
-- `camera`: Pointer to the camera component for rendering
-- `debug`: Whether to render debug information
+- `size`: Size of the gizmo
 
-**Returns:** If it rendered successfully
+**This function has been available since:** v0.0.1
 
-**Thread Safety:** not-safe
+---
+
+#### **`Renderer::GetGizmoSize`**
+
+
+ Get the default gizmo size
+
+Signature:
+
+```cpp
+ static float GetGizmoSize();
+```
+
+**Returns:** Size of the gizmo
 
 **This function has been available since:** v0.0.1
 
@@ -561,7 +578,7 @@ Signature:
 Signature:
 
 ```cpp
- void _RegisterGizmo(const std::string& tag, float size = 1.0f);
+ void _RegisterGizmo(const std::string& tag);
 ```
 
 **Parameters:**
@@ -575,23 +592,47 @@ Signature:
 
 ---
 
-#### **`Renderer::`**
+#### **`Renderer::GetUniform`**
 
 
- Struct to hold gizmo information
+ Get a uniform by ID
 
 Signature:
 
 ```cpp
- };
+ static Uniform* GetUniform(size_t id);
 ```
 
-**Members:**
+**Parameters:**
 
-| Type | Name | Description |
-| --- | --- | --- | 
-| `bgfx::TextureHandle` | `texture` | Texture handle for the gizmo |
-| `float` | `size` | Size of the gizmo. 1.0f is the default size, roughly 1 unit in world space |
+- `id`: ID of the uniform (Returned by RegisterUniform)
+
+**Returns:** Pointer to the Uniform struct, or nullptr if not found
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Renderer::SetPseudoCamera`**
+
+
+ Set which CameraComponent to use as the pseudo camera for rendering
+
+Signature:
+
+```cpp
+ static void SetPseudoCamera(CameraComponent* camera);
+```
+
+**Parameters:**
+
+- `camera`: Pointer to the CameraComponent to use as the pseudo camera
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
 
 ---
 
@@ -647,13 +688,45 @@ Signature:
 
 ---
 
+#### **`Renderer::_GetProgram`**
+
+
+ Internal helper for GetProgram.
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ static Program* _GetProgram(size_t id);
+```
+
+**Parameters:**
+
+- `id`: ID of the shader program
+
+**Returns:** Pointer to the Program struct, or nullptr if not found
+
+**Thread Safety:** read-only
+
+---
+
 ## Member Variables
 
 
 | Type | Name | Description |
 | --- | --- | --- | 
 | `int` | `height` | Height of the game window in pixels |
-| `SDL_Window*` | `win` | SDL window handle |
+| `std::string` | `m_title` | Title of the game window |
+| `bool` | `m_isReady` | Whether the renderer is initialized and ready |
+| `static` | `std` | Registry of shader uniforms |
+| `static` | `std` | Registry of gizmos |
+| `float` | `m_gizmoSize` | Default size for gizmos |
+| `static` | `std` | Shader programs organized by view ID |
+| `CameraComponent*` | `m_pseudoCamera` | Pseudo camera for rendering when enabled in debug mode |
+| `DebugRender*` | `m_drender` | Debug renderer instance |
+| `bool` | `m_isFirstFrame` | Whether this is the first frame being rendered |
 
 ---
 

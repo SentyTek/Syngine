@@ -1,9 +1,9 @@
 // ╒══════════════════════════ Syngine.h ═╕
 // │ Syngine                              │
-// │ Created YYYY-MM-DD                   │
+// │ Created 2025-08-11                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -23,3 +23,4 @@
 
 #include "Syngine/Utils/Helpers.h"
 #include "Syngine/Utils/ModelLoader.h"
+#include "Syngine/Utils/Profiler.h"

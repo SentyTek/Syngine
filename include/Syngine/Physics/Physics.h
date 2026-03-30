@@ -2,15 +2,16 @@
 // │ Syngine                              │
 // │ Created 2025-05-21                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
 
 // Forward declarations
 namespace Syngine {
-class DebugRender;
+    class DebugRender;
+    struct CompoundShapePart; // Forward declaration
 }
 
 #include "Syngine/Utils/ModelLoader.h"
@@ -45,20 +46,21 @@ class DebugRender;
 
 using namespace JPH;
 namespace Syngine {
-    struct DebugModes; // Forward declaration
+struct DebugModes; // Forward declaration
+struct CompoundShapePart; // Forward declaration
 
     // Layer definitions for Jolt
     namespace Layers {
         static constexpr ObjectLayer NON_MOVING = 0;
         static constexpr ObjectLayer MOVING = 1;
-        static constexpr ObjectLayer NUM_LAYERS = 2; 
+        static constexpr ObjectLayer NUM_LAYERS = 2;
     };
 
     // BroadPhaseLayer definitions for Jolt
     namespace BroadPhaseLayers {
         static constexpr BroadPhaseLayer NON_MOVING(0);
         static constexpr BroadPhaseLayer MOVING(1);
-        static constexpr uint32_t NUM_BP_LAYERS = 2; 
+        static constexpr uint32_t NUM_BP_LAYERS = 2;
     };
 
     // BroadPhaseLayerInterface implementation
@@ -199,6 +201,10 @@ namespace Syngine {
         /// @internal
         void _Update(float deltaTime, int collisionSteps);
 
+        /// @brief Get the debug renderer
+        /// @return Pointer to the debug renderer
+        DebugRender* _GetDebugRenderer() { return mDebugRenderer; }
+
         /// @brief Draw debug information
         /// @param width Width of the viewport
         /// @param height Height of the viewport
@@ -297,7 +303,8 @@ namespace Syngine {
                         const MeshData&  meshData,
                         EMotionType      motionType,
                         ObjectLayer      layer,
-                        const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f));
+                        const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f),
+                        const float      mass  = 0.f);
 
         /// @brief Create a capsule body
         /// @param position Position of the capsule
@@ -335,7 +342,14 @@ namespace Syngine {
                                ObjectLayer layer,
                                float       mass = 0.0f);
 
-        void _DrawOtherFrustum(const float* view, const float* proj);
+        BodyID _CreateCompound(RVec3Arg                              position,
+                               QuatArg                               rotation,
+                               const std::vector<CompoundShapePart>& parts,
+                               EMotionType                           motionType,
+                               ObjectLayer                           layer,
+                               float mass = 0.0f);
+
+        void _DrawFrustum(const float* view, const float* proj);
 
         void _DrawLine(const float* from, const float* to, JPH::ColorArg color);
 

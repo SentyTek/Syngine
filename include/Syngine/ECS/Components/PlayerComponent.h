@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-05-29                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -14,6 +14,7 @@
 
 #include "SDL3/SDL_video.h"
 #include "SDL3/SDL_events.h"
+#include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 
 #include "Jolt/Jolt.h"
@@ -47,7 +48,7 @@ enum class PlayerState {
 /// @section PlayerComponent
 class PlayerComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::Components componentType = SYN_COMPONENT_PLAYER; //* Player component type
+    static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_PLAYER; //* Player component type
 
     /// @brief Constructor for PlayerComponent
     /// @param owner The GameObject that owns this component.
@@ -56,16 +57,29 @@ class PlayerComponent : public Syngine::Component {
     /// @note This should only be called by GameObject::AddComponent<T>()
     /// @since v0.0.1
     /// @internal
-    PlayerComponent(GameObject*               owner,
-                    Syngine::CameraComponent* camera);
-    
+    PlayerComponent(GameObject* owner, Syngine::CameraComponent* camera);
+
+    // No assignment operator because the copy is bad enough
+    PlayerComponent(const PlayerComponent& other);
+
     ~PlayerComponent();
 
     /// @brief Gets the component type
     /// @return The component type of this component.
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
+
+    /// @brief Clone the PlayerComponent
+    /// @return A unique pointer to the cloned PlayerComponent
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<PlayerComponent>(*this);
+    }
+
+    /// @brief Serializes the PlayerComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// PlayerComponent's state
+    Serializer::DataNode Serialize() const override;
 
     /// @brief Initializes the player component with camera, window, and physics
     /// manager.
@@ -88,15 +102,12 @@ class PlayerComponent : public Syngine::Component {
 
     /// @brief Updates the player. Mostly handles movement, physics, and
     /// updating the state.
-    /// @param keystate The current state of the keyboard.
-    /// @param simulate Whether to simulate physics or not.
     /// @param deltaTime The time since the last update.
     /// @note This is called every frame to update the player's position,
-    /// rotation, and state.
+    /// rotation, and state. Fetches keyboard state internally.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    /// @internal
-    void Update(const bool* keystate, float deltaTime);
+    void Update(float deltaTime) override;
 
     /// @brief Updates position and camera after physics simulation.
     /// @note This is called after the physics simulation to update the player's
@@ -104,7 +115,7 @@ class PlayerComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    void _PostPhysicsUpdate();
+    void PostPhysicsUpdate() override;
 
     /// @brief Gets the current player state.
     /// @return The current player state.
@@ -125,9 +136,9 @@ class PlayerComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetRotation(float yaw, float pitch);
-   
+
     float maxPitchAngle = 89.0f; //* Max vertical angle for the camera pitch (in degrees).
-    
+
     float sprintMult    = 2.0f; //* Multiplier for sprinting speed.
     float crouchSpeed   = 0.5f; //* Speed when crouching.
     float moveSpeed     = 1.5f; //* Default movement speed of the player.

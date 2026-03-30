@@ -13,29 +13,38 @@
 ## Goto: 
 
 
+- [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
 - [PhysicsShapes](#synginephysicsshapes)
-- [shape](#syngineshape)
-- [GetComponentType](#synginegetcomponenttype)
-- [Init](#syngineinit)
-- [Update](#syngineupdate)
-- [Destroy](#synginedestroy)
-- [_GetBodyID](#syngine_getbodyid)
-- [_GetPhysicsManager](#syngine_getphysicsmanager)
-- [GetMass](#synginegetmass)
-- [GetFriction](#synginegetfriction)
-- [GetRestitution](#synginegetrestitution)
-- [GetShapeParameters](#synginegetshapeparameters)
-- [UpdateShapeParameters](#syngineupdateshapeparameters)
-- [SetFriction](#synginesetfriction)
-- [SetRestitution](#synginesetrestitution)
+- [ForceMode](#syngineforcemode)
+- [RigidbodyParameters](#synginerigidbodyparameters)
+- [GetComponentType](#rigidbodycomponentgetcomponenttype)
+- [Clone](#rigidbodycomponentclone)
+- [Serialize](#rigidbodycomponentserialize)
+- [Init](#rigidbodycomponentinit)
+- [RetryInitIfPending](#rigidbodycomponentretryinitifpending)
+- [SyncBodyToTransform](#rigidbodycomponentsyncbodytotransform)
+- [Update](#rigidbodycomponentupdate)
+- [Destroy](#rigidbodycomponentdestroy)
+- [_GetBodyID](#rigidbodycomponent_getbodyid)
+- [_GetPhysicsManager](#rigidbodycomponent_getphysicsmanager)
+- [GetMass](#rigidbodycomponentgetmass)
+- [GetFriction](#rigidbodycomponentgetfriction)
+- [GetRestitution](#rigidbodycomponentgetrestitution)
+- [GetShapeParameters](#rigidbodycomponentgetshapeparameters)
+- [UpdateShapeParameters](#rigidbodycomponentupdateshapeparameters)
+- [SetFriction](#rigidbodycomponentsetfriction)
+- [SetRestitution](#rigidbodycomponentsetrestitution)
+- [AddForce](#rigidbodycomponentaddforce)
+- [AddForceAtPosition](#rigidbodycomponentaddforceatposition)
+- [AddTorque](#rigidbodycomponentaddtorque)
 
 ---
 
 ## Class Constructor
 
 
-#### **`Syngine::RigidbodyComponent`**
+#### **`RigidbodyComponent::RigidbodyComponent`**
 
 
  Constructor for the RigidbodyComponent class
@@ -50,8 +59,6 @@ Signature:
 
 **Parameters:**
 
-- `static`: Rigidbody component type
-- `static`: Rigidbody component type
 - `owner`: Pointer to the GameObject that owns this component
 - `params`: Rigidbody parameters to initialize the component
 
@@ -70,14 +77,54 @@ Signature:
 Signature:
 
 ```cpp
-enum class PhysicsShapes 
+enum class PhysicsShapes
 ```
+
+**Members:**
+
+| Name | Description |
+| --- | --- | 
+| `SPHERE` | Sphere shape |
+| `BOX` | Box shape |
+| `CAPSULE` | Capsule shape |
+| `CAPSULE_TAPERED` | Tapered capsule shape |
+| `CYLINDER` | Cylinder shape |
+| `CYLINDER_TAPERED` | Tapered cylinder shape |
+| `CONE` | Cone shape |
+| `CONVEX_HULL` | Convex hull shape |
+| `PLANE` | Plane shape |
+| `MESH` | Mesh shape |
+| `COMPOUND` | Compound shape |
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Syngine::shape`**
+#### **`Syngine::ForceMode`**
+
+
+ Enum for different force application modes
+
+Signature:
+
+```cpp
+enum class ForceMode
+```
+
+**Members:**
+
+| Name | Description |
+| --- | --- | 
+| `FORCE` | Add a continuous force to the rigidbody using its mass (F = m * a) (Newtons) |
+| `ACCELERATION` | Add a continuous acceleration to the rigidbody, ignoring its mass. Note: This is not well supported, and is equivalent to FORCE if you did NOT manually set the mass yourself. |
+| `IMPULSE` | Add an instant force impulse, using its mass (I = m * dv) ( Newton-seconds) |
+| `VELOCITY_CHANGE` | Change velocity instantaneously, ignoring its mass. This is not well supported, and is equivalent to IMPULSE you did NOT manually set the mass yourself. |
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::RigidbodyParameters`**
 
 
  Struct to hold parameters for the RigidbodyComponent. This struct is used to initialize the RigidbodyComponent with specific properties.
@@ -85,14 +132,14 @@ enum class PhysicsShapes
 Signature:
 
 ```cpp
- PhysicsShapes shape = PhysicsShapes::BOX; // The shape of the rigidbody
+struct RigidbodyParameters
 ```
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Syngine::GetComponentType`**
+#### **`RigidbodyComponent::GetComponentType`**
 
 
  Get the type of this component
@@ -100,7 +147,7 @@ Signature:
 Signature:
 
 ```cpp
- Syngine::Components GetComponentType() override;
+ Syngine::ComponentTypeID GetComponentType() override;
 ```
 
 **Returns:** The component type as an enum value
@@ -111,7 +158,37 @@ Signature:
 
 ---
 
-#### **`Syngine::Init`**
+#### **`RigidbodyComponent::Clone`**
+
+
+ Clone the RigidbodyComponent
+
+Signature:
+
+```cpp
+ std::unique_ptr<Component> Clone() const override;
+```
+
+**Returns:** A unique pointer to the cloned RigidbodyComponent
+
+---
+
+#### **`RigidbodyComponent::Serialize`**
+
+
+ Serializes the RigidbodyComponent to a data node
+
+Signature:
+
+```cpp
+ Serializer::DataNode Serialize() const override;
+```
+
+**Returns:** A pointer to the serialized data node representing the RigidbodyComponent's state
+
+---
+
+#### **`RigidbodyComponent::Init`**
 
 
  Initialize the RigidbodyComponent
@@ -134,7 +211,41 @@ Signature:
 
 ---
 
-#### **`Syngine::Update`**
+#### **`RigidbodyComponent::RetryInitIfPending`**
+
+
+ Retry deferred initialization when dependencies (like Transform) become available.
+
+Signature:
+
+```cpp
+ void RetryInitIfPending();
+```
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`RigidbodyComponent::SyncBodyToTransform`**
+
+
+ Push the current TransformComponent world pose into the physics body. Useful after runtime re-parenting or prefab child attachment.
+
+Signature:
+
+```cpp
+ void SyncBodyToTransform();
+```
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`RigidbodyComponent::Update`**
 
 
  Update the RigidbodyComponent
@@ -144,12 +255,12 @@ Signature:
 Signature:
 
 ```cpp
- void Update(bool simulate);
+ void Update(float deltaTime) override;
 ```
 
 **Parameters:**
 
-- `simulate`: Whether to simulate physics or not
+- `deltaTime`: The physics timestep
 
 **Thread Safety:** not-safe
 
@@ -157,7 +268,7 @@ Signature:
 
 ---
 
-#### **`Syngine::Destroy`**
+#### **`RigidbodyComponent::Destroy`**
 
 
  Destroys the RigidbodyComponent and its associated physics body
@@ -176,7 +287,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_GetBodyID`**
+#### **`RigidbodyComponent::_GetBodyID`**
 
 
  Get the BodyID of the physics body
@@ -198,7 +309,7 @@ Signature:
 
 ---
 
-#### **`Syngine::_GetPhysicsManager`**
+#### **`RigidbodyComponent::_GetPhysicsManager`**
 
 
  Gets the physics manager
@@ -220,7 +331,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetMass`**
+#### **`RigidbodyComponent::GetMass`**
 
 
  Get the mass of the physics body.
@@ -241,7 +352,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetFriction`**
+#### **`RigidbodyComponent::GetFriction`**
 
 
  Get the friction of the physics body.
@@ -260,7 +371,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetRestitution`**
+#### **`RigidbodyComponent::GetRestitution`**
 
 
  Get the restitution of the physics body.
@@ -279,7 +390,7 @@ Signature:
 
 ---
 
-#### **`Syngine::GetShapeParameters`**
+#### **`RigidbodyComponent::GetShapeParameters`**
 
 
  Get the shape parameters of the physics body
@@ -300,7 +411,7 @@ Signature:
 
 ---
 
-#### **`Syngine::UpdateShapeParameters`**
+#### **`RigidbodyComponent::UpdateShapeParameters`**
 
 
  Set the shape parameters of the physics body
@@ -321,7 +432,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetFriction`**
+#### **`RigidbodyComponent::SetFriction`**
 
 
  Set the friction of the physics body
@@ -342,7 +453,7 @@ Signature:
 
 ---
 
-#### **`Syngine::SetRestitution`**
+#### **`RigidbodyComponent::SetRestitution`**
 
 
  Set the restitution of the physics body
@@ -360,6 +471,88 @@ Signature:
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`RigidbodyComponent::AddForce`**
+
+
+ Add a force to the rigidbody
+
+**Note:** Force values for visible movement may be higher than expected.
+
+Signature:
+
+```cpp
+ void AddForce(const float* force, ForceMode mode = ForceMode::FORCE);
+```
+
+**Parameters:**
+
+- `force`: The force to add (vec3)
+- `mode`: The mode of force application. See ForceMode enum for details.
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`RigidbodyComponent::AddForceAtPosition`**
+
+
+ Add a force to the rigidbody at a specific position
+
+**Note:** Force values for visible movement may be higher than expected.
+
+Signature:
+
+```cpp
+ void AddForceAtPosition(const float* force, const float* position, ForceMode mode = ForceMode::FORCE);
+```
+
+**Parameters:**
+
+- `force`: The force to add (vec3)
+- `position`: The position to apply the force at (vec3)
+- `mode`: The mode of force application
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`RigidbodyComponent::AddTorque`**
+
+
+ Add a torque to the rigidbody
+
+**Note:** Torque values for visible rotation may be higher than expected.
+
+Signature:
+
+```cpp
+ void AddTorque(const float* torque, ForceMode mode = ForceMode::FORCE);
+```
+
+**Parameters:**
+
+- `torque`: The torque to add (vec3)
+- `mode`: The mode of torque application. Note that ACCELERATION and VELOCITY_CHANGE modes are not well supported for torque, and will be treated the same as FORCE and IMPULSE respectively. Use with caution.
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+## Member Variables
+
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `constexpr` | `Syngine` | Rigidbody component type |
 
 ---
 

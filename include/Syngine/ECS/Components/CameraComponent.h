@@ -2,12 +2,13 @@
 // │ Syngine                              │
 // │ Created 2025-06-10                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
 #include "Syngine/ECS/Component.h"
+#include "bx/math.h"
 
 namespace Syngine {
 
@@ -35,7 +36,7 @@ struct Camera {
 /// @since v0.0.1
 class CameraComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::Components componentType = Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
+    static constexpr Syngine::ComponentTypeID componentType = Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
 
     /// @brief Constructor for the CameraComponent class
     /// @param owner Pointer to the GameObject that owns this component
@@ -43,20 +44,35 @@ class CameraComponent : public Syngine::Component {
     /// @since v0.0.1
     /// @internal
     CameraComponent(GameObject* owner);
-    
+
+    CameraComponent(const CameraComponent& other);
+    CameraComponent& operator=(const CameraComponent& other);
+
     ~CameraComponent();
 
     /// @brief Get the type of this component
     /// @return The component type as an enum value
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::Components GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override;
+
+    /// @brief Clone the CameraComponent
+    /// @return A unique pointer to the cloned CameraComponent
+
+    std::unique_ptr<Component> Clone() const override {
+        return std::make_unique<CameraComponent>(*this);
+    }
+
+    /// @brief Serializes the CameraComponent to a data node
+    /// @return A pointer to the serialized data node representing the
+    /// CameraComponent's state
+    Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the camera component
     /// @note This should only be called when the component is added to a GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void Init() {}; // No specific initialization needed
+    void Init() override {} // No specific initialization needed
 
     /// @brief Update the camera component
     /// @param viewId ID of the view to update
@@ -125,6 +141,39 @@ class CameraComponent : public Syngine::Component {
   private:
     GameObject* m_owner; // Reference to the owner game object
     Camera      camera;  // Camera data
+
+    /// @brief Structure representing a plane in 3D space
+    /// @since v0.0.1
+    /// @internal
+    struct Plane {
+        float normal[3] = { 0.f, 1.f, 0.f }; //* Normal vector of the plane
+        float distance  = 0.f;               //* Distance from origin
+    };
+
+    /// @brief Structure representing a frustum for view culling
+    /// @since v0.0.1
+    /// @internal
+    struct Frustum {
+        Plane top;    //* Top plane
+        Plane bottom; //* Bottom plane
+        Plane left;   //* Left plane
+        Plane right;  //* Right plane
+        Plane n;   //* Near plane
+        Plane f;    //* Far plane
+    };
+
+    static void _normalizePlane(CameraComponent::Plane& plane);
+
+    Frustum _extractFrustum();
+
+    bool _aabbInsidePlane(const Plane&    plane,
+                          const bx::Vec3& min,
+                          const bx::Vec3& max);
+    bool _aabbInsideFrustum(const Frustum&  frustum,
+                            const bx::Vec3& min,
+                            const bx::Vec3& max);
+
+    friend class RenderCore;
 }; // class CameraComponent
 
 } // namespace Syngine

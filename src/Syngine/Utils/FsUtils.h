@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-07-18                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 #pragma once
 
@@ -37,7 +37,7 @@ static inline std::string _ResolveOSPath(const char* path)
     // SDL_GetBasePath() returns ".../Contents/MacOS/"
     const char* base = SDL_GetBasePath();
     std::string p(base);
-    
+
     // swap "MacOS/" -> "Resources/"
     size_t pos = p.find("MacOS/");
     if (pos != std::string::npos)
@@ -46,7 +46,7 @@ static inline std::string _ResolveOSPath(const char* path)
     }
     else
     {
-        
+
     }
     p += path; // e.g. "shaders/vs_simple.sc.bin"
     return p;
@@ -62,8 +62,7 @@ static inline std::string _ResolveOSPath(const char* path)
 inline bool _CheckRequiredFolders() {
     const char* requiredFolders[] = {
         "shaders",
-        "meshes",
-        "default",
+        "default", // Should meshes be considered required?
     };
 
     for (const char* folder : requiredFolders) {
@@ -78,5 +77,27 @@ inline bool _CheckRequiredFolders() {
     }
     return true;
 }
+
+/// @brief Take an absolute path and make it relative to the root of the game
+/// directory
+/// @param path The absolute path to convert
+/// @note Assumes the input path is to something within the game directory. If
+/// it's not, the behavior is undefined.
+/// @return The path relative to the root of the game directory
+/// @since v0.0.1
+static inline std::string _MakeRelativeToRoot(std::string path) {
+    std::string gameDir = Syngine::_ResolveOSPath("").substr(0, Syngine::_ResolveOSPath("").find_last_of("/\\") + 1);
+    if (path.find(gameDir) == 0) {
+        return path.substr(gameDir.length());
+    }
+    return path; // If the path doesn't start with the game directory, return it unchanged
+}
+
+/// @brief Check if a file exists at the given path, taking into account
+/// platform-specific path resolution
+/// @param path The relative path to the file to check
+/// @return True if the file exists, false otherwise
+/// @since v0.0.1
+bool _FileExists(const char* path);
 
 } // namespace Syngine

@@ -2,13 +2,16 @@
 // │ Syngine                              │
 // │ Created 2025-06-10                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/Components/CameraComponent.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/GameObject.h"
 
+#include "Syngine/Utils/Profiler.h"
+#include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
 
@@ -33,8 +36,40 @@ CameraComponent::CameraComponent(GameObject* owner) {
     }
 }
 
+CameraComponent::CameraComponent(const CameraComponent& other) {
+    this->m_owner = other.m_owner;
+    this->camera = other.camera;
+
+    if (this->m_owner) {
+        this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+    }
+}
+
+CameraComponent& CameraComponent::operator=(const CameraComponent& other) {
+    if (this != &other) {
+        this->m_owner = other.m_owner;
+        this->camera = other.camera;
+
+        if (this->m_owner) {
+            this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+        }
+    }
+    return *this;
+}
+
 CameraComponent::~CameraComponent() {
     // No specific cleanup needed for now
+}
+
+Serializer::DataNode CameraComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
+    node / "eye" = std::vector<float>{ camera.eye[0], camera.eye[1], camera.eye[2] };
+    node / "fov" = camera.fov;
+    node / "farPlane" = camera.farPlane;
+    node / "yaw" = camera.yaw;
+    node / "pitch" = camera.pitch;
+    return node;
 }
 
 void CameraComponent::Update(int viewId, int width, int height) {
@@ -65,7 +100,7 @@ void CameraComponent::Update(int viewId, int width, int height) {
     bgfx::setViewTransform(viewId, cam.view, cam.proj);
 }
 
-Components CameraComponent::GetComponentType() {
+Syngine::ComponentTypeID CameraComponent::GetComponentType() {
     return SYN_COMPONENT_CAMERA;
 }
 
@@ -107,8 +142,132 @@ void CameraComponent::GetAngles(float& yaw, float& pitch) const {
     pitch = this->camera.pitch;
 }
 
-Camera Syngine::CameraComponent::GetCamera() const {
-    return this->camera;
+Camera Syngine::CameraComponent::GetCamera() const { return this->camera; }
+
+void CameraComponent::_normalizePlane(CameraComponent::Plane& plane) {
+    const float len = bx::sqrt(plane.normal[0] * plane.normal[0] +
+                               plane.normal[1] * plane.normal[1] +
+                               plane.normal[2] * plane.normal[2]);
+    const float invLen = 1.0f / len;
+    plane.normal[0] *= invLen;
+    plane.normal[1] *= invLen;
+    plane.normal[2] *= invLen;
+    plane.distance  *= invLen;
 }
+
+CameraComponent::Frustum CameraComponent::_extractFrustum() {
+    Frustum frustum;
+
+    float* vp = new float[16];
+    bx::mtxMul(vp, this->camera.view, this->camera.proj);
+
+    frustum.left.normal[0] = vp[3] + vp[0];
+    frustum.left.normal[1] = vp[7] + vp[4];
+    frustum.left.normal[2] = vp[11] + vp[8];
+    frustum.left.distance  = vp[15] + vp[12];
+
+    frustum.right.normal[0] = vp[3] - vp[0];
+    frustum.right.normal[1] = vp[7] - vp[4];
+    frustum.right.normal[2] = vp[11] - vp[8];
+    frustum.right.distance  = vp[15] - vp[12];
+
+    frustum.bottom.normal[0] = vp[3] + vp[1];
+    frustum.bottom.normal[1] = vp[7] + vp[5];
+    frustum.bottom.normal[2] = vp[11] + vp[9];
+    frustum.bottom.distance  = vp[15] + vp[13];
+
+    frustum.top.normal[0] = vp[3] - vp[1];
+    frustum.top.normal[1] = vp[7] - vp[5];
+    frustum.top.normal[2] = vp[11] - vp[9];
+    frustum.top.distance  = vp[15] - vp[13];
+
+    frustum.n.normal[0] = vp[3] + vp[2];
+    frustum.n.normal[1] = vp[7] + vp[6];
+    frustum.n.normal[2] = vp[11] + vp[10];
+    frustum.n.distance  = vp[15] + vp[14];
+
+    frustum.f.normal[0] = vp[3] - vp[2];
+    frustum.f.normal[1] = vp[7] - vp[6];
+    frustum.f.normal[2] = vp[11] - vp[10];
+    frustum.f.distance  = vp[15] - vp[14];
+
+    _normalizePlane(frustum.left);
+    _normalizePlane(frustum.right);
+    _normalizePlane(frustum.top);
+    _normalizePlane(frustum.bottom);
+    _normalizePlane(frustum.n);
+    _normalizePlane(frustum.f);
+    delete[] vp;
+
+    return frustum;
+}
+
+bool CameraComponent::_aabbInsidePlane(const Plane& plane, const bx::Vec3& min, const bx::Vec3& max) {
+    bx::Vec3 v = { (plane.normal[0] >= 0.0f) ? max.x : min.x,
+                   (plane.normal[1] >= 0.0f) ? max.y : min.y,
+                   (plane.normal[2] >= 0.0f) ? max.z : min.z };
+
+    const float distance = bx::dot(bx::Vec3(plane.normal[0], plane.normal[1], plane.normal[2]), v) + plane.distance;
+
+    return distance >= 0;
+}
+
+bool CameraComponent::_aabbInsideFrustum(const Frustum&  frustum,
+                                         const bx::Vec3& min,
+                                         const bx::Vec3& max) {
+    SYN_PROFILE_FUNCTION();
+    return _aabbInsidePlane(frustum.left, min, max) &&
+           _aabbInsidePlane(frustum.right, min, max) &&
+           _aabbInsidePlane(frustum.top, min, max) &&
+           _aabbInsidePlane(frustum.bottom, min, max) &&
+           _aabbInsidePlane(frustum.n, min, max) &&
+           _aabbInsidePlane(frustum.f, min, max);
+}
+
+static Syngine::ComponentRegistrar s_cameraRegistrar(
+    Syngine::SYN_COMPONENT_CAMERA,
+
+    // ParseXml
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
+        for (const auto& attr : elem->attributes()) {
+            scl::string key = attr->tag();
+            std::string value = attr->data().cstr();
+            if (key == "eye") {
+                scl::string eyeValue(value);
+                node / "eye" = Serializer::_ParseFloatArray(eyeValue);
+            } else if (key == "fov") {
+                node / "fov" = std::stof(value);
+            } else if (key == "farPlane") {
+                node / "farPlane" = std::stof(value);
+            } else if (key == "yaw") {
+                node / "yaw" = std::stof(value);
+            } else if (key == "pitch") {
+                node / "pitch" = std::stof(value);
+            }
+        }
+        return node;
+    },
+
+    // Instantiate
+    [](Syngine::GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+        auto comp = std::make_unique<CameraComponent>(owner);
+        if (data.Has("eye")) {
+            const auto& eyeArr = data["eye"].As<std::vector<float>>();
+            comp->SetPosition(eyeArr[0], eyeArr[1], eyeArr[2]);
+        }
+        if (data.Has("fov")) {
+            comp->SetFOV(data["fov"].As<float>());
+        }
+        if (data.Has("farPlane")) {
+            comp->SetFarPlane(data["farPlane"].As<float>());
+        }
+        if (data.Has("yaw") && data.Has("pitch")) {
+            comp->SetAngles(data["yaw"].As<float>(), data["pitch"].As<float>());
+        }
+        return comp;
+    }
+);
 
 } // namespace Syngine

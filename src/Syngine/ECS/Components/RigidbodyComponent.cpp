@@ -2,14 +2,15 @@
 // │ Syngine                              │
 // │ Created 2025-05-22                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/RigidbodyComponent.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
@@ -22,23 +23,72 @@
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 #include "Jolt/Physics/EActivation.h"
 
-
 #include "Jolt/Math/MathTypes.h"
-#include "Jolt/Physics/Body/MotionType.h"
+#include "Jolt/Physics/Body/MotionProperties.h"
+#include "Syngine/Utils/Serializer.h"
+#include "bx/math.h"
+
+#include <memory>
 #include <vector>
 
 namespace Syngine {
-RigidbodyComponent::RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params) {
+RigidbodyComponent::RigidbodyComponent(GameObject*                  owner,
+                                       Syngine::RigidbodyParameters params) {
+    if (!Core::IsPhysicsEnabled()) return;
+
     this->m_owner = owner;
     this->Init(params);
+}
+
+RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
+    if (!Core::IsPhysicsEnabled()) return;
+
+    this->m_owner = other.m_owner;
+    this->physicsManager = other.physicsManager;
+    this->transform = other.transform;
+    this->bodyID = other.bodyID;
+    this->mass = other.mass;
+    this->friction = other.friction;
+    this->restitution = other.restitution;
+    this->shape = other.shape;
+    this->shapeParameters = other.shapeParameters;
+}
+
+RigidbodyComponent&
+RigidbodyComponent::operator=(const RigidbodyComponent& other) {
+    if (!Core::IsPhysicsEnabled()) return *this;
+
+    if (this != &other) {
+        this->m_owner = other.m_owner;
+        this->physicsManager = other.physicsManager;
+        this->transform = other.transform;
+        this->bodyID = other.bodyID;
+        this->mass = other.mass;
+        this->friction = other.friction;
+        this->restitution = other.restitution;
+        this->shape = other.shape;
+        this->shapeParameters = other.shapeParameters;
+    }
+    return *this;
 }
 
 RigidbodyComponent::~RigidbodyComponent() {
     Destroy();
 }
 
-Components RigidbodyComponent::GetComponentType() {
+Syngine::ComponentTypeID RigidbodyComponent::GetComponentType() {
     return SYN_COMPONENT_RIGIDBODY;
+}
+
+Serializer::DataNode RigidbodyComponent::Serialize() const {
+    Serializer::DataNode node;
+    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_RIGIDBODY);
+    node / "mass" = mass;
+    node / "friction" = friction;
+    node / "restitution" = restitution;
+    node / "shape"       = static_cast<int>(shape);
+    node / "shapeParameters" = shapeParameters;
+    return node;
 }
 
 JPH::BodyID RigidbodyComponent::_GetBodyID() const { return bodyID; }
@@ -50,6 +100,13 @@ float RigidbodyComponent::GetRestitution() const { return restitution; }
 
 // Initialize the RigidbodyComponent with the given parameters.
 void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
+    pendingParams = params;
+    initPending = false;
+
+    if (initComplete && !bodyID.IsInvalid()) {
+        return;
+    }
+
     this->physicsManager = Syngine::Core::_GetApp()->physicsManager.get();
     this->transform      = this->m_owner->GetComponent<TransformComponent>();
     this->mass           = params.mass;
@@ -57,20 +114,29 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
     this->restitution    = params.restitution;
     this->shape          = params.shape;
     this->shapeParameters = params.shapeParameters;
-
-    if (!physicsManager || !transform) {
+    if (!this->transform) {
+        initPending = true;
+        Syngine::Logger::Warn("RigidbodyComponent deferred initialization: waiting for TransformComponent");
         return;
     }
 
-    float* position = transform->position;
-    float* rotation = transform->rotation;
-    JPH::Quat rotationQuat = JPH::Quat::sEulerAngles(JPH::Vec3(rotation[0], rotation[1], rotation[2]));
-    JPH::RVec3 posVec(position[0], position[1], position[2]);
+    if (!physicsManager || !transform) {
+        initPending = true;
+        return;
+    }
+
+    float* curPos = transform->GetPosition();
+    float curRot[4];
+    transform->GetRotationQuaternion(
+        curRot[0], curRot[1], curRot[2], curRot[3]);
+
+    JPH::Quat rotationQuat(curRot[0], curRot[1], curRot[2], curRot[3]);
+    JPH::RVec3 posVec(curPos[0], curPos[1], curPos[2]);
 
     switch (shape) {
         case PhysicsShapes::SPHERE: {
             if (shapeParameters.empty()) { Syngine::Logger::Error("RigidbodyComponent::Init: No radius provided for sphere shape."); return; }
-            float radius = shapeParameters[0]/2;
+            float radius = shapeParameters[0];
             bodyID = physicsManager->_CreateSphere(posVec, radius, params.motionType, params.layer, mass);
             break;
         }
@@ -79,7 +145,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                 Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for box shape.");
                 return;
             }
-            JPH::Vec3 shapeParametersVec(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
+            JPH::Vec3 shapeParametersVec(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             bodyID         = physicsManager->_CreateBox(posVec,
                                                rotationQuat,
                                                shapeParametersVec,
@@ -101,10 +167,10 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
 
             JPH::Vec3 scale(0.5f, 0.5f, 0.5f);
             if (!shapeParameters.empty()) {
-                scale = JPH::Vec3(shapeParameters[0]/2, shapeParameters[1]/2, shapeParameters[2]/2);
+                scale = JPH::Vec3(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             }
 
-            bodyID = physicsManager->_CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale);
+            bodyID = physicsManager->_CreateMeshBody(posVec, rotationQuat, meshComp->meshData, params.motionType, params.layer, scale, mass);
             break;
         }
         case PhysicsShapes::CAPSULE: {
@@ -121,6 +187,14 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
             bodyID = physicsManager->_CreateCylinder(posVec, rotationQuat, radius, halfHeight, params.motionType, params.layer, mass);
             break;
         }
+        case PhysicsShapes::COMPOUND: {
+            if (params.compoundParts.empty()) {
+                Syngine::Logger::Error("RigidbodyComponent::Init: No parts provided for compound shape.");
+                return;
+            }
+            bodyID = physicsManager->_CreateCompound(posVec, rotationQuat, params.compoundParts, params.motionType, params.layer, mass);
+            break;
+        }
         default:
             return;
     }
@@ -130,54 +204,87 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         // Set the body properties (mass set during body creation)
         if (friction > 0) bodyInterface.SetFriction(bodyID, friction);
         if (restitution > 0) bodyInterface.SetRestitution(bodyID, restitution);
+        initComplete = true;
+        initPending = false;
+    } else {
+        initPending = true;
     }
 }
 
-void RigidbodyComponent::Update(bool simulate) {
+void RigidbodyComponent::RetryInitIfPending() {
+    if (!initPending || initComplete) {
+        return;
+    }
+
+    Syngine::Logger::LogF(LogLevel::INFO, "RigidbodyComponent: Retrying initialization for GameObject '%s'", m_owner->name.c_str());
+    Init(pendingParams);
+}
+
+void RigidbodyComponent::SyncBodyToTransform() {
+    if (initPending && !initComplete) {
+        RetryInitIfPending();
+    }
+
     if (!physicsManager || !transform || bodyID.IsInvalid()) {
         return;
     }
-    if (!physicsManager || !transform || bodyID.IsInvalid()) return;
 
     BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    float* curPos = transform->GetPosition();
+    float  curRot[4];
+    transform->GetRotationQuaternion(curRot[0], curRot[1], curRot[2], curRot[3]);
 
-    if(simulate) {
+    Vec3 pos(curPos[0], curPos[1], curPos[2]);
+    Quat rot(curRot[0], curRot[1], curRot[2], curRot[3]);
+    bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
+}
+
+void RigidbodyComponent::Update(float deltaTime) {
+    if (initPending && !initComplete) {
+        RetryInitIfPending();
+    }
+
+    if (!physicsManager || !transform || bodyID.IsInvalid()) {
+        return;
+    }
+
+    BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    bool simulate = Syngine::Core::Get()->GetSimulationState();
+
+    if (simulate) {
         // Smoothly lerp the TransformComponent towards the physics body's
         // position and rotation over time
-        static const float lerpAlpha = 1.0f / 5.0f;
-
+        static const float lerpAlpha = 0.2f;
+        // When physics drives the transform
         RVec3 physicsPos = bodyInterface.GetPosition(bodyID);
-        Quat  physicsRot = bodyInterface.GetRotation(bodyID);
+        Quat physicsRot = bodyInterface.GetRotation(bodyID);
 
-        Vec3 currentPos(transform->position[0],
-                        transform->position[1],
-                        transform->position[2]);
-        Quat currentRot(transform->rotation[0],
-                        transform->rotation[1],
-                        transform->rotation[2],
-                        transform->rotation[3]);
+        float* curPos = transform->GetPosition(); // World position
+        float curRot[4];
+        transform->GetRotationQuaternion(
+            curRot[0], curRot[1], curRot[2], curRot[3]);
+
+        Vec3 currentPos(curPos[0], curPos[1], curPos[2]);
+        Quat currentRot(curRot[0], curRot[1], curRot[2], curRot[3]);
 
         // Lerp pos and slerp rot
-        Vec3 lerpedPos =
-            currentPos +
-            (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) -
-             currentPos) *
-                lerpAlpha;
-        Quat lerpedRot = currentRot.SLERP(physicsRot, lerpAlpha);
+        Vec3 lerpedPos = currentPos + (Vec3(physicsPos.GetX(), physicsPos.GetY(), physicsPos.GetZ()) - currentPos) * lerpAlpha;
 
-        transform->SetPosition(
+        Quat targetRot = physicsRot.Conjugated();
+        Quat lerpedRot = currentRot.SLERP(targetRot, lerpAlpha);
+
+        transform->SetWorldPosition(
             lerpedPos.GetX(), lerpedPos.GetY(), lerpedPos.GetZ());
-        transform->SetRotation(lerpedRot.GetX(), lerpedRot.GetY(),
+        transform->SetWorldRotationQuat(lerpedRot.GetX(), lerpedRot.GetY(),
                                lerpedRot.GetZ(), lerpedRot.GetW());
     } else {
-        Vec3 pos(transform->position[0], 
-                  transform->position[1], 
-                  transform->position[2]);
-        Quat rot(transform->rotation[0],
-                  transform->rotation[1],
-                  transform->rotation[2],
-                  transform->rotation[3]);
-        
+        float* curPos = transform->GetPosition();
+        float  curRot[4];
+        transform->GetRotationQuaternion(
+            curRot[0], curRot[1], curRot[2], curRot[3]);
+        Vec3 pos(curPos[0], curPos[1], curPos[2]);
+        Quat rot(curRot[0], curRot[1], curRot[2], curRot[3]);
+
         bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
     }
 }
@@ -293,5 +400,145 @@ void RigidbodyComponent::SetRestitution(float newRestitution) {
     restitution = newRestitution;
     physicsManager->_GetBodyInterface().SetRestitution(bodyID, restitution);
 }
+
+//----- Forces and whatnot
+// Important to note again that ACCELERATION and VELOCITY_CHANGE modes are
+// identical to FORCE and IMPULSE respectively, at least if user did not set
+// mass manually during rb creation. Jolt doesn't really support these modes so
+// it is what it is.
+void RigidbodyComponent::AddForce(const float* force, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]));
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]) * (mass == 0 ? 1.0f : mass));
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]));
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]) * (mass == 0 ? 1.0f : mass));
+        break;
+    }
+}
+
+void RigidbodyComponent::AddForceAtPosition(const float* force, const float* position, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    JPH::RVec3 pos(position[0], position[1], position[2]);
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]), pos);
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddForce(bodyID, JPH::Vec3(force[0], force[1], force[2]) * mass, pos);
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]), pos);
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddImpulse(bodyID, JPH::Vec3(force[0], force[1], force[2]) * mass, pos);
+        break;
+    }
+}
+
+void RigidbodyComponent::AddTorque(const float* torque, ForceMode mode) {
+    if (bodyID.IsInvalid() || !physicsManager) return;
+    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+
+    switch (mode) {
+    case ForceMode::FORCE:
+        bodyInterface.AddTorque(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]));
+        break;
+    case ForceMode::ACCELERATION:
+        bodyInterface.AddTorque(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]) * mass);
+        break;
+    case ForceMode::IMPULSE:
+        bodyInterface.AddAngularImpulse(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]));
+        break;
+    case ForceMode::VELOCITY_CHANGE:
+        bodyInterface.AddAngularImpulse(bodyID, JPH::Vec3(torque[0], torque[1], torque[2]) * mass);
+        break;
+    }
+}
+
+// Helper to convert 4x4 matrix to quaternion
+void RigidbodyComponent::_MatrixToQuat(float* outQuat, const float* mtx) {
+    // Assumes rotation matrix
+    float trace = mtx[0] + mtx[5] + mtx[10];
+    float s;
+
+    if (trace > 0.0f) {
+        s = 0.5f / std::sqrt(trace + 1.0f);
+        outQuat[3] = 0.25f / s;              // w
+        outQuat[0] = (mtx[6] - mtx[9]) * s; // x
+        outQuat[1] = (mtx[8] - mtx[2]) * s; // y
+        outQuat[2] = (mtx[1] - mtx[4]) * s; // z
+    } else {
+        if (mtx[0] > mtx[5] && mtx[0] > mtx[10]) {
+            s = 2.0f * std::sqrt(1.0f + mtx[0] - mtx[5] - mtx[10]);
+            outQuat[3] = (mtx[6] - mtx[9]) / s; // w
+            outQuat[0] = 0.25f * s;              // x
+            outQuat[1] = (mtx[1] + mtx[4]) / s; // y
+            outQuat[2] = (mtx[8] + mtx[2]) / s; // z
+        } else if (mtx[5] > mtx[10]) {
+            s = 2.0f * std::sqrt(1.0f + mtx[5] - mtx[0] - mtx[10]);
+            outQuat[3] = (mtx[8] - mtx[2]) / s; // w
+            outQuat[0] = (mtx[1] + mtx[4]) / s; // x
+            outQuat[1] = 0.25f * s;              // y
+            outQuat[2] = (mtx[6] + mtx[9]) / s; // z
+        } else {
+            s = 2.0f * std::sqrt(1.0f + mtx[10] - mtx[0] - mtx[5]);
+            outQuat[3] = (mtx[1] - mtx[4]) / s; // w
+            outQuat[0] = (mtx[8] + mtx[2]) / s; // x
+            outQuat[1] = (mtx[6] + mtx[9]) / s; // y
+            outQuat[2] = 0.25f * s;              // z
+        }
+    }
+}
+
+static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
+    Syngine::SYN_COMPONENT_RIGIDBODY,
+
+    // ParseXml
+    [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
+        Serializer::DataNode node;
+        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_RIGIDBODY);
+        for (const auto& attr : elem->attributes()) {
+            std::string key = attr->tag().cstr();
+            std::string value = attr->data().cstr();
+
+            if (key == "mass")
+                node["mass"] = std::stof(value);
+            else if (key == "friction")
+                node["friction"] = std::stof(value);
+            else if (key == "restitution")
+                node["restitution"] = std::stof(value);
+            else if (key == "shape")
+                node["shape"] = static_cast<int>(std::stoi(value));
+            else if (key == "shapeParameters") {
+                scl::string v = attr->data();
+                node["shapeParameters"] = Serializer::_ParseFloatArray(v);
+            }
+        }
+        return node;
+    },
+
+    // Instantiate
+    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+        RigidbodyParameters params;
+        params.mass = data["mass"].As(1.0f);
+        params.friction = data["friction"].As(0.5f);
+        params.restitution = data["restitution"].As(0.0f);
+        params.shape = static_cast<PhysicsShapes>(data["shape"].As(0));
+        params.shapeParameters = data["shapeParameters"].As<std::vector<float>>({});
+        return std::make_unique<RigidbodyComponent>(owner, params);
+    }
+);
 
 } // namespace Syngine

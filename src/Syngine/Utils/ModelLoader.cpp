@@ -2,8 +2,8 @@
 // │ Syngine                              │
 // │ Created 2025-05-05                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Logger.h"
@@ -67,9 +67,9 @@ void SynModelLoader::_UnloadAllMeshes() {
 bool AssimpLoader::_LoadModel(MeshData& out, const std::string& path, bool loadTextures) {
     Assimp::Importer importer;
 
-    const uint16_t flags    = aiProcess_JoinIdenticalVertices
-                            | aiProcess_CalcTangentSpace
-                            | aiProcess_GenSmoothNormals;
+    const int flags = aiProcess_JoinIdenticalVertices |
+                      aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
+                      aiProcess_DropNormals;
 
     //read file. ideally use some kind of post processing (tangents, join indices, etc), but this is a simple example
     const std::string resolvedPath = _ResolveOSPath(path.c_str());
@@ -91,7 +91,7 @@ bool AssimpLoader::_LoadModel(MeshData& out, const std::string& path, bool loadT
     }
     meshData.hasTextures = loadTextures;
     meshData.path        = resolvedPath;
-    meshData.id          = loadedMeshes.size();
+    meshData.id          = static_cast<int>(loadedMeshes.size());
 
     try {
         meshData.lastWriteTime = std::filesystem::last_write_time(resolvedPath);
@@ -141,7 +141,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             vertex.tangent[0] = mesh->mTangents[i].x;
             vertex.tangent[1] = mesh->mTangents[i].y;
             vertex.tangent[2] = mesh->mTangents[i].z;
-            
+
             aiVector3D normal = mesh->mNormals[i];
             aiVector3D tangent = mesh->mTangents[i];
             aiVector3D bitangent = mesh->mBitangents[i];
@@ -213,9 +213,9 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
     //create buffers
     const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.vertices.size() * sizeof(Vertex)));
     memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
-    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout, BGFX_BUFFER_COMPUTE_READ);
+    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
 
-    mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
+    mem = bgfx::alloc(static_cast<uint32_t>(meshData.indices.size() * sizeof(uint32_t)));
     memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
@@ -287,7 +287,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
             } else {
                 mat.normalMap = BGFX_INVALID_HANDLE;
             }
-            
+
             std::string heightPath = path.substr(0, path.find_last_of('.')) + "_height.png";
 
             if (std::filesystem::exists(heightPath)) {
@@ -318,7 +318,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
     } else { //if !loadTextures
         //Even if not loading textures, still might have multiple materials defined
         //with different base colors
-        
+
         if (scene->mNumMaterials > 0) {
             meshData.materials.reserve(scene->mNumMaterials);
             for(unsigned int i = 0; i < scene->mNumMaterials; ++i) {
@@ -360,7 +360,7 @@ bool AssimpLoader::processScene(MeshData& meshData, const aiScene* scene, const 
         meshData.materials.push_back(mat);
     }
 
-    meshData.numMaterials = meshData.materials.size();
+    meshData.numMaterials = static_cast<uint32_t>(meshData.materials.size());
 
     // and output
     meshData.vbh = vbh;
@@ -417,7 +417,7 @@ bool AssimpLoader::_ReloadModel(MeshData& out, int id) {
     mesh->numMaterials = temp.numMaterials;
     mesh->vbh          = temp.vbh;
     mesh->ibh          = temp.ibh;
-    mesh->id           = loadedMeshes.size(); // Update ID to the new index
+    mesh->id           = static_cast<int>(loadedMeshes.size()); // Update ID to the new index
 
     try {
         mesh->lastWriteTime = std::filesystem::last_write_time(mesh->path);

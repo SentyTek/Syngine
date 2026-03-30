@@ -1,7 +1,7 @@
 name: Generate Lua Docs
 
 on:
-  push:
+  pull_request:
     branches:
       - dev
 
@@ -10,13 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0 # so we can push back
-      
+
       - name: Install Lua
         uses: leafo/gh-actions-lua@v10
         with:

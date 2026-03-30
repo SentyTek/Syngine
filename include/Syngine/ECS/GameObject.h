@@ -2,19 +2,21 @@
 // │ Syngine                              │
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
-// │ Copyright (c) SentyTek 2025-2025     │
-// │ Placeholder License                  │
+// │ Copyright (c) SentyTek 2025-2026     │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <map>
+#include <vector>
+
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/AllComponents.h"
-
-using namespace std;
+#include "Syngine/ECS/Components/TransformComponent.h"
+#include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
 
@@ -25,22 +27,38 @@ namespace Syngine {
 /// @since v0.0.1
 class GameObject {
   public:
-    string name; //* Name of the GameObject, used for identification and
+    std::string name; //* Name of the GameObject, used for identification and
                  //* debugging.
 
-    string type; //* Type of the GameObject, used for categorization and
-                 //* filtering. e.g., "player", "enemy", "item", etc.
+    std::string type; //* Type of the GameObject, used for shaders.
 
-    string gizmo; //* Gizmo type for rendering in the editor, e.g.,
+    std::string gizmo; //* Gizmo type for rendering in the editor, e.g.,
                   //* "camera_render", "mesh_render"
+
+    std::vector<std::string> tags; //* Tags for grouping and identifying GameObjects
 
     /// @brief Constructor for the GameObject class
     /// @param name Name of the GameObject
     /// @param type Type of the GameObject, defaults to "default"
     /// @since v0.0.1
-    GameObject(string name, string type = "default");
+    GameObject(std::string name,
+               std::string type       = "default",
+               std::string initialTag = "");
+
+    /// @brief Construct from a DataNode, used for deserialization
+    /// @param data DataNode representing the serialized GameObject
+    /// @since v0.0.1
+    GameObject(const Serializer::DataNode& data);
+
+    GameObject(const GameObject& other);
+    GameObject& operator=(const GameObject& other);
 
     ~GameObject();
+
+    // Operator overload yippee
+    bool operator==(const GameObject& other) const {
+        return this->id == other.id;
+    }
 
     /// @brief Get the ID of the GameObject
     /// @return ID of the GameObject
@@ -68,58 +86,139 @@ class GameObject {
     /// @since v0.0.1
     void SetActive(bool active) noexcept;
 
+    /// @brief Get the tags of the GameObject
+    /// @return Vector of tags of the GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
+    inline std::vector<std::string> GetTags() const noexcept { return tags; }
+
+    /// @brief Add a tag to the GameObject
+    /// @param tag Tag to add
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void AddTag(const std::string& tag);
+
+    /// @brief Remove a tag from the GameObject
+    /// @param tag Tag to remove
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void RemoveTag(const std::string& tag);
+
+    /// @brief Check if the GameObject has a specific tag
+    /// @param tag Tag to check
+    /// @return true if the tag exists, false otherwise
+    /// @threadsafety safe
+    /// @since v0.0.1
+    bool HasTag(const std::string& tag) const;
+
+    /// @brief Clear all tags from the GameObject
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void ClearTags();
+
+    /// @brief Get the number of components attached to the GameObject
+    /// @return Number of components attached to the GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
+    size_t GetComponentCount() const noexcept;
+
     /// @brief Remove a component from the GameObject
     /// @param type Type of the component to remove
     /// @return 0 on success, -1 if the component was not found
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int RemoveComponent(Syngine::Components type);
+    int RemoveComponent(Syngine::ComponentTypeID type);
 
     /// @brief Check if the GameObject has a component of the specified type
     /// @param type Type of the component to check
     /// @return true if the component exists, false otherwise
     /// @threadsafety safe
     /// @since v0.0.1
-    bool HasComponent(Syngine::Components type);
+    bool HasComponent(Syngine::ComponentTypeID type);
 
     /// @brief Get a component of the specified type
-    /// @param T Type of the component to get
+    /// @param type Type of the component to get
     /// @return Pointer to the component if it exists, nullptr otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    template <typename T> T* GetComponent();
+    Component* GetComponent(Syngine::ComponentTypeID type) const;
+
+    /// @brief Get a component of the specified type
+    /// @tparam T Type of the component to get
+    /// @return Pointer to the component if it exists, nullptr otherwise
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    template <typename T> T* GetComponent() const;
 
     /// @brief Add a component to the GameObject
-    /// @param T Type of the component to add
+    /// @tparam T Type of the component to add
     /// @param args Arguments to pass to the component constructor
     /// @return Pointer to the added component if successful, nullptr otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
     template <typename T, typename... Args> T* AddComponent(Args&&... args);
 
+    /// @brief Get const access to the components map for iteration
+    /// @return Const reference to the components map
+    /// @threadsafety safe
+    /// @since v0.0.1
+    const std::map<ComponentTypeID, std::unique_ptr<Component>>& GetComponents() const {
+        return components;
+    }
+
+    /// @brief Serialize the GameObject and its components into a DataNode for saving
+    /// @return DataNode representing the serialized GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
+    Serializer::DataNode Serialize() const;
+
+    /// @brief Set the parent of the GameObject
+    /// @param parent Pointer to the parent GameObject
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetParent(GameObject* parent);
+
+    /// @brief Get the parent of the GameObject
+    /// @return Pointer to the parent GameObject, or nullptr if there is no parent
+    /// @threadsafety safe
+    /// @since v0.0.1
+    GameObject* GetParent() const;
+
+    /// @brief Add a child GameObject to this GameObject
+    /// @param child Pointer to the child GameObject to add
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void AddChild(GameObject* child);
+
+    /// @brief Remove a child GameObject from this GameObject
+    /// @param child Pointer to the child GameObject to remove
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void RemoveChild(GameObject* child);
+
   private:
     long id; // Unique ID for the GameObject
 
-    std::map<Syngine::Components, unique_ptr<Syngine::Component>>
+    std::map<Syngine::ComponentTypeID, std::unique_ptr<Syngine::Component>>
         components; // Map of components attached to the GameObject
 
     bool isActive = true; // Whether the GameObject is active or not
 };
 
 template<typename T>
-T* GameObject::GetComponent() {
+T* GameObject::GetComponent() const {
     auto it = this->components.find(T::componentType);
     if (it == this->components.end()) {
         return nullptr; // Component not found
     }
-    
+
     return dynamic_cast<T*>(it->second.get());
-}
+};
+
 
 template <typename T, typename... Args>
 T* GameObject::AddComponent(Args&&... args) {
     auto type = T::componentType;
-
     if (components.contains(type)) return nullptr;
 
     // Forward the arguments to the component constructor

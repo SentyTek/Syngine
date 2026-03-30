@@ -1,3 +1,6 @@
 AllComponents.h
 Version.h
 InputHelpers.h
+RenderCore.h
+MetalBridge.h
+Helpers.h
