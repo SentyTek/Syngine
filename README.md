@@ -8,21 +8,20 @@
 ---
 
 ## Features
-- **Modular Architecture** - Hot-swappable systems and a lightweight easy to use core
-- **Input & Windowing** - SDL3-based windowing with a custom input manager with keyboard & mouse and gamepad support
+- **Input & Windowing** - SDL3-based windowing with a custom input manager with keyboard & mouse and gamepad support with Steamworks
 - **Rendering** - Powered by bgfx for cross-platform games. Supports **Vulkan, Direct3D 12 and Metal** with user-moddable shaders and easy and powerful renderer management
 - **Physics** - Jolt Physics for a fast and accurate collision system with high quality dynamics and constraints.
-- **Scripting & Modding** - Integrated Lua & XML scripting for moddable gameplay logic and assets
-- **Asset Pipeline** - Assimp + SPK, our custom binary bundle format with multithreaded LZ4 compression for speedy load times
-- **Entity-Component-System** - Custom entities allows for easy creation, modularity and management of all game objects
-- **Advanced tooling** - XML based asset pipeline, in-engine level editor, hot-reloading support, and more.
+- **Scripting & Modding** - Deeply integrated Lua scripting SDK for moddable gameplay logic and assets
+- **Asset Pipeline** - Assimp + SPK, our custom binary bundle format, multithreaded for speedy load times
+- **Actor-Component System** - Custom entities allows for easy creation, modularity and management of all game objects. Combines ease of use of Unity GameObjects and cache benefits of Entity-Component-Systems
+- **Advanced tooling** - XML based asset pipeline, in-engine level editor, hot-reloading support, and more
 
-## Roadmap
-Phase one: Core systems with Rendering, Physics, and Input subsystems - Completed Q4 2025
-Phase two: Engine infrastructure and editing tools (Multithreading, job system, level editor, packages). - In progress. Complete by Q3 2026.
-Phase three: Simulation & Advanced rendering (Compute support, deferred rendering, audio subsystem, volumetrics, post processing)
-Phase four: Modding, Multiplayer, UI systems
-Phase five: More advanced asset management, animations, advanced tech
+## Roadmap (Subject to change)
+- Phase one: Core systems with Rendering, Physics, and Input subsystems - Completed Q4 2025
+- Phase two: Engine infrastructure and editing tools (Multithreading, job system, level editor, ~~packages~~). - In progress. Complete by Q3 2026.
+- Phase three: Simulation & Advanced rendering (Steamworks integration, Compute support, Forward+ rendering, audio subsystem, cooler rendering techniques)
+- Phase four: Modding, UI systems
+- Phase five: More advanced asset management, animations, advanced tech
 
 ---
 
@@ -45,3 +44,8 @@ third_party/    -> Third party components like SDL and Jolt
 - [Jolt Physics](https://github.com/jrouwe/JoltPhysics)
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
 - [miniscl.hpp](https://github.com/MerianBerry/SCL)
+
+## License
+Syngine is licensed under the MIT license
+See LICENSE for details
+Third-party licenses are listed in THIRD_PARTY_LICENSES.txt

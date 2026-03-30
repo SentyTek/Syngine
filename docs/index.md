@@ -22,6 +22,12 @@ We have several pages of documentation available. Note the API reference is auto
 
 - [Code Format Policy](policy.md)
 
+## Guides
+- [Create your first Syngine game](./guides/first-game.md)
+- [Profile your Syngine game](./guides/profiler.md)
+- [Create your own Component](./guides/components.md)
+- [Learn how Prefabs word](./guides/prefab.md)
+
 ### API Reference
 
 
