@@ -88,7 +88,7 @@ struct RendererConfig {
 /// @since v0.0.1
 class Renderer {
   public:
-    
+
     static int width; //* Width of the game window in pixels
     static int height; //* Height of the game window in pixels
 

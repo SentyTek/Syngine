@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [_LoadShader](#syngine_loadshader)
@@ -42,4 +42,3 @@ inline bgfx::ShaderHandle _LoadShader(const char* shaderPath);
 **This function has been available since:** v0.0.1
 
 ---
-

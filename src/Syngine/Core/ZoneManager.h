@@ -19,7 +19,7 @@ namespace Syngine {
 class ZoneManager {
     static std::vector<ZoneComponent*> m_zones; //* List of all zones in the game
   public:
-    
+
     /// @brief Registers a zone with the manager.
     /// @param zone The zone to register.
     /// @since v0.0.1

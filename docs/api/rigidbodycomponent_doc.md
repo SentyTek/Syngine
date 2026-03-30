@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [Member Variables](#member-variables)
@@ -83,7 +83,7 @@ enum class PhysicsShapes
 **Members:**
 
 | Name | Description |
-| --- | --- | 
+| --- | --- |
 | `SPHERE` | Sphere shape |
 | `BOX` | Box shape |
 | `CAPSULE` | Capsule shape |
@@ -114,7 +114,7 @@ enum class ForceMode
 **Members:**
 
 | Name | Description |
-| --- | --- | 
+| --- | --- |
 | `FORCE` | Add a continuous force to the rigidbody using its mass (F = m * a) (Newtons) |
 | `ACCELERATION` | Add a continuous acceleration to the rigidbody, ignoring its mass. Note: This is not well supported, and is equivalent to FORCE if you did NOT manually set the mass yourself. |
 | `IMPULSE` | Add an instant force impulse, using its mass (I = m * dv) ( Newton-seconds) |
@@ -551,8 +551,7 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `constexpr` | `Syngine` | Rigidbody component type |
 
 ---
-

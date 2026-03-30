@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [c](#serializerc)
@@ -87,7 +87,7 @@ Signature:
 **Members:**
 
 | Name | Description |
-| --- | --- | 
+| --- | --- |
 | `Null` | No data |
 | `Integer` | Integer number |
 | `UnsignedInteger` | Unsigned integer number |
@@ -451,7 +451,7 @@ Signature:
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `uint32_t` | `width` | Default 1080p |
 | `uint32_t` | `height` | Default 1080p |
 | `bool` | `fullscreen` | Windowed by default |
@@ -486,7 +486,7 @@ Signature:
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `std::string` | `name` | Human-readable name of the prefab |
 | `std::string` | `guid` | Unique identifier for the prefab |
 | `DataNode` | `rootGameObjectData` | Serialized GameObject tree (with all |
@@ -512,7 +512,7 @@ Signature:
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `std::string` | `name` | Human-readable name of the scene |
 | `std::string` | `guid` | Unique identifier for the scene |
 | `DataNode` | `gameObjects` | Array of root GameObjects in the scene |
@@ -537,7 +537,7 @@ Signature:
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `DataNode` | `state` | Serialized game state (player data, world state, etc. Game sets this up) |
 | `DataNode` | `Serialize()` | const Helper to serialize save data |
 
@@ -641,4 +641,3 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-

@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [Serializer::DataNode](#componentregistryserializer::datanode)
@@ -98,4 +98,3 @@ Signature:
 **Returns:** A unique pointer to the new component instance, or nullptr if the type is not registered
 
 ---
-

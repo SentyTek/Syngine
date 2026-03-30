@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [e](#debugrendere)
@@ -330,4 +330,3 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-

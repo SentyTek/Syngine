@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [Phys](#physphys)
@@ -392,4 +392,3 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-

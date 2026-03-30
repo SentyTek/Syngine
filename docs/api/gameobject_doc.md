@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [Member Variables](#member-variables)
@@ -537,10 +537,9 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `std::string` | `type` | Type of the GameObject, used for shaders. |
 | `std::string` | `gizmo` | Gizmo type for rendering in the editor, e.g., |
 | `std::vector<std::string>` | `tags` | Tags for grouping and identifying GameObjects |
 
 ---
-

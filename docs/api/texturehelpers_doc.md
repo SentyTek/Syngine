@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [LoadTextureFromMemory](#syngineloadtexturefrommemory)
@@ -94,4 +94,3 @@ bgfx::TextureHandle CreateNoiseTexture(uint16_t width, uint16_t height);
 **Returns:** A bgfx::TextureHandle representing the noise texture
 
 ---
-

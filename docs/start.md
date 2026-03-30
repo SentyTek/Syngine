@@ -63,7 +63,7 @@ We also recommend changing your app's accent color by opening the `Assets.xcasse
 This is a macOS only step.
 The install scripts will automatically generate an Info.plist file, however some things still need to be updated by editing `system/assets/Info.plist.in`.
 
-We recommend updating the copyright, bundle versions, and the development region, if you are developing in a different region  
+We recommend updating the copyright, bundle versions, and the development region, if you are developing in a different region
 
 
 ## Building

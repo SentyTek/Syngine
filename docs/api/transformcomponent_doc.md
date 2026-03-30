@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [Member Variables](#member-variables)
@@ -609,10 +609,9 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `float` | `m_rotation` | Rotation of the transform (Quaternion) |
 | `float` | `m_scale` | Scale of the transform |
 | `std::vector<TransformComponent*>` | `m_children` | Child transform components |
 
 ---
-

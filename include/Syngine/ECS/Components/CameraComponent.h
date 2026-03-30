@@ -47,7 +47,7 @@ class CameraComponent : public Syngine::Component {
 
     CameraComponent(const CameraComponent& other);
     CameraComponent& operator=(const CameraComponent& other);
-    
+
     ~CameraComponent();
 
     /// @brief Get the type of this component

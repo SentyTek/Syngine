@@ -96,7 +96,7 @@ class RigidbodyComponent : public Syngine::Component {
 
     RigidbodyComponent(const RigidbodyComponent& other);
     RigidbodyComponent& operator=(const RigidbodyComponent& other);
-    
+
     ~RigidbodyComponent();
 
     /// @brief Get the type of this component
@@ -202,7 +202,7 @@ class RigidbodyComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetFriction(float newFriction);
-    
+
     /// @brief Set the restitution of the physics body
     /// @param newRestitution The new restitution value to set
     /// @threadsafety not-safe

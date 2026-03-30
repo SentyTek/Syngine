@@ -37,7 +37,7 @@ static inline std::string _ResolveOSPath(const char* path)
     // SDL_GetBasePath() returns ".../Contents/MacOS/"
     const char* base = SDL_GetBasePath();
     std::string p(base);
-    
+
     // swap "MacOS/" -> "Resources/"
     size_t pos = p.find("MacOS/");
     if (pos != std::string::npos)
@@ -46,7 +46,7 @@ static inline std::string _ResolveOSPath(const char* path)
     }
     else
     {
-        
+
     }
     p += path; // e.g. "shaders/vs_simple.sc.bin"
     return p;
@@ -82,7 +82,7 @@ inline bool _CheckRequiredFolders() {
 /// directory
 /// @param path The absolute path to convert
 /// @note Assumes the input path is to something within the game directory. If
-/// it's not, the behavior is undefined. 
+/// it's not, the behavior is undefined.
 /// @return The path relative to the root of the game directory
 /// @since v0.0.1
 static inline std::string _MakeRelativeToRoot(std::string path) {
@@ -94,7 +94,7 @@ static inline std::string _MakeRelativeToRoot(std::string path) {
 }
 
 /// @brief Check if a file exists at the given path, taking into account
-/// platform-specific path resolution 
+/// platform-specific path resolution
 /// @param path The relative path to the file to check
 /// @return True if the file exists, false otherwise
 /// @since v0.0.1

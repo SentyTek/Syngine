@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [Member Variables](#member-variables)
@@ -728,7 +728,7 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `ZoneShape` | `m_shape` | Shape of the zone (box or sphere) |
 | `float` | `m_pos` | Position of the zone center |
 | `bool` | `m_active` | Whether the zone is active or not |
@@ -736,4 +736,3 @@ Signature:
 | `std::vector<std::string>` | `m_tags` | Tags of the zone |
 
 ---
-

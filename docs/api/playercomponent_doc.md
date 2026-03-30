@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [Member Variables](#member-variables)
@@ -300,7 +300,7 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `float` | `maxPitchAngle` | Max vertical angle for the camera pitch (in degrees). |
 | `float` | `sprintMult` | Multiplier for sprinting speed. |
 | `float` | `crouchSpeed` | Speed when crouching. |
@@ -316,4 +316,3 @@ Signature:
 | `bool` | `enableCrouching` | Whether player crouching is enabled (on by default). |
 
 ---
-

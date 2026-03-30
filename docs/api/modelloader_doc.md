@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [Vertex](#synginevertex)
@@ -55,7 +55,7 @@ struct Material
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `std::string` | `name` | Name of the material |
 | `bgfx::TextureHandle` | `albedo` | Albedo texture handle |
 | `bgfx::TextureHandle` | `normalMap` | Normal map texture handle |
@@ -85,7 +85,7 @@ struct MeshData
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- | 
+| --- | --- | --- |
 | `std::vector<Vertex>` | `vertices` | Vertices of the mesh |
 | `std::vector<uint32_t>` | `indices` | Indices of the mesh |
 | `std::vector<Material>` | `materials` | Materials of the mesh |
@@ -259,4 +259,3 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-

@@ -10,7 +10,7 @@
 
 ---
 
-## Goto: 
+## Goto:
 
 
 - [LogLevel](#syngineloglevel)
@@ -51,7 +51,7 @@ enum class LogLevel
 **Members:**
 
 | Name | Description |
-| --- | --- | 
+| --- | --- |
 | `INFO` | Informational messages |
 | `WARN` | Warning messages |
 | `ERR` | Error messages |
@@ -473,4 +473,3 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-

@@ -18,7 +18,7 @@ jobs:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0 # so we can push back
-      
+
       - name: Install Lua
         uses: leafo/gh-actions-lua@v10
         with:
