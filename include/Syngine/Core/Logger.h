@@ -3,7 +3,7 @@
 // │ Created 2025-07-14                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// │ Placeholder License                  │
+// | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
 #pragma once
