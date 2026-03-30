@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [Member Variables](#member-variables)
@@ -74,7 +74,7 @@ enum class BillboardMode
 **Members:**
 
 | Name | Description |
-| --- | --- |
+| --- | --- | 
 | `CAMERA_ALIGNED` | Always faces the camera |
 | `AXIS_Y_ALIGNED` | Rotates around Y (vertical) axis only |
 | `FIXED` | No rotation, fixed orientation |
@@ -283,7 +283,7 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `std::string` | `m_texturePath` | Path to the billboard texture |
 | `float` | `m_rot` | Rotation of the billboard |
 | `float` | `size` | Size of the billboard |
@@ -291,3 +291,4 @@ Signature:
 | `bool` | `receiveSunLight` | Whether the billboard receives sunlight |
 
 ---
+

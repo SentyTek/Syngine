@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [Member Variables](#member-variables)
@@ -74,7 +74,7 @@ struct MeshAABB
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `float[3]` | `min` | Minimum corner of the AABB |
 | `float[3]` | `max` | Maximum corner of the AABB |
 | `float[3]` | `center` | Center of the AABB |
@@ -329,10 +329,11 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `bool` | `castShadows` | Whether the mesh casts shadows |
 | `bool` | `receiveSunLight` | Whether the mesh receives sunlight |
 | `MeshData` | `meshData` | Mesh data for the GameObject |
 | `mutable` | `MeshAABB` | Axis-aligned bounding box of the mesh |
 
 ---
+

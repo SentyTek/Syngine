@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [Member Variables](#member-variables)
@@ -56,7 +56,7 @@ struct HardwareSpecs
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `std::string` | `osName` | Operating system name |
 | `std::string` | `cpuModel` | CPU model name |
 | `std::string` | `cpuArch` | CPU architecture (e.g., x86_64, ARM) |
@@ -90,7 +90,7 @@ struct EngineConfig
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `std::string` | `windowTitle` | Title of the game window |
 | `int` | `windowWidth` | Width of the game window in pixels |
 | `int` | `windowHeight` | Height of the game window in pixels |
@@ -114,7 +114,7 @@ struct DebugModes
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `bool` | `Enabled` | Global debug toggle |
 | `bool` | `PhysWireframes` | Whether to draw physics wireframes |
 | `bool` | `Gizmos` | Gizmos such as cameras, lights, and audio sources |
@@ -404,7 +404,7 @@ Signature:
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `EngineConfig` | `config` | Engine configuration |
 | `std::unique_ptr<Window>` | `window` | Pointer to the window |
 | `std::unique_ptr<Renderer>` | `renderer` | Pointer to the render system |
@@ -498,7 +498,7 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `Core*` | `m_instance` | Pointer to the global Core instance |
 | `App*` | `m_app` | Pointer to the global App instance |
 | `bool` | `m_shouldClose` | Whether the application should close |
@@ -506,3 +506,4 @@ Signature:
 | `_FrameCounter` | `m_frameCounter` | Frame counter for FPS/TPS tracking |
 
 ---
+

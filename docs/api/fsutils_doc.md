@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [_GetAppdataPath](#syngine_getappdatapath)
@@ -134,3 +134,4 @@ bool _FileExists(const char* path);
 **This function has been available since:** v0.0.1
 
 ---
+

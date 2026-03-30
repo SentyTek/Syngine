@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [Member Variables](#member-variables)
@@ -35,7 +35,7 @@ enum DefaultComponents : ComponentTypeID
 **Members:**
 
 | Name | Description |
-| --- | --- |
+| --- | --- | 
 | `SYN_COMPONENT_MESH` | 3D mesh or model |
 | `SYN_COMPONENT_TRANSFORM` | Position, rotation, scale |
 | `SYN_COMPONENT_AI` | AI logic/behavior |
@@ -106,8 +106,9 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `bool` | `isEnabled` | Whether the component is enabled or not |
 | `GameObject*` | `m_owner` | The owner of the component, the GameObject it is attached to |
 
 ---
+

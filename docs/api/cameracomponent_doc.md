@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [Constructor](#class-constructor)
@@ -78,7 +78,7 @@ struct Camera
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `float[3]` | `eye` | Camera position in world space |
 | `float[3]` | `target` | Camera target position |
 | `float[3]` | `up` | Camera up vector |
@@ -388,7 +388,7 @@ Signature:
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `float[3]` | `normal` | Normal vector of the plane |
 | `float` | `distance` | Distance from origin |
 
@@ -413,7 +413,7 @@ Signature:
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `Plane` | `top` | Top plane |
 | `Plane` | `bottom` | Bottom plane |
 | `Plane` | `left` | Left plane |
@@ -424,3 +424,4 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+

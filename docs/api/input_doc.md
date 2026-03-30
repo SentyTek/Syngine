@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [Constructor](#class-constructor)
@@ -89,7 +89,7 @@ enum class KeybindType : size_t
 **Members:**
 
 | Name | Description |
-| --- | --- |
+| --- | --- | 
 | `UNBOUND` | A keybind that is not bound to any key |
 | `KEYCODE` | A keybind that is bound to a specific keycode |
 | `SCANCODE` | A keybind that is bound to a specific scancode |
@@ -120,7 +120,7 @@ struct KeyShortcut
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `key` | `The` | key to bind |
 | `key` | `The` | key to bind |
 | `modifiers` | `The` | modifiers to bind |
@@ -152,7 +152,7 @@ struct KeySequence
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `key` | `The` | binding to bind |
 | `list` | `The` | list of bindings to bind |
 | `index` | `The` | index to find the type of |
@@ -182,7 +182,7 @@ struct KeyBinding
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `keycode` | `The` | keycode to bind |
 | `other` | `The` | ``KeyBinding`` to compare against |
 | `event` | `The` | ``SDL_KeyboardEvent`` to check against |
@@ -660,3 +660,4 @@ Signature:
 **This function has been available since:** 0.0.1
 
 ---
+

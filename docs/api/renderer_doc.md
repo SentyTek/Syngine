@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [Member Variables](#member-variables)
@@ -90,7 +90,7 @@ enum ViewID : bgfx::ViewId
 **Members:**
 
 | Name | Description |
-| --- | --- |
+| --- | --- | 
 | `VIEW_SHADOW` | Shadow map rendering |
 | `VIEW_SKY` | Skybox rendering |
 | `VIEW_GBUFFER` | G-Buffer rendering for deferred shading |
@@ -122,7 +122,7 @@ enum UniformType
 **Members:**
 
 | Name | Description |
-| --- | --- |
+| --- | --- | 
 | `UNIFORM_SAMPLER` | Texture sampler uniform |
 | `UNIFORM_VEC4` | Vec4 uniform |
 | `UNIFORM_MAT4` | Mat4 uniform |
@@ -147,7 +147,7 @@ struct Uniform
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `bgfx::UniformHandle` | `handle` | Handle for the uniform |
 | `UniformType` | `type` | Type of the uniform |
 | `void*` | `data` | Pointer to the uniform data |
@@ -172,7 +172,7 @@ struct Program
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `bgfx::ProgramHandle` | `program` | Shader program handle |
 | `unsigned short` | `viewId` | View ID for rendering |
 | `std::string` | `name` | Name of the shader program |
@@ -197,7 +197,7 @@ struct RendererConfig
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `bool` | `useShadows` | Whether to use shadow mapping |
 | `float` | `shadowDist` | Distance for shadow rendering |
 | `bool` | `vsync` | Whether to enable vertical sync |
@@ -716,7 +716,7 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `int` | `height` | Height of the game window in pixels |
 | `std::string` | `m_title` | Title of the game window |
 | `bool` | `m_isReady` | Whether the renderer is initialized and ready |
@@ -729,3 +729,4 @@ Signature:
 | `bool` | `m_isFirstFrame` | Whether this is the first frame being rendered |
 
 ---
+

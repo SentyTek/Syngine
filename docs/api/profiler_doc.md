@@ -10,7 +10,7 @@
 
 ---
 
-## Goto:
+## Goto: 
 
 
 - [Member Variables](#member-variables)
@@ -61,7 +61,7 @@ struct SpanEvent
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `const` | `char*` | name 8 byte pointer to name string |
 | `uint32_t` | `threadID` | Thread ID |
 | `uint64_t` | `timestamp` | Timestamp in microseconds |
@@ -85,7 +85,7 @@ struct TimerEvent
 **Members:**
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `SpanEvent` | `startEvent` | Start event |
 | `SpanEvent` | `endEvent` | End event |
 
@@ -105,7 +105,7 @@ Signature:
 **Members:**
 
 | Name | Description |
-| --- | --- |
+| --- | --- | 
 | `EVENT_START` | Start. |
 | `EVENT_END` | End. |
 
@@ -211,7 +211,7 @@ Signature:
 
 
 | Type | Name | Description |
-| --- | --- | --- |
+| --- | --- | --- | 
 | `thread_local` | `std` | Last frame's events |
 | `thread_local` | `std` | Call stack names |
 | `thread_local` | `uint8_t` | Call stack depth |
@@ -219,3 +219,4 @@ Signature:
 | `int` | `m_nextTimerID` | Next timer ID |
 
 ---
+
