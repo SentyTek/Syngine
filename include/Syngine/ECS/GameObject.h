@@ -196,6 +196,15 @@ class GameObject {
     /// @since v0.0.1
     void RemoveChild(GameObject* child);
 
+    /// @brief Sets the enabled state of the GameObject, which determines
+    /// whether it is rendered and updated
+    /// @param enabled true to enable the GameObject, false to disable it
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetEnabled(bool enabled = true);
+    
+    bool enabled = true; //* Whether the GameObject is enabled for rendering and updates
+
   private:
     long id; // Unique ID for the GameObject
 

@@ -1,4 +1,4 @@
-$input v_uvMacro v_uvDetail v_normal v_tangent v_worldPos v_viewDepth
+$input v_uvMacro v_uvDetail v_normal v_tangent v_worldPos v_viewDepth v_uvScaled
 #include <bgfx_shader.sh>
 #include "shadow.bgsl"
 #include "common.bgsl"
@@ -10,10 +10,11 @@ SAMPLER2D(s_heightMap, 2);
 
 //lighting + material params
 uniform vec4 u_lightDir; //worldspace sun dir
-uniform vec4 u_floats;   //[x = heightmap scale, y = mix factor, z = ambient, w = detail tile scale]
 uniform vec4 u_skyColor; //hemisphere ambient sky color
 uniform vec4 u_sunColor; //sunlight color
 uniform vec4 u_horizonColor; // same as u_scatterColor in sky shader (horizon scatter color)
+
+uniform vec4 u_materialParams1; // mixFactor, ambient, uvOverride, useVertexColor (unused in this shader)
 
 void main() {
     vec3 lightDirToSun = normalize(u_lightDir.xyz);
@@ -23,20 +24,20 @@ void main() {
     vec3 vN = normalize(v_normal);
 
     // Normal mapping from normal map (micro detail)
-    vec3 nmap = texture2D(s_normalMap, v_uvDetail).xyz * 2.0 - 1.0;
+    vec3 nmap = texture2D(s_normalMap, v_uvDetail * v_uvScaled.y).xyz * 2.0 - 1.0;
     vec3 T = normalize(v_tangent.xyz);
     vec3 B = cross(vN, T) * v_tangent.w; // Calculate bitangent
     vec3 Nmicro = normalize(T*nmap.x + B*nmap.y + vN*nmap.z);
 
     // Mix base terrain normal with detail normal map
-    // u_floats.y controls how much detail normal mapping is applied
-    vec3 N = normalize(mix(vN, Nmicro, u_floats.y));
+    // u_materialParams1.x controls how much detail normal mapping is applied
+    vec3 N = normalize(mix(vN, Nmicro, u_materialParams1.x));
 
     // Hemisphere ambient (http://richardssoftware.net/home/Post/58)
     // Instead of flat ambient, mix sky and ground colors based on normal Y
     float hemiMix = N.y * 0.5 + 0.5;
     vec3 skyColor = u_skyColor.xyz;
-    vec4 albedo = texture2D(s_albedo, v_uvMacro * u_floats.w);
+    vec4 albedo = texture2D(s_albedo, v_uvMacro * v_uvScaled.x);
 
     // Rotate lightDirToSun by 90 degrees around the X axis for micro shadowing
     vec3 rotatedLightDir = vec3(lightDirToSun.x, -lightDirToSun.z, lightDirToSun.y);
@@ -44,7 +45,7 @@ void main() {
     // Lighting is direct sun
     float NdotL = smoothstep(-0.12, 0.15, max(dot(N, rotatedLightDir), 0.0)); //Smoothstep to extend light over horizon
     float nightFactor = clamp(smoothstep(-0.05, 0.05, sunElevation), 0.2, 1.0);
-    vec3 ambient = mix(albedo.rgb, skyColor, hemiMix) * u_floats.z * clamp(NdotL, 0.1, 0.5); // Ambient scaled by NdotL for better blending at low sun angles
+    vec3 ambient = mix(albedo.rgb, skyColor, hemiMix) * u_materialParams1.y * clamp(NdotL, 0.1, 0.5); // Ambient scaled by NdotL for better blending at low sun angles
 
     // Micro shadowing from normal map
     // Softer attenuation for grazing angles

@@ -3,7 +3,7 @@
 # │ Created 2025-08-25                   │
 # ├──────────────────────────────────────┤
 # │ Copyright (c) SentyTek 2025-2026     │
-# │ Placeholder License                  │
+# │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
 

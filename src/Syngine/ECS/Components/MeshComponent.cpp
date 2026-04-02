@@ -58,7 +58,6 @@ Serializer::DataNode MeshComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
     node / "path" = _MakeRelativeToRoot(this->meshData.path);
-    node / "hasTextures" = this->meshData.hasTextures;
     //TODO: mats will need to be serialized at some point
     return node;
 }
@@ -125,16 +124,107 @@ bool MeshComponent::ReloadMesh() {
     return true; // Success
 }
 
+uint8_t MeshComponent::GetSubmeshCount() const {
+    const size_t count = this->meshData.subMeshes.size();
+    return static_cast<uint8_t>(count > UINT8_MAX ? UINT8_MAX : count);
+}
+
+uint8_t MeshComponent::GetSubmeshMaterialIndex(uint8_t submeshIndex) const {
+    if (submeshIndex >= this->meshData.subMeshes.size()) {
+        const int maxIndex =
+            this->meshData.subMeshes.empty()
+                ? -1
+                : static_cast<int>(this->meshData.subMeshes.size() - 1);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Submesh index %d out of bounds (max %d)",
+                              submeshIndex,
+                              maxIndex);
+        return 0; // Return default material index on error
+    }
+    return this->meshData.subMeshes[submeshIndex].materialIndex;
+}
+
+bool MeshComponent::SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materialIndex) {
+    if (submeshIndex >= this->meshData.subMeshes.size()) {
+        const int maxIndex =
+            this->meshData.subMeshes.empty()
+                ? -1
+                : static_cast<int>(this->meshData.subMeshes.size() - 1);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Submesh index %d out of bounds (max %d)",
+                              submeshIndex,
+                              maxIndex);
+        return false; // Error: submesh index out of bounds
+    }
+    if (materialIndex >= this->meshData.materials.size()) {
+        const int maxIndex =
+            this->meshData.materials.empty()
+                ? -1
+                : static_cast<int>(this->meshData.materials.size() - 1);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Material index %d out of bounds (max %d)",
+                              materialIndex,
+                              maxIndex);
+        return false; // Error: material index out of bounds
+    }
+    this->meshData.subMeshes[submeshIndex].materialIndex = materialIndex;
+    return true; // Success
+}
+
+float* MeshComponent::GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const {
+    if (materialIndex >= this->meshData.numMaterials) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Material index %d out of bounds (max %d)",
+                              materialIndex, this->meshData.numMaterials - 1);
+        return nullptr; // Error: material index out of bounds
+    }
+    if (textureType > 2) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Texture type %d out of bounds (max 2)",
+                              textureType);
+        return nullptr; // Error: invalid texture type
+    }
+    return const_cast<float*>(this->meshData.materials[materialIndex].uvScale + textureType);
+}
+
+bool MeshComponent::SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, float uvScale[2]) {
+    if (materialIndex >= this->meshData.numMaterials) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Material index %d out of bounds (max %d)",
+                              materialIndex, this->meshData.numMaterials - 1);
+        return false; // Error: material index out of bounds
+    }
+    if (textureType > 2) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Texture type %d out of bounds (max 2)",
+                              textureType);
+        return false; // Error: invalid texture type
+    }
+    this->meshData.materials[materialIndex].uvScale[textureType * 2] = uvScale[0];
+    this->meshData.materials[materialIndex].uvScale[textureType * 2 + 1] = uvScale[1];
+    return true; // Success
+}
+
+float MeshComponent::GetObjectUVScaleOverride() const {
+    return this->m_objectUVScaleOverride;
+}
+
+void MeshComponent::SetObjectUVScaleOverride(float uvScaleOverride) {
+    this->m_objectUVScaleOverride = uvScaleOverride;
+}
+
 bool MeshComponent::UploadMesh(std::vector<float>    vertices,
                                std::vector<uint32_t> indices,
                                std::vector<uint8_t>  baseColor) {
     Syngine::MeshData meshData;
-    meshData.hasTextures = false;
-
     int vertexSize = baseColor.empty() ? 12 : 8; // if no baseColor provided, expect vertex colors
 
-    meshData.numVertices = static_cast<uint32_t>(vertices.size() / vertexSize); // 12 floats per vertex (3 pos, 3 normal, 2 uv0, 4 color)
-    meshData.numIndices  = static_cast<uint32_t>(indices.size());
+    Syngine::SubMesh subMesh;
+    subMesh.indexStart = 0;
+    subMesh.indexCount = static_cast<uint32_t>(indices.size());
+    subMesh.materialIndex = 0;
+    meshData.subMeshes.push_back(subMesh);
+    meshData.numSubMeshes = 1;
 
     // set vertex data
     meshData.vertices.resize(static_cast<uint32_t>(vertices.size() / vertexSize));
@@ -195,13 +285,13 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         .end(); // stride = 72 bytes
 
     // create buffers
-    const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.numVertices * sizeof(Vertex)));
-    memcpy(mem->data, meshData.vertices.data(), meshData.numVertices * sizeof(Vertex));
+    const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.vertices.size() * sizeof(Vertex)));
+    memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
     bgfx::VertexBufferHandle vbh =
     bgfx::createVertexBuffer(mem, layout);
 
-    mem = bgfx::alloc(meshData.numIndices * sizeof(uint32_t));
-    memcpy(mem->data, meshData.indices.data(), meshData.numIndices * sizeof(uint32_t));
+    mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
+    memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh =
         bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 

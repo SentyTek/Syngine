@@ -1,41 +1,48 @@
-$input v_worldPos, v_normal, v_viewDepth, v_vertexColor
+$input v_worldPos, v_normal, v_viewDepth, v_vertexColor, v_uvScaled, v_uvMacro, v_uvDetail
 #include <bgfx_shader.sh>
 #include "shadow.bgsl"
 #include "common.bgsl"
 
+SAMPLER2D(s_normalMap, 1);
+
 uniform vec4 u_lightDir;        // World space direction *from* the light source
 uniform vec4 u_baseColor;       // Base color of the material
-uniform vec4 u_useVertexColor;  // Flag to use vertex color
-uniform vec4 u_floats;          // [x = unused, y = unused, z = ambient, w = unused]
 uniform vec4 u_skyColor;        // hemisphere ambient sky color
 uniform vec4 u_sunColor;        // sunlight color
 uniform vec4 u_horizonColor;    // fog/horizon color
+
+uniform vec4 u_materialParams1; // x = mixFactor for normal mapping, y = ambient multiplier, z = uvOverride, w = use vertex color
 
 void main() {
     vec3 normal = normalize(v_normal);
     vec3 lightDirToSun = normalize(u_lightDir.xyz);
     float sunElevation = lightDirToSun.y;
 
-    vec4 col = mix(u_baseColor, v_vertexColor, u_useVertexColor.x);
+    vec4 col = mix(u_baseColor, v_vertexColor, u_materialParams1.w);
+
+    vec4 nsamp = texture2D(s_normalMap, v_uvDetail * v_uvScaled.y);
+    vec3 nmap = normalize(nsamp.xyz * 2.0 - 1.0);
 
     // Hemisphere ambient (http://richardssoftware.net/home/Post/58)
     // Instead of flat ambient, mix sky and ground colors based on normal Y
     float hemiMix = normal.y * 0.5 + 0.5;
     vec3 skyColor = u_skyColor.xyz;
 
+    vec3 N = normalize(mix(normal, nmap, u_materialParams1.x));
+
     // Lighting is direct sun
-    float NdotL = max(dot(normal, lightDirToSun), 0.0);
+    float NdotL = max(dot(N, lightDirToSun), 0.0);
 
     float nightFactor = clamp(smoothstep(-0.05, 0.05, sunElevation), 0.2, 1.0);
-    vec3 ambient = mix(col.rgb, skyColor, hemiMix) * u_floats.z;
+    vec3 ambient = mix(col.rgb, skyColor, hemiMix) * u_materialParams1.y;
 
-    float shadowFactor = getShadowFactor(v_worldPos, vec3(0.0, 1.0, 0.0), normal, u_lightDir, v_viewDepth);
+    float shadowFactor = getShadowFactor(v_worldPos, vec3(0.0, 1.0, 0.0), N, u_lightDir, v_viewDepth);
 
     float sunIntensity = smoothstep(-0.1, 0.1, sunElevation);
     vec3 directLight = u_sunColor.xyz * sunIntensity * NdotL * shadowFactor;
 
     // Fake first-bounce global illumination
-    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.05 * clamp(dot(normal, -lightDirToSun), 0.2, 1.0);
+    vec3 bounce = u_sunColor.xyz * sunIntensity * 0.05 * clamp(dot(N, -lightDirToSun), 0.2, 1.0);
 
     // Calculate view direction
     vec3 viewDir = normalize(u_viewPos.xyz - v_worldPos);
@@ -43,13 +50,13 @@ void main() {
     // Specular. Using Schlick's approximation for fresnel
     vec3 F0 = vec3_splat(0.04); // roughly linear
     vec3 halfVec = normalize(lightDirToSun - viewDir);
-    float NdotH = max(dot(normal, halfVec), 0.0);
+    float NdotH = max(dot(N, halfVec), 0.0);
 
     // Blinn-Phong specular
     float specPower = 32.0; // Rough surface
     float specStrength = pow(NdotH, specPower) * shadowFactor; // modulated by shadowing
 
-    vec3 fresnel = fresnelSchlick(max(dot(normal, viewDir), 0.0), F0);
+    vec3 fresnel = fresnelSchlick(max(dot(N, viewDir), 0.0), F0);
 
     // Fog
     float fogDist = length(v_worldPos);
@@ -63,5 +70,5 @@ void main() {
     finalColor = mix(finalColor, u_horizonColor.xyz, fogFactor);
 
     gl_FragData[0] = vec4(finalColor, col.a);
-    gl_FragData[1] = vec4(normal * 0.5 + 0.5, 1.0); //normal output (world space, encoded to [0,1])
+    gl_FragData[1] = vec4(N * 0.5 + 0.5, 1.0); //normal output (world space, encoded to [0,1])
 }

@@ -82,10 +82,12 @@ class RenderCore {
             bgfx::TextureHandle texture;
             uint32_t samplerFlags;
         };
+
+        // Uniform data struct for storing uniform handle, type, and data
         struct UniformData {
-            size_t             handle;
-            std::vector<float> data;
-            uint16_t           num = 1;
+            bgfx::UniformHandle handle;
+            std::vector<float>  data;
+            uint16_t            num = 1;
         };
         std::vector<Texture> textures;
         std::vector<UniformData> uniforms;
@@ -101,7 +103,7 @@ class RenderCore {
                     tex.samplerFlags);
             }
             for (const auto& uni : uniforms) {
-                Renderer::SetUniform(uni.handle, uni.data.data(), uni.num);
+                Renderer::SetUniform(uni.handle.idx, uni.data.data(), uni.num);
             }
         }
     };
@@ -112,6 +114,9 @@ class RenderCore {
         bgfx::VertexBufferHandle vbh;
         bgfx::IndexBufferHandle  ibh;
         float                    modelMtx[16];
+
+        uint32_t indexStart;
+        uint32_t indexCount;
 
         MaterialInstance material;
         Program          program;

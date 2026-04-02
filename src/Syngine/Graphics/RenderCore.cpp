@@ -16,6 +16,7 @@
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/TextureHelpers.h"
+#include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Version.h"
 #include "Syngine/Utils/Profiler.h"
 #include "Syngine/Core/Logger.h"
@@ -277,15 +278,15 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     m_defaultUniformIds.insert(
         { "u_default_skyColor",
           Renderer::RegisterUniform(
-              m_internalPrograms.skyProgram, "u_skyColor", UniformType::UNIFORM_VEC4) });
+              m_internalPrograms.defaultProgram, "u_skyColor", UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert(
         { "u_default_sunColor",
           Renderer::RegisterUniform(
-              m_internalPrograms.skyProgram, "u_sunColor", UniformType::UNIFORM_VEC4) });
+              m_internalPrograms.defaultProgram, "u_sunColor", UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert(
         { "u_default_horizonColor",
           Renderer::RegisterUniform(
-              m_internalPrograms.skyProgram, "u_horizonColor", UniformType::UNIFORM_VEC4) });
+              m_internalPrograms.defaultProgram, "u_horizonColor", UniformType::UNIFORM_VEC4) });
 
     m_defaultUniformIds.insert(
         { "u_default_shadowMap",
@@ -318,18 +319,31 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
               m_internalPrograms.skyProgram, "u_time", UniformType::UNIFORM_VEC4) });
 
     // Texture program uniforms
-    m_defaultUniformIds.insert({ "u_texture_lightDir",
-                                 Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                                 "u_lightDir",
-                                                 UniformType::UNIFORM_VEC4) });
-    m_defaultUniformIds.insert({ "u_texture_floats",
-                                 Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                                 "u_floats",
-                                                 UniformType::UNIFORM_VEC4) });
-    m_defaultUniformIds.insert({ "u_texture_normalMatrix",
-                                 Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                                 "u_normalMatrix",
-                                                 UniformType::UNIFORM_MAT3) });
+    m_defaultUniformIds.insert(
+        { "u_texture_lightDir",
+          Renderer::RegisterUniform(m_internalPrograms.textureProgram,
+                                    "u_lightDir",
+                                    UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_texture_floats",
+          Renderer::RegisterUniform(m_internalPrograms.textureProgram,
+                                    "u_floats",
+                                    UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_texture_normalMatrix",
+          Renderer::RegisterUniform(m_internalPrograms.textureProgram,
+                                    "u_normalMatrix",
+                                    UniformType::UNIFORM_MAT3) });
+    m_defaultUniformIds.insert(
+        { "u_texture_uvScales",
+          Renderer::RegisterUniform(m_internalPrograms.textureProgram,
+                                    "u_uvScale",
+                                    UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_texture_materialParams1",
+          Renderer::RegisterUniform(m_internalPrograms.textureProgram,
+                                    "u_materialParams1",
+                                    UniformType::UNIFORM_VEC4) });
 
     m_defaultUniformIds.insert(
         { "u_texture_albedo",
@@ -382,7 +396,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     m_defaultUniformIds.insert({ "u_texture_viewPos",
                                  Renderer::RegisterUniform(m_internalPrograms.textureProgram,
                                                  "u_viewPos",
-                                                 UniformType::UNIFORM_VEC4) });;
+                                                 UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert({ "u_default_viewPos",
                                  Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
                                                  "u_viewPos",
@@ -401,8 +415,19 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
               m_internalPrograms.textureProgram, "u_csmTexelSize", UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert(
         { "u_default_csmTexelSize",
-          Renderer::RegisterUniform(
-              m_internalPrograms.defaultProgram, "u_csmTexelSize", UniformType::UNIFORM_VEC4) });
+          Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
+                                    "u_csmTexelSize",
+                                    UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_default_uvScales",
+          Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
+                                    "u_uvScale",
+                                    UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
+        { "u_default_materialParams1",
+          Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
+                                    "u_materialParams1",
+                                    UniformType::UNIFORM_VEC4) });
 
     // SSAO program uniforms
     m_defaultUniformIds.insert(
@@ -525,7 +550,6 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     float scatterColor[4]     = { 0.8f, 0.5f, 0.3f, 1.0f };
 
     Renderer::SetUniform(m_defaultUniformIds["u_skyColorZenith"], skyColorZenith);
-    Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"], skyColorZenith);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"], skyColorZenith);
     Renderer::SetUniform(m_defaultUniformIds["u_skyColorMidnight"], skyColorMidnight);
     Renderer::SetUniform(m_defaultUniformIds["u_sky_sunColor"], sunColor);
@@ -921,123 +945,129 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
     // Iterate registry
     auto gameObjects = Registry::GetRenderableObjects();
     for (auto& go : gameObjects) {
-        if (!go) continue;
-        auto* meshComp = go->GetComponent<MeshComponent>();
-        if (!meshComp || !meshComp->isEnabled || !meshComp->meshData.valid)
-            continue;
+        if (!go || !go->enabled) continue;
 
+        auto meshComp = go->GetComponent<MeshComponent>();
+        if (!meshComp || !meshComp->isEnabled) continue;
+
+        MeshData& meshData = meshComp->meshData;
+        if (!meshData.valid) continue;
         if (_ShouldCullBySize(go, camera)) {
             m_drawnCounts.culledSize++;
             continue;
         }
 
-        MeshAABB aabb = meshComp->GetAABB();
-        bx::Vec3 min = { aabb.min[0], aabb.min[1], aabb.min[2] };
-        bx::Vec3 max = { aabb.max[0], aabb.max[1], aabb.max[2] };
-        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
-            m_drawnCounts.culledFrustum++;
-            continue;
-        }
-
-        RenderPacket packet;
-        packet.vbh = meshComp->meshData.vbh;
-        packet.ibh = meshComp->meshData.ibh;
-
         float modelMtx[16];
-        go->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
-
-        float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));
-        float sy = bx::length(bx::Vec3(modelMtx[4], modelMtx[5], modelMtx[6]));
-        float sz = bx::length(bx::Vec3(modelMtx[8], modelMtx[9], modelMtx[10]));
-
-        float normal3x3[9];
-        for(int i = 0; i < 3; ++i) {
-            normal3x3[i * 3 + 0] = modelMtx[i * 4 + 0] / sx;
-            normal3x3[i * 3 + 1] = modelMtx[i * 4 + 1] / sy;
-            normal3x3[i * 3 + 2] = modelMtx[i * 4 + 2] / sz;
+        auto  transformComp = go->GetComponent<TransformComponent>();
+        if (transformComp) {
+            transformComp->GetModelMatrix(modelMtx);
+        } else {
+            bx::mtxIdentity(modelMtx);
         }
-        go->GetComponent<TransformComponent>()->GetModelMatrix(packet.modelMtx);
 
-        Material& mat = meshComp->meshData.materials[0];
-        packet.program = Renderer::GetProgram(go->type.c_str());
+        bgfx::ProgramHandle program = Renderer::GetProgram(go->type).program;
+        if (!bgfx::isValid(program)) continue;
 
-        MaterialInstance matInst;
-        matInst.renderState = BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LESS |
-                              BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
-        if (go->type == "default") {
-            matInst.uniforms.reserve(4);
-            // Uniform: u_default_floats
-            size_t handle = m_defaultUniformIds.at("u_default_floats");
-            Uniform* u = Renderer::GetUniform(handle);
-            matInst.uniforms.push_back(
-                { handle, { 0.f, 0.f, 0.1f, 0.f }, u->num });
+        // Emit one packet per submesh
+        for (size_t submeshIdx = 0; submeshIdx < meshData.subMeshes.size(); ++submeshIdx) {
+            const SubMesh& submesh = meshData.subMeshes[submeshIdx];
+            size_t         materialIdx = static_cast<size_t>(submesh.materialIndex);
 
-            // Model matrix
-            handle = m_defaultUniformIds.at("u_default_normalMatrix");
-            Uniform* uModel = Renderer::GetUniform(handle);
-            matInst.uniforms.push_back(
-                { handle, std::vector<float>(normal3x3, normal3x3 + 9), uModel->num });
+            // Skip invalid materials
+            if (materialIdx >= meshComp->meshData.materials.size()) continue;
 
-            // Uniform: u_default_useVertex / u_baseColor
-            if (mat.useVertexColor) {
-                size_t handle = m_defaultUniformIds.at("u_default_useVertex");
-                Uniform* u      = Renderer::GetUniform(handle);
-                matInst.uniforms.push_back({ handle, {1.f, 0.f, 0.f, 0.f}, u->num });
+            Material& mat = meshComp->meshData.materials[materialIdx];
+
+            // Create packet
+            MaterialInstance matInst;
+            RenderPacket packet;
+            packet.vbh = meshData.vbh;
+            packet.ibh = meshData.ibh;
+            packet.indexStart = submesh.indexStart;
+            packet.indexCount = submesh.indexCount;
+
+            memcpy(packet.modelMtx, modelMtx, sizeof(modelMtx));
+            packet.program = { program };
+
+            // Material and uniforms
+            {
+            // UV scale
+            std::vector<float> uvScale = { 1.0f, 1.0f, 1.0f, 0.0f }; // W unused for now. One number for each texture.
+            if (meshComp->GetObjectUVScaleOverride() != 1.0f) {
+                uvScale[0] = meshComp->GetObjectUVScaleOverride();
+                uvScale[1] = meshComp->GetObjectUVScaleOverride();
+                uvScale[2] = meshComp->GetObjectUVScaleOverride();
             } else {
-                size_t handle = m_defaultUniformIds.at("u_default_useVertex");
-                Uniform* u = Renderer::GetUniform(handle);
-                matInst.uniforms.push_back({ handle, {0.f, 0.f, 0.f, 0.f}, u->num });
-
-                size_t handle2 = m_defaultUniformIds.at("u_baseColor");
-                Uniform* uBaseColor = Renderer::GetUniform(handle2);
-                matInst.uniforms.push_back({ handle2, std::vector<float>(mat.baseColor, mat.baseColor + 4), uBaseColor->num });
+                uvScale[0] = mat.uvScale[0];
+                uvScale[1] = mat.uvScale[1];
+                uvScale[2] = mat.uvScale[2];
             }
-        } else if (go->type == "texture") {
-            matInst.uniforms.reserve(2);
-            uint32_t samplerFlags =
-                BGFX_SAMPLER_MIN_ANISOTROPIC | BGFX_SAMPLER_MAG_ANISOTROPIC;
-            // Uniform: u_texture_floats
-            size_t handle = m_defaultUniformIds.at("u_texture_floats");
-            Uniform* u      = Renderer::GetUniform(handle);
-            std::vector<float> data = {
-                mat.heightScale,
-                mat.mixFactor,
-                mat.ambient,
-                mat.tileDetail
+            MaterialInstance::UniformData uniformData1 = {
+                Renderer::GetUniform(
+                    m_defaultUniformIds.at("u_"+go->type+"_uvScale"))
+                    ->handle,
+                uvScale,
+                1
             };
-            matInst.uniforms.push_back({ handle, data, u->num });
+            matInst.uniforms.push_back(uniformData1);
 
-            // Model matrix
-            handle = m_defaultUniformIds.at("u_texture_normalMatrix");
-            Uniform* uModel = Renderer::GetUniform(handle);
-            matInst.uniforms.push_back(
-                { handle, std::vector<float>(packet.modelMtx, packet.modelMtx + 16), uModel->num });
+            // Params1
+            // mixFactor, ambient, uvOverride, unused
+            std::vector<float> params1 = { mat.mixFactor,
+                                           mat.ambient,
+                                           meshComp->GetObjectUVScaleOverride(),
+                                           mat.useVertexColor ? 1.0f : 0.0f };
+            MaterialInstance::UniformData uniformData2 = {
+                Renderer::GetUniform(
+                    m_defaultUniformIds.at("u_"+go->type+"_materialParams1"))
+                    ->handle,
+                params1,
+                1
+            };
+            matInst.uniforms.push_back(uniformData2);
 
             // Textures
-            matInst.textures.push_back({
-                0,
-                Renderer::GetUniform(m_defaultUniformIds.at("u_texture_albedo"))->handle,
-                mat.albedo,
-                samplerFlags
-            });
-
-            matInst.textures.push_back({
-                1,
-                Renderer::GetUniform(m_defaultUniformIds.at("u_normalMap"))->handle,
-                mat.normalMap,
-                samplerFlags
-            });
-
-            matInst.textures.push_back({
-                2,
-                Renderer::GetUniform(m_defaultUniformIds.at("u_heightMap"))->handle,
-                mat.heightMap,
-                samplerFlags
-            });
+            if (go->type == "texture") {
+            uint32_t sflags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_MAG_ANISOTROPIC;
+            if (bgfx::isValid(mat.albedo)) {
+                MaterialInstance::Texture texData = {
+                    0,
+                    Renderer::GetUniform(
+                        m_defaultUniformIds.at("s_texture_albedo"))
+                        ->handle,
+                    mat.albedo,
+                    sflags
+                };
+                matInst.textures.push_back(texData);
+            }
+            if (bgfx::isValid(mat.normalMap)) {
+                MaterialInstance::Texture texData = {
+                    1,
+                    Renderer::GetUniform(
+                        m_defaultUniformIds.at("s_texture_normal"))
+                        ->handle,
+                    mat.normalMap,
+                    sflags
+                };
+                matInst.textures.push_back(texData);
+            }
+            if (bgfx::isValid(mat.heightMap)) {
+                MaterialInstance::Texture texData = {
+                    2,
+                    Renderer::GetUniform(
+                        m_defaultUniformIds.at("s_texture_height"))
+                        ->handle,
+                    mat.heightMap,
+                    sflags
+                };
+                matInst.textures.push_back(texData);
+            }
+            }
+            }
+            packet.material = matInst;
+            m_renderPackets.push_back(packet);
         }
 
-        packet.material = matInst;
-        m_renderPackets.push_back(packet);
     }
 }
 
@@ -1171,7 +1201,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
 
         bgfx::setTransform(packet.modelMtx);
         bgfx::setVertexBuffer(0, packet.vbh);
-        bgfx::setIndexBuffer(packet.ibh);
+        bgfx::setIndexBuffer(packet.ibh, packet.indexStart, packet.indexCount);
         bgfx::submit(program.viewId, program.program);
         m_drawnCounts.forward++;
     }

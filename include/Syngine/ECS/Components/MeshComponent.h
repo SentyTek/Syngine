@@ -140,12 +140,65 @@ class MeshComponent : public Syngine::Component {
     /// @since v0.0.1
     MeshAABB& GetAABB();
 
+    /// @brief Get the submesh count
+    /// @return Number of submeshes in the mesh
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    uint8_t GetSubmeshCount() const;
+
+    /// @brief Get material index for a specific submesh
+    /// @param submeshIndex Index of the submesh to query
+    /// @return Material index for the specified submesh, or 255 if invalid index
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    uint8_t GetSubmeshMaterialIndex(uint8_t submeshIndex) const;
+
+    /// @brief Assign a material to a specific submesh
+    /// @param submeshIndex Index of the submesh to assign the material to
+    /// @param materialIndex Index of the material to assign to the submesh
+    /// @return true if the assignment was successful, false if the submesh index is invalid
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    bool SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materialIndex);
+
+    /// @brief Get UV scale for specific texture type and material
+    /// @param materialIndex Index of the material to query
+    /// @param textureType Type of the texture (0 = albedo, 1 = normal, 2 = height)
+    /// @return UV scale for the specified material and texture type
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    float* GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
+
+    /// @brief Set UV scale for specific texture type and material
+    /// @param materialIndex Index of the material to modify
+    /// @param textureType Type of the texture (0 = albedo, 1 = normal, 2 = height)
+    /// @param uvScale UV scale to set for the specified material and texture type
+    /// @return true if the UV scale was successfully set, false if the material index is invalid
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    bool SetMaterialUVScale(uint8_t materialIndex,
+                            uint8_t textureType,
+                            float   uvScale[2]);
+
+    /// @brief Gets the UV scale override for the whole object
+    /// @return UV scale override for the whole object. 1.0f by default.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    float GetObjectUVScaleOverride() const;
+
+    /// @brief Sets the UV scale override for the whole object
+    /// @param uvScaleOverride UV scale override to set for the whole object
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetObjectUVScaleOverride(float uvScaleOverride);
+
   private:
     mutable MeshAABB m_aabb; //* Axis-aligned bounding box of the mesh
     mutable bool     m_aabbDirty =
         true; //* Whether the AABB needs to be recalculated
     mutable uint64_t m_cachedTransformVersion =
         0; //* Cached version of the transform when AABB was last calculated
+    float m_objectUVScaleOverride = 1.0f; //* UV scale override for the whole object
 };
 
 } // namespace Syngine
