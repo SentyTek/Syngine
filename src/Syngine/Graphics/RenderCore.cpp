@@ -1004,7 +1004,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             }
             MaterialInstance::UniformData uniformData1 = {
                 Renderer::GetUniform(
-                    m_defaultUniformIds.at("u_"+go->type+"_uvScale"))
+                    m_defaultUniformIds.at("u_"+go->type+"_uvScales"))
                     ->handle,
                 uvScale,
                 1
