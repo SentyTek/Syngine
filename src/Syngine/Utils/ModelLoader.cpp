@@ -26,6 +26,57 @@
 
 namespace Syngine {
 
+namespace {
+
+bgfx::TextureHandle _LoadAssimpTexture(const aiScene*                  scene,
+                                       const aiString&                 texPath,
+                                       const std::filesystem::path&    modelDir) {
+    if (texPath.length == 0) {
+        return BGFX_INVALID_HANDLE;
+    }
+
+    if (scene) {
+        if (const aiTexture* embedded = scene->GetEmbeddedTexture(texPath.C_Str())) {
+            if (embedded->mHeight == 0) {
+                return Syngine::LoadTextureFromMemory(
+                    reinterpret_cast<const uint8_t*>(embedded->pcData),
+                    embedded->mWidth,
+                    texPath.C_Str());
+            }
+
+            // Assimp stores raw textures as aiTexel (BGRA8); convert to RGBA8.
+            const uint32_t pixelCount = embedded->mWidth * embedded->mHeight;
+            std::vector<uint8_t> rgba(pixelCount * 4);
+            for (uint32_t i = 0; i < pixelCount; ++i) {
+                const aiTexel& src = embedded->pcData[i];
+                rgba[i * 4 + 0] = src.r;
+                rgba[i * 4 + 1] = src.g;
+                rgba[i * 4 + 2] = src.b;
+                rgba[i * 4 + 3] = src.a;
+            }
+
+            return bgfx::createTexture2D(
+                static_cast<uint16_t>(embedded->mWidth),
+                static_cast<uint16_t>(embedded->mHeight),
+                false,
+                1,
+                bgfx::TextureFormat::RGBA8,
+                BGFX_TEXTURE_NONE,
+                bgfx::copy(rgba.data(), static_cast<uint32_t>(rgba.size())));
+        }
+    }
+
+    std::filesystem::path resolvedPath(texPath.C_Str());
+    if (resolvedPath.is_relative()) {
+        resolvedPath = modelDir / resolvedPath;
+    }
+    resolvedPath = resolvedPath.lexically_normal();
+
+    return Syngine::LoadTextureFromFile(resolvedPath.string().c_str());
+}
+
+} // namespace
+
 /* Base class */
 std::vector<MeshData> ModelLoader::loadedMeshes;
 
@@ -136,7 +187,7 @@ bool AssimpLoader::processScene(MeshData&          out,
         // Process all aiScene materials
         for (uint32_t i = 0; i < scene->mNumMaterials; ++i) {
             aiMaterial* aiMat = scene->mMaterials[i];
-            Material    mat   = _ProcessMaterial(aiMat, path, loadTextures);
+            Material    mat   = _ProcessMaterial(aiMat, scene, path, loadTextures);
             allMaterials.push_back(mat);
         }
 
@@ -249,11 +300,11 @@ bool AssimpLoader::processScene(MeshData&          out,
                 vertex.tangent[1] = aiMeshPtr->mTangents[v].y;
                 vertex.tangent[2] = aiMeshPtr->mTangents[v].z;
                 // Store handedness in w component of tangent
-                // cross(normal, tangent)
-                aiVector3D cross = aiMeshPtr->mTangents[v] ^
+                // sign(dot(cross(normal, tangent), bitangent))
+                aiVector3D cross = aiMeshPtr->mNormals[v] ^
                                     aiMeshPtr->mTangents[v];
                 vertex.tangent[3] =
-                    (cross * aiMeshPtr->mNormals[v]) < 0.0f ? -1.0f : 1.0f;
+                    (cross * aiMeshPtr->mBitangents[v]) < 0.0f ? -1.0f : 1.0f;
             }
 
             out.vertices.push_back(vertex);
@@ -308,159 +359,6 @@ bool AssimpLoader::processScene(MeshData&          out,
                               "Failed to create vertex/index buffer");
         return false;
     }
-
-    if (loadTextures) {
-        // load materials
-        out.materials.reserve(scene->mNumMaterials);
-        for (unsigned int i = 0; i < scene->mNumMaterials; ++i) {
-            aiMaterial* material = scene->mMaterials[i];
-            Material    mat;
-
-            // set default values
-            aiColor4D diffuse;
-            if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) == AI_SUCCESS) {
-                mat.baseColor[0] = diffuse.r;
-                mat.baseColor[1] = diffuse.g;
-                mat.baseColor[2] = diffuse.b;
-                mat.baseColor[3] = diffuse.a;
-            }
-
-            aiString texPath;
-            if (material->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath) ==
-                AI_SUCCESS) {
-                const aiTexture* tex =
-                    scene->GetEmbeddedTexture(texPath.C_Str());
-                if (tex->mHeight == 0) {
-                    // compressed texture
-                    bgfx::TextureHandle texHandle =
-                        Syngine::LoadTextureFromMemory(
-                            (const uint8_t*)tex->pcData,
-                            tex->mWidth,
-                            texPath.C_Str() // for debugging or caching
-                        );
-                    if (!bgfx::isValid(texHandle)) {
-                        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                                              "Failed to load texture %s",
-                                              texPath.C_Str());
-                        return false;
-                    }
-                    mat.albedo = texHandle;
-                } else {
-                    // uncompressed
-                }
-            } else {
-                mat.albedo = BGFX_INVALID_HANDLE;
-            }
-
-            aiString normPath;
-            if (material->GetTexture(aiTextureType_NORMALS, 0, &normPath) ==
-                AI_SUCCESS) {
-                const aiTexture* normTex =
-                    scene->GetEmbeddedTexture(normPath.C_Str());
-                if (normTex->mHeight == 0) {
-                    // compressed texture
-                    bgfx::TextureHandle texHandle =
-                        Syngine::LoadTextureFromMemory(
-                            (const uint8_t*)normTex->pcData,
-                            normTex->mWidth,
-                            normPath.C_Str() // for debugging or caching
-                        );
-                    if (!bgfx::isValid(texHandle)) {
-                        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                                              "Failed to load normal map %s",
-                                              normPath.C_Str());
-                        return false;
-                    }
-                    mat.normalMap = texHandle;
-                } else {
-                    // uncompressed
-                }
-            } else {
-                mat.normalMap = BGFX_INVALID_HANDLE;
-            }
-
-            std::string heightPath =
-                path.substr(0, path.find_last_of('.')) + "_height.png";
-
-            if (std::filesystem::exists(heightPath)) {
-                bgfx::TextureHandle texHandle =
-                    Syngine::LoadTextureFromFile(heightPath.c_str());
-                if (!bgfx::isValid(texHandle)) {
-                    Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                                          "Failed to load height map %s",
-                                          heightPath.c_str());
-                    return false;
-                }
-                mat.heightMap = texHandle;
-            } else {
-                Syngine::Logger::LogF(Syngine::LogLevel::WARN,
-                                      "Height map not found for object %s",
-                                      path.c_str());
-                mat.heightMap = Syngine::CreateFlatTexture();
-            }
-            mat.name = "material_" + std::to_string(i);
-            out.materials.push_back(mat);
-        }
-
-        // If no materials were loaded but loadTextures was true
-        // Consider making a default material
-        if (out.materials.empty() && scene->mNumMeshes > 0) {
-            Material mat;
-            mat.albedo    = BGFX_INVALID_HANDLE;
-            mat.normalMap = BGFX_INVALID_HANDLE;
-            mat.heightMap = Syngine::CreateFlatTexture();
-            mat.name      = "default_material";
-            out.materials.push_back(mat);
-        }
-    } else { // if !loadTextures
-        // Even if not loading textures, still might have multiple materials
-        // defined with different base colors
-
-        if (scene->mNumMaterials > 0) {
-            out.materials.reserve(scene->mNumMaterials);
-            for (unsigned int i = 0; i < scene->mNumMaterials; ++i) {
-                aiMaterial* material = scene->mMaterials[i];
-                Material    mat;
-
-                aiColor4D diffuse;
-                if (material->Get(AI_MATKEY_COLOR_DIFFUSE, diffuse) ==
-                    AI_SUCCESS) {
-                    mat.baseColor[0] = diffuse.r;
-                    mat.baseColor[1] = diffuse.g;
-                    mat.baseColor[2] = diffuse.b;
-                    mat.baseColor[3] = diffuse.a;
-                }
-
-                mat.albedo    = BGFX_INVALID_HANDLE;
-                mat.normalMap = BGFX_INVALID_HANDLE;
-                mat.heightMap = Syngine::CreateFlatTexture();
-                mat.name      = "material_" + std::to_string(i);
-                out.materials.push_back(mat);
-            }
-        } else { // Fallback if no materials are defined
-            Material mat;
-            mat.albedo    = BGFX_INVALID_HANDLE;
-            mat.normalMap = BGFX_INVALID_HANDLE;
-            mat.heightMap = Syngine::CreateFlatTexture();
-            mat.name      = "default_material";
-            out.materials.push_back(mat);
-        }
-    }
-
-    // Ensure at least one material exists
-    if (out.materials.empty()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
-                              "Mesh %s had no materials, using default.",
-                              path.c_str());
-        Material mat;
-        mat.albedo    = BGFX_INVALID_HANDLE;
-        mat.normalMap = BGFX_INVALID_HANDLE;
-        mat.heightMap = Syngine::CreateFlatTexture();
-        mat.name      = "default_material";
-        out.materials.push_back(mat);
-    }
-
-    out.numMaterials = static_cast<uint32_t>(out.materials.size());
 
     // and output
     out.vbh = vbh;
@@ -548,6 +446,7 @@ bool AssimpLoader::_ReloadModel(MeshData& out, int id) {
 }
 
 Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
+                                        const aiScene*     scene,
                                         const std::string& path,
                                         bool               loadTextures) {
     Material mat = {};
@@ -574,22 +473,27 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
 
     // Load textures if requested
     if (loadTextures) {
+        const std::filesystem::path modelDir =
+            std::filesystem::path(path).parent_path();
+
         aiString texPath;
         if (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
-            aiString path;
-            aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &path);
-            mat.albedo = Syngine::LoadTextureFromFile(path.C_Str());
+            aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath);
+            mat.albedo = _LoadAssimpTexture(scene, texPath, modelDir);
         } else if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-            aiString path;
-            aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &path);
-            mat.albedo = Syngine::LoadTextureFromFile(path.C_Str());
+            aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
+            mat.albedo = _LoadAssimpTexture(scene, texPath, modelDir);
+        } else {
+            mat.albedo = BGFX_INVALID_HANDLE;
         }
 
         // Normal map
         if (aiMat->GetTextureCount(aiTextureType_NORMALS) > 0) {
-            aiString path;
-            aiMat->GetTexture(aiTextureType_NORMALS, 0, &path);
-            mat.normalMap = Syngine::LoadTextureFromFile(path.C_Str());
+            aiString normalPath;
+            aiMat->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
+            mat.normalMap = _LoadAssimpTexture(scene, normalPath, modelDir);
+        } else {
+            mat.normalMap = BGFX_INVALID_HANDLE;
         }
 
         // Height map - try to find a texture with _height suffix
@@ -603,6 +507,10 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
                                   path.c_str());
             mat.heightMap = Syngine::CreateFlatTexture();
         }
+    } else {
+        mat.albedo = BGFX_INVALID_HANDLE;
+        mat.normalMap = BGFX_INVALID_HANDLE;
+        mat.heightMap = Syngine::CreateFlatTexture();
     }
     return mat;
 }

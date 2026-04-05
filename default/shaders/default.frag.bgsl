@@ -20,15 +20,16 @@ void main() {
 
     vec4 col = mix(u_baseColor, v_vertexColor, u_materialParams1.w);
 
-    vec4 nsamp = texture2D(s_normalMap, v_uvDetail * v_uvScaled.y);
-    vec3 nmap = normalize(nsamp.xyz * 2.0 - 1.0);
+    //vec4 nsamp = texture2D(s_normalMap, v_uvDetail * v_uvScaled.y);
+    //vec3 nmap = normalize(nsamp.xyz * 2.0 - 1.0);
 
     // Hemisphere ambient (http://richardssoftware.net/home/Post/58)
     // Instead of flat ambient, mix sky and ground colors based on normal Y
     float hemiMix = normal.y * 0.5 + 0.5;
     vec3 skyColor = u_skyColor.xyz;
 
-    vec3 N = normalize(mix(normal, nmap, u_materialParams1.x));
+    //vec3 N = normalize(mix(normal, nmap, u_materialParams1.x));
+    vec3 N = normal; // skip normal mapping for now, to test lighting and shadows
 
     // Lighting is direct sun
     float NdotL = max(dot(N, lightDirToSun), 0.0);

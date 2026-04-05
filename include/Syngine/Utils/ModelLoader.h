@@ -193,6 +193,7 @@ class AssimpLoader : public ModelLoader {
     /// @since v0.0.1
     /// @internal
     static Material _ProcessMaterial(aiMaterial*        aiMat,
+                                     const aiScene*     scene,
                                      const std::string& path,
                                      bool               loadTextures);
 

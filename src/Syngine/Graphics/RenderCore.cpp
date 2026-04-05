@@ -44,6 +44,28 @@
 
 namespace Syngine {
 
+namespace {
+
+bgfx::TextureHandle s_fallbackAlbedo = BGFX_INVALID_HANDLE;
+bgfx::TextureHandle s_fallbackNormal = BGFX_INVALID_HANDLE;
+bgfx::TextureHandle s_fallbackHeight = BGFX_INVALID_HANDLE;
+
+bgfx::TextureHandle _CreateSolidRGBA8Texture(uint8_t r,
+                                             uint8_t g,
+                                             uint8_t b,
+                                             uint8_t a) {
+    const uint8_t pixel[4] = { r, g, b, a };
+    return bgfx::createTexture2D(1,
+                                 1,
+                                 false,
+                                 1,
+                                 bgfx::TextureFormat::RGBA8,
+                                 0,
+                                 bgfx::copy(pixel, sizeof(pixel)));
+}
+
+} // namespace
+
 // I present to you an unholy abomination of static member definitions
 std::unordered_map<std::string, uint16_t> RenderCore::m_defaultUniformIds;
 
@@ -293,6 +315,10 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
           Renderer::RegisterUniform(
               m_internalPrograms.defaultProgram, "s_shadowMap", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
+        { "u_default_normal",
+          Renderer::RegisterUniform(
+              m_internalPrograms.defaultProgram, "s_normalMap", UniformType::UNIFORM_SAMPLER) });
+    m_defaultUniformIds.insert(
         { "u_default_useVertex",
           Renderer::RegisterUniform(
               m_internalPrograms.defaultProgram, "u_useVertexColor", UniformType::UNIFORM_VEC4) });
@@ -350,11 +376,11 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
           Renderer::RegisterUniform(
               m_internalPrograms.textureProgram, "s_albedo", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
-        { "u_normalMap",
+        { "u_texture_normal",
           Renderer::RegisterUniform(
               m_internalPrograms.textureProgram, "s_normalMap", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
-        { "u_heightMap",
+        { "u_texture_height",
           Renderer::RegisterUniform(
               m_internalPrograms.textureProgram, "s_heightMap", UniformType::UNIFORM_SAMPLER) });
     m_defaultUniformIds.insert(
@@ -479,6 +505,23 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
               m_internalPrograms.tonemapProgram, "s_ssaoTex", UniformType::UNIFORM_SAMPLER) });
     }
 
+    if (!bgfx::isValid(s_fallbackAlbedo)) {
+        s_fallbackAlbedo = _CreateSolidRGBA8Texture(255, 255, 255, 255);
+    }
+    if (!bgfx::isValid(s_fallbackNormal)) {
+        s_fallbackNormal = _CreateSolidRGBA8Texture(128, 128, 255, 255);
+    }
+    if (!bgfx::isValid(s_fallbackHeight)) {
+        s_fallbackHeight = Syngine::CreateFlatTexture();
+    }
+
+    if (!bgfx::isValid(s_fallbackAlbedo) ||
+        !bgfx::isValid(s_fallbackNormal) ||
+        !bgfx::isValid(s_fallbackHeight)) {
+        Syngine::Logger::Error("Failed to create one or more fallback textures");
+        return false;
+    }
+
     // create billboard buffers
     static const float billboardVertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
                                                0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
@@ -551,6 +594,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
 
     Renderer::SetUniform(m_defaultUniformIds["u_skyColorZenith"], skyColorZenith);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"], skyColorZenith);
+    Renderer::SetUniform(m_defaultUniformIds["u_default_skyColor"], skyColorZenith);
     Renderer::SetUniform(m_defaultUniformIds["u_skyColorMidnight"], skyColorMidnight);
     Renderer::SetUniform(m_defaultUniformIds["u_sky_sunColor"], sunColor);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_sunColor"], sunColor);
@@ -592,6 +636,19 @@ void RenderCore::_Shutdown() {
     });
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
     m_defaultUniformIds.clear();
+
+    if (bgfx::isValid(s_fallbackAlbedo)) {
+        bgfx::destroy(s_fallbackAlbedo);
+        s_fallbackAlbedo = BGFX_INVALID_HANDLE;
+    }
+    if (bgfx::isValid(s_fallbackNormal)) {
+        bgfx::destroy(s_fallbackNormal);
+        s_fallbackNormal = BGFX_INVALID_HANDLE;
+    }
+    if (bgfx::isValid(s_fallbackHeight)) {
+        bgfx::destroy(s_fallbackHeight);
+        s_fallbackHeight = BGFX_INVALID_HANDLE;
+    }
 
     bgfx::shutdown();
 }
@@ -957,16 +1014,22 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             continue;
         }
 
-        float modelMtx[16];
-        auto  transformComp = go->GetComponent<TransformComponent>();
-        if (transformComp) {
-            transformComp->GetModelMatrix(modelMtx);
-        } else {
-            bx::mtxIdentity(modelMtx);
-        }
-
         bgfx::ProgramHandle program = Renderer::GetProgram(go->type).program;
         if (!bgfx::isValid(program)) continue;
+
+        float modelMtx[16];
+        go->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
+
+        float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));
+        float sy = bx::length(bx::Vec3(modelMtx[4], modelMtx[5], modelMtx[6]));
+        float sz = bx::length(bx::Vec3(modelMtx[8], modelMtx[9], modelMtx[10]));
+
+        float normal3x3[9];
+        for(int i = 0; i < 3; ++i) {
+            normal3x3[i * 3 + 0] = modelMtx[i * 4 + 0] / sx;
+            normal3x3[i * 3 + 1] = modelMtx[i * 4 + 1] / sy;
+            normal3x3[i * 3 + 2] = modelMtx[i * 4 + 2] / sz;
+        }
 
         // Emit one packet per submesh
         for (size_t submeshIdx = 0; submeshIdx < meshData.subMeshes.size(); ++submeshIdx) {
@@ -988,6 +1051,15 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
             memcpy(packet.modelMtx, modelMtx, sizeof(modelMtx));
             packet.program = { program };
+
+            uint16_t handle = static_cast<uint16_t>(m_defaultUniformIds.at("u_"+go->type+"_normalMatrix"));
+            Uniform* uModel = Renderer::GetUniform(handle);
+            if (uModel) {
+                matInst.uniforms.push_back(
+                    { uModel->handle, std::vector<float>(normal3x3, normal3x3 + 9), 1 });
+            }
+
+            matInst.renderState = BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
 
             // Material and uniforms
             {
@@ -1012,8 +1084,13 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             matInst.uniforms.push_back(uniformData1);
 
             // Params1
-            // mixFactor, ambient, uvOverride, unused
-            std::vector<float> params1 = { mat.mixFactor,
+            // mixFactor, ambient, uvOverride, unuse
+
+            // Only texture shader uses mix factor, for blending
+            // with normal map. Default shader doesn't use it at
+            // all.
+            const float mixf = (go->type == "texture") ? mat.mixFactor : 0.0f;
+            std::vector<float> params1 = { mixf,
                                            mat.ambient,
                                            meshComp->GetObjectUVScaleOverride(),
                                            mat.useVertexColor ? 1.0f : 0.0f };
@@ -1028,40 +1105,51 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
             // Textures
             if (go->type == "texture") {
-            uint32_t sflags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP | BGFX_SAMPLER_MAG_ANISOTROPIC;
-            if (bgfx::isValid(mat.albedo)) {
-                MaterialInstance::Texture texData = {
+                uint32_t sflags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MAG_ANISOTROPIC;
+                const bgfx::TextureHandle albedoTex =
+                    bgfx::isValid(mat.albedo) ? mat.albedo : s_fallbackAlbedo;
+                const bgfx::TextureHandle normalTex =
+                    bgfx::isValid(mat.normalMap) ? mat.normalMap : s_fallbackNormal;
+                const bgfx::TextureHandle heightTex =
+                    bgfx::isValid(mat.heightMap) ? mat.heightMap : s_fallbackHeight;
+
+                matInst.textures.push_back({
                     0,
-                    Renderer::GetUniform(
-                        m_defaultUniformIds.at("s_texture_albedo"))
-                        ->handle,
-                    mat.albedo,
+                    Renderer::GetUniform(m_defaultUniformIds.at("u_texture_albedo"))->handle,
+                    albedoTex,
                     sflags
-                };
-                matInst.textures.push_back(texData);
-            }
-            if (bgfx::isValid(mat.normalMap)) {
-                MaterialInstance::Texture texData = {
+                });
+                matInst.textures.push_back({
                     1,
-                    Renderer::GetUniform(
-                        m_defaultUniformIds.at("s_texture_normal"))
-                        ->handle,
-                    mat.normalMap,
+                    Renderer::GetUniform(m_defaultUniformIds.at("u_texture_normal"))->handle,
+                    normalTex,
                     sflags
-                };
-                matInst.textures.push_back(texData);
-            }
-            if (bgfx::isValid(mat.heightMap)) {
-                MaterialInstance::Texture texData = {
+                });
+                matInst.textures.push_back({
                     2,
-                    Renderer::GetUniform(
-                        m_defaultUniformIds.at("s_texture_height"))
-                        ->handle,
-                    mat.heightMap,
+                    Renderer::GetUniform(m_defaultUniformIds.at("u_texture_height"))->handle,
+                    heightTex,
                     sflags
-                };
-                matInst.textures.push_back(texData);
-            }
+                });
+            } else if (go->type == "default") {
+                // just u_baseColor for default shader, no samplers
+                std::vector<float> baseColor = { mat.baseColor[0], mat.baseColor[1], mat.baseColor[2], mat.baseColor[3] };
+                MaterialInstance::UniformData uniformData = {
+                    Renderer::GetUniform(
+                        m_defaultUniformIds.at("u_baseColor"))
+                        ->handle,
+                    baseColor,
+                    1
+                 };
+                matInst.uniforms.push_back(uniformData);
+
+                matInst.textures.push_back({
+                    1,
+                    Renderer::GetUniform(m_defaultUniformIds.at("u_default_normal"))->handle,
+                    s_fallbackNormal,
+                    BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                        BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP
+                });
             }
             }
             packet.material = matInst;
@@ -1088,7 +1176,7 @@ void RenderCore::_DrawShadows(const Program&   program,
                               uint8_t          cascade) {
     SYN_PROFILE_FUNCTION();
     const uint64_t renderState =
-        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CCW;
+        BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
 
     if (Core::_GetApp()->debug.CSMBounds) {
         if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
@@ -1103,8 +1191,7 @@ void RenderCore::_DrawShadows(const Program&   program,
     std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
     {
         SYN_PROFILE_SCOPE("Set Shadow View");
-    bgfx::setViewName(program.viewId + cascade, "Shadow Cascade");
-        bgfx::setState(renderState);
+        bgfx::setViewName(program.viewId + cascade, "Shadow Cascade");
     }
     {
         SYN_PROFILE_SCOPE("Draw Shadow Cascade");
@@ -1131,6 +1218,8 @@ void RenderCore::_DrawShadows(const Program&   program,
             continue;
         }
 
+        bgfx::setState(renderState);
+
         // Get the transform for this object
         {
             SYN_PROFILE_SCOPE("Set transform");
@@ -1148,6 +1237,7 @@ void RenderCore::_DrawShadows(const Program&   program,
         {
             SYN_PROFILE_SCOPE("Submit shadow");
         // Shadow shaders are simple, just output depth
+        Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Submitting shadow for object: %s, cascade: %d", gameObject->name.c_str(), cascade);
         bgfx::submit(program.viewId + cascade, program.program);
         m_drawnCounts.shadows++;
         }
