@@ -1237,7 +1237,6 @@ void RenderCore::_DrawShadows(const Program&   program,
         {
             SYN_PROFILE_SCOPE("Submit shadow");
         // Shadow shaders are simple, just output depth
-        Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Submitting shadow for object: %s, cascade: %d", gameObject->name.c_str(), cascade);
         bgfx::submit(program.viewId + cascade, program.program);
         m_drawnCounts.shadows++;
         }
