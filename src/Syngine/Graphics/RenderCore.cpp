@@ -1105,7 +1105,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
             // Textures
             if (go->type == "texture") {
-                uint32_t sflags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT | BGFX_SAMPLER_MAG_ANISOTROPIC;
+                uint32_t sflags = BGFX_SAMPLER_NONE;
                 const bgfx::TextureHandle albedoTex =
                     bgfx::isValid(mat.albedo) ? mat.albedo : s_fallbackAlbedo;
                 const bgfx::TextureHandle normalTex =

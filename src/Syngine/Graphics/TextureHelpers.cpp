@@ -13,7 +13,6 @@
 #include <SDL3/SDL.h>
 
 #include <cstdint>
-#include <string>
 #include <vector>
 #include <algorithm>
 
@@ -22,37 +21,51 @@
 #endif
 #include "stb_image.h"
 
-// This is a private function exclusively used in this file
-static void _BoxDownsample2x2(const uint8_t* src, int srcW, int srcH, std::vector<uint8_t>& dst) {
-    int dstW = std::max(1, srcW / 2);
-    int dstH = std::max(1, srcH / 2);
-    dst.resize(dstW * dstH * 4);
+namespace {
 
-    for(int y = 0; y < dstH; y++){
-        for(int x = 0; x < dstW; x++){
-            int r=0,g=0,b=0,a=0, cnt=0;
-            for(int oy=0; oy<2; oy++){
-                for(int ox=0; ox<2; ox++){
-                    int sx = x*2 + ox;
-                    int sy = y*2 + oy;
-                    if(sx < srcW && sy < srcH){
-                        int i = (sy*srcW + sx)*4;
-                        r += src[i+0];
-                        g += src[i+1];
-                        b += src[i+2];
-                        a += src[i+3];
-                        cnt++;
+static void _BoxDownsample2x2(const uint8_t* src,
+                              int            srcW,
+                              int            srcH,
+                              std::vector<uint8_t>& dst) {
+    const int dstW = std::max(1, srcW / 2);
+    const int dstH = std::max(1, srcH / 2);
+    dst.resize(static_cast<size_t>(dstW) * static_cast<size_t>(dstH) * 4);
+
+    for (int y = 0; y < dstH; ++y) {
+        for (int x = 0; x < dstW; ++x) {
+            int r = 0;
+            int g = 0;
+            int b = 0;
+            int a = 0;
+            int count = 0;
+
+            for (int oy = 0; oy < 2; ++oy) {
+                for (int ox = 0; ox < 2; ++ox) {
+                    const int sx = x * 2 + ox;
+                    const int sy = y * 2 + oy;
+                    if (sx >= srcW || sy >= srcH) {
+                        continue;
                     }
+
+                    const int srcIndex = (sy * srcW + sx) * 4;
+                    r += src[srcIndex + 0];
+                    g += src[srcIndex + 1];
+                    b += src[srcIndex + 2];
+                    a += src[srcIndex + 3];
+                    ++count;
                 }
             }
-            int di = (y*dstW + x)*4;
-            dst[di+0] = r/cnt;
-            dst[di+1] = g/cnt;
-            dst[di+2] = b/cnt;
-            dst[di+3] = a/cnt;
+
+            const int dstIndex = (y * dstW + x) * 4;
+            dst[dstIndex + 0] = static_cast<uint8_t>(r / count);
+            dst[dstIndex + 1] = static_cast<uint8_t>(g / count);
+            dst[dstIndex + 2] = static_cast<uint8_t>(b / count);
+            dst[dstIndex + 3] = static_cast<uint8_t>(a / count);
         }
     }
 }
+
+} // namespace
 
 bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name) {
     int w, h, channels;
@@ -63,39 +76,63 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
         return BGFX_INVALID_HANDLE;
     }
 
-    int mipCount = 1 + (int)floor(log2(std::max(w, h)));
-    auto tex = bgfx::createTexture2D(
-        (uint16_t)w,
-        (uint16_t)h,
-        true,               //has mips
-        1,                  //num layers
-        bgfx::TextureFormat::RGBA8,
-        BGFX_TEXTURE_NONE   //we'll use updateTexture2D
-    );
+    int mipCount = 1;
+    for (int mipW = w, mipH = h; mipW > 1 || mipH > 1; ) {
+        mipW = std::max(1, mipW / 2);
+        mipH = std::max(1, mipH / 2);
+        ++mipCount;
+    }
 
-    //upload levels
-    std::vector<uint8_t> src;
-    src.assign(pixels, pixels + w*h*4);
+    size_t totalBytes = 0;
+    for (int mipW = w, mipH = h, level = 0; level < mipCount; ++level) {
+        totalBytes += static_cast<size_t>(mipW) * static_cast<size_t>(mipH) * 4;
+        mipW = std::max(1, mipW / 2);
+        mipH = std::max(1, mipH / 2);
+    }
+
+    std::vector<uint8_t> packedMips;
+    packedMips.reserve(totalBytes);
+
+    std::vector<uint8_t> currentLevel(
+        pixels,
+        pixels + static_cast<size_t>(w) * static_cast<size_t>(h) * 4);
     int levelW = w;
     int levelH = h;
 
-    for (int level = 0; level < mipCount; level++) {
-        //copy level data into bgfx
-        const bgfx::Memory* mem = bgfx::copy(src.data(), static_cast<uint32_t>(src.size()));
-        bgfx::updateTexture2D(tex, 0, level, 0, 0, (uint16_t)levelW, (uint16_t)levelH, mem);
+    for (int level = 0; level < mipCount; ++level) {
+        packedMips.insert(packedMips.end(), currentLevel.begin(), currentLevel.end());
 
-        //generate next mip in our src buffer
-        if(level+1 < mipCount) {
-            std::vector<uint8_t> next;
-            _BoxDownsample2x2(src.data(), levelW, levelH, next);
-            src.swap(next);
+        if (level + 1 < mipCount) {
+            std::vector<uint8_t> nextLevel;
+            _BoxDownsample2x2(currentLevel.data(), levelW, levelH, nextLevel);
+            currentLevel.swap(nextLevel);
             levelW = std::max(1, levelW / 2);
             levelH = std::max(1, levelH / 2);
-            src.resize(levelW * levelH * 4);
         }
     }
 
+    const bgfx::Memory* mem =
+        bgfx::copy(packedMips.data(), static_cast<uint32_t>(packedMips.size()));
+    const bgfx::TextureHandle tex = bgfx::createTexture2D(
+        static_cast<uint16_t>(w),
+        static_cast<uint16_t>(h),
+        mipCount > 1,
+        1,
+        bgfx::TextureFormat::RGBA8,
+        BGFX_TEXTURE_NONE,
+        mem);
+
     stbi_image_free(pixels);
+
+    if (!bgfx::isValid(tex)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Failed to create texture %s (%dx%d)",
+                              name ? name : "<memory>",
+                              w,
+                              h);
+        return BGFX_INVALID_HANDLE;
+    }
+
     return tex;
 }
 
