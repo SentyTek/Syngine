@@ -38,10 +38,12 @@ void ZoneManager::_UpdateZones() {
             // Or, if an object is in, and is in the onetime list, don't do
             // anything If an object is not in, and is tracked, it just exited.
             if (inZone && !zone->_IsTrackingObject(objPtr) && !zone->_HasOneTimeObject(objPtr)) {
-                zone->OnEnter(objPtr);
+                if (zone->OnEnter)
+                    zone->OnEnter(objPtr);
                 zone->_AddObject(objPtr);
             } else if (!inZone && zone->_IsTrackingObject(objPtr)) {
-                zone->OnExit(objPtr);
+                if (zone->OnExit)
+                    zone->OnExit(objPtr);
                 zone->_RemoveObject(objPtr);
             }
         }
