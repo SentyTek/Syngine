@@ -202,7 +202,7 @@ class GameObject {
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetEnabled(bool enabled = true);
-    
+
     bool enabled = true; //* Whether the GameObject is enabled for rendering and updates
 
   private:

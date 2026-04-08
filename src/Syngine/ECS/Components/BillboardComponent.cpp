@@ -96,7 +96,7 @@ void BillboardComponent::Init(const std::string& bundlePath, const std::string& 
     // Load the texture for the billboard
     std::string resolvedBundlePath =
         Syngine::Internal::ResolvePath(bundlePath.c_str());
-    
+
     this->m_texture = Syngine::LoadTextureFromBundle(
         resolvedBundlePath, texturePath);
 

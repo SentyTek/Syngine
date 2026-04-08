@@ -332,7 +332,7 @@ bool AssimpLoader::processScene(MeshData&      out,
     }
 
     out.numSubMeshes = static_cast<uint8_t>(out.subMeshes.size());
-    
+
     // create bgfx vertex layout
     bgfx::VertexLayout layout;
     layout.begin()

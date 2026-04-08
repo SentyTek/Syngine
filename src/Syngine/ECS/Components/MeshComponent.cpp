@@ -110,7 +110,7 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
                               texturePath.c_str());
         return false; // Error loading mesh stream
     }
-    
+
     // Load the mesh data from the bundle
     AssimpLoader loader;
     if (!loader._LoadModel(
@@ -174,7 +174,7 @@ bool MeshComponent::ReloadMesh() {
             this->m_texturePath.c_str());
             return false; // Error loading mesh stream
         }
-        
+
     // Reload the mesh data from the bundle
     AssimpLoader loader;
     if (!loader._ReloadModel(this->meshData,
