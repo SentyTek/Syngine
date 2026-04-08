@@ -15,6 +15,7 @@
 
 - [LoadTextureFromMemory](#syngineloadtexturefrommemory)
 - [LoadTextureFromFile](#syngineloadtexturefromfile)
+- [LoadTextureFromBundle](#syngineloadtexturefrombundle)
 - [CreateFlatTexture](#synginecreateflattexture)
 - [CreateNoiseTexture](#synginecreatenoisetexture)
 
@@ -55,6 +56,26 @@ bgfx::TextureHandle LoadTextureFromFile(const char* path);
 **Parameters:**
 
 - `path`: Path to the texture file
+
+**Returns:** A bgfx::TextureHandle representing the loaded texture
+
+---
+
+#### **`Syngine::LoadTextureFromBundle`**
+
+
+ Load a texture from a bundle
+
+Signature:
+
+```cpp
+bgfx::TextureHandle LoadTextureFromBundle(const std::string& bundlePath, const std::string& textureName);
+```
+
+**Parameters:**
+
+- `bundlePath`: Path to the shader bundle containing the texture
+- `textureName`: Name of the texture within the shader bundle
 
 **Returns:** A bgfx::TextureHandle representing the loaded texture
 

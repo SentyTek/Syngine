@@ -17,6 +17,7 @@
 - [Constructor](#class-constructor)
 - [MeshAABB](#synginemeshaabb)
 - [bool](#meshcomponentbool)
+- [Constructor](#class-constructor)
 - [GetComponentType](#meshcomponentgetcomponenttype)
 - [Clone](#meshcomponentclone)
 - [Serialize](#meshcomponentserialize)
@@ -28,6 +29,13 @@
 - [IsMeshLoaded](#meshcomponentismeshloaded)
 - [UploadMesh](#meshcomponentuploadmesh)
 - [GetAABB](#meshcomponentgetaabb)
+- [GetSubmeshCount](#meshcomponentgetsubmeshcount)
+- [GetSubmeshMaterialIndex](#meshcomponentgetsubmeshmaterialindex)
+- [SetSubmeshMaterialIndex](#meshcomponentsetsubmeshmaterialindex)
+- [GetMaterialUVScale](#meshcomponentgetmaterialuvscale)
+- [SetMaterialUVScale](#meshcomponentsetmaterialuvscale)
+- [GetObjectUVScaleOverride](#meshcomponentgetobjectuvscaleoverride)
+- [SetObjectUVScaleOverride](#meshcomponentsetobjectuvscaleoverride)
 
 ---
 
@@ -44,7 +52,7 @@
 Signature:
 
 ```cpp
- MeshComponent(GameObject* owner, const std::string& path = "", bool loadTextures = true);
+ MeshComponent(GameObject* owner, const std::string& path, bool loadTextures = true);
 ```
 
 **Parameters:**
@@ -98,6 +106,36 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+
+## Class Constructor
+
+
+#### **`MeshComponent::MeshComponent`**
+
+
+ Constructor for the MeshComponent class
+
+**Note:** This should only be called by GameObject::AddComponent<T>()
+
+Signature:
+
+```cpp
+ MeshComponent(GameObject* owner, const std::string& bundlePath, const std::string& texturePath, bool loadTextures = true);
+```
+
+**Parameters:**
+
+- `owner`: Pointer to the GameObject that owns this component
+- `bundlePath`: Path to the shader bundle containing the mesh
+- `texturePath`: Path to the mesh within the bundle
+- `loadTextures`: Whether to load textures for the model
+
+**This function has been available since:** v0.0.1
+
+---
+
+## Class & Related Members
+
 
 #### **`MeshComponent::GetComponentType`**
 
@@ -158,12 +196,13 @@ Signature:
 Signature:
 
 ```cpp
- void Init(const std::string& path = "", bool loadTextures = true);
+ void Init(const std::string& bundlePath, const std::string& texturePath, bool loadTextures = true);
 ```
 
 **Parameters:**
 
-- `path`: Path to the model file
+- `bundlePath`: Path to the shader bundle containing the mesh
+- `texturePath`: Path to the mesh within the bundle
 - `loadTextures`: Whether to load textures for the model
 
 **Thread Safety:** not-safe
@@ -201,12 +240,13 @@ Signature:
 Signature:
 
 ```cpp
- bool LoadMesh(const std::string& path, bool loadTextures = true);
+ bool LoadMesh(const std::string& bundlePath, const std::string& texturePath, bool loadTextures = true);
 ```
 
 **Parameters:**
 
-- `path`: Path to the model file
+- `bundlePath`: Path to the shader bundle containing the mesh
+- `texturePath`: Path to the mesh within the bundle
 - `loadTextures`: Whether to load textures for the model
 
 **Returns:** 0 on success, non-zero code on failure
@@ -325,6 +365,161 @@ Signature:
 
 ---
 
+#### **`MeshComponent::GetSubmeshCount`**
+
+
+ Get the submesh count
+
+Signature:
+
+```cpp
+ uint8_t GetSubmeshCount() const;
+```
+
+**Returns:** Number of submeshes in the mesh
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`MeshComponent::GetSubmeshMaterialIndex`**
+
+
+ Get material index for a specific submesh
+
+Signature:
+
+```cpp
+ uint8_t GetSubmeshMaterialIndex(uint8_t submeshIndex) const;
+```
+
+**Parameters:**
+
+- `submeshIndex`: Index of the submesh to query
+
+**Returns:** Material index for the specified submesh, or 255 if invalid index
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`MeshComponent::SetSubmeshMaterialIndex`**
+
+
+ Assign a material to a specific submesh
+
+Signature:
+
+```cpp
+ bool SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materialIndex);
+```
+
+**Parameters:**
+
+- `submeshIndex`: Index of the submesh to assign the material to
+- `materialIndex`: Index of the material to assign to the submesh
+
+**Returns:** true if the assignment was successful, false if the submesh index is invalid
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`MeshComponent::GetMaterialUVScale`**
+
+
+ Get UV scale for specific texture type and material
+
+Signature:
+
+```cpp
+ float* GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
+```
+
+**Parameters:**
+
+- `materialIndex`: Index of the material to query
+- `textureType`: Type of the texture (0 = albedo, 1 = normal, 2 = height)
+
+**Returns:** UV scale for the specified material and texture type
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`MeshComponent::SetMaterialUVScale`**
+
+
+ Set UV scale for specific texture type and material
+
+Signature:
+
+```cpp
+ bool SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, float uvScale[2]);
+```
+
+**Parameters:**
+
+- `materialIndex`: Index of the material to modify
+- `textureType`: Type of the texture (0 = albedo, 1 = normal, 2 = height)
+- `uvScale`: UV scale to set for the specified material and texture type
+
+**Returns:** true if the UV scale was successfully set, false if the material index is invalid
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`MeshComponent::GetObjectUVScaleOverride`**
+
+
+ Gets the UV scale override for the whole object
+
+Signature:
+
+```cpp
+ float GetObjectUVScaleOverride() const;
+```
+
+**Returns:** UV scale override for the whole object. 1.0f by default.
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`MeshComponent::SetObjectUVScaleOverride`**
+
+
+ Sets the UV scale override for the whole object
+
+Signature:
+
+```cpp
+ void SetObjectUVScaleOverride(float uvScaleOverride);
+```
+
+**Parameters:**
+
+- `uvScaleOverride`: UV scale override to set for the whole object
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
 ## Member Variables
 
 
@@ -334,6 +529,9 @@ Signature:
 | `bool` | `receiveSunLight` | Whether the mesh receives sunlight |
 | `MeshData` | `meshData` | Mesh data for the GameObject |
 | `mutable` | `MeshAABB` | Axis-aligned bounding box of the mesh |
+| `float` | `m_objectUVScaleOverride` | UV scale override for the whole object |
+| `std::string` | `m_bundlePath` | Path to the shader bundle containing the mesh |
+| `std::string` | `m_texturePath` | Path to the mesh within the bundle |
 
 ---
 
