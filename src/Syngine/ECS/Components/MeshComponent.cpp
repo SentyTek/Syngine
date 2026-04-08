@@ -24,23 +24,49 @@
 #include <string>
 
 namespace Syngine {
+
+// This constructor does nothing. It is used for creating an empty MeshComponent that can be initialized later.
+MeshComponent::MeshComponent(GameObject* owner) {
+    this->meshData = Syngine::MeshData();
+    this->m_owner  = owner;
+    this->m_bundlePath = "";
+    this->m_texturePath = "";
+}
+
 MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& path,
                              bool               loadTextures) {
     this->meshData = Syngine::MeshData();
     this->m_owner  = owner;
-    this->Init(path, loadTextures);
+    this->m_bundlePath = "meshes/meshes.spk";
+    this->m_texturePath = path;
+    this->Init(this->m_bundlePath, path, loadTextures);
+}
+
+MeshComponent::MeshComponent(GameObject*        owner,
+                             const std::string& bundlePath,
+                             const std::string& texturePath,
+                             bool               loadTextures) {
+    this->meshData = Syngine::MeshData();
+    this->m_owner  = owner;
+    this->m_bundlePath = bundlePath;
+    this->m_texturePath = texturePath;
+    this->Init(bundlePath, texturePath, loadTextures);
 }
 
 MeshComponent::MeshComponent(const MeshComponent& other) {
     this->meshData = other.meshData; // Shallow copy, deep copy may be needed
     this->m_owner  = other.m_owner;
+    this->m_bundlePath = other.m_bundlePath;
+    this->m_texturePath = other.m_texturePath;
 }
 
 MeshComponent& MeshComponent::operator=(const MeshComponent& other) {
     if (this != &other) {
         this->meshData = other.meshData; // Shallow copy, deep copy may be needed
         this->m_owner  = other.m_owner;
+        this->m_bundlePath = other.m_bundlePath;
+        this->m_texturePath = other.m_texturePath;
     }
     return *this;
 }
@@ -57,26 +83,54 @@ Syngine::ComponentTypeID MeshComponent::GetComponentType() {
 Serializer::DataNode MeshComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
-    node / "path" = _MakeRelativeToRoot(this->meshData.path);
+    node / "bundle" = m_bundlePath;
+    node / "path" = m_texturePath;
     //TODO: mats will need to be serialized at some point
     return node;
 }
 
-void MeshComponent::Init(const std::string& path, bool loadTextures) {
-    if (!path.empty())
-        this->LoadMesh(path, loadTextures);
+void MeshComponent::Init(const std::string& bundlePath,
+                         const std::string& texturePath,
+                         bool               loadTextures) {
+    if (!bundlePath.empty() && !texturePath.empty())
+        this->LoadMesh(bundlePath, texturePath, loadTextures);
 }
 
-bool MeshComponent::LoadMesh(const std::string& path, bool loadTextures) {
-    // Load the mesh data from the file
+bool MeshComponent::LoadMesh(const std::string& bundlePath,
+                             const std::string& texturePath,
+                             bool               loadTextures) {
+    // Get the data stream from the bundle
+    std::string resolvedBundlePath =
+        Syngine::Internal::ResolvePath(bundlePath.c_str());
+    scl::stream meshStream = Serializer::_ReadFromBundle(resolvedBundlePath, texturePath);
+    if (meshStream.size() == 0) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              "Failed to load mesh from bundle %s with texture %s",
+                              resolvedBundlePath.c_str(),
+                              texturePath.c_str());
+        return false; // Error loading mesh stream
+    }
+    
+    // Load the mesh data from the bundle
     AssimpLoader loader;
     if (!loader._LoadModel(
-            this->meshData, path.c_str(), loadTextures)) {
+            this->meshData, &meshStream, texturePath, loadTextures)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to load mesh from %s",
-                              _MakeRelativeToRoot(path).c_str());
+                              texturePath.c_str());
         return false; // Error loading mesh
     }
+
+    // For hot reloading the bundle will update, not textures specifically.
+    try {
+        meshData.lastWriteTime = std::filesystem::last_write_time(resolvedBundlePath);
+    } catch (const std::filesystem::filesystem_error& e) {
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                              "Failed to get last write time for %s: %s",
+                              resolvedBundlePath.c_str(),
+                              e.what()); // e.what() lol what a name
+    }
+
     return true; // Success
 }
 
@@ -109,17 +163,37 @@ bool MeshComponent::UnloadMesh() {
 }
 
 bool MeshComponent::ReloadMesh() {
-    // Reload the mesh data from the file
-    if (this->meshData.path.empty()) {
-        Syngine::Logger::Error("No mesh path set for reloading");
-        return false; // Error: no path set
-    }
+    // Get the data stream from the bundle
+    std::string resolvedBundlePath =
+    Syngine::Internal::ResolvePath(this->m_bundlePath.c_str());
+    scl::stream meshStream = Serializer::_ReadFromBundle(resolvedBundlePath, this->m_texturePath);
+    if (meshStream.size() == 0) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+            "Failed to load mesh from bundle %s with texture %s",
+            resolvedBundlePath.c_str(),
+            this->m_texturePath.c_str());
+            return false; // Error loading mesh stream
+        }
+        
+    // Reload the mesh data from the bundle
     AssimpLoader loader;
-    if (!loader._ReloadModel(this->meshData, this->meshData.id)) {
+    if (!loader._ReloadModel(this->meshData,
+                             &meshStream,
+                             this->m_texturePath,
+                             this->meshData.id)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Failed to reload mesh from %s",
-                              _MakeRelativeToRoot(this->meshData.path).c_str());
+                              _MakeRelativeToRoot(this->m_texturePath).c_str());
         return false; // Error reloading mesh
+    }
+
+    try {
+        this->meshData.lastWriteTime = std::filesystem::last_write_time(this->m_texturePath);
+    } catch (const std::filesystem::filesystem_error& e) {
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                              "Failed to get last write time for %s: %s",
+                              this->m_texturePath.c_str(),
+                              e.what());
     }
     return true; // Success
 }
@@ -411,6 +485,9 @@ static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH,
                 node / "path" = svalue;
             } else if (key == "hasTextures") {
                 node / "hasTextures" = (value == "true");
+            } else if (key == "bundle") {
+                std::string svalue = std::string(value.cstr());
+                node / "bundle" = svalue;
             }
         }
         return node;
@@ -419,8 +496,9 @@ static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH,
     // Instantiate: DataNode -> Component instance
     [](Syngine::GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
         std::string path = data.Has("path") ? data["path"].As<std::string>() : "";
+        std::string bundlePath = data.Has("bundle") ? data["bundle"].As<std::string>() : "meshes/meshes.spk";
         bool hasTextures = data.Has("hasTextures") ? data["hasTextures"].As<bool>() : false;
-        auto meshComp = std::make_unique<MeshComponent>(owner, path, hasTextures);
+        auto meshComp = std::make_unique<MeshComponent>(owner, bundlePath, path, hasTextures);
         return meshComp;
     }
 );

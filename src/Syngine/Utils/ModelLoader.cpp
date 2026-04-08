@@ -24,13 +24,36 @@
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
 
+#include "miniscl.hpp"
+
 namespace Syngine {
 
 namespace {
 
+std::string _GetAssimpFormatHint(const std::string& assetPath) {
+    const size_t dotPos = assetPath.find_last_of('.');
+    if (dotPos == std::string::npos || dotPos + 1 >= assetPath.size()) {
+        return std::string();
+    }
+
+    std::string ext = assetPath.substr(dotPos + 1);
+    std::transform(ext.begin(), ext.end(), ext.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+
+    // Assimp registers legacy glTF1 before glTF2 for .gltf/.glb. When loading
+    // from memory with a hint, this can hit a first-chance throw in glTF1 on
+    // valid GLB2 files before glTF2 gets a chance. Route these through the
+    // glTF2 importer path explicitly.
+    if (ext == "glb" || ext == "gltf") {
+        return "vrm";
+    }
+
+    return ext;
+}
+
 bgfx::TextureHandle _LoadAssimpTexture(const aiScene*                  scene,
-                                       const aiString&                 texPath,
-                                       const std::filesystem::path&    modelDir) {
+                                       const aiString&                 texPath) {
     if (texPath.length == 0) {
         return BGFX_INVALID_HANDLE;
     }
@@ -66,13 +89,8 @@ bgfx::TextureHandle _LoadAssimpTexture(const aiScene*                  scene,
         }
     }
 
-    std::filesystem::path resolvedPath(texPath.C_Str());
-    if (resolvedPath.is_relative()) {
-        resolvedPath = modelDir / resolvedPath;
-    }
-    resolvedPath = resolvedPath.lexically_normal();
-
-    return Syngine::LoadTextureFromFile(resolvedPath.string().c_str());
+    // Textures should always be in the glb files.
+    return BGFX_INVALID_HANDLE;
 }
 
 } // namespace
@@ -119,7 +137,8 @@ void ModelLoader::_UnloadAllMeshes() {
 
 // Returns true if the model was loaded successfully, false otherwise
 bool AssimpLoader::_LoadModel(MeshData&          out,
-                              const std::string& path,
+                              scl::stream*       stream,
+                              const std::string& assetPath,
                               bool               loadTextures) {
     Assimp::Importer importer;
 
@@ -127,10 +146,12 @@ bool AssimpLoader::_LoadModel(MeshData&          out,
                       aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
                       aiProcess_DropNormals;
 
+    const std::string formatHint = _GetAssimpFormatHint(assetPath);
+
     // read file. ideally use some kind of post processing (tangents, join
     // indices, etc), but this is a simple example
-    const std::string resolvedPath = _ResolveOSPath(path.c_str());
-    const aiScene*    scene        = importer.ReadFile(resolvedPath, flags);
+    const aiScene* scene = importer.ReadFileFromMemory(
+        stream->data(), stream->size(), flags, formatHint.c_str());
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->HasMeshes()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -140,43 +161,29 @@ bool AssimpLoader::_LoadModel(MeshData&          out,
     }
 
     if (scene->mNumMeshes == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              "No meshes found in model: %s",
-                              resolvedPath.c_str());
+        Syngine::Logger::Error("No meshes found in model.");
         return false;
     }
 
     MeshData meshData;
-    if (!processScene(meshData, scene, resolvedPath, loadTextures)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              "Failed to process scene for model: %s",
-                              resolvedPath.c_str());
+    if (!processScene(meshData, scene, stream, loadTextures)) {
+        Syngine::Logger::Error("Failed to process model scene.");
         return false;
     }
-    meshData.path        = resolvedPath;
     meshData.id          = static_cast<int>(loadedMeshes.size());
 
-    try {
-        meshData.lastWriteTime = std::filesystem::last_write_time(resolvedPath);
-    } catch (const std::filesystem::filesystem_error& e) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
-                              "Failed to get last write time for %s: %s",
-                              resolvedPath.c_str(),
-                              e.what()); // e.what() lol what a name
-    }
     meshData.valid = true; // Mark as valid after processing
 
-    Syngine::Logger::LogF(
-        Syngine::LogLevel::INFO, "Loaded mesh %s", path.c_str());
+    Syngine::Logger::Info("Loaded mesh");
     loadedMeshes.push_back(meshData);
     out = meshData;
     return true;
 }
 
-bool AssimpLoader::processScene(MeshData&          out,
-                                const aiScene*     scene,
-                                const std::string& path,
-                                bool               loadTextures) {
+bool AssimpLoader::processScene(MeshData&      out,
+                                const aiScene* scene,
+                                scl::stream*   meshStream,
+                                bool           loadTextures) {
     out.vertices.clear();
     out.indices.clear();
     out.materials.clear();
@@ -187,7 +194,7 @@ bool AssimpLoader::processScene(MeshData&          out,
         // Process all aiScene materials
         for (uint32_t i = 0; i < scene->mNumMaterials; ++i) {
             aiMaterial* aiMat = scene->mMaterials[i];
-            Material    mat   = _ProcessMaterial(aiMat, scene, path, loadTextures);
+            Material    mat   = _ProcessMaterial(aiMat, scene, meshStream, loadTextures);
             allMaterials.push_back(mat);
         }
 
@@ -368,7 +375,10 @@ bool AssimpLoader::processScene(MeshData&          out,
 }
 
 // Reloads a model by its ID, returns true if successful
-bool AssimpLoader::_ReloadModel(MeshData& out, int id) {
+bool AssimpLoader::_ReloadModel(MeshData&          out,
+                                scl::stream*       stream,
+                                const std::string& assetPath,
+                                int                id) {
     MeshData* mesh = _GetMeshById(id);
     if (!mesh) {
         Syngine::Logger::LogF(
@@ -381,7 +391,9 @@ bool AssimpLoader::_ReloadModel(MeshData& out, int id) {
     const uint16_t   flags = aiProcess_JoinIdenticalVertices |
                            aiProcess_CalcTangentSpace |
                            aiProcess_GenSmoothNormals;
-    const aiScene* scene = importer.ReadFile(mesh->path, flags);
+    const std::string formatHint = _GetAssimpFormatHint(assetPath);
+    const aiScene* scene = importer.ReadFileFromMemory(
+        stream->data(), stream->size(), flags, formatHint.c_str());
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->HasMeshes()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -398,10 +410,8 @@ bool AssimpLoader::_ReloadModel(MeshData& out, int id) {
             break;
         }
     }
-    if (!processScene(temp, scene, mesh->path, hasTextures)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              "Failed to process scene for model: %s",
-                              mesh->path.c_str());
+    if (!processScene(temp, scene, stream, hasTextures)) {
+        Syngine::Logger::Error("Failed to process model scene during reload.");
         return false;
     }
 
@@ -429,25 +439,16 @@ bool AssimpLoader::_ReloadModel(MeshData& out, int id) {
     mesh->id =
         static_cast<int>(loadedMeshes.size()); // Update ID to the new index
 
-    try {
-        mesh->lastWriteTime = std::filesystem::last_write_time(mesh->path);
-    } catch (const std::filesystem::filesystem_error& e) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
-                              "Failed to get last write time for %s: %s",
-                              mesh->path.c_str(),
-                              e.what());
-    }
     mesh->valid = true;
 
-    Syngine::Logger::LogF(
-        Syngine::LogLevel::INFO, "Reloaded mesh %s", mesh->path.c_str());
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Reloaded mesh with ID %d", mesh->id);
     out = *mesh; // Update output with reloaded data
     return true;
 }
 
 Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
                                         const aiScene*     scene,
-                                        const std::string& path,
+                                        scl::stream*       meshStream,
                                         bool               loadTextures) {
     Material mat = {};
     mat.useVertexColor = false;
@@ -473,16 +474,13 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
 
     // Load textures if requested
     if (loadTextures) {
-        const std::filesystem::path modelDir =
-            std::filesystem::path(path).parent_path();
-
         aiString texPath;
         if (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
             aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath);
-            mat.albedo = _LoadAssimpTexture(scene, texPath, modelDir);
+            mat.albedo = _LoadAssimpTexture(scene, texPath);
         } else if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
-            mat.albedo = _LoadAssimpTexture(scene, texPath, modelDir);
+            mat.albedo = _LoadAssimpTexture(scene, texPath);
         } else {
             mat.albedo = BGFX_INVALID_HANDLE;
         }
@@ -491,13 +489,13 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
         if (aiMat->GetTextureCount(aiTextureType_NORMALS) > 0) {
             aiString normalPath;
             aiMat->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
-            mat.normalMap = _LoadAssimpTexture(scene, normalPath, modelDir);
+            mat.normalMap = _LoadAssimpTexture(scene, normalPath);
         } else {
             mat.normalMap = BGFX_INVALID_HANDLE;
         }
 
         // Height map - try to find a texture with _height suffix
-        std::string heightPath =
+        /*std::string heightPath =
             path.substr(0, path.find_last_of('.')) + "_height.png";
         if (std::filesystem::exists(heightPath)) {
             mat.heightMap = Syngine::LoadTextureFromFile(heightPath.c_str());
@@ -506,7 +504,10 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
                                   "Height map not found for material %s",
                                   path.c_str());
             mat.heightMap = Syngine::CreateFlatTexture();
-        }
+        }*/
+
+        // HEIGHT MAPS ARE NO LONGER USED BY SHADERS
+        mat.heightMap = Syngine::CreateFlatTexture(); // For now, just use a flat texture
     } else {
         mat.albedo = BGFX_INVALID_HANDLE;
         mat.normalMap = BGFX_INVALID_HANDLE;

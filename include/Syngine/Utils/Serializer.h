@@ -327,6 +327,13 @@ class Serializer {
         }
 
         scl::pack::PackIndex* wts = pack.openFile(assetPath.c_str());
+
+        if (!wts || !wts->stream()) {
+            Logger::LogF(LogLevel::ERR, "Failed to open asset in bundle: %s", assetPath.c_str());
+            pack.close();
+            return scl::stream();
+        }
+
         wts->waitable().wait();
         scl::stream ms;
         size_t dataSize = wts->stream()->size();

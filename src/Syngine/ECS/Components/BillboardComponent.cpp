@@ -21,7 +21,21 @@ BillboardComponent::BillboardComponent(GameObject* owner,
     this->size    = size;
     this->m_mode  = mode;
     this->m_texturePath = texturePath;
-    this->Init(texturePath);
+    this->m_bundlePath = "imgs/imgs.spk";
+    this->Init("imgs/imgs.spk", texturePath);
+}
+
+BillboardComponent::BillboardComponent(GameObject* owner,
+                                       std::string bundlePath,
+                                       std::string texturePath,
+                                       BillboardMode mode,
+                                       float size) {
+    this->m_owner = owner;
+    this->size    = size;
+    this->m_mode  = mode;
+    this->m_texturePath = texturePath;
+    this->m_bundlePath = bundlePath;
+    this->Init(bundlePath, texturePath);
 }
 
 BillboardComponent::BillboardComponent(const BillboardComponent& other) {
@@ -29,9 +43,10 @@ BillboardComponent::BillboardComponent(const BillboardComponent& other) {
     this->size    = other.size;
     this->m_mode  = other.m_mode;
     this->m_texturePath = other.m_texturePath;
+    this->m_bundlePath = other.m_bundlePath;
     this->m_texture = BGFX_INVALID_HANDLE;
     if (!this->m_texturePath.empty()) {
-        this->Init(this->m_texturePath);
+        this->Init(this->m_bundlePath, this->m_texturePath);
     }
 }
 
@@ -45,8 +60,9 @@ BillboardComponent& BillboardComponent::operator=(const BillboardComponent& othe
         this->size    = other.size;
         this->m_mode  = other.m_mode;
         this->m_texturePath = other.m_texturePath;
+        this->m_bundlePath = other.m_bundlePath;
         if (!this->m_texturePath.empty()) {
-            this->Init(this->m_texturePath);
+            this->Init(this->m_bundlePath, this->m_texturePath);
         }
     }
     return *this;
@@ -69,16 +85,20 @@ Serializer::DataNode BillboardComponent::Serialize() const {
     billboardNode / "size" = size;
     billboardNode / "mode" = static_cast<int>(m_mode);
     billboardNode / "texturePath" = m_texturePath;
+    billboardNode / "bundlePath" = m_bundlePath;
         // Note: We don't serialize the texture handle itself, as it's not
         // meaningful outside of the current runtime context. Instead, we serialize
         // the texture path, which can be used to reload the texture when deserializing.
     return billboardNode;
 }
 
-void BillboardComponent::Init(const std::string& texturePath) {
+void BillboardComponent::Init(const std::string& bundlePath, const std::string& texturePath) {
     // Load the texture for the billboard
-    this->m_texture = Syngine::LoadTextureFromFile(
-        Syngine::_ResolveOSPath(texturePath.c_str()).c_str());
+    std::string resolvedBundlePath =
+        Syngine::Internal::ResolvePath(bundlePath.c_str());
+    
+    this->m_texture = Syngine::LoadTextureFromBundle(
+        resolvedBundlePath, texturePath);
 
     if (!bgfx::isValid(this->m_texture)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -102,6 +122,8 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
                 node / "mode" = std::stoi(value.cstr());
             } else if (key == "texturePath") {
                 node / "texturePath" = value;
+            } else if (key == "bundlePath") {
+                node / "bundlePath" = value;
             }
         }
         return node;
@@ -118,7 +140,8 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
             }
         }
         std::string texturePath = data.Has("texturePath") ? data["texturePath"].As<std::string>() : "";
-        return std::make_unique<BillboardComponent>(owner, texturePath, mode, size);
+        std::string bundlePath = data.Has("bundlePath") ? data["bundlePath"].As<std::string>() : "";
+        return std::make_unique<BillboardComponent>(owner, bundlePath, texturePath, mode, size);
     }
 );
 

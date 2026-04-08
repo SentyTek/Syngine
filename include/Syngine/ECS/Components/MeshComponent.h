@@ -11,6 +11,7 @@
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Serializer.h"
+#include <string>
 
 namespace Syngine {
 
@@ -35,6 +36,9 @@ class MeshComponent : public Syngine::Component {
     static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_MESH; //* Mesh component type
 
+    // Basic constructor for doing nothing.
+    MeshComponent(GameObject* owner);
+
     /// @brief Constructor for the MeshComponent class
     /// @param owner Pointer to the GameObject that owns this component
     /// @param path Path to the model file
@@ -42,7 +46,19 @@ class MeshComponent : public Syngine::Component {
     /// @note This should only be called by GameObject::AddComponent<T>()
     /// @since v0.0.1
     MeshComponent(GameObject*        owner,
-                  const std::string& path         = "",
+                  const std::string& path,
+                  bool               loadTextures = true);
+
+    /// @brief Constructor for the MeshComponent class
+    /// @param owner Pointer to the GameObject that owns this component
+    /// @param bundlePath Path to the shader bundle containing the mesh
+    /// @param texturePath Path to the mesh within the bundle
+    /// @param loadTextures Whether to load textures for the model
+    /// @note This should only be called by GameObject::AddComponent<T>()
+    /// @since v0.0.1
+    MeshComponent(GameObject*        owner,
+                  const std::string& bundlePath,
+                  const std::string& texturePath,
                   bool               loadTextures = true);
 
     MeshComponent(const MeshComponent& other);
@@ -68,13 +84,16 @@ class MeshComponent : public Syngine::Component {
     Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the mesh component
-    /// @param path Path to the model file
+    /// @param bundlePath Path to the shader bundle containing the mesh
+    /// @param texturePath Path to the mesh within the bundle
     /// @param loadTextures Whether to load textures for the model
     /// @note This should only be called when the component is added to a
     /// GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void Init(const std::string& path = "", bool loadTextures = true);
+    void Init(const std::string& bundlePath,
+              const std::string& texturePath,
+              bool               loadTextures = true);
 
     /// @brief Update the mesh component. Unused.
     /// @param deltaTime Time elapsed since the last update in seconds
@@ -83,12 +102,15 @@ class MeshComponent : public Syngine::Component {
     void Update(float deltaTime) override {};
 
     /// @brief Load a mesh from a file
-    /// @param path Path to the model file
+    /// @param bundlePath Path to the shader bundle containing the mesh
+    /// @param texturePath Path to the mesh within the bundle
     /// @param loadTextures Whether to load textures for the model
     /// @return 0 on success, non-zero code on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool LoadMesh(const std::string& path, bool loadTextures = true);
+    bool LoadMesh(const std::string& bundlePath,
+                  const std::string& texturePath,
+                  bool               loadTextures = true);
 
     /// @brief Reload the mesh from the file
     /// @return 0 on success, non-zero on failure
@@ -199,6 +221,10 @@ class MeshComponent : public Syngine::Component {
     mutable uint64_t m_cachedTransformVersion =
         0; //* Cached version of the transform when AABB was last calculated
     float m_objectUVScaleOverride = 1.0f; //* UV scale override for the whole object
+    std::string m_bundlePath; //* Path to the shader bundle containing the mesh
+    std::string m_texturePath; //* Path to the mesh within the bundle
+
+    friend class Core;
 };
 
 } // namespace Syngine

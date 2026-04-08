@@ -25,6 +25,13 @@ LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
 /// @return A bgfx::TextureHandle representing the loaded texture
 bgfx::TextureHandle LoadTextureFromFile(const char* path);
 
+/// @brief Load a texture from a bundle
+/// @param bundlePath Path to the shader bundle containing the texture
+/// @param textureName Name of the texture within the shader bundle
+/// @return A bgfx::TextureHandle representing the loaded texture
+bgfx::TextureHandle LoadTextureFromBundle(const std::string& bundlePath,
+                                          const std::string& textureName);
+
 /// @brief Creates a flat texture, a 1x1 grey pixel texture
 /// @return A bgfx::TextureHandle representing a flat texture
 bgfx::TextureHandle CreateFlatTexture();

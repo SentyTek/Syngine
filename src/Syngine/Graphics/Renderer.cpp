@@ -21,6 +21,7 @@
 #include <SDL3/SDL_properties.h>
 
 #include <bgfx/platform.h>
+#include "Syngine/Utils/FsUtils.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 
@@ -130,6 +131,13 @@ size_t Renderer::AddProgram(const std::string& path,
         return -1;
     }
 
+    if (!_FileExists(path.c_str())) {
+        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+                              "Shader file not found: %s",
+                              path.c_str());
+        return -1;
+    }
+
     if (GetProgram(name).id != 0) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Program with name \"%s\" already exists",
@@ -172,7 +180,8 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
         Syngine::Logger::Fatal("Cannot add program before renderer is ready");
         return -1;
     }
-    if (name.empty() || path.empty() || bundlePath.empty()) {
+    std::string resolvedBundlePath = Syngine::_ResolveOSPath(bundlePath.c_str());
+    if (name.empty() || path.empty() || resolvedBundlePath.empty()) {
          Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Invalid parameters for AddProgram from bundle");
         return -1;
@@ -185,7 +194,7 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     }
 
     // Fallback if bundle doesn't exist
-    if (!_FileExists(bundlePath.c_str())) {
+    if (!_FileExists(resolvedBundlePath.c_str())) {
         Syngine::Logger::LogF(Syngine::LogLevel::WARN,
                               "Bundle %s not found, falling back to regular AddProgram",
                               bundlePath.c_str());
@@ -216,8 +225,8 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     prog.program = programHandle;
     prog.name    = name;
     prog.viewId  = viewId;
-    prog.vsPath  = bundlePath + ":" + path + ".vert.bin";
-    prog.fsPath  = bundlePath + ":" + path + ".frag.bin";
+    prog.vsPath  = resolvedBundlePath + ":" + path + ".vert.bin";
+    prog.fsPath  = resolvedBundlePath + ":" + path + ".frag.bin";
     prog.id      = programHandle.idx;
 
     viewPrograms[viewId].push_back(prog); // Store program by viewId
@@ -469,7 +478,7 @@ void Renderer::_RegisterGizmo(const std::string& tag) {
         }
     }
 
-    Syngine::BillboardComponent* gizmo = new Syngine::BillboardComponent(nullptr, "default/gizmos/" + tag + ".png", BillboardMode::CAMERA_ALIGNED, m_gizmoSize);
+    Syngine::BillboardComponent* gizmo = new Syngine::BillboardComponent(nullptr, "gizmos/default_gizmos.spk", tag + ".png", BillboardMode::CAMERA_ALIGNED, m_gizmoSize);
 
     m_gizmoRegistry[tag] = gizmo;
 }

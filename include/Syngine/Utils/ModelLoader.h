@@ -13,6 +13,11 @@
 
 #include <bgfx/bgfx.h>
 
+// forward declarations
+namespace scl {
+class stream;
+};
+
 struct aiScene;
 struct aiMaterial;
 namespace Syngine {
@@ -91,8 +96,6 @@ struct MeshData {
     bgfx::IndexBufferHandle  ibh; //* Handle to the index buffer on the GPU
 
     // Metadata
-    std::string
-         path; //* Path to the mesh file (for debugging and editor purposes)
     int  id; //* Unique ID for the mesh (for hot reloading and editor purposes)
     bool valid; //* Whether the mesh data is valid and can be rendered
     std::filesystem::file_time_type
@@ -108,8 +111,14 @@ class ModelLoader {
 
   public:
     virtual bool
-    _LoadModel(MeshData& out, const std::string& path, bool loadTextures) = 0;
-    virtual bool _ReloadModel(MeshData& out, int id)                      = 0;
+    _LoadModel(MeshData& out,
+               scl::stream* meshStream,
+               const std::string& assetPath,
+               bool loadTextures) = 0;
+    virtual bool _ReloadModel(MeshData& out,
+                              scl::stream* stream,
+                              const std::string& assetPath,
+                              int id) = 0;
 
     /// @brief Unloads all loaded models
     /// @note This is used to clear all loaded models, for example when the
@@ -148,14 +157,15 @@ class AssimpLoader : public ModelLoader {
     /// @brief Loads a model from the specified path, returns true if
     /// successful
     /// @param out MeshData to fill with the loaded model
-    /// @param path Path to the model file
+    /// @param meshStream Stream containing the model data
     /// @param loadTextures Whether to load textures for the model
     /// @return true if the model was loaded successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
     bool _LoadModel(MeshData&          out,
-                    const std::string& path,
+                    scl::stream*       meshStream,
+                    const std::string& assetPath,
                     bool               loadTextures) override;
 
     /// @brief Reloads a model by its ID, returns true if successful
@@ -165,13 +175,16 @@ class AssimpLoader : public ModelLoader {
     /// @note This is used to reload models only when they change on disk for
     /// hot reloading
     /// @internal
-    bool _ReloadModel(MeshData& out, int id) override;
+    bool _ReloadModel(MeshData&          out,
+              scl::stream*       stream,
+              const std::string& assetPath,
+              int                id) override;
 
   private:
     /// @brief Processes the Assimp scene and fills the MeshData structure
     /// @param out MeshData to fill with the processed data
     /// @param scene Assimp scene to process
-    /// @param path Path to the model file
+    /// @param meshStream Stream containing the model data (for resolving relative texture paths)
     /// @param loadTextures Whether to load textures for the model
     /// @return true if the scene was processed successfully, false otherwise
     /// @threadsafety not-safe
@@ -179,14 +192,13 @@ class AssimpLoader : public ModelLoader {
     /// @internal
     static bool processScene(MeshData&          out,
                              const aiScene*     scene,
-                             const std::string& path,
+                             scl::stream*       meshStream,
                              bool               loadTextures);
 
 
     /// @brief Processes an Assimp material and fills the Material structure
     /// @param aiMat Assimp material to process
-    /// @param path Path to the model file (for resolving relative texture
-    /// paths)
+    /// @param meshStream Stream containing the model data (for resolving relative texture paths)
     /// @param loadTextures Whether to load textures for the material
     /// @return Material structure filled with the processed material data
     /// @threadsafety not-safe
@@ -194,7 +206,7 @@ class AssimpLoader : public ModelLoader {
     /// @internal
     static Material _ProcessMaterial(aiMaterial*        aiMat,
                                      const aiScene*     scene,
-                                     const std::string& path,
+                                     scl::stream*       meshStream,
                                      bool               loadTextures);
 
     /// @brief Creates a default material with no textures

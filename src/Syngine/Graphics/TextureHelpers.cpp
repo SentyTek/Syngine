@@ -9,6 +9,7 @@
 #include "Syngine/Graphics/TextureHelpers.h"
 #include "Syngine/Core/Logger.h"
 
+#include "Syngine/Utils/Serializer.h"
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
 
@@ -20,6 +21,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #endif
 #include "stb_image.h"
+
+#include "miniscl.hpp"
 
 namespace {
 
@@ -151,6 +154,21 @@ bgfx::TextureHandle Syngine::LoadTextureFromFile(const char* path) {
     SDL_CloseIO(rw);
 
     return Syngine::LoadTextureFromMemory(data.data(), static_cast<size_t>(size), path);
+}
+
+bgfx::TextureHandle Syngine::LoadTextureFromBundle(const std::string& bundlePath, const std::string& textureName) {
+    scl::stream ms =
+        Syngine::Serializer::_ReadFromBundle(bundlePath, textureName);
+    if (ms.size() == 0) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               "Failed to load texture %s from bundle %s",
+                               textureName.c_str(),
+                               bundlePath.c_str());
+        return BGFX_INVALID_HANDLE;
+    }
+    std::vector<uint8_t> data(ms.size());
+    ms.read(data.data(), ms.size());
+    return Syngine::LoadTextureFromMemory(data.data(), data.size(), textureName.c_str());
 }
 
 bgfx::TextureHandle Syngine::CreateFlatTexture() {
