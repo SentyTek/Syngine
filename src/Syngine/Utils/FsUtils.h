@@ -8,6 +8,7 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
 #include "Syngine/Core/Logger.h"
 
 #include "SDL3/SDL_filesystem.h"
@@ -69,6 +70,10 @@ static inline std::string _ResolveOSPath(const char* path)
     }
     return p;
 #endif
+}
+
+static inline std::string _ResolveOSPath(std::string path) {
+    return _ResolveOSPath(path.c_str());
 }
 
 /// @brief Checks if required folders exist in the game directory

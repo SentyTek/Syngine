@@ -180,7 +180,7 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
         Syngine::Logger::Fatal("Cannot add program before renderer is ready");
         return -1;
     }
-    std::string resolvedBundlePath = Syngine::_ResolveOSPath(bundlePath.c_str());
+    std::string resolvedBundlePath = Syngine::_ResolveOSPath(bundlePath);
     if (name.empty() || path.empty() || resolvedBundlePath.empty()) {
          Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Invalid parameters for AddProgram from bundle");
@@ -201,8 +201,8 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
         return AddProgram(path, name, viewId);
     }
 
-    bgfx::ShaderHandle vs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".vert.bin").c_str());
-    bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".frag.bin").c_str());
+    bgfx::ShaderHandle vs = _LoadShaderFromBundle(bundlePath, path + ".vert.bin");
+    bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath, path + ".frag.bin");
     bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
     if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -225,8 +225,9 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     prog.program = programHandle;
     prog.name    = name;
     prog.viewId  = viewId;
-    prog.vsPath  = resolvedBundlePath + ":" + path + ".vert.bin";
-    prog.fsPath  = resolvedBundlePath + ":" + path + ".frag.bin";
+    prog.vsPath  = path + ".vert.bin";
+    prog.fsPath  = path + ".frag.bin";
+    prog.bundlePath = bundlePath;
     prog.id      = programHandle.idx;
 
     viewPrograms[viewId].push_back(prog); // Store program by viewId
@@ -339,10 +340,21 @@ bool Renderer::ReloadProgram(Syngine::ViewID viewId, const std::string_view& nam
 bool Renderer::ReloadAllPrograms() {
     for (auto& programs : viewPrograms) {
         for (auto& prog : programs.second) {
-            bgfx::ShaderHandle vs = _LoadShader(prog.vsPath.c_str());
-            bgfx::ShaderHandle fs = _LoadShader(prog.fsPath.c_str());
-            bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
+            bgfx::ShaderHandle  vs;
+            bgfx::ShaderHandle  fs;
 
+            // Load differently depending on whether this program was originally
+            // loaded from a bundle or not, since the shader loading functions
+            // are different for each case
+            if (prog.bundlePath.empty()) {
+                vs = _LoadShader(prog.vsPath.c_str());
+                fs = _LoadShader(prog.fsPath.c_str());
+            } else {
+                vs = _LoadShaderFromBundle(prog.bundlePath, prog.vsPath);
+                fs = _LoadShaderFromBundle(prog.bundlePath, prog.fsPath);
+            }
+            
+            bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
             if (!bgfx::isValid(newProgram)) {
                 Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                                       "Failed to reload program %s",

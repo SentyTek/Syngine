@@ -85,14 +85,14 @@ inline bgfx::ShaderHandle _LoadShaderFromMemory(const void* data, size_t size) {
     return bgfx::createShader(mem);
 }
 
-inline bgfx::ShaderHandle _LoadShaderFromBundle(const char* bundlePath, const char* shaderName) {
+inline bgfx::ShaderHandle _LoadShaderFromBundle(const std::string& bundlePath, const std::string& shaderName) {
     scl::stream stream = Serializer::_ReadFromBundle(bundlePath, shaderName);
     if (stream.size() == 0) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
             "LoadShaderFromBundle: failed to read shader '%s' from bundle '%s'",
-            shaderName,
-            bundlePath);
+            shaderName.c_str(),
+            bundlePath.c_str());
         return BGFX_INVALID_HANDLE;
     }
     return _LoadShaderFromMemory(stream.data(), stream.size());

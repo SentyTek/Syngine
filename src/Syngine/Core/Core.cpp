@@ -520,7 +520,7 @@ void Core::_ReloadChangedAssets() {
         if (!mc) continue;
         MeshData& mesh = mc->meshData;
         if (!mesh.valid || mc->m_bundlePath.empty()) continue;
-        if (mesh.lastWriteTime != std::filesystem::last_write_time(mc->m_bundlePath)) {
+        if (mesh.lastWriteTime != std::filesystem::last_write_time(_ResolveOSPath(mc->m_bundlePath))) {
             mc->ReloadMesh();
         }
     }
