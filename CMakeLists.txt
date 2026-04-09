@@ -250,6 +250,7 @@ target_include_directories(Syngine
         ${CMAKE_CURRENT_LIST_DIR}/third_party/assimp/include
         ${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics
         ${CMAKE_CURRENT_LIST_DIR}/third_party/sol2
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/sol2/include
         ${CMAKE_CURRENT_LIST_DIR}/
     PRIVATE
         # Engine private headers/sources directory

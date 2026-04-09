@@ -91,7 +91,7 @@ function(clangd target)
   set(CLANGD_CONFIG_COMPILE_STUFF
 "CompileFlags:
   Add: [-xc${CLANG_LANG_POSTFIX}, -std=c${CLANG_LANG_POSTFIX}${CLANGD_LANG_STANDARD}${CLANGD_CONFIG_WARNINGS}${CLANGD_INCLUDE_DIRS}]
-  Remove: [-std:*]
+  Remove: [-std:*, -external:*]
   Compiler: clang${CLANG_LANG_POSTFIX}")
 
   set(CLANGD_CONFIG_INLAY_HINTS
