@@ -353,7 +353,7 @@ bool Renderer::ReloadAllPrograms() {
                 vs = _LoadShaderFromBundle(prog.bundlePath, prog.vsPath);
                 fs = _LoadShaderFromBundle(prog.bundlePath, prog.fsPath);
             }
-            
+
             bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
             if (!bgfx::isValid(newProgram)) {
                 Syngine::Logger::LogF(Syngine::LogLevel::ERR,
