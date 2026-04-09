@@ -266,9 +266,6 @@ target_link_libraries(Syngine PRIVATE
     bimg
     bgfx
     Jolt
-)
-
-target_link_libraries(Syngine PUBLIC
     lua
     sol2
 )
