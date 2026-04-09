@@ -7,6 +7,7 @@
 # ╰──────────────────────────────────────╯
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
 
+
 cmake_minimum_required(VERSION 3.16)
 project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
