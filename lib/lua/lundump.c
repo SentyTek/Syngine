@@ -421,4 +421,3 @@ LClosure *luaU_undump (lua_State *L, ZIO *Z, const char *name, int fixed) {
   L->top.p--;  /* pop table */
   return cl;
 }
-

@@ -588,7 +588,7 @@ two underscores followed by lowercase Latin letters.
 
 <ul>
 
-<li><b><code>__add</code></b>: 
+<li><b><code>__add</code></b>:
 the addition (<code>+</code>) operation.
 If any operand for an addition is not a number,
 Lua will try to call a metamethod.
@@ -604,42 +604,42 @@ Otherwise, if no metamethod is found,
 Lua raises an error.
 </li>
 
-<li><b><code>__sub</code></b>: 
+<li><b><code>__sub</code></b>:
 the subtraction (<code>-</code>) operation.
 Behavior similar to the addition operation.
 </li>
 
-<li><b><code>__mul</code></b>: 
+<li><b><code>__mul</code></b>:
 the multiplication (<code>*</code>) operation.
 Behavior similar to the addition operation.
 </li>
 
-<li><b><code>__div</code></b>: 
+<li><b><code>__div</code></b>:
 the division (<code>/</code>) operation.
 Behavior similar to the addition operation.
 </li>
 
-<li><b><code>__mod</code></b>: 
+<li><b><code>__mod</code></b>:
 the modulo (<code>%</code>) operation.
 Behavior similar to the addition operation.
 </li>
 
-<li><b><code>__pow</code></b>: 
+<li><b><code>__pow</code></b>:
 the exponentiation (<code>^</code>) operation.
 Behavior similar to the addition operation.
 </li>
 
-<li><b><code>__unm</code></b>: 
+<li><b><code>__unm</code></b>:
 the negation (unary <code>-</code>) operation.
 Behavior similar to the addition operation.
 </li>
 
-<li><b><code>__idiv</code></b>: 
+<li><b><code>__idiv</code></b>:
 the floor division (<code>//</code>) operation.
 Behavior similar to the addition operation.
 </li>
 
-<li><b><code>__band</code></b>: 
+<li><b><code>__band</code></b>:
 the bitwise AND (<code>&amp;</code>) operation.
 Behavior similar to the addition operation,
 except that Lua will try a metamethod
@@ -647,32 +647,32 @@ if any operand is neither an integer
 nor a float coercible to an integer (see <a href="#3.4.3">&sect;3.4.3</a>).
 </li>
 
-<li><b><code>__bor</code></b>: 
+<li><b><code>__bor</code></b>:
 the bitwise OR (<code>|</code>) operation.
 Behavior similar to the bitwise AND operation.
 </li>
 
-<li><b><code>__bxor</code></b>: 
+<li><b><code>__bxor</code></b>:
 the bitwise exclusive OR (binary <code>~</code>) operation.
 Behavior similar to the bitwise AND operation.
 </li>
 
-<li><b><code>__bnot</code></b>: 
+<li><b><code>__bnot</code></b>:
 the bitwise NOT (unary <code>~</code>) operation.
 Behavior similar to the bitwise AND operation.
 </li>
 
-<li><b><code>__shl</code></b>: 
+<li><b><code>__shl</code></b>:
 the bitwise left shift (<code>&lt;&lt;</code>) operation.
 Behavior similar to the bitwise AND operation.
 </li>
 
-<li><b><code>__shr</code></b>: 
+<li><b><code>__shr</code></b>:
 the bitwise right shift (<code>&gt;&gt;</code>) operation.
 Behavior similar to the bitwise AND operation.
 </li>
 
-<li><b><code>__concat</code></b>: 
+<li><b><code>__concat</code></b>:
 the concatenation (<code>..</code>) operation.
 Behavior similar to the addition operation,
 except that Lua will try a metamethod
@@ -680,7 +680,7 @@ if any operand is neither a string nor a number
 (which is always coercible to a string).
 </li>
 
-<li><b><code>__len</code></b>: 
+<li><b><code>__len</code></b>:
 the length (<code>#</code>) operation.
 If the object is not a string,
 Lua will try its metamethod.
@@ -694,7 +694,7 @@ then Lua uses the table length operation (see <a href="#3.4.7">&sect;3.4.7</a>).
 Otherwise, Lua raises an error.
 </li>
 
-<li><b><code>__eq</code></b>: 
+<li><b><code>__eq</code></b>:
 the equal (<code>==</code>) operation.
 Behavior similar to the addition operation,
 except that Lua will try a metamethod only when the values
@@ -703,7 +703,7 @@ and they are not primitively equal.
 The result of the call is always converted to a boolean.
 </li>
 
-<li><b><code>__lt</code></b>: 
+<li><b><code>__lt</code></b>:
 the less than (<code>&lt;</code>) operation.
 Behavior similar to the addition operation,
 except that Lua will try a metamethod only when the values
@@ -711,12 +711,12 @@ being compared are neither both numbers nor both strings.
 Moreover, the result of the call is always converted to a boolean.
 </li>
 
-<li><b><code>__le</code></b>: 
+<li><b><code>__le</code></b>:
 the less equal (<code>&lt;=</code>) operation.
 Behavior similar to the less than operation.
 </li>
 
-<li><b><code>__index</code></b>: 
+<li><b><code>__index</code></b>:
 The indexing access operation <code>table[key]</code>.
 This event happens when <code>table</code> is not a table or
 when <code>key</code> is not present in <code>table</code>.
@@ -737,7 +737,7 @@ This indexing is regular, not raw,
 and therefore can trigger another <code>__index</code> metavalue.
 </li>
 
-<li><b><code>__newindex</code></b>: 
+<li><b><code>__newindex</code></b>:
 The indexing assignment <code>table[key] = value</code>.
 Like the index event,
 this event happens when <code>table</code> is not a table or
@@ -766,7 +766,7 @@ the metamethod itself can call <a href="#pdf-rawset"><code>rawset</code></a>
 to do the assignment.
 </li>
 
-<li><b><code>__call</code></b>: 
+<li><b><code>__call</code></b>:
 The call operation <code>func(args)</code>.
 This event happens when Lua tries to call a non-function value
 (that is, <code>func</code> is not a function).
@@ -1255,7 +1255,7 @@ consider the following code:
        print("foo", a)
        return coroutine.yield(2*a)
      end
-     
+
      co = coroutine.create(function (a,b)
            print("co-body", a, b)
            local r = foo(a+1)
@@ -1264,7 +1264,7 @@ consider the following code:
            print("co-body", r, s)
            return b, "end"
      end)
-     
+
      print("main", coroutine.resume(co, 1, 10))
      print("main", coroutine.resume(co, "r"))
      print("main", coroutine.resume(co, "x", "y"))
@@ -1432,8 +1432,8 @@ enclosed by <em>long brackets</em>.
 We define an <em>opening long bracket of level <em>n</em></em> as an opening
 square bracket followed by <em>n</em> equal signs followed by another
 opening square bracket.
-So, an opening long bracket of level&nbsp;0 is written as <code>[[</code>, 
-an opening long bracket of level&nbsp;1 is written as <code>[=[</code>, 
+So, an opening long bracket of level&nbsp;0 is written as <code>[[</code>,
+an opening long bracket of level&nbsp;1 is written as <code>[=[</code>,
 and so on.
 A <em>closing long bracket</em> is defined similarly;
 for instance,
@@ -1636,7 +1636,7 @@ The grammar could see this fragment in two ways:
 
 <pre>
      a = b + c(print or io.write)('done')
-     
+
      a = b + c; (print or io.write)('done')
 </pre><p>
 The current parser always sees such constructions
@@ -2904,13 +2904,13 @@ to the vararg table:
 
 <pre>
      CALL             PARAMETERS
-     
+
      f(3)             a=3, b=nil
      f(3, 4)          a=3, b=4
      f(3, 4, 5)       a=3, b=4
      f(r(), 10)       a=1, b=10
      f(r())           a=1, b=2
-     
+
      g(3)             a=3, b=nil, va. table -&gt;  {n = 0}
      g(3, 4)          a=3, b=4,   va. table -&gt;  {n = 0}
      g(3, 4, 5, 8)    a=3, b=4,   va. table -&gt;  {5, 8, n = 2}
@@ -3467,12 +3467,12 @@ status codes to indicate different kinds of errors or other conditions:
 
 <li><b><a name="pdf-LUA_ERRRUN"><code>LUA_ERRRUN</code></a></b>:  a runtime error.</li>
 
-<li><b><a name="pdf-LUA_ERRMEM"><code>LUA_ERRMEM</code></a></b>: 
+<li><b><a name="pdf-LUA_ERRMEM"><code>LUA_ERRMEM</code></a></b>:
 memory allocation error.
 For such errors, Lua does not call the message handler.
 </li>
 
-<li><b><a name="pdf-LUA_ERRERR"><code>LUA_ERRERR</code></a></b>: 
+<li><b><a name="pdf-LUA_ERRERR"><code>LUA_ERRERR</code></a></b>:
 stack overflow while running the message handler
 due to another stack overflow.
 More often than not,
@@ -3564,7 +3564,7 @@ First, we can rewrite our function like here:
      int k (lua_State *L, int status, lua_KContext ctx) {
        ...  /* code 2 */
      }
-     
+
      int original_function (lua_State *L) {
        ...     /* code 1 */
        return k(L, lua_pcall(L, n, m, h), ctx);
@@ -4199,47 +4199,47 @@ they are listed after the option.
 
 <ul>
 
-<li><b><a name="pdf-LUA_GCCOLLECT"><code>LUA_GCCOLLECT</code></a></b>: 
+<li><b><a name="pdf-LUA_GCCOLLECT"><code>LUA_GCCOLLECT</code></a></b>:
 Performs a full garbage-collection cycle.
 </li>
 
-<li><b><a name="pdf-LUA_GCSTOP"><code>LUA_GCSTOP</code></a></b>: 
+<li><b><a name="pdf-LUA_GCSTOP"><code>LUA_GCSTOP</code></a></b>:
 Stops the garbage collector.
 </li>
 
-<li><b><a name="pdf-LUA_GCRESTART"><code>LUA_GCRESTART</code></a></b>: 
+<li><b><a name="pdf-LUA_GCRESTART"><code>LUA_GCRESTART</code></a></b>:
 Restarts the garbage collector.
 </li>
 
-<li><b><a name="pdf-LUA_GCCOUNT"><code>LUA_GCCOUNT</code></a></b>: 
+<li><b><a name="pdf-LUA_GCCOUNT"><code>LUA_GCCOUNT</code></a></b>:
 Returns the current amount of memory (in Kbytes) in use by Lua.
 </li>
 
-<li><b><a name="pdf-LUA_GCCOUNTB"><code>LUA_GCCOUNTB</code></a></b>: 
+<li><b><a name="pdf-LUA_GCCOUNTB"><code>LUA_GCCOUNTB</code></a></b>:
 Returns the remainder of dividing the current amount of bytes of
 memory in use by Lua by 1024.
 </li>
 
-<li><b><a name="pdf-LUA_GCSTEP"><code>LUA_GCSTEP</code></a> (size_t n)</b>: 
+<li><b><a name="pdf-LUA_GCSTEP"><code>LUA_GCSTEP</code></a> (size_t n)</b>:
 Performs a step of garbage collection.
 </li>
 
-<li><b><a name="pdf-LUA_GCISRUNNING"><code>LUA_GCISRUNNING</code></a></b>: 
+<li><b><a name="pdf-LUA_GCISRUNNING"><code>LUA_GCISRUNNING</code></a></b>:
 Returns a boolean that tells whether the collector is running
 (i.e., not stopped).
 </li>
 
-<li><b><a name="pdf-LUA_GCINC"><code>LUA_GCINC</code></a></b>: 
+<li><b><a name="pdf-LUA_GCINC"><code>LUA_GCINC</code></a></b>:
 Changes the collector to incremental mode.
 Returns the previous mode (<code>LUA_GCGEN</code> or <code>LUA_GCINC</code>).
 </li>
 
-<li><b><a name="pdf-LUA_GCGEN"><code>LUA_GCGEN</code></a></b>: 
+<li><b><a name="pdf-LUA_GCGEN"><code>LUA_GCGEN</code></a></b>:
 Changes the collector to generational mode.
 Returns the previous mode (<code>LUA_GCGEN</code> or <code>LUA_GCINC</code>).
 </li>
 
-<li><b><a name="pdf-LUA_GCPARAM"><code>LUA_GCPARAM</code></a> (int param, int val)</b>: 
+<li><b><a name="pdf-LUA_GCPARAM"><code>LUA_GCPARAM</code></a> (int param, int val)</b>:
 Changes and/or returns the value of a parameter of the collector.
 If <code>val</code> is -1, the call only returns the current value.
 The argument <code>param</code> must have one of the following values:
@@ -6329,7 +6329,7 @@ The fields of <a href="#lua_Debug"><code>lua_Debug</code></a> have the following
 
 <ul>
 
-<li><b><code>source</code></b>: 
+<li><b><code>source</code></b>:
 the source of the chunk that created the function.
 If <code>source</code> starts with a '<code>@</code>',
 it means that the function was defined in a file where
@@ -6341,35 +6341,35 @@ the function was defined in a string where
 <code>source</code> is that string.
 </li>
 
-<li><b><code>srclen</code></b>: 
+<li><b><code>srclen</code></b>:
 The length of the string <code>source</code>.
 </li>
 
-<li><b><code>short_src</code></b>: 
+<li><b><code>short_src</code></b>:
 a "printable" version of <code>source</code>, to be used in error messages.
 </li>
 
-<li><b><code>linedefined</code></b>: 
+<li><b><code>linedefined</code></b>:
 the line number where the definition of the function starts.
 </li>
 
-<li><b><code>lastlinedefined</code></b>: 
+<li><b><code>lastlinedefined</code></b>:
 the line number where the definition of the function ends.
 </li>
 
-<li><b><code>what</code></b>: 
+<li><b><code>what</code></b>:
 the string <code>"Lua"</code> if the function is a Lua function,
 <code>"C"</code> if it is a C&nbsp;function,
 <code>"main"</code> if it is the main part of a chunk.
 </li>
 
-<li><b><code>currentline</code></b>: 
+<li><b><code>currentline</code></b>:
 the current line where the given function is executing.
 When no line information is available,
 <code>currentline</code> is set to -1.
 </li>
 
-<li><b><code>name</code></b>: 
+<li><b><code>name</code></b>:
 a reasonable name for the given function.
 Because functions in Lua are first-class values,
 they do not have a fixed name:
@@ -6381,7 +6381,7 @@ If it cannot find a name,
 then <code>name</code> is set to <code>NULL</code>.
 </li>
 
-<li><b><code>namewhat</code></b>: 
+<li><b><code>namewhat</code></b>:
 explains the <code>name</code> field.
 The value of <code>namewhat</code> can be
 <code>"global"</code>, <code>"local"</code>, <code>"upvalue"</code>,
@@ -6390,12 +6390,12 @@ according to how the function was called.
 (Lua uses the empty string when no other option seems to apply.)
 </li>
 
-<li><b><code>istailcall</code></b>: 
+<li><b><code>istailcall</code></b>:
 true if this function invocation was called by a tail call.
 In this case, the caller of this level is not in the stack.
 </li>
 
-<li><b><code>extraargs</code></b>: 
+<li><b><code>extraargs</code></b>:
 The number of extra arguments added by the call
 to functions called through <code>__call</code> metamethods.
 (Each <code>__call</code> metavalue adds a single extra argument,
@@ -6403,21 +6403,21 @@ the object being called,
 but there may be a chain of <code>__call</code> metavalues.)
 </li>
 
-<li><b><code>nups</code></b>: 
+<li><b><code>nups</code></b>:
 the number of upvalues of the function.
 </li>
 
-<li><b><code>nparams</code></b>: 
+<li><b><code>nparams</code></b>:
 the number of parameters of the function
 (always 0&nbsp;for C&nbsp;functions).
 </li>
 
-<li><b><code>isvararg</code></b>: 
+<li><b><code>isvararg</code></b>:
 true if the function is a variadic function
 (always true for C&nbsp;functions).
 </li>
 
-<li><b><code>ftransfer</code></b>: 
+<li><b><code>ftransfer</code></b>:
 the index in the stack of the first value being "transferred",
 that is, parameters in a call or return values in a return.
 (The other values are in consecutive indices.)
@@ -6429,7 +6429,7 @@ or a return hook, denoting the first value being returned.
 (For call hooks, this value is always 1.)
 </li>
 
-<li><b><code>ntransfer</code></b>: 
+<li><b><code>ntransfer</code></b>:
 The number of values being transferred (see previous item).
 (For calls of Lua functions,
 this value is always equal to <code>nparams</code>.)
@@ -6513,7 +6513,7 @@ between parentheses in the comments following each field.)
 
 <ul>
 
-<li><b>'<code>f</code>'</b>: 
+<li><b>'<code>f</code>'</b>:
 pushes onto the stack the function that is
 running at the given level;
 </li>
@@ -6527,7 +6527,7 @@ running at the given level;
 <li><b>'<code>r</code>'</b>:  fills in the fields <code>ftransfer</code> and <code>ntransfer</code>;
 </li>
 
-<li><b>'<code>S</code>'</b>: 
+<li><b>'<code>S</code>'</b>:
 fills in the fields <code>source</code>, <code>short_src</code>,
 <code>linedefined</code>, <code>lastlinedefined</code>, and <code>what</code>;
 </li>
@@ -6539,7 +6539,7 @@ fills in the fields <code>source</code>, <code>short_src</code>,
 <code>nups</code>, <code>nparams</code>, and <code>isvararg</code>;
 </li>
 
-<li><b>'<code>L</code>'</b>: 
+<li><b>'<code>L</code>'</b>:
 pushes onto the stack a table whose indices are
 the lines on the function with some associated code,
 that is, the lines where you can put a break point.
@@ -8336,29 +8336,29 @@ It performs different functions according to its first argument, <code>opt</code
 
 <ul>
 
-<li><b>"<code>collect</code>"</b>: 
+<li><b>"<code>collect</code>"</b>:
 Performs a full garbage-collection cycle.
 This is the default option.
 </li>
 
-<li><b>"<code>stop</code>"</b>: 
+<li><b>"<code>stop</code>"</b>:
 Stops automatic execution of the garbage collector.
 The collector will run only when explicitly invoked,
 until a call to restart it.
 </li>
 
-<li><b>"<code>restart</code>"</b>: 
+<li><b>"<code>restart</code>"</b>:
 Restarts automatic execution of the garbage collector.
 </li>
 
-<li><b>"<code>count</code>"</b>: 
+<li><b>"<code>count</code>"</b>:
 Returns the total memory in use by Lua in Kbytes.
 The value has a fractional part,
 so that it multiplied by 1024
 gives the exact number of bytes in use by Lua.
 </li>
 
-<li><b>"<code>step</code>"</b>: 
+<li><b>"<code>step</code>"</b>:
 Performs a garbage-collection step.
 This option may be followed by an extra argument,
 an integer with the step size.
@@ -8384,20 +8384,20 @@ In generational mode,
 the function returns <b>true</b> if the step finished a major collection.
 </li>
 
-<li><b>"<code>isrunning</code>"</b>: 
+<li><b>"<code>isrunning</code>"</b>:
 Returns a boolean that tells whether the collector is running
 (i.e., not stopped).
 </li>
 
-<li><b>"<code>incremental</code>"</b>: 
+<li><b>"<code>incremental</code>"</b>:
 Changes the collector mode to incremental and returns the previous mode.
 </li>
 
-<li><b>"<code>generational</code>"</b>: 
+<li><b>"<code>generational</code>"</b>:
 Changes the collector mode to generational and returns the previous mode.
 </li>
 
-<li><b>"<code>param</code>"</b>: 
+<li><b>"<code>param</code>"</b>:
 Changes and/or retrieves the values of a parameter of the collector.
 This option must be followed by one or two extra arguments:
 The name of the parameter being changed or retrieved (a string)
@@ -9735,21 +9735,21 @@ Here are some examples:
 <pre>
      x = string.gsub("hello world", "(%w+)", "%1 %1")
      -- x="hello hello world world"
-     
+
      x = string.gsub("hello world", "%w+", "%0 %0", 1)
      -- x="hello hello world"
-     
+
      x = string.gsub("hello world from Lua", "(%w+)%s*(%w+)", "%2 %1")
      -- x="world hello Lua from"
-     
+
      x = string.gsub("home = $HOME, user = $USER", "%$(%w+)", os.getenv)
      -- x="home = /home/roberto, user = roberto"
-     
+
      x = string.gsub("4+5 = $return 4+5$", "%$(.-)%$", function (s)
            return load(s)()
          end)
      -- x="4+5 = 9"
-     
+
      local t = {name="lua", version="5.5"}
      x = string.gsub("$name-$version.tar.gz", "%$(%w+)", t)
      -- x="lua-5.5.tar.gz"
@@ -9942,7 +9942,7 @@ The following combinations are allowed in describing a character class:
 
 <ul>
 
-<li><b><em>x</em></b>: 
+<li><b><em>x</em></b>:
 (where <em>x</em> is not one of the <em>magic characters</em>
 <code>^$()%.[]*+-?</code>)
 represents the character <em>x</em> itself.
@@ -9978,7 +9978,7 @@ Any non-alphanumeric character
 can be preceded by a '<code>%</code>' to represent itself in a pattern.
 </li>
 
-<li><b><code>[<em>set</em>]</code></b>: 
+<li><b><code>[<em>set</em>]</code></b>:
 represents the class which is the union of all
 characters in <em>set</em>.
 A range of characters can be specified by
@@ -10008,7 +10008,7 @@ Therefore, patterns like <code>[%a-z]</code> or <code>[a-%%]</code>
 have no meaning.
 </li>
 
-<li><b><code>[^<em>set</em>]</code></b>: 
+<li><b><code>[^<em>set</em>]</code></b>:
 represents the complement of <em>set</em>,
 where <em>set</em> is interpreted as above.
 </li>
@@ -10630,7 +10630,7 @@ Returns the arc sine of <code>x</code> (in radians).
 
 
 <p>
- 
+
 Returns the arc tangent of <code>y/x</code> (in radians),
 using the signs of both arguments to find the
 quadrant of the result.
@@ -10829,7 +10829,7 @@ Converts the angle <code>x</code> from degrees to radians.
 <p>
 When called without arguments,
 returns a pseudo-random float with uniform distribution
-in the range  <em>[0, 1)</em>.  
+in the range  <em>[0, 1)</em>.
 When called with two integers <code>m</code> and <code>n</code>,
 <code>math.random</code> returns a pseudo-random integer
 with uniform distribution in the range <em>[m, n]</em>.
@@ -11258,7 +11258,7 @@ The available formats are
 
 <ul>
 
-<li><b>"<code>n</code>"</b>: 
+<li><b>"<code>n</code>"</b>:
 reads a numeral and returns it as a float or an integer,
 following the lexical conventions of Lua.
 (The numeral may have leading whitespaces and a sign.)
@@ -11270,24 +11270,24 @@ or it is too long (more than 200 characters),
 it is discarded and the format returns <b>fail</b>.
 </li>
 
-<li><b>"<code>a</code>"</b>: 
+<li><b>"<code>a</code>"</b>:
 reads the whole file, starting at the current position.
 On end of file, it returns the empty string;
 this format never fails.
 </li>
 
-<li><b>"<code>l</code>"</b>: 
+<li><b>"<code>l</code>"</b>:
 reads the next line skipping the end of line,
 returning <b>fail</b> on end of file.
 This is the default format.
 </li>
 
-<li><b>"<code>L</code>"</b>: 
+<li><b>"<code>L</code>"</b>:
 reads the next line keeping the end-of-line character (if present),
 returning <b>fail</b> on end of file.
 </li>
 
-<li><b><em>number</em></b>: 
+<li><b><em>number</em></b>:
 reads a string with up to this number of bytes,
 returning <b>fail</b> on end of file.
 If <code>number</code> is zero,
@@ -11484,12 +11484,12 @@ as follows:
 
 <ul>
 
-<li><b>"<code>exit</code>"</b>: 
+<li><b>"<code>exit</code>"</b>:
 the command terminated normally;
 the following number is the exit status of the command.
 </li>
 
-<li><b>"<code>signal</code>"</b>: 
+<li><b>"<code>signal</code>"</b>:
 the command was terminated by a signal;
 the following number is the signal that terminated the command.
 </li>
@@ -11815,7 +11815,7 @@ and raises an error when called with a level out of range.
 
 
 <p>
-Variable names starting with '<code>(</code>' (open parenthesis) 
+Variable names starting with '<code>(</code>' (open parenthesis)
 represent variables with no known names
 (internal variables such as loop control variables,
 and variables from chunks saved without debug information).
@@ -12419,24 +12419,24 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 
 	block ::= {stat} [retstat]
 
-	stat ::=  &lsquo;<b>;</b>&rsquo; | 
-		 varlist &lsquo;<b>=</b>&rsquo; explist | 
-		 functioncall | 
-		 label | 
-		 <b>break</b> | 
-		 <b>goto</b> Name | 
-		 <b>do</b> block <b>end</b> | 
-		 <b>while</b> exp <b>do</b> block <b>end</b> | 
-		 <b>repeat</b> block <b>until</b> exp | 
-		 <b>if</b> exp <b>then</b> block {<b>elseif</b> exp <b>then</b> block} [<b>else</b> block] <b>end</b> | 
-		 <b>for</b> Name &lsquo;<b>=</b>&rsquo; exp &lsquo;<b>,</b>&rsquo; exp [&lsquo;<b>,</b>&rsquo; exp] <b>do</b> block <b>end</b> | 
-		 <b>for</b> namelist <b>in</b> explist <b>do</b> block <b>end</b> | 
-		 <b>function</b> funcname funcbody | 
-		 <b>local</b> <b>function</b> Name funcbody | 
-		 <b>global</b> <b>function</b> Name funcbody | 
-		 <b>local</b> attnamelist [&lsquo;<b>=</b>&rsquo; explist] | 
-		 <b>global</b> attnamelist | 
-		 <b>global</b> [attrib] &lsquo;<b>*</b>&rsquo; 
+	stat ::=  &lsquo;<b>;</b>&rsquo; |
+		 varlist &lsquo;<b>=</b>&rsquo; explist |
+		 functioncall |
+		 label |
+		 <b>break</b> |
+		 <b>goto</b> Name |
+		 <b>do</b> block <b>end</b> |
+		 <b>while</b> exp <b>do</b> block <b>end</b> |
+		 <b>repeat</b> block <b>until</b> exp |
+		 <b>if</b> exp <b>then</b> block {<b>elseif</b> exp <b>then</b> block} [<b>else</b> block] <b>end</b> |
+		 <b>for</b> Name &lsquo;<b>=</b>&rsquo; exp &lsquo;<b>,</b>&rsquo; exp [&lsquo;<b>,</b>&rsquo; exp] <b>do</b> block <b>end</b> |
+		 <b>for</b> namelist <b>in</b> explist <b>do</b> block <b>end</b> |
+		 <b>function</b> funcname funcbody |
+		 <b>local</b> <b>function</b> Name funcbody |
+		 <b>global</b> <b>function</b> Name funcbody |
+		 <b>local</b> attnamelist [&lsquo;<b>=</b>&rsquo; explist] |
+		 <b>global</b> attnamelist |
+		 <b>global</b> [attrib] &lsquo;<b>*</b>&rsquo;
 
 	attnamelist ::=  [attrib] Name [attrib] {&lsquo;<b>,</b>&rsquo; Name [attrib]}
 
@@ -12450,20 +12450,20 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 
 	varlist ::= var {&lsquo;<b>,</b>&rsquo; var}
 
-	var ::=  Name | prefixexp &lsquo;<b>[</b>&rsquo; exp &lsquo;<b>]</b>&rsquo; | prefixexp &lsquo;<b>.</b>&rsquo; Name 
+	var ::=  Name | prefixexp &lsquo;<b>[</b>&rsquo; exp &lsquo;<b>]</b>&rsquo; | prefixexp &lsquo;<b>.</b>&rsquo; Name
 
 	namelist ::= Name {&lsquo;<b>,</b>&rsquo; Name}
 
 	explist ::= exp {&lsquo;<b>,</b>&rsquo; exp}
 
-	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Numeral | LiteralString | &lsquo;<b>...</b>&rsquo; | functiondef | 
-		 prefixexp | tableconstructor | exp binop exp | unop exp 
+	exp ::=  <b>nil</b> | <b>false</b> | <b>true</b> | Numeral | LiteralString | &lsquo;<b>...</b>&rsquo; | functiondef |
+		 prefixexp | tableconstructor | exp binop exp | unop exp
 
 	prefixexp ::= var | functioncall | &lsquo;<b>(</b>&rsquo; exp &lsquo;<b>)</b>&rsquo;
 
-	functioncall ::=  prefixexp args | prefixexp &lsquo;<b>:</b>&rsquo; Name args 
+	functioncall ::=  prefixexp args | prefixexp &lsquo;<b>:</b>&rsquo; Name args
 
-	args ::=  &lsquo;<b>(</b>&rsquo; [explist] &lsquo;<b>)</b>&rsquo; | tableconstructor | LiteralString 
+	args ::=  &lsquo;<b>(</b>&rsquo; [explist] &lsquo;<b>)</b>&rsquo; | tableconstructor | LiteralString
 
 	functiondef ::= <b>function</b> funcbody
 
@@ -12481,9 +12481,9 @@ and LiteralString, see <a href="#3.1">&sect;3.1</a>.)
 
 	fieldsep ::= &lsquo;<b>,</b>&rsquo; | &lsquo;<b>;</b>&rsquo;
 
-	binop ::=  &lsquo;<b>+</b>&rsquo; | &lsquo;<b>-</b>&rsquo; | &lsquo;<b>*</b>&rsquo; | &lsquo;<b>/</b>&rsquo; | &lsquo;<b>//</b>&rsquo; | &lsquo;<b>^</b>&rsquo; | &lsquo;<b>%</b>&rsquo; | 
-		 &lsquo;<b>&amp;</b>&rsquo; | &lsquo;<b>~</b>&rsquo; | &lsquo;<b>|</b>&rsquo; | &lsquo;<b>&gt;&gt;</b>&rsquo; | &lsquo;<b>&lt;&lt;</b>&rsquo; | &lsquo;<b>..</b>&rsquo; | 
-		 &lsquo;<b>&lt;</b>&rsquo; | &lsquo;<b>&lt;=</b>&rsquo; | &lsquo;<b>&gt;</b>&rsquo; | &lsquo;<b>&gt;=</b>&rsquo; | &lsquo;<b>==</b>&rsquo; | &lsquo;<b>~=</b>&rsquo; | 
+	binop ::=  &lsquo;<b>+</b>&rsquo; | &lsquo;<b>-</b>&rsquo; | &lsquo;<b>*</b>&rsquo; | &lsquo;<b>/</b>&rsquo; | &lsquo;<b>//</b>&rsquo; | &lsquo;<b>^</b>&rsquo; | &lsquo;<b>%</b>&rsquo; |
+		 &lsquo;<b>&amp;</b>&rsquo; | &lsquo;<b>~</b>&rsquo; | &lsquo;<b>|</b>&rsquo; | &lsquo;<b>&gt;&gt;</b>&rsquo; | &lsquo;<b>&lt;&lt;</b>&rsquo; | &lsquo;<b>..</b>&rsquo; |
+		 &lsquo;<b>&lt;</b>&rsquo; | &lsquo;<b>&lt;=</b>&rsquo; | &lsquo;<b>&gt;</b>&rsquo; | &lsquo;<b>&gt;=</b>&rsquo; | &lsquo;<b>==</b>&rsquo; | &lsquo;<b>~=</b>&rsquo; |
 		 <b>and</b> | <b>or</b>
 
 	unop ::= &lsquo;<b>-</b>&rsquo; | <b>not</b> | &lsquo;<b>#</b>&rsquo; | &lsquo;<b>~</b>&rsquo;
@@ -12506,4 +12506,3 @@ Last change: revised for Lua 5.5.0
 -->
 
 </body></html>
-

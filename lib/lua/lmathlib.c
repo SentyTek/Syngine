@@ -762,4 +762,3 @@ LUAMOD_API int luaopen_math (lua_State *L) {
   setrandfunc(L);
   return 1;
 }
-

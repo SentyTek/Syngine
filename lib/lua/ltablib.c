@@ -423,4 +423,3 @@ LUAMOD_API int luaopen_table (lua_State *L) {
   luaL_newlib(L, tab_funcs);
   return 1;
 }
-

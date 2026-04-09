@@ -93,4 +93,3 @@ LUAI_FUNC void *luaM_shrinkvector_ (lua_State *L, void *block, int *nelem,
 LUAI_FUNC void *luaM_malloc_ (lua_State *L, size_t size, int tag);
 
 #endif
-

@@ -267,5 +267,3 @@ typedef struct luaL_Stream {
 
 
 #endif
-
-

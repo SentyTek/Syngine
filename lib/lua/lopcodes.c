@@ -137,4 +137,3 @@ int luaP_isIT (Instruction i) {
       return testITMode(GET_OPCODE(i)) && GETARG_B(i) == 0;
   }
 }
-

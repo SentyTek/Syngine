@@ -448,4 +448,3 @@ LUAI_FUNC TStatus luaE_resetthread (lua_State *L, TStatus status);
 
 
 #endif
-

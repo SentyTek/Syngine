@@ -57,4 +57,3 @@ if (UNIX)
   target_compile_definitions(lua PRIVATE LUA_USE_LINUX)
   target_link_libraries(lua PRIVATE dl)
 endif()
-

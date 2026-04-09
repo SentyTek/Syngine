@@ -304,4 +304,3 @@ int luaU_dump (lua_State *L, const Proto *f, lua_Writer w, void *data,
   dumpBlock(&D, NULL, 0);  /* signal end of dump */
   return D.status;
 }
-

@@ -350,4 +350,3 @@ TString *luaS_normstr (lua_State *L, TString *ts) {
     return internshrstr(L, str, len);
   }
 }
-
