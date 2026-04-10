@@ -71,6 +71,7 @@ struct Program {
     std::string         name    = "empty"; //* Name of the shader program
     std::string         vsPath  = ""; //* Vertex shader path
     std::string         fsPath  = ""; //* Fragment shader path
+    std::string         bundlePath = ""; //* Bundle path if loaded from a bundle
     int                 id      = 0;  //* Unique ID of the shader program
     std::vector<Uniform> uniforms;     //* List of shader uniforms
 };

@@ -1,5 +1,5 @@
-$input a_position a_normal a_color0
-$output v_worldPos v_normal v_viewDepth v_vertexColor
+$input a_position a_normal a_color0 a_texcoord0 a_texcoord1
+$output v_worldPos v_normal v_viewDepth v_vertexColor v_uvScaled v_uvMacro v_uvDetail
 #include <bgfx_shader.sh>
 
 // u_model is the world matrix (model matrix)
@@ -8,6 +8,8 @@ $output v_worldPos v_normal v_viewDepth v_vertexColor
 // u_modelViewProj is u_proj * u_view * u_model
 
 uniform mat3 u_normalMatrix; // should be the inverse transpose of the model matrix
+uniform vec4 u_uvScale; // x = uvScaleAlbedo, y = uvScaleNormal, z = uvScaleHeight, w = unused
+uniform vec4 u_materialParams1; // x = mixFactor for normal mapping, y = ambient multiplier, z = uvOverride, w = use vertex color
 
 void main() {
     // Transform position to world space
@@ -16,6 +18,20 @@ void main() {
     v_viewDepth = mul(u_view, worldPos).z;
     v_normal = normalize(mul(u_normalMatrix, a_normal));
     v_vertexColor = a_color0;
+
+    //two UV sets
+    v_uvMacro   = a_texcoord0; //0->1 for heightmap diffs
+    v_uvDetail  = a_texcoord1; //already pre-scaled or 1->1 for detail maps
+
+    // prescale UVs to reduce per pixel work
+    float uvScaleAlbedo = u_uvScale.x;
+    float uvScaleNormal = u_uvScale.y;
+    float uvScaleHeight = u_uvScale.z;
+    if (u_materialParams1.z > 0.0) {
+        uvScaleAlbedo = uvScaleNormal = uvScaleHeight = u_materialParams1.z;
+    }
+    v_uvScaled = vec4(uvScaleAlbedo, uvScaleNormal, uvScaleHeight, 0.0);
+    //v_uvScaled = vec4(0.0, 0.0, 0.0, 0.0);
 
     gl_Position = mul(u_viewProj, worldPos);
 }

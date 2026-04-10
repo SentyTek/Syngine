@@ -21,6 +21,7 @@
 #include <SDL3/SDL_properties.h>
 
 #include <bgfx/platform.h>
+#include "Syngine/Utils/FsUtils.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 
@@ -130,6 +131,13 @@ size_t Renderer::AddProgram(const std::string& path,
         return -1;
     }
 
+    if (!_FileExists(path.c_str())) {
+        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+                              "Shader file not found: %s",
+                              path.c_str());
+        return -1;
+    }
+
     if (GetProgram(name).id != 0) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Program with name \"%s\" already exists",
@@ -172,7 +180,8 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
         Syngine::Logger::Fatal("Cannot add program before renderer is ready");
         return -1;
     }
-    if (name.empty() || path.empty() || bundlePath.empty()) {
+    std::string resolvedBundlePath = Syngine::_ResolveOSPath(bundlePath);
+    if (name.empty() || path.empty() || resolvedBundlePath.empty()) {
          Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               "Invalid parameters for AddProgram from bundle");
         return -1;
@@ -185,15 +194,15 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     }
 
     // Fallback if bundle doesn't exist
-    if (!_FileExists(bundlePath.c_str())) {
+    if (!_FileExists(resolvedBundlePath.c_str())) {
         Syngine::Logger::LogF(Syngine::LogLevel::WARN,
                               "Bundle %s not found, falling back to regular AddProgram",
                               bundlePath.c_str());
         return AddProgram(path, name, viewId);
     }
 
-    bgfx::ShaderHandle vs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".vert.bin").c_str());
-    bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath.c_str(), (path + ".frag.bin").c_str());
+    bgfx::ShaderHandle vs = _LoadShaderFromBundle(bundlePath, path + ".vert.bin");
+    bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath, path + ".frag.bin");
     bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
     if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -216,8 +225,9 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     prog.program = programHandle;
     prog.name    = name;
     prog.viewId  = viewId;
-    prog.vsPath  = bundlePath + ":" + path + ".vert.bin";
-    prog.fsPath  = bundlePath + ":" + path + ".frag.bin";
+    prog.vsPath  = path + ".vert.bin";
+    prog.fsPath  = path + ".frag.bin";
+    prog.bundlePath = bundlePath;
     prog.id      = programHandle.idx;
 
     viewPrograms[viewId].push_back(prog); // Store program by viewId
@@ -330,10 +340,21 @@ bool Renderer::ReloadProgram(Syngine::ViewID viewId, const std::string_view& nam
 bool Renderer::ReloadAllPrograms() {
     for (auto& programs : viewPrograms) {
         for (auto& prog : programs.second) {
-            bgfx::ShaderHandle vs = _LoadShader(prog.vsPath.c_str());
-            bgfx::ShaderHandle fs = _LoadShader(prog.fsPath.c_str());
-            bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
+            bgfx::ShaderHandle  vs;
+            bgfx::ShaderHandle  fs;
 
+            // Load differently depending on whether this program was originally
+            // loaded from a bundle or not, since the shader loading functions
+            // are different for each case
+            if (prog.bundlePath.empty()) {
+                vs = _LoadShader(prog.vsPath.c_str());
+                fs = _LoadShader(prog.fsPath.c_str());
+            } else {
+                vs = _LoadShaderFromBundle(prog.bundlePath, prog.vsPath);
+                fs = _LoadShaderFromBundle(prog.bundlePath, prog.fsPath);
+            }
+
+            bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
             if (!bgfx::isValid(newProgram)) {
                 Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                                       "Failed to reload program %s",
@@ -469,7 +490,7 @@ void Renderer::_RegisterGizmo(const std::string& tag) {
         }
     }
 
-    Syngine::BillboardComponent* gizmo = new Syngine::BillboardComponent(nullptr, "default/gizmos/" + tag + ".png", BillboardMode::CAMERA_ALIGNED, m_gizmoSize);
+    Syngine::BillboardComponent* gizmo = new Syngine::BillboardComponent(nullptr, "gizmos/default_gizmos.spk", tag + ".png", BillboardMode::CAMERA_ALIGNED, m_gizmoSize);
 
     m_gizmoRegistry[tag] = gizmo;
 }

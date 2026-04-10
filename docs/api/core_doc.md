@@ -408,7 +408,7 @@ Signature:
 | `EngineConfig` | `config` | Engine configuration |
 | `std::unique_ptr<Window>` | `window` | Pointer to the window |
 | `std::unique_ptr<Renderer>` | `renderer` | Pointer to the render system |
-| `std::unique_ptr<SynModelLoader>` | `synModels` | Pointer to the model loader |
+| `std::unique_ptr<ModelLoader>` | `synModels` | Pointer to the model loader |
 | `std::unique_ptr<Phys>` | `physicsManager` | Pointer to the physics manager |
 | `std::unique_ptr<ZoneManager>` | `zoneManager` | Pointer to the zone manager |
 | `DebugModes` | `debug` | Debug modes flags |

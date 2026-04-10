@@ -15,8 +15,8 @@
 
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
-- [SpanEvent](#synginespanevent)
-- [TimerEvent](#synginetimerevent)
+- [SpanEvent](#profilerspanevent)
+- [TimerEvent](#profilertimerevent)
 - [EventType](#profilereventtype)
 - [PushEvent](#profileruipushevent)
 - [Reset](#profileruireset)
@@ -47,7 +47,7 @@ Signature:
 ## Class & Related Members
 
 
-#### **`Syngine::SpanEvent`**
+#### **`Profiler::SpanEvent`**
 
 
  Span POD struct for profiling. Contains name, start time, and end time.
@@ -71,7 +71,7 @@ struct SpanEvent
 
 ---
 
-#### **`Syngine::TimerEvent`**
+#### **`Profiler::TimerEvent`**
 
 
  Timer event struct for paired start/end events

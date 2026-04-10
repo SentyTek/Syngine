@@ -38,6 +38,7 @@ class BillboardComponent : public Syngine::Component {
     bgfx::TextureHandle m_texture =
         BGFX_INVALID_HANDLE; //* Texture handle for the billboard
     std::string m_texturePath; //* Path to the billboard texture
+    std::string m_bundlePath;  //* Path to the shader bundle containing the billboard texture
 
     GameObject* m_owner; // Reference to the owner game object
 
@@ -64,6 +65,24 @@ class BillboardComponent : public Syngine::Component {
                        BillboardMode mode = BillboardMode::CAMERA_ALIGNED,
                        float         size = 1.0f);
 
+    /// @brief Construct a new Billboard Component objects
+    /// @param owner Pointer to the owner GameObject
+    /// @param bundlePath Path to the shader bundle containing the billboard
+    /// texture
+    /// @param textureName Name of the texture within the shader bundle
+    /// @param mode Billboard rendering mode
+    /// @param size Size of the billboard
+    /// @since v0.0.1
+    /// @note The bundlePath should be a valid path to a shader bundle file,
+    /// relative to the game's assets directory. The textureName should be the
+    /// name of a texture contained within that shader bundle. owner GO handled
+    /// by the ECS.
+    BillboardComponent(GameObject*   owner,
+                       std::string   bundlePath,
+                       std::string   textureName,
+                       BillboardMode mode = BillboardMode::CAMERA_ALIGNED,
+                       float         size = 1.0f);
+
     BillboardComponent(const BillboardComponent& other);
     BillboardComponent& operator=(const BillboardComponent& other);
 
@@ -82,12 +101,13 @@ class BillboardComponent : public Syngine::Component {
     Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the billboard component
+    /// @param bundlePath Path to the shader bundle containing the billboard texture
     /// @param texturePath Path to the billboard texture
     /// @note This should only be called when the component is added to a
     /// GameObject
     /// @since v0.0.1
     /// @internal
-    void Init(const std::string& texturePath);
+    void Init(const std::string& bundlePath, const std::string& texturePath);
 
     /// @brief Update the billboard component. Unused.
     /// @param deltaTime Time elapsed since the last update, in seconds

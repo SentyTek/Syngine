@@ -84,8 +84,6 @@ include(${SYNGINE_SOURCE_DIR}/cmake/GameConfig.cmake)
 SyngineGame(${EXECUTABLE_NAME}
     SOURCES
         src/main.cpp
-    SHADER_DIRS
-        ${GAME_ASSET_DIR}/shaders
 )
 ' > CMakeLists.txt
 

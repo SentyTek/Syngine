@@ -81,4 +81,17 @@ Syngine::InputAction::RegisterAction(
     }
 )
 ```
+
+Mouse events can be registered as so:
+```cpp
+void HandleMouseMovement(float x, float y) {
+    std::cout << "Mouse dX: " << x << " | Mouse dY: " << y;
+}
+void HandleMouseScroll(float x, float y) {
+    // X is horizontal, Y is vertical
+}
+InputAction::RegisterMouseMoveEvent(HandleMouseMovement);
+InputAction::RegisterScrollEvent(HandleMouseScroll);
+```
+
 With these building blocks, you're ready to start filling your world with dynamic, responsive GameObjects! Of course, feel free to inspect headers, use intellisense, or view the [API Docs](../index.md#api-reference) to get further information on the API.

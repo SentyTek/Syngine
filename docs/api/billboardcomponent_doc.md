@@ -16,6 +16,7 @@
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
 - [BillboardMode](#synginebillboardmode)
+- [Constructor](#class-constructor)
 - [GetComponentType](#synginegetcomponenttype)
 - [Serialize](#syngineserialize)
 - [Init](#syngineinit)
@@ -84,6 +85,37 @@ enum class BillboardMode
 
 ---
 
+## Class Constructor
+
+
+#### **`Syngine::BillboardComponent`**
+
+
+ Construct a new Billboard Component objects
+
+**Note:** The bundlePath should be a valid path to a shader bundle file, relative to the game's assets directory. The textureName should be the name of a texture contained within that shader bundle. owner GO handled by the ECS.
+
+Signature:
+
+```cpp
+ BillboardComponent(GameObject* owner, std::string bundlePath, std::string textureName, BillboardMode mode = BillboardMode::CAMERA_ALIGNED, float size = 1.0f);
+```
+
+**Parameters:**
+
+- `owner`: Pointer to the owner GameObject
+- `bundlePath`: Path to the shader bundle containing the billboard texture
+- `textureName`: Name of the texture within the shader bundle
+- `mode`: Billboard rendering mode
+- `size`: Size of the billboard
+
+**This function has been available since:** v0.0.1
+
+---
+
+## Class & Related Members
+
+
 #### **`Syngine::GetComponentType`**
 
 
@@ -127,11 +159,12 @@ Signature:
 Signature:
 
 ```cpp
- void Init(const std::string& texturePath);
+ void Init(const std::string& bundlePath, const std::string& texturePath);
 ```
 
 **Parameters:**
 
+- `bundlePath`: Path to the shader bundle containing the billboard texture
 - `texturePath`: Path to the billboard texture
 
 **This function has been available since:** v0.0.1
@@ -285,6 +318,7 @@ Signature:
 | Type | Name | Description |
 | --- | --- | --- | 
 | `std::string` | `m_texturePath` | Path to the billboard texture |
+| `std::string` | `m_bundlePath` | Path to the shader bundle containing the billboard texture |
 | `float` | `m_rot` | Rotation of the billboard |
 | `float` | `size` | Size of the billboard |
 | `bool` | `receiveShadows` | Whether the billboard receives shadows |
