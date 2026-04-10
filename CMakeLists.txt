@@ -7,6 +7,7 @@
 # ╰──────────────────────────────────────╯
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
 
+
 cmake_minimum_required(VERSION 3.16)
 project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
@@ -143,6 +144,11 @@ set_default_option(BGFX_BUILD_TOOLS ON "Enable building BGFX tools")
 set_default_option(BGFX_BUILD_EXAMPLES OFF "Disable building BGFX examples")
 set(BGFX_BUILD_TOOLS_BINARIES shaderc ON CACHE BOOL "Enable building shaderc binary for shader compilation")
 
+# sol2 Options
+set(SOL2_LUA_VERSION "5.5.0" CACHE STRING "The version of Lua used")
+# we build Lua manually
+set(SOL2_BUILD_LUA FALSE CACHE BOOL "Always build Lua, do not search for it in the system")
+
 # Set platform specific options for BGFX and SDL
 if(APPLE)
     set_default_option(BGFX_CONFIG_MULTITHREADED OFF "Disable multithreaded rendering for BGFX on Apple platforms")
@@ -187,6 +193,8 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/t
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake ${CMAKE_BINARY_DIR}/third_party/bgfx.cmake EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/assimp ${CMAKE_BINARY_DIR}/third_party/assimp EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib)
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/sol2 ${CMAKE_BINARY_DIR}/third_party/sol2 EXCLUDE_FROM_ALL)
 
 # Allow not building SynTools if not needed
 option(SYNGINE_BUILD_TOOLS "Build Syngine Tools (Shader Compiler, Asset Packager)" ON)
@@ -241,10 +249,12 @@ target_include_directories(Syngine
         ${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bimg/include # Often needed by bgfx headers
         ${CMAKE_CURRENT_LIST_DIR}/third_party/assimp/include
         ${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/sol2
+        ${CMAKE_CURRENT_LIST_DIR}/third_party/sol2/include
+        ${CMAKE_CURRENT_LIST_DIR}/
     PRIVATE
         # Engine private headers/sources directory
         ${CMAKE_CURRENT_LIST_DIR}/src
-
         ${CMAKE_CURRENT_LIST_DIR}/lib
 )
 
@@ -257,6 +267,8 @@ target_link_libraries(Syngine PRIVATE
     bimg
     bgfx
     Jolt
+    lua
+    sol2
 )
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)

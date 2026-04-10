@@ -13,3 +13,6 @@
 [submodule "tools"]
 	path = tools
 	url = https://github.com/SentyTek/SynTools.git
+[submodule "third_party/sol2"]
+	path = third_party/sol2
+	url = https://github.com/SentyTek/sol2.git

@@ -26,10 +26,6 @@ jobs:
       - name: Init required submodules
         run: >
           git submodule update --init --recursive
-          third_party/SDL
-          third_party/bgfx.cmake
-          third_party/assimp
-          third_party/JoltPhysics
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v3
