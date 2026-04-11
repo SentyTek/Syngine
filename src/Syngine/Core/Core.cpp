@@ -519,8 +519,8 @@ void Core::_ReloadChangedAssets() {
         MeshComponent* mc = go->GetComponent<MeshComponent>();
         if (!mc) continue;
         MeshData& mesh = mc->meshData;
-        if (!mesh.valid || mesh.path.empty()) continue;
-        if (mesh.lastWriteTime != std::filesystem::last_write_time(mesh.path)) {
+        if (!mesh.valid || mc->m_bundlePath.empty()) continue;
+        if (mesh.lastWriteTime != std::filesystem::last_write_time(_ResolveOSPath(mc->m_bundlePath))) {
             mc->ReloadMesh();
         }
     }
@@ -571,7 +571,7 @@ void Core::_HandleKeyEvent(const SDL_Event& event) {
                     MeshData& mesh = mc->meshData;
                     if (!mesh.valid) continue;
                     if (mesh.lastWriteTime !=
-                        std::filesystem::last_write_time(mesh.path)) {
+                        std::filesystem::last_write_time(mc->m_bundlePath)) {
                         mc->ReloadMesh();
                     }
                 }

@@ -11,6 +11,7 @@
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Serializer.h"
+#include <string>
 
 namespace Syngine {
 
@@ -35,6 +36,9 @@ class MeshComponent : public Syngine::Component {
     static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_MESH; //* Mesh component type
 
+    // Basic constructor for doing nothing.
+    MeshComponent(GameObject* owner);
+
     /// @brief Constructor for the MeshComponent class
     /// @param owner Pointer to the GameObject that owns this component
     /// @param path Path to the model file
@@ -42,7 +46,19 @@ class MeshComponent : public Syngine::Component {
     /// @note This should only be called by GameObject::AddComponent<T>()
     /// @since v0.0.1
     MeshComponent(GameObject*        owner,
-                  const std::string& path         = "",
+                  const std::string& path,
+                  bool               loadTextures = true);
+
+    /// @brief Constructor for the MeshComponent class
+    /// @param owner Pointer to the GameObject that owns this component
+    /// @param bundlePath Path to the shader bundle containing the mesh
+    /// @param texturePath Path to the mesh within the bundle
+    /// @param loadTextures Whether to load textures for the model
+    /// @note This should only be called by GameObject::AddComponent<T>()
+    /// @since v0.0.1
+    MeshComponent(GameObject*        owner,
+                  const std::string& bundlePath,
+                  const std::string& texturePath,
                   bool               loadTextures = true);
 
     MeshComponent(const MeshComponent& other);
@@ -68,13 +84,16 @@ class MeshComponent : public Syngine::Component {
     Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the mesh component
-    /// @param path Path to the model file
+    /// @param bundlePath Path to the shader bundle containing the mesh
+    /// @param texturePath Path to the mesh within the bundle
     /// @param loadTextures Whether to load textures for the model
     /// @note This should only be called when the component is added to a
     /// GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void Init(const std::string& path = "", bool loadTextures = true);
+    void Init(const std::string& bundlePath,
+              const std::string& texturePath,
+              bool               loadTextures = true);
 
     /// @brief Update the mesh component. Unused.
     /// @param deltaTime Time elapsed since the last update in seconds
@@ -83,12 +102,15 @@ class MeshComponent : public Syngine::Component {
     void Update(float deltaTime) override {};
 
     /// @brief Load a mesh from a file
-    /// @param path Path to the model file
+    /// @param bundlePath Path to the shader bundle containing the mesh
+    /// @param texturePath Path to the mesh within the bundle
     /// @param loadTextures Whether to load textures for the model
     /// @return 0 on success, non-zero code on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool LoadMesh(const std::string& path, bool loadTextures = true);
+    bool LoadMesh(const std::string& bundlePath,
+                  const std::string& texturePath,
+                  bool               loadTextures = true);
 
     /// @brief Reload the mesh from the file
     /// @return 0 on success, non-zero on failure
@@ -140,12 +162,69 @@ class MeshComponent : public Syngine::Component {
     /// @since v0.0.1
     MeshAABB& GetAABB();
 
+    /// @brief Get the submesh count
+    /// @return Number of submeshes in the mesh
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    uint8_t GetSubmeshCount() const;
+
+    /// @brief Get material index for a specific submesh
+    /// @param submeshIndex Index of the submesh to query
+    /// @return Material index for the specified submesh, or 255 if invalid index
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    uint8_t GetSubmeshMaterialIndex(uint8_t submeshIndex) const;
+
+    /// @brief Assign a material to a specific submesh
+    /// @param submeshIndex Index of the submesh to assign the material to
+    /// @param materialIndex Index of the material to assign to the submesh
+    /// @return true if the assignment was successful, false if the submesh index is invalid
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    bool SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materialIndex);
+
+    /// @brief Get UV scale for specific texture type and material
+    /// @param materialIndex Index of the material to query
+    /// @param textureType Type of the texture (0 = albedo, 1 = normal, 2 = height)
+    /// @return UV scale for the specified material and texture type
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    float* GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
+
+    /// @brief Set UV scale for specific texture type and material
+    /// @param materialIndex Index of the material to modify
+    /// @param textureType Type of the texture (0 = albedo, 1 = normal, 2 = height)
+    /// @param uvScale UV scale to set for the specified material and texture type
+    /// @return true if the UV scale was successfully set, false if the material index is invalid
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    bool SetMaterialUVScale(uint8_t materialIndex,
+                            uint8_t textureType,
+                            float   uvScale[2]);
+
+    /// @brief Gets the UV scale override for the whole object
+    /// @return UV scale override for the whole object. 1.0f by default.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    float GetObjectUVScaleOverride() const;
+
+    /// @brief Sets the UV scale override for the whole object
+    /// @param uvScaleOverride UV scale override to set for the whole object
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetObjectUVScaleOverride(float uvScaleOverride);
+
   private:
     mutable MeshAABB m_aabb; //* Axis-aligned bounding box of the mesh
     mutable bool     m_aabbDirty =
         true; //* Whether the AABB needs to be recalculated
     mutable uint64_t m_cachedTransformVersion =
         0; //* Cached version of the transform when AABB was last calculated
+    float m_objectUVScaleOverride = 1.0f; //* UV scale override for the whole object
+    std::string m_bundlePath; //* Path to the shader bundle containing the mesh
+    std::string m_texturePath; //* Path to the mesh within the bundle
+
+    friend class Core;
 };
 
 } // namespace Syngine

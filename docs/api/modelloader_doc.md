@@ -15,14 +15,17 @@
 
 - [Vertex](#synginevertex)
 - [Material](#synginematerial)
+- [SubMesh](#synginesubmesh)
 - [MeshData](#synginemeshdata)
-- [static](#synmodelloaderstatic)
-- [_UnloadAllMeshes](#synmodelloader_unloadallmeshes)
-- [_GetMeshes](#synmodelloader_getmeshes)
-- [_GetMeshById](#synmodelloader_getmeshbyid)
+- [static](#modelloaderstatic)
+- [_UnloadAllMeshes](#modelloader_unloadallmeshes)
+- [_GetMeshes](#modelloader_getmeshes)
+- [_GetMeshById](#modelloader_getmeshbyid)
 - [_LoadModel](#assimploader_loadmodel)
 - [_ReloadModel](#assimploader_reloadmodel)
 - [processScene](#assimploaderprocessscene)
+- [_ProcessMaterial](#assimploader_processmaterial)
+- [_CreateDefaultMaterial](#assimploader_createdefaultmaterial)
 
 ---
 
@@ -58,14 +61,40 @@ struct Material
 | --- | --- | --- | 
 | `std::string` | `name` | Name of the material |
 | `bgfx::TextureHandle` | `albedo` | Albedo texture handle |
-| `bgfx::TextureHandle` | `normalMap` | Normal map texture handle |
-| `bgfx::TextureHandle` | `heightMap` | Height map texture handle |
-| `float` | `tileDetail` | How many repeats of detail maps |
+| `BGFX_INVALID_HANDLE` | `Normal` | map texture handle |
+| `BGFX_INVALID_HANDLE` | `Height` | map texture handle |
+| `float[3]` | `uvScale` | UV scale for each texture type (albedo, normal, height) |
 | `float` | `heightScale` | Matches blender displacement |
 | `float` | `mixFactor` | Mix between detail and macro maps |
 | `float` | `ambient` | Ambient floor |
-| `float[4]` | `baseColor` | RGBA base color |
 | `bool` | `useVertexColor` | Whether to use vertex color or base color |
+| `float[4]` | `baseColor` | RGBA base color |
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Syngine::SubMesh`**
+
+
+ SubMesh structure for storing submesh information
+
+Signature:
+
+```cpp
+struct SubMesh
+```
+
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `uint32_t` | `indexStart` | Starting index in the index buffer for this submesh |
+| `uint32_t` | `indexCount` | Number of indices in this submesh |
+| `uint8_t` | `materialIndex` | Index of the material used by this submesh |
+| `name` | `Name` | of the submesh (for debugging and editor purposes) |
+| `float[3]` | `boundMin` | Minimum bounding box coordinates for the submesh |
+| `float[3]` | `boundMax` | Maximum bounding box coordinates for the submesh |
 
 **This function has been available since:** v0.0.1
 
@@ -86,28 +115,26 @@ struct MeshData
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `std::vector<Vertex>` | `vertices` | Vertices of the mesh |
-| `std::vector<uint32_t>` | `indices` | Indices of the mesh |
-| `std::vector<Material>` | `materials` | Materials of the mesh |
-| `bgfx::VertexBufferHandle` | `vbh` | Vertex buffer handle |
-| `bgfx::IndexBufferHandle` | `ibh` | Index buffer handle |
-| `uint32_t` | `numVertices` | Number of vertices in the mesh |
-| `uint32_t` | `numIndices` | Number of indices in the mesh |
-| `uint8_t` | `numMaterials` | Number of materials in the mesh |
-| `bool` | `hasTextures` | Whether the mesh has textures |
-| `std::string` | `path` | Path to the mesh file (relative to the game root) |
-| `int` | `id` | Unique ID of the mesh |
-| `std::filesystem::file_time_type` | `lastWriteTime` | For tracking changes |
-| `bool` | `valid` | Meshes are hardly ever actually invalid, but this is useful for reloading |
+| `std::vector<Vertex>` | `vertices` | List of vertices in the mesh |
+| `std::vector<uint32_t>` | `indices` | List of indices for indexed drawing |
+| `std::vector<Material>` | `materials` | List of materials used by the mesh |
+| `uint8_t` | `numMaterials` | Number of materials used by the mesh |
+| `std::vector<SubMesh>` | `subMeshes` | List of submeshes in the mesh |
+| `uint8_t` | `numSubMeshes` | Number of submeshes in the mesh |
+| `bgfx::VertexBufferHandle` | `vbh` | Handle to the vertex buffer on the GPU |
+| `bgfx::IndexBufferHandle` | `ibh` | Handle to the index buffer on the GPU |
+| `int` | `id` | Unique ID for the mesh (for hot reloading and editor purposes) |
+| `bool` | `valid` | Whether the mesh data is valid and can be rendered |
+| `lastWriteTime` | `Last` | write time of the mesh file (for hot reloading) |
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`SynModelLoader::static`**
+#### **`ModelLoader::static`**
 
 
- SynModelLoader class for loading 3D models
+ Model class for loading 3D models
 
 Signature:
 
@@ -119,7 +146,7 @@ Signature:
 
 ---
 
-#### **`SynModelLoader::_UnloadAllMeshes`**
+#### **`ModelLoader::_UnloadAllMeshes`**
 
 
  Unloads all loaded models
@@ -143,7 +170,7 @@ Signature:
 
 ---
 
-#### **`SynModelLoader::_GetMeshes`**
+#### **`ModelLoader::_GetMeshes`**
 
 
  Get all loaded meshes
@@ -165,7 +192,7 @@ Signature:
 
 ---
 
-#### **`SynModelLoader::_GetMeshById`**
+#### **`ModelLoader::_GetMeshById`**
 
 
  Get a mesh by its ID
@@ -199,7 +226,7 @@ Signature:
 Signature:
 
 ```cpp
- public: /// @brief Loads a model from the specified path, returns true if /// successful /// @param out MeshData to fill with the loaded model /// @param path Path to the model file /// @param loadTextures Whether to load textures for the model /// @return true if the model was loaded successfully, false otherwise /// @threadsafety not-safe /// @since v0.0.1 /// @internal bool _LoadModel(MeshData& out, const std::string& path, bool loadTextures) override;
+ public: /// @brief Loads a model from the specified path, returns true if /// successful /// @param out MeshData to fill with the loaded model /// @param meshStream Stream containing the model data /// @param loadTextures Whether to load textures for the model /// @return true if the model was loaded successfully, false otherwise /// @threadsafety not-safe /// @since v0.0.1 /// @internal bool _LoadModel(MeshData& out, scl::stream* meshStream, const std::string& assetPath, bool loadTextures) override;
 ```
 
 **This function has been available since:** v0.0.1
@@ -219,7 +246,7 @@ Signature:
 Signature:
 
 ```cpp
- bool _ReloadModel(MeshData& out, int id) override;
+ bool _ReloadModel(MeshData& out, scl::stream* stream, const std::string& assetPath, int id) override;
 ```
 
 **Parameters:**
@@ -242,17 +269,67 @@ Signature:
 Signature:
 
 ```cpp
- static bool processScene(MeshData& meshData, const aiScene* scene, const std::string& path, bool loadTextures);
+ static bool processScene(MeshData& out, const aiScene* scene, scl::stream* meshStream, bool loadTextures);
 ```
 
 **Parameters:**
 
-- `meshData`: MeshData to fill with the processed data
+- `out`: MeshData to fill with the processed data
 - `scene`: Assimp scene to process
-- `path`: Path to the model file
+- `meshStream`: Stream containing the model data (for resolving relative texture paths)
 - `loadTextures`: Whether to load textures for the model
 
 **Returns:** true if the scene was processed successfully, false otherwise
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`AssimpLoader::_ProcessMaterial`**
+
+
+ Processes an Assimp material and fills the Material structure
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ static Material _ProcessMaterial(aiMaterial* aiMat, const aiScene* scene, scl::stream* meshStream, bool loadTextures);
+```
+
+**Parameters:**
+
+- `aiMat`: Assimp material to process
+- `meshStream`: Stream containing the model data (for resolving relative texture paths)
+- `loadTextures`: Whether to load textures for the material
+
+**Returns:** Material structure filled with the processed material data
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`AssimpLoader::_CreateDefaultMaterial`**
+
+
+ Creates a default material with no textures
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ static Material _CreateDefaultMaterial();
+```
+
+**Returns:** Material structure filled with default material data
 
 **Thread Safety:** not-safe
 

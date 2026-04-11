@@ -8,11 +8,13 @@
 # Adds several functions to compile shaders, add assets, and configure the game target (root/engine/cmake/GameConfig.cmake)
 
 include(${SYNGINE_SOURCE_DIR}/cmake/CompileShaders.cmake)
+include(${SYNGINE_SOURCE_DIR}/cmake/CompileMeshes.cmake)
+include(${SYNGINE_SOURCE_DIR}/cmake/FileBundle.cmake)
 
 # Function to compile all shaders in a directory
 function(compile_collect_shaders SHADER_SRC_DIR ALL_SHADERS_LIST)
     set(LOCAL_SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
-    set(LOCAL_SHADER_BUNDLE_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders")
+    set(LOCAL_SHADER_BUNDLE_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/rom/shaders")
     file(MAKE_DIRECTORY ${LOCAL_SHADER_OUTPUT_DIR}) # Ensure output directory exists
     set(LOCAL_BGFX_CORE_INCLUDE_DIR "${SYNGINE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src")
 
@@ -49,117 +51,82 @@ function(compile_collect_shaders SHADER_SRC_DIR ALL_SHADERS_LIST)
     endif()
 endfunction()
 
-# Asset handling helpers
-function(_add_assets_win_linux target)
-    set(BUNDLED_SHADER_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders")
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${target}>/shaders"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${BUNDLED_SHADER_DIR}"
-            "$<TARGET_FILE_DIR:${target}>/shaders"
-        COMMENT "Copying bundled shaders to executable directory"
-    )
+function(compile_collect_default_gizmos GIZMO_BUNDLE_OUTPUT_VAR)
+    set(DEFAULT_GIZMO_SOURCE_DIR "${SYNGINE_SOURCE_DIR}/default/gizmos")
 
-    # Loop through the game asset directory (root/assets) and copy all folders into the executable directory
-    if(EXISTS "${GAME_ASSET_DIR}")
-        file(GLOB GAME_ASSET_SUBDIRS RELATIVE "${GAME_ASSET_DIR}" "${GAME_ASSET_DIR}/*")
-        foreach(SUBDIR ${GAME_ASSET_SUBDIRS})
-            if(IS_DIRECTORY "${GAME_ASSET_DIR}/${SUBDIR}")
-                # Do not copy the "shaders" directory
-                if(SUBDIR STREQUAL "shaders")
-                    continue()
-                endif()
-                add_custom_command(TARGET ${target} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                        "${GAME_ASSET_DIR}/${SUBDIR}"
-                        "$<TARGET_FILE_DIR:${target}>/${SUBDIR}"
-                    COMMENT "Copying game asset subdirectory '${SUBDIR}' to executable directory"
-                )
-                message(STATUS "Adding game asset subdirectory: ${GAME_ASSET_DIR}/${SUBDIR} -> $<TARGET_FILE_DIR:${target}>/${SUBDIR}")
-            endif()
-        endforeach()
+    if(NOT IS_DIRECTORY "${DEFAULT_GIZMO_SOURCE_DIR}")
+        set(${GIZMO_BUNDLE_OUTPUT_VAR} "" PARENT_SCOPE)
+        return()
     endif()
 
-    # Loop through the engine default directory (root/engine/default) and copy all folders except "shaders" into the executable directory
-    if(EXISTS "${SYNGINE_SOURCE_DIR}/default")
-        file(GLOB ENGINE_DEFAULT_SUBDIRS RELATIVE "${SYNGINE_SOURCE_DIR}/default" "${SYNGINE_SOURCE_DIR}/default/*")
-        foreach(SUBDIR ${ENGINE_DEFAULT_SUBDIRS})
-            if(IS_DIRECTORY "${SYNGINE_SOURCE_DIR}/default/${SUBDIR}" AND NOT SUBDIR STREQUAL "shaders")
-                add_custom_command(TARGET ${target} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_directory
-                        "${SYNGINE_SOURCE_DIR}/default/${SUBDIR}"
-                        "$<TARGET_FILE_DIR:${target}>/default/${SUBDIR}"
-                    COMMENT "Copying engine default subdirectory '${SUBDIR}' to executable directory"
-                )
-                message(STATUS "Adding engine default subdirectory: ${SYNGINE_SOURCE_DIR}/default/${SUBDIR} -> $<TARGET_FILE_DIR:${target}>/default/${SUBDIR}")
-            endif()
-        endforeach()
+    file(GLOB DEFAULT_GIZMO_ENTRIES RELATIVE "${DEFAULT_GIZMO_SOURCE_DIR}" "${DEFAULT_GIZMO_SOURCE_DIR}/*")
+    if(NOT DEFAULT_GIZMO_ENTRIES)
+        set(${GIZMO_BUNDLE_OUTPUT_VAR} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    create_file_bundle(
+        BUNDLE_NAME "default_gizmos"
+        OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/rom/gizmos"
+        SOURCE_DIRECTORY "${DEFAULT_GIZMO_SOURCE_DIR}"
+        INPUT_FILES ${DEFAULT_GIZMO_ENTRIES}
+        BUNDLE_FILE_OUTPUT_VAR GENERATED_GIZMO_BUNDLE
+    )
+
+    set(${GIZMO_BUNDLE_OUTPUT_VAR} "${GENERATED_GIZMO_BUNDLE}" PARENT_SCOPE)
+endfunction()
+
+function(compile_collect_asset_bundle ASSET_SRC_DIR BUNDLE_NAME ASSET_BUNDLE_OUTPUT_VAR)
+    if(NOT IS_DIRECTORY "${ASSET_SRC_DIR}")
+        set(${ASSET_BUNDLE_OUTPUT_VAR} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    file(GLOB ASSET_ENTRIES RELATIVE "${ASSET_SRC_DIR}" "${ASSET_SRC_DIR}/*")
+    if(NOT ASSET_ENTRIES)
+        set(${ASSET_BUNDLE_OUTPUT_VAR} "" PARENT_SCOPE)
+        return()
+    endif()
+
+    create_file_bundle(
+        BUNDLE_NAME "${BUNDLE_NAME}"
+        OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/rom/${BUNDLE_NAME}"
+        SOURCE_DIRECTORY "${ASSET_SRC_DIR}"
+        INPUT_FILES ${ASSET_ENTRIES}
+        BUNDLE_FILE_OUTPUT_VAR GENERATED_ASSET_BUNDLE
+    )
+
+    set(${ASSET_BUNDLE_OUTPUT_VAR} "${GENERATED_ASSET_BUNDLE}" PARENT_SCOPE)
+endfunction()
+
+# Asset handling helpers
+function(_add_assets_win_linux target)
+    set(ROM_DIR "$<TARGET_FILE_DIR:${target}>/rom")
+
+    get_target_property(COPY_ROM ${target} SYNGINE_COPY_ROM)
+    if(COPY_ROM)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${ROM_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_BINARY_DIR}/$<CONFIG>/rom"
+                "${ROM_DIR}"
+            COMMENT "Copying staged rom assets to executable directory"
+        )
     endif()
 endfunction()
 
 function(_add_assets_mac target)
-    # macOS: Bundle resources into .app/Contents/Resources
-    # Helper macro to add a file to the bundle's Resources directory
-    macro(add_resource FILE DEST_SUBDIR)
-        get_filename_component(FILENAME "${FILE}" NAME)
-        target_sources(${target} PRIVATE "${FILE}")
-        if(DEST_SUBDIR)
-            set_property(SOURCE "${FILE}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources/${DEST_SUBDIR}")
-        else()
-            make_directory("${CMAKE_BINARY_DIR}/Resources/${DEST_SUBDIR}")
-            set_property(SOURCE "${FILE}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources/${DEST_SUBDIR}")
-        endif()
-    endmacro()
+    set(ROM_DIR "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/rom")
 
-    set(BUNDLED_SHADER_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/shaders")
-    add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/shaders"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${BUNDLED_SHADER_DIR}"
-            "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/shaders"
-        COMMENT "Copying bundled shaders into app Resources"
-    )
-
-    # --- Loop through the root/assets directory and copy all asset folders that aren't shaders ---
-    if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
-        file(GLOB ASSET_SUBDIRS RELATIVE "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_SOURCE_DIR}/assets/*")
-        foreach(ASSET_SUBDIR ${ASSET_SUBDIRS})
-            if(IS_DIRECTORY "${CMAKE_SOURCE_DIR}/assets/${ASSET_SUBDIR}" AND NOT "${ASSET_SUBDIR}" STREQUAL "shaders")
-                file(GLOB_RECURSE ASSET_SUBDIR_FILES RELATIVE "${CMAKE_SOURCE_DIR}/assets/${ASSET_SUBDIR}" "${CMAKE_SOURCE_DIR}/assets/${ASSET_SUBDIR}/*")
-                foreach(asset_file_relative ${ASSET_SUBDIR_FILES})
-                    set(abs_asset_file "${CMAKE_SOURCE_DIR}/assets/${ASSET_SUBDIR}/${asset_file_relative}")
-                    if(IS_DIRECTORY "${abs_asset_file}")
-                        continue()
-                    endif()
-                    target_sources(${target} PRIVATE "${abs_asset_file}")
-                    set_property(SOURCE "${abs_asset_file}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources/${ASSET_SUBDIR}")
-                    message(STATUS "Bundling asset file for macOS: ${abs_asset_file} -> Resources/${ASSET_SUBDIR}/${asset_file_relative}")
-                endforeach()
-            endif()
-        endforeach()
-    else()
-        message(WARNING "Asset directory not found at ${CMAKE_SOURCE_DIR}/assets")
-    endif()
-
-    # --- Copy engine/default subfolders except 'shaders' into bundle Resources ---
-    if(EXISTS "${SYNGINE_SOURCE_DIR}")
-        file(GLOB ENGINE_DEFAULT_SUBDIRS RELATIVE "${SYNGINE_SOURCE_DIR}/default" "${SYNGINE_SOURCE_DIR}/default/*")
-        foreach(subdir ${ENGINE_DEFAULT_SUBDIRS})
-            if(IS_DIRECTORY "${SYNGINE_SOURCE_DIR}/default/${subdir}" AND NOT "${subdir}" STREQUAL "shaders")
-                file(GLOB_RECURSE DEFAULT_SUBDIR_FILES RELATIVE "${SYNGINE_SOURCE_DIR}/default/${subdir}" "${SYNGINE_SOURCE_DIR}/default/${subdir}/*")
-                foreach(default_file_relative ${DEFAULT_SUBDIR_FILES})
-                    set(abs_default_file "${SYNGINE_SOURCE_DIR}/default/${subdir}/${default_file_relative}")
-                    if(IS_DIRECTORY "${abs_default_file}")
-                        continue()
-                    endif()
-                    target_sources(${target} PRIVATE "${abs_default_file}")
-                    set_property(SOURCE "${abs_default_file}" PROPERTY MACOSX_PACKAGE_LOCATION "Resources/default/${subdir}")
-                    message(STATUS "Bundling engine default file for macOS: ${abs_default_file} -> Resources/default/${subdir}/${default_file_relative}")
-                endforeach()
-            endif()
-        endforeach()
-    else()
-        message(WARNING "Engine default directory not found at ${SYNGINE_SOURCE_DIR}/default")
+    get_target_property(COPY_ROM ${target} SYNGINE_COPY_ROM)
+    if(COPY_ROM)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${ROM_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_BINARY_DIR}/$<CONFIG>/rom"
+                "${ROM_DIR}"
+            COMMENT "Copying staged rom assets into app Resources"
+        )
     endif()
 endfunction()
 
@@ -295,7 +262,7 @@ function(SyngineGame name)
 # Parse args
 set(options "")
 set(oneValueArgs "")
-set(multiValueArgs SOURCES SHADER_DIRS)
+set(multiValueArgs SOURCES)
 cmake_parse_arguments(ARG "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
 if(NOT ARG_SOURCES)
@@ -334,18 +301,74 @@ message(STATUS "SyngineGame: Set BX_CONFIG_DEBUG preprocessor definition for ${n
 set(ALL_COMPILED_SHADER_BINARIES "")
 compile_collect_shaders("${SYNGINE_SOURCE_DIR}/default/shaders" ALL_COMPILED_SHADER_BINARIES)
 
-# Compile game shaders if provided
-if(ARG_SHADER_DIRS)
-    foreach(SHADER_DIR ${ARG_SHADER_DIRS})
-        compile_collect_shaders("${SHADER_DIR}" ALL_COMPILED_SHADER_BINARIES)
+# Discover and process game asset folders automatically.
+set(ALL_BUNDLED_MESH_FILES "")
+set(ALL_BUNDLED_OTHER_ASSET_FILES "")
+if(EXISTS "${GAME_ASSET_DIR}")
+    file(GLOB GAME_ASSET_SUBDIRS RELATIVE "${GAME_ASSET_DIR}" "${GAME_ASSET_DIR}/*")
+    foreach(ASSET_SUBDIR ${GAME_ASSET_SUBDIRS})
+        if(NOT IS_DIRECTORY "${GAME_ASSET_DIR}/${ASSET_SUBDIR}")
+            continue()
+        endif()
+
+        if(ASSET_SUBDIR STREQUAL "shaders")
+            compile_collect_shaders("${GAME_ASSET_DIR}/${ASSET_SUBDIR}" ALL_COMPILED_SHADER_BINARIES)
+        elseif(ASSET_SUBDIR STREQUAL "meshes")
+            compile_all_meshes(
+                SOURCE_DIRECTORY "${GAME_ASSET_DIR}/${ASSET_SUBDIR}"
+                OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/rom/meshes"
+                BUNDLE_FILES_OUTPUT_VAR ALL_BUNDLED_MESH_FILES
+            )
+        else()
+            compile_collect_asset_bundle(
+                "${GAME_ASSET_DIR}/${ASSET_SUBDIR}"
+                "${ASSET_SUBDIR}"
+                GENERATED_ASSET_BUNDLE
+            )
+            if(GENERATED_ASSET_BUNDLE)
+                list(APPEND ALL_BUNDLED_OTHER_ASSET_FILES ${GENERATED_ASSET_BUNDLE})
+            endif()
+        endif()
     endforeach()
 endif()
+
+message(STATUS "SyngineGame: Compiled mesh bundles for ${name}: ${ALL_BUNDLED_MESH_FILES}")
+message(STATUS "SyngineGame: Compiled asset bundles for ${name}: ${ALL_BUNDLED_OTHER_ASSET_FILES}")
+
+set(ALL_BUNDLED_GIZMO_FILES "")
+compile_collect_default_gizmos(ALL_BUNDLED_GIZMO_FILES)
+message(STATUS "SyngineGame: Compiled default gizmo bundles for ${name}: ${ALL_BUNDLED_GIZMO_FILES}")
 
 # Add dependency on the compiled shaders
 if(ALL_COMPILED_SHADER_BINARIES)
     add_custom_target(GameShaders ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
     add_dependencies(${name} GameShaders)
     message(STATUS "SyngineGame: Added GameShaders target for ${name}.")
+endif()
+
+# Add dependency on the compiled mesh bundles
+if(ALL_BUNDLED_MESH_FILES)
+    add_custom_target(GameMeshes ALL DEPENDS ${ALL_BUNDLED_MESH_FILES})
+    add_dependencies(${name} GameMeshes)
+    message(STATUS "SyngineGame: Added GameMeshes target for ${name}.")
+endif()
+
+# Add dependency on the compiled generic asset bundles
+if(ALL_BUNDLED_OTHER_ASSET_FILES)
+    add_custom_target(GameAssets ALL DEPENDS ${ALL_BUNDLED_OTHER_ASSET_FILES})
+    add_dependencies(${name} GameAssets)
+    message(STATUS "SyngineGame: Added GameAssets target for ${name}.")
+endif()
+
+# Add dependency on the compiled gizmo bundles
+if(ALL_BUNDLED_GIZMO_FILES)
+    add_custom_target(GameGizmos ALL DEPENDS ${ALL_BUNDLED_GIZMO_FILES})
+    add_dependencies(${name} GameGizmos)
+    message(STATUS "SyngineGame: Added GameGizmos target for ${name}.")
+endif()
+
+if(ALL_COMPILED_SHADER_BINARIES OR ALL_BUNDLED_MESH_FILES OR ALL_BUNDLED_OTHER_ASSET_FILES OR ALL_BUNDLED_GIZMO_FILES)
+    set_property(TARGET ${name} PROPERTY SYNGINE_COPY_ROM TRUE)
 endif()
 
 # --- Target Properties (macOS Bundle Info) ---

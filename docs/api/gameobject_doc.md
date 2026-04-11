@@ -37,6 +37,7 @@
 - [GetParent](#gameobjectgetparent)
 - [AddChild](#gameobjectaddchild)
 - [RemoveChild](#gameobjectremovechild)
+- [SetEnabled](#gameobjectsetenabled)
 
 ---
 
@@ -533,6 +534,27 @@ Signature:
 
 ---
 
+#### **`GameObject::SetEnabled`**
+
+
+ Sets the enabled state of the GameObject, which determines whether it is rendered and updated
+
+Signature:
+
+```cpp
+ void SetEnabled(bool enabled = true);
+```
+
+**Parameters:**
+
+- `enabled`: true to enable the GameObject, false to disable it
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
 ## Member Variables
 
 
@@ -541,6 +563,7 @@ Signature:
 | `std::string` | `type` | Type of the GameObject, used for shaders. |
 | `std::string` | `gizmo` | Gizmo type for rendering in the editor, e.g., |
 | `std::vector<std::string>` | `tags` | Tags for grouping and identifying GameObjects |
+| `bool` | `enabled` | Whether the GameObject is enabled for rendering and updates |
 
 ---
 

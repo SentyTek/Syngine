@@ -84,8 +84,6 @@ echo # Invoke the engine to build the game
 echo SyngineGame^(${EXECUTABLE_NAME}
 echo     SOURCES
 echo         src/main.cpp
-echo     SHADER_DIRS
-echo         ${GAME_ASSET_DIR}/shaders
 echo ^)
 ) > CMakeLists.txt
 

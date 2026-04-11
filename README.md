@@ -44,6 +44,8 @@ third_party/    -> Third party components like SDL and Jolt
 - [Jolt Physics](https://github.com/jrouwe/JoltPhysics)
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
 - [miniscl.hpp](https://github.com/MerianBerry/SCL)
+- [sol2](https://github.com/SentyTek/sol2) (Our patched fork of [sol2](https://github.com/ThePhD/sol2))
+- [Lua 5.5](https://lua.org/)
 
 ## License
 Syngine is licensed under the MIT license

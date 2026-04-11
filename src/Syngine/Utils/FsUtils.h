@@ -8,6 +8,7 @@
 #pragma once
 
 #include <filesystem>
+#include <string>
 #include "Syngine/Core/Logger.h"
 
 #include "SDL3/SDL_filesystem.h"
@@ -38,21 +39,41 @@ static inline std::string _ResolveOSPath(const char* path)
     const char* base = SDL_GetBasePath();
     std::string p(base);
 
+    // If path is already absolute, just return it since it's probably got rom.
+    if (std::filesystem::path(path).is_absolute()) {
+        return path;
+    }
+
     // swap "MacOS/" -> "Resources/"
     size_t pos = p.find("MacOS/");
     if (pos != std::string::npos)
     {
-        p.replace(pos, 6, "Resources/");
+        p.replace(pos, 6, "Resources");
     }
-    else
-    {
-
+    // Only add "rom/" prefix if it's not already there, to allow for absolute paths in the bundle
+    if (p.find("rom/") == std::string::npos) {
+        p += "rom/" + std::string(path); // e.g. "shaders/vs_simple.sc.bin"
+    } else {
+        p += path; // If "rom/" is already in the base path, just append the relative path
     }
-    p += path; // e.g. "shaders/vs_simple.sc.bin"
     return p;
 #else
-    return std::string(path);
+    // If path is already absolute, just return it since it's probably got rom.
+    if (std::filesystem::path(path).is_absolute()) {
+        return path;
+    }
+
+    // Only add "rom/" prefix if it's not already there, to allow for absolute paths in the game directory
+    std::string p(path);
+    if (p.find("rom/") == std::string::npos) {
+        p = "rom/" + p; // e.g. "shaders/vs_simple.sc.bin"
+    }
+    return p;
 #endif
+}
+
+static inline std::string _ResolveOSPath(std::string path) {
+    return _ResolveOSPath(path.c_str());
 }
 
 /// @brief Checks if required folders exist in the game directory
@@ -62,7 +83,7 @@ static inline std::string _ResolveOSPath(const char* path)
 inline bool _CheckRequiredFolders() {
     const char* requiredFolders[] = {
         "shaders",
-        "default", // Should meshes be considered required?
+        "gizmos", // Should meshes be considered required?
     };
 
     for (const char* folder : requiredFolders) {

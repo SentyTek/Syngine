@@ -14,7 +14,27 @@
 #ifdef SYN_DEBUG_GRAPHICS
 #define SYN_PROFILE_SCOPE(name)
 #define SYN_PROFILE_FUNCTION()
+
+// Create dummy definitions to avoid build errors when the profiler is disabled
+namespace Syngine {
+class Profiler {
+  public:  class ProfilerScope {
+      public: inline ProfilerScope(const char* name) {}
+  };
+  public: class ProfilerUI {
+      public: static void Render() {}
+      public: static void SaveCapture(const std::string& path) {}
+  };
+  public: static void PushEvent(const char* name, int type) {}
+  public: static void Reset() {}
+  public: static const std::vector<int>& GetThreadData() { return std::vector<int>(); }
+  public: static int StartTimer(const char* name) { return 0; }
+  public: static void EndTimer(int) {}
+};
+}; // namespace Syngine
+
 #else
+
 #include <cstdint>
 #include <vector>
 #include <string>
