@@ -53,5 +53,16 @@ class LuaManager {
     /// @brief Do a safe script execution with error handling
     /// @param script The Lua script to execute
     void SafeScript(const std::string& script);
+
+    /// @brief Do a safe file execution with error handling
+    /// @param filePath The path to the Lua file to execute
+    void SafeFile(const std::string& filePath);
+
+    /// @brief Add a function to the Lua state
+    /// @param name The name of the function in Lua
+    /// @param func The C++ function to bind to Lua
+    /// @param table Optional table name to add the function to (e.g., "syngine"). If empty, the function will be added to the global namespace.
+    template <typename Func>
+    void AddFunction(const std::string& name, Func func, const std::string& table = "");
 };
 } // namespace Syngine

@@ -30,7 +30,7 @@
 
 namespace Syngine {
 
-std::filesystem::path _GetContextdataPath(const std::string& appName) {
+std::filesystem::path _GetAppDataPath(const std::string& appName) {
     std::filesystem::path appDataFolder;
 #ifdef _WIN32
     // On Windows, use the user's Roaming AppData folder.

@@ -24,7 +24,7 @@ We have several pages of documentation available. Note the API reference is auto
 - [Using Prefabs in Syngine](guides/prefab.md)
 - [Making Your Own Components](guides/components.md)
 - [Profiling Your Syngine Game](guides/profiler.md)
-
+- [Lua Scripting in Syngine](guides/lua-scripting.md)
 
 - [Code Format Policy](policy.md)
 

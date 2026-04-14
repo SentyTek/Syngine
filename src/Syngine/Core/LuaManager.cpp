@@ -7,16 +7,39 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/LuaManager.h"
-#include <sol/forward.hpp>
-#include <sol/load_result.hpp>
-#include <sol/optional_implementation.hpp>
-#include <sol/state_view.hpp>
+#include "Syngine/Utils/FsUtils.h"
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
 
 namespace Syngine {
 
+// Simply links into the logger to print info.
+sol::object _SynginePrint(sol::variadic_args va) {
+    std::string output;
+    for (size_t i = 0; i < va.size(); ++i) {
+        sol::object obj = va[i];
+        if (obj.is<std::string>()) {
+            output += obj.as<std::string>();
+        } else if (obj.is<int>()) {
+            output += std::to_string(obj.as<int>());
+        } else if (obj.is<double>()) {
+            output += std::to_string(obj.as<double>());
+        } else if (obj.is<bool>()) {
+            output += obj.as<bool>() ? "true" : "false";
+        } else {
+            output += "<non-printable type>";
+        }
+        if (i < va.size() - 1) {
+            output += "\t";
+        }
+    }
+
+    Logger::LogF(LogLevel::INFO, "%s", output.c_str());
+    return sol::lua_nil;
+}
+
+// Custom require function that looks for Lua scripts in the "scripts" directory
 sol::object _CustomRequire(sol::this_state ts) {
     sol::state_view lua(ts);
 
@@ -30,7 +53,7 @@ sol::object _CustomRequire(sol::this_state ts) {
         return sol::lua_nil;
     }
 
-    std::string fullModuleName = "scripts/" + moduleName + ".lua";
+    std::string fullModuleName =  _GetAppDataPath("scripts/" + moduleName + ".lua").string();
     Logger::LogF(
         LogLevel::INFO, "Requiring Lua module: %s", fullModuleName.c_str());
 
@@ -83,6 +106,9 @@ void _RemoveBaseFuncs(sol::state& lua, bool removeError = true, bool noMetatable
             base["setmetatable"] = nullptr;
             base["getmetatable"] = nullptr;
         }
+
+        // Add in our own
+        lua["syngine"] = lua.create_table_with("log", _SynginePrint);
     }
 }
 
@@ -151,6 +177,42 @@ void LuaManager::SafeScript(const std::string& script) {
         Logger::LogF(LogLevel::ERR,
                      "Lua error during script execution: %s",
                      err.what());
+    }
+}
+
+void LuaManager::SafeFile(const std::string& filePath) {
+    if (!m_luaState) {
+        Logger::Error("Lua state is not initialized. Cannot execute file.");
+        return;
+    }
+
+    const sol::protected_function_result result =
+        m_luaState->safe_script_file(filePath, sol::script_pass_on_error);
+
+    if (!result.valid()) {
+        const sol::error err = result;
+        Logger::LogF(LogLevel::ERR,
+                     "Lua error during file execution '%s': %s",
+                     filePath.c_str(),
+                     err.what());
+    }
+}
+
+template <typename Func>
+void LuaManager::AddFunction(const std::string& name, Func func, const std::string& table) {
+    if (!m_luaState) {
+        Logger::Error("Lua state is not initialized. Cannot add function.");
+        return;
+    }
+
+    if (table.empty()) {
+        (*m_luaState)[name] = func;
+    } else {
+        sol::table tbl = (*m_luaState)[table];
+        if (!tbl.valid()) {
+            tbl = (*m_luaState)[table] = m_luaState->create_table();
+        }
+        tbl[name] = func;
     }
 }
 

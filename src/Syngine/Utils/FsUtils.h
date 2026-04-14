@@ -23,7 +23,7 @@ namespace Syngine {
 /// @return The path to the application data directory
 /// @since v0.0.1
 /// @internal
-std::filesystem::path _GetContextdataPath(const std::string& appName);
+std::filesystem::path _GetAppDataPath(const std::string& appName);
 
 /// @brief Resolves the full relative path to resourced files based on platform.
 /// macOS uses a different path structure than others because of the app bundle

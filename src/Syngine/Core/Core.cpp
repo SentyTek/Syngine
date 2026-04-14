@@ -233,6 +233,15 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     { .onPressed = Core::_ReloadShaders });
     }
 
+    // Do the lua script in appdata
+    {
+        std::string scriptPath =
+            _GetAppDataPath(m_context->config.windowTitle) / "init.lua";
+        if (std::filesystem::exists(scriptPath)) {
+            m_context->luaState->SafeFile(scriptPath);
+        }
+    }
+
     return true;
 }
 

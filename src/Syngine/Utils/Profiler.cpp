@@ -27,7 +27,7 @@ std::vector<TimerEvent> Profiler::m_timers;
 int Profiler::m_nextTimerID = 0;
 
 void Profiler::ProfilerUI::SaveCapture(const std::string& filepath) {
-    std::filesystem::path realPath = Syngine::_GetContextdataPath(Core::_GetContext()->config.windowTitle) / filepath;
+    std::filesystem::path realPath = Syngine::_GetAppDataPath(Core::_GetContext()->config.windowTitle) / filepath;
     std::ofstream out(realPath);
     out << "["; // Start JSON array
 
