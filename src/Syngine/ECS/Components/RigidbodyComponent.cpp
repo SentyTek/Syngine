@@ -15,6 +15,7 @@
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Physics/Physics.h"
+#include "Syngine/Utils/Serializer.h"
 
 #include "Jolt/Math/Quat.h"
 #include "Jolt/Physics/Body/BodyInterface.h"
@@ -22,11 +23,11 @@
 #include "Jolt/Physics/Collision/Shape/CylinderShape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
 #include "Jolt/Physics/EActivation.h"
-
 #include "Jolt/Math/MathTypes.h"
 #include "Jolt/Physics/Body/MotionProperties.h"
-#include "Syngine/Utils/Serializer.h"
+
 #include "bx/math.h"
+#include <sol/sol.hpp>
 
 #include <memory>
 #include <vector>
@@ -533,7 +534,8 @@ static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
     },
 
     // Instantiate
-    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+    [](GameObject* owner, const Serializer::DataNode& data)
+        -> std::unique_ptr<Syngine::Component> {
         RigidbodyParameters params;
         params.mass = data["mass"].As(1.0f);
         params.friction = data["friction"].As(0.5f);
@@ -541,6 +543,69 @@ static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
         params.shape = static_cast<PhysicsShapes>(data["shape"].As(0));
         params.shapeParameters = data["shapeParameters"].As<std::vector<float>>({});
         return std::make_unique<RigidbodyComponent>(owner, params);
+    },
+
+    // Lua bindings
+    [](sol::state& lua) {
+        lua.new_usertype<RigidbodyComponent>(
+            "RigidbodyComponent",
+            // Methods
+            "AddForce", [](RigidbodyComponent& self, sol::variadic_args args) {
+                float force[3] = {0.0f, 0.0f, 0.0f};
+                ForceMode mode = ForceMode::FORCE;
+                int i = 0;
+                for (auto arg : args) {
+                    if (arg.is<float>() && i < 3) {
+                        force[i++] = arg.as<float>();
+                    } else if (arg.is<std::string>()) {
+                        std::string modeStr = arg.as<std::string>();
+                        if (modeStr == "IMPULSE") mode = ForceMode::IMPULSE;
+                    }
+                }
+                self.AddForce(force, mode);
+            },
+            "AddForceAtPosition", [](RigidbodyComponent& self, sol::variadic_args args) {
+                float force[3] = {0.0f, 0.0f, 0.0f};
+                float position[3] = {0.0f, 0.0f, 0.0f};
+                ForceMode mode = ForceMode::FORCE;
+                int i = 0;
+                for (auto arg : args) {
+                    if (arg.is<float>() && i < 3) {
+                        force[i++] = arg.as<float>();
+                    } else if (arg.is<float>() && i >= 3 && i < 6) {
+                        position[i - 3] = arg.as<float>();
+                        i++;
+                    } else if (arg.is<std::string>()) {
+                        std::string modeStr = arg.as<std::string>();
+                        if (modeStr == "IMPULSE") mode = ForceMode::IMPULSE;
+                    }
+                }
+                self.AddForceAtPosition(force, position, mode);
+            },
+            "AddTorque", [](RigidbodyComponent& self, sol::variadic_args args) {
+                float torque[3] = {0.0f, 0.0f, 0.0f};
+                ForceMode mode = ForceMode::FORCE;
+                int i = 0;
+                for (auto arg : args) {
+                    if (arg.is<float>() && i < 3) {
+                        torque[i++] = arg.as<float>();
+                    } else if (arg.is<std::string>()) {
+                        std::string modeStr = arg.as<std::string>();
+                        if (modeStr == "IMPULSE") mode = ForceMode::IMPULSE;
+                    }
+                }
+                self.AddTorque(torque, mode);
+            },
+            "UpdateShapeParameters", [](RigidbodyComponent& self, sol::variadic_args args) {
+                std::vector<float> newParams;
+                for (auto arg : args) {
+                    if (arg.is<float>()) {
+                        newParams.push_back(arg.as<float>());
+                    }
+                }
+                self.UpdateShapeParameters(newParams);
+             }
+        );
     }
 );
 

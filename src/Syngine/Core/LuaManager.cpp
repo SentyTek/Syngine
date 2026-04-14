@@ -7,16 +7,134 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/LuaManager.h"
+#include "Syngine/ECS/GameObject.h"
+#include "Syngine/ECS/AllComponents.h"
+#include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/Utils/FsUtils.h"
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
 
+#include <algorithm>
+#include <cctype>
+#include <unordered_map>
+
 namespace Syngine {
+
+namespace {
+
+std::string _ToLowerCopy(std::string value) {
+    std::transform(value.begin(),
+                   value.end(),
+                   value.begin(),
+                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return value;
+}
+
+std::string _NormalizeComponentType(const std::string& rawType) {
+    const std::string lowered = _ToLowerCopy(rawType);
+
+    if (lowered == "transform" || lowered == "transformcomponent") {
+        return "TransformComponent";
+    }
+    if (lowered == "mesh" || lowered == "meshcomponent") {
+        return "MeshComponent";
+    }
+    if (lowered == "rigidbody" || lowered == "rigidbodycomponent") {
+        return "RigidbodyComponent";
+    }
+    if (lowered == "billboard" || lowered == "billboardcomponent") {
+        return "BillboardComponent";
+    }
+
+    return rawType;
+}
+
+PhysicsShapes _ParsePhysicsShape(const sol::object& shapeObj,
+                                 PhysicsShapes      fallback) {
+    if (!shapeObj.valid() || shapeObj == sol::lua_nil) {
+        return fallback;
+    }
+
+    if (shapeObj.is<int>()) {
+        return static_cast<PhysicsShapes>(shapeObj.as<int>());
+    }
+
+    if (shapeObj.is<std::string>()) {
+        const std::string shape = _ToLowerCopy(shapeObj.as<std::string>());
+        static const std::unordered_map<std::string, PhysicsShapes> kShapeMap = {
+            { "sphere", PhysicsShapes::SPHERE },
+            { "box", PhysicsShapes::BOX },
+            { "capsule", PhysicsShapes::CAPSULE },
+            { "capsule_tapered", PhysicsShapes::CAPSULE_TAPERED },
+            { "cylinder", PhysicsShapes::CYLINDER },
+            { "cylinder_tapered", PhysicsShapes::CYLINDER_TAPERED },
+            { "cone", PhysicsShapes::CONE },
+            { "convex_hull", PhysicsShapes::CONVEX_HULL },
+            { "plane", PhysicsShapes::PLANE },
+            { "mesh", PhysicsShapes::MESH },
+            { "compound", PhysicsShapes::COMPOUND },
+        };
+
+        auto it = kShapeMap.find(shape);
+        if (it != kShapeMap.end()) {
+            return it->second;
+        }
+    }
+
+    return fallback;
+}
+
+RigidbodyParameters _ParseRigidbodyParams(sol::optional<sol::table> maybeParams) {
+    RigidbodyParameters params{};
+    if (!maybeParams) {
+        return params;
+    }
+
+    const sol::table paramTable = *maybeParams;
+
+    params.mass = paramTable.get_or("mass", params.mass);
+    params.friction = paramTable.get_or("friction", params.friction);
+    params.restitution = paramTable.get_or("restitution", params.restitution);
+
+    const sol::object shapeObj = paramTable["shape"];
+    params.shape = _ParsePhysicsShape(shapeObj, params.shape);
+
+    const sol::object shapeParamsObj = paramTable["shapeParameters"];
+    if (shapeParamsObj.valid() && shapeParamsObj.get_type() == sol::type::table) {
+        params.shapeParameters.clear();
+        sol::table shapeParamsTable = shapeParamsObj.as<sol::table>();
+        for (size_t i = 1;; ++i) {
+            sol::optional<float> maybeValue = shapeParamsTable[i];
+            if (!maybeValue) {
+                break;
+            }
+            params.shapeParameters.push_back(*maybeValue);
+        }
+    }
+
+    const sol::object motionTypeObj = paramTable["motionType"];
+    if (motionTypeObj.valid() && motionTypeObj.is<int>()) {
+        params.motionType = static_cast<JPH::EMotionType>(motionTypeObj.as<int>());
+    }
+
+    const sol::object layerObj = paramTable["layer"];
+    if (layerObj.valid() && layerObj.is<int>()) {
+        params.layer = static_cast<JPH::ObjectLayer>(layerObj.as<int>());
+    }
+
+    return params;
+}
+
+} // namespace
+
+// Static member definitions
+sol::state* LuaManager::m_luaState = nullptr;
+bool        LuaManager::m_initialized = false;
 
 // Simply links into the logger to print info.
 sol::object _SynginePrint(sol::variadic_args va) {
-    std::string output;
+    std::string output = "[Lua/init.lua] ";
     for (size_t i = 0; i < va.size(); ++i) {
         sol::object obj = va[i];
         if (obj.is<std::string>()) {
@@ -36,6 +154,188 @@ sol::object _SynginePrint(sol::variadic_args va) {
     }
 
     Logger::LogF(LogLevel::INFO, "%s", output.c_str());
+    return sol::lua_nil;
+}
+
+void LuaManager::_RegisterEntityBindings(sol::state& lua) {
+    // Register GameObject as a usertype
+    auto gameObjectType = lua.new_usertype<Syngine::GameObject>(
+        "GameObject",
+        sol::constructors<Syngine::GameObject(
+            std::string, std::string, std::string)>());
+    gameObjectType["name"] = &Syngine::GameObject::name;
+    gameObjectType["type"] = &Syngine::GameObject::type;
+    gameObjectType["enabled"] = &Syngine::GameObject::enabled;
+    gameObjectType["AddComponent"] = [&lua](sol::this_state,
+                                             Syngine::GameObject* obj,
+                                             std::string          type,
+                                             sol::variadic_args   args) -> sol::object {
+        const std::string normalizedType = _NormalizeComponentType(type);
+
+        if (normalizedType == "TransformComponent") {
+            TransformComponent* comp = obj->AddComponent<TransformComponent>();
+            if (!comp) {
+                Logger::LogF(LogLevel::ERR,
+                             "Failed to add component '%s' in Lua (already exists?)",
+                             type.c_str());
+                return sol::lua_nil;
+            }
+            return sol::make_object(lua, comp);
+        } else if (normalizedType == "MeshComponent") {
+            MeshComponent* comp = nullptr;
+
+            // No args
+            if (args.size() == 0) {
+                Logger::Warn(
+                    "Adding MeshComponent with no arguments in Lua is not "
+                    "recommended since it won't have a mesh assigned. Consider "
+                    "providing at least a path to a model.");
+                return sol::lua_nil;
+            } else if (args.size() == 2) {
+                sol::object arg0 = args[0];
+                sol::object arg1 = args[1];
+
+                // bundle, path
+                if (arg0.is<std::string>() && arg1.is<std::string>()) {
+                    comp = obj->AddComponent<MeshComponent>(arg0.as<std::string>(), arg1.as<std::string>());
+                }
+            } else {
+                // Try to parse as (bundle, path, hasTextures)
+                sol::object arg0 = args[0];
+                sol::object arg1 = args[1];
+                sol::object arg2 = args[2];
+
+                if (arg0.is<std::string>() && arg1.is<std::string>() && arg2.is<bool>()) {
+                    comp = obj->AddComponent<MeshComponent>(arg0.as<std::string>(), arg1.as<std::string>(), arg2.as<bool>());
+                } else {
+                    Logger::LogF(LogLevel::ERR,
+                                 "Invalid arguments for adding MeshComponent in Lua. Expected (path, hasTextures) or (bundle, path) or (bundle, path, hasTextures).");
+                    return sol::lua_nil;
+                }
+            }
+
+            if (!comp) {
+                Logger::LogF(LogLevel::ERR,
+                             "Failed to add MeshComponent in Lua (bad args or already exists?)",
+                             type.c_str());
+                return sol::lua_nil;
+            }
+            return sol::make_object(lua, comp);
+        } else if (normalizedType == "RigidbodyComponent") {
+            sol::optional<sol::table> params = sol::nullopt;
+            if (args.size() >= 1) {
+                sol::object arg0 = args[0];
+                if (arg0.get_type() == sol::type::table) {
+                    params = arg0.as<sol::table>();
+                }
+            }
+
+            const RigidbodyParameters rbParams = _ParseRigidbodyParams(params);
+            RigidbodyComponent* comp = obj->AddComponent<RigidbodyComponent>(rbParams);
+            if (!comp) {
+                Logger::LogF(LogLevel::ERR,
+                             "Failed to add component '%s' in Lua (already exists?)",
+                             type.c_str());
+                return sol::lua_nil;
+            }
+            return sol::make_object(lua, comp);
+        } else if (normalizedType == "BillboardComponent") {
+            std::string texturePath;
+            std::string bundlePath;
+            BillboardMode mode = BillboardMode::CAMERA_ALIGNED;
+            float size = 1.0f;
+
+            // Parse args in order: (texturePath), (bundlePath, texturePath),
+            // (texturePath, mode, size), (bundlePath, texturePath, mode, size)
+            if (args.size() >= 1 && args[0].is<std::string>()) {
+                texturePath = args[0].as<std::string>();
+            }
+            if (args.size() >= 2 && args[1].is<std::string>()) {
+                bundlePath = args[1].as<std::string>();
+            }
+            if (args.size() >= 3 && args[2].is<std::string>()) {
+                std::string modeStr = args[2].as<std::string>();
+                if (modeStr == "CAMERA_ALIGNED") {
+                    mode = BillboardMode::CAMERA_ALIGNED;
+                } else if (modeStr == "Y_ALIGNED") {
+                    mode = BillboardMode::AXIS_Y_ALIGNED;
+                } else if (modeStr == "FIXED") {
+                    mode = BillboardMode::FIXED;
+                } else {
+                    Logger::LogF(LogLevel::ERR,
+                                 "Invalid billboard mode '%s' specified in Lua. Defaulting to CAMERA_ALIGNED.",
+                                 modeStr.c_str());
+                }
+            }
+            if (args.size() >= 4 && args[3].is<float>()) {
+                size = args[3].as<float>();
+            }
+
+            BillboardComponent* comp = obj->AddComponent<BillboardComponent>(texturePath, bundlePath, mode, size);
+            if (!comp) {
+                Logger::LogF(LogLevel::ERR,
+                             "Failed to add component '%s' in Lua (already exists?)",
+                             type.c_str());
+                return sol::lua_nil;
+            }
+            return sol::make_object(lua, comp);
+        } else {
+            Logger::LogF(LogLevel::ERR,
+                         "Unknown component type '%s' requested in Lua",
+                         type.c_str());
+            return sol::lua_nil;
+        }
+    };
+    gameObjectType["GetComponent"] = [&lua](Syngine::GameObject* obj,
+                                             std::string          type) -> sol::object {
+        const std::string normalizedType = _NormalizeComponentType(type);
+
+        if (normalizedType == "TransformComponent") {
+            TransformComponent* comp = obj->GetComponent<TransformComponent>();
+            if (comp) return sol::make_object(lua, comp);
+            return sol::lua_nil;
+        } else if (normalizedType == "MeshComponent") {
+            MeshComponent* comp = obj->GetComponent<MeshComponent>();
+            if (comp) return sol::make_object(lua, comp);
+            return sol::lua_nil;
+        } else if (normalizedType == "RigidbodyComponent") {
+            RigidbodyComponent* comp = obj->GetComponent<RigidbodyComponent>();
+            if (comp) return sol::make_object(lua, comp);
+            return sol::lua_nil;
+        } else if (normalizedType == "BillboardComponent") {
+            BillboardComponent* comp = obj->GetComponent<BillboardComponent>();
+            if (comp) return sol::make_object(lua, comp);
+            return sol::lua_nil;
+        } else {
+            Logger::LogF(LogLevel::ERR,
+                         "Unknown component type '%s' requested in Lua",
+                         type.c_str());
+            return sol::lua_nil;
+        }
+    };
+
+    // Create the scene namespace as a table
+    sol::table scene = lua.create_table();
+    scene["createGameObject"] = [&lua](std::string name) -> sol::object {
+        // Create a new GameObject
+        GameObject* go = new GameObject(name, "default", "default");
+        return sol::make_object(lua, go);
+    };
+    lua["scene"] = scene;
+}
+
+sol::object _AddComponent(sol::state_view lua, GameObject* obj, std::string type) {
+    // For simplicity, we only support TransformComponent for now. In a real
+    // implementation, you would have a factory or registry to create components
+    // based on the type string.
+    if (type == "TransformComponent") {
+        TransformComponent* comp = obj->AddComponent<TransformComponent>();
+        return sol::make_object(lua, comp);
+    }
+
+    Logger::LogF(LogLevel::ERR,
+                 "Unknown component type '%s' requested in Lua",
+                 type.c_str());
     return sol::lua_nil;
 }
 
@@ -80,7 +380,7 @@ sol::object _CustomRequire(sol::this_state ts) {
     return res;
 }
 
-void _RemoveBaseFuncs(sol::state& lua, bool removeError = true, bool noMetatables = false) {
+void LuaManager::_RemoveBaseFuncs(sol::state& lua, bool removeError, bool noMetatables) {
     // Remove potentially dangerous functions from the base library
     sol::table base = lua["base"];
     if (base.valid()) {
@@ -109,10 +409,13 @@ void _RemoveBaseFuncs(sol::state& lua, bool removeError = true, bool noMetatable
 
         // Add in our own
         lua["syngine"] = lua.create_table_with("log", _SynginePrint);
+        _RegisterEntityBindings(lua);
+        ComponentRegistry::_RegisterAllLuaBindings(lua);
     }
 }
 
 LuaManager::LuaManager(LuaLibs args) {
+    m_initialized = false;
     m_luaState = new sol::state();
 
     if (!m_luaState) {
@@ -154,6 +457,7 @@ LuaManager::LuaManager(LuaLibs args) {
     } else {
         Logger::Error("Invalid LuaLibs flag specified. No libraries opened.");
     }
+    m_initialized = true;
 }
 
 LuaManager::~LuaManager() {

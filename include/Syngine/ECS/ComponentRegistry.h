@@ -16,6 +16,10 @@
 #include "Syngine/Utils/Serializer.h"
 #include "miniscl.hpp"
 
+namespace sol {
+class state; // forward declaration
+}
+
 namespace Syngine {
 
 /// @brief ComponentRegistry is a global registry that maps component type IDs
@@ -27,7 +31,9 @@ class ComponentRegistry {
     public:
       using ParseXmlFn =
           std::function<Serializer::DataNode(const scl::xml::XmlElem*)>;
-      using InstantiateFn = std::function<std::unique_ptr<Component>(GameObject*, const Serializer::DataNode&)>;
+      using InstantiateFn = std::function<std::unique_ptr<Component>(
+          GameObject*, const Serializer::DataNode&)>;
+      using RegisterLuaFn = std::function<void(sol::state&)>;
 
       /// @brief Register a component type with its XML parsing and
       /// instantiation functions
@@ -47,7 +53,7 @@ class ComponentRegistry {
       /// );
       /// @since v0.0.1
       static void
-      Register(Syngine::ComponentTypeID type, ParseXmlFn parseFn, InstantiateFn instantiateFn);
+      Register(Syngine::ComponentTypeID type, ParseXmlFn parseFn, InstantiateFn instantiateFn, RegisterLuaFn registerLuaFn = nullptr);
 
       /// @brief Parse an XML element into a DataNode for a given component type
       /// @param type The unique ID of the component type
@@ -69,22 +75,30 @@ class ComponentRegistry {
                   GameObject*                 owner,
                   const Serializer::DataNode& data);
 
+      /// @brief Register Lua bindings for component creation and manipulation
+      /// @param lua The Lua state to register the bindings with
+      static void RegisterLuaBindings(sol::state& lua);
+
     private:
       struct Entry {
           ComponentTypeID type; // Optional: for debugging/logging
           ParseXmlFn      parseXml;
           InstantiateFn   instantiate;
+          RegisterLuaFn   registerLua; // Optional: for registering Lua bindings
       };
 
       static std::unordered_map<Syngine::ComponentTypeID, Entry>& m_registry();
+      static void _RegisterAllLuaBindings(sol::state& lua); // IMPORTANT: LuaManager calls this after Lua state is initialized
+      friend class LuaManager; // Allow LuaManager to call _RegisterAllLuaBindings
 };
 
 // Helper struct to register components in the ComponentRegistry at static initialization time
 struct ComponentRegistrar {
     ComponentRegistrar(Syngine::ComponentTypeID type,
                        ComponentRegistry::ParseXmlFn parseFn,
-                       ComponentRegistry::InstantiateFn instantiateFn) {
-        ComponentRegistry::Register(type, std::move(parseFn), std::move(instantiateFn));
+                       ComponentRegistry::InstantiateFn instantiateFn,
+                       ComponentRegistry::RegisterLuaFn registerLuaFn = nullptr) {
+        ComponentRegistry::Register(type, std::move(parseFn), std::move(instantiateFn), std::move(registerLuaFn));
     }
 };
 

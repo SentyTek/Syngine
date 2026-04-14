@@ -14,10 +14,12 @@
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/Profiler.h"
-
 #include "Syngine/Utils/Serializer.h"
+
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
+
+#include <sol/sol.hpp>
 #include "miniscl.hpp"
 
 #include <cfloat>
@@ -472,7 +474,8 @@ MeshAABB& MeshComponent::GetAABB() {
     return m_aabb;
 }
 
-static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH,
+static Syngine::ComponentRegistrar s_meshRegistrar(
+    Syngine::SYN_COMPONENT_MESH,
     // ParseXML: XML element -> DataNode
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
@@ -494,12 +497,20 @@ static Syngine::ComponentRegistrar s_meshRegistrar(Syngine::SYN_COMPONENT_MESH,
     },
 
     // Instantiate: DataNode -> Component instance
-    [](Syngine::GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+    [](Syngine::GameObject* owner, const Serializer::DataNode& data)
+        -> std::unique_ptr<Syngine::Component> {
         std::string path = data.Has("path") ? data["path"].As<std::string>() : "";
         std::string bundlePath = data.Has("bundle") ? data["bundle"].As<std::string>() : "meshes/meshes.spk";
         bool hasTextures = data.Has("hasTextures") ? data["hasTextures"].As<bool>() : false;
         auto meshComp = std::make_unique<MeshComponent>(owner, bundlePath, path, hasTextures);
         return meshComp;
+    },
+
+    [](sol::state& lua) {
+        lua.new_usertype<MeshComponent>("MeshComponent"
+            // Methods
+            // (none worth exposing to Lua yet)
+        );
     }
 );
 

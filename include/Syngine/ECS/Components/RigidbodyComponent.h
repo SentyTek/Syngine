@@ -46,10 +46,8 @@ enum class ForceMode {
     IMPULSE, //* Add an instant force impulse, using its mass (I = m * dv) (
              //* Newton-seconds)
     VELOCITY_CHANGE //* Change velocity instantaneously, ignoring its mass.
-                    //Note:
-                    //* This is not well supported, and is equivalent to IMPULSE
-                    //if
-                    //* you did NOT manually set the mass yourself.
+                    //* Note: This is not well supported, and is equivalent to
+                    //* IMPULSE if you did NOT manually set the mass yourself.
 };
 
 struct CompoundShapePart {

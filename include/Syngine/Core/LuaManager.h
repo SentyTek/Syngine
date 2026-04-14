@@ -20,8 +20,14 @@ namespace Syngine {
 /// @brief Manages the Lua state and scripting environment for the engine.
 /// @section Lua
 class LuaManager {
-    sol::state* m_luaState;
+    static sol::state* m_luaState;
+    static sol::state* _GetState() { return m_luaState; }
+    static bool        m_initialized;
 
+    static void _RegisterEntityBindings(sol::state& lua);
+    static void _RemoveBaseFuncs(sol::state& lua, bool removeError = true, bool noMetatables = false);
+
+    friend class ComponentRegistrar; // Allow ComponentRegistrar to register Lua bindings
   public:
     /// @brief Enum for specifying which Lua libraries to open
     /// @since v0.0.1
@@ -52,17 +58,17 @@ class LuaManager {
 
     /// @brief Do a safe script execution with error handling
     /// @param script The Lua script to execute
-    void SafeScript(const std::string& script);
+    static void SafeScript(const std::string& script);
 
     /// @brief Do a safe file execution with error handling
     /// @param filePath The path to the Lua file to execute
-    void SafeFile(const std::string& filePath);
+    static void SafeFile(const std::string& filePath);
 
     /// @brief Add a function to the Lua state
     /// @param name The name of the function in Lua
     /// @param func The C++ function to bind to Lua
     /// @param table Optional table name to add the function to (e.g., "syngine"). If empty, the function will be added to the global namespace.
     template <typename Func>
-    void AddFunction(const std::string& name, Func func, const std::string& table = "");
+    static void AddFunction(const std::string& name, Func func, const std::string& table = "");
 };
 } // namespace Syngine
