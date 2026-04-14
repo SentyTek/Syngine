@@ -327,7 +327,7 @@ std::string Logger::_LogLevelToString(LogLevel level) noexcept {
 void Logger::Init(const std::string& appname,
                   const std::filesystem::path& logPath) {
     m_appName = appname;
-    std::filesystem::path logFolder = Syngine::_GetAppdataPath(m_appName) / "logs";
+    std::filesystem::path logFolder = Syngine::_GetContextdataPath(m_appName) / "logs";
     if (logFolder.empty()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log folder path is empty, cannot initialize logger.");
         return;

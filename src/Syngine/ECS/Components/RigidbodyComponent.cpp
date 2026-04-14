@@ -107,7 +107,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         return;
     }
 
-    this->physicsManager = Syngine::Core::_GetApp()->physicsManager.get();
+    this->physicsManager = Syngine::Core::_GetContext()->physicsManager.get();
     this->transform      = this->m_owner->GetComponent<TransformComponent>();
     this->mass           = params.mass;
     this->friction       = params.friction;

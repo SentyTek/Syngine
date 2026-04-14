@@ -19,6 +19,12 @@ We have several pages of documentation available. Note the API reference is auto
 
 ## Table of Contents
 
+### Guides
+- [Creating Your First Syngine Game](guides/first-game.md)
+- [Using Prefabs in Syngine](guides/prefab.md)
+- [Making Your Own Components](guides/components.md)
+- [Profiling Your Syngine Game](guides/profiler.md)
+
 
 - [Code Format Policy](policy.md)
 

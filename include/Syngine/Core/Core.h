@@ -9,6 +9,7 @@
 #pragma once
 
 #include "Syngine/Core/Registry.h"
+#include "Syngine/Core/LuaManager.h"
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
@@ -26,6 +27,7 @@ namespace Syngine {
 // Forward declare
 class ZoneManager;
 class Window;
+class LuaManager;
 
 /// @brief Struct to hold hardware specifications
 /// @section Core
@@ -148,8 +150,8 @@ class Core {
     /// @return True if physics is enabled, false otherwise
     /// @since v0.0.1
     static bool IsPhysicsEnabled() {
-        return m_instance && m_instance->m_app &&
-            m_instance->m_app->config.usePhysics;
+        return m_instance && m_instance->m_context &&
+            m_instance->m_context->config.usePhysics;
     }
 
     /// @brief Set the current debug modes
@@ -157,8 +159,8 @@ class Core {
     /// @return True on success, false otherwise
     /// @since v0.0.1
     static bool SetDebugMode(DebugModes mode) {
-        if (m_instance && m_instance->m_app) {
-            m_instance->m_app->debug = mode;
+        if (m_instance && m_instance->m_context) {
+            m_instance->m_context->debug = mode;
             return true;
         }
         return false;
@@ -168,8 +170,8 @@ class Core {
     /// @return Current DebugModes struct
     /// @since v0.0.1
     static DebugModes GetDebugMode() {
-        if (m_instance && m_instance->m_app) {
-            return m_instance->m_app->debug;
+        if (m_instance && m_instance->m_context) {
+            return m_instance->m_context->debug;
         }
         return DebugModes();
     }
@@ -201,21 +203,22 @@ class Core {
     /// @brief Struct to hold application state
     /// @section Core
     /// @since v0.0.1
-    struct App {
+    struct Context {
         EngineConfig                    config;         //* Engine configuration
         std::unique_ptr<Window>         window;         //* Pointer to the window
         std::unique_ptr<Renderer>       renderer;       //* Pointer to the render system
         std::unique_ptr<ModelLoader>    synModels;      //* Pointer to the model loader
         std::unique_ptr<Phys>           physicsManager; //* Pointer to the physics manager
         std::unique_ptr<ZoneManager>    zoneManager;    //* Pointer to the zone manager
-        DebugModes                      debug;          //* Debug modes flags
+        std::unique_ptr<LuaManager>     luaState;       //* Pointer to the Lua state
+        DebugModes debug;                               //* Debug modes flags
     };
 
     /// @brief Get the global App instance
-    /// @return Pointer to the global App instance
+    /// @return Pointer to the global Context instance
     /// @since v0.0.1
     /// @internal
-    static App* _GetApp();
+    static Context* _GetContext();
 
     /// @brief Get the global game config
     /// @return Pointer to the global game config
@@ -286,7 +289,7 @@ class Core {
     static void _ReloadShaders();
 
     static Core*         m_instance;     //* Pointer to the global Core instance
-    static App*          m_app;          //* Pointer to the global App instance
+    static Context*      m_context;      //* Pointer to the global Context instance
     static bool          m_shouldClose;  //* Whether the application should close
     static _internal     m_internal;     //* Internal state struct
     static _FrameCounter m_frameCounter; //* Frame counter for FPS/TPS tracking

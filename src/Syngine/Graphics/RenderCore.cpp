@@ -817,11 +817,11 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
             camPos[2] + lightDirVec.z * lightDistance
         };
 
-        if (Core::_GetApp()->debug.CSMBounds) {
+        if (Core::_GetContext()->debug.CSMBounds) {
             // Draw line from light to target
             float from[3] = { lightPosSnapped.x, lightPosSnapped.y, lightPosSnapped.z };
             float to[3] = { target.x, target.y, target.z };
-            Core::_GetApp()->physicsManager->_DrawLine(from, to, JPH::Color::sYellow);
+            Core::_GetContext()->physicsManager->_DrawLine(from, to, JPH::Color::sYellow);
         }
 
         bx::mtxLookAt(&outLightView[i * 16], lightPosSnapped, target);
@@ -1178,12 +1178,12 @@ void RenderCore::_DrawShadows(const Program&   program,
     const uint64_t renderState =
         BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
 
-    if (Core::_GetApp()->debug.CSMBounds) {
+    if (Core::_GetContext()->debug.CSMBounds) {
         if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
         float view[16 * NUM_CASCADES], proj[16 * NUM_CASCADES], outCascadeSplits[NUM_CASCADES];
         _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
         for (int i = 0; i < NUM_CASCADES; ++i) {
-            Core::_GetApp()->physicsManager->_DrawFrustum(view + i * 16, proj + i * 16);
+            Core::_GetContext()->physicsManager->_DrawFrustum(view + i * 16, proj + i * 16);
         }
 
     }
@@ -1303,7 +1303,7 @@ void RenderCore::_DrawDebug(const Program&   program,
     bgfx::setViewName(program.viewId, "Debug");
     GameObject *p = Registry::GetGameObjectByName("player");
     if (p && Core::IsPhysicsEnabled()) {
-        Core::_GetApp()->physicsManager->_DrawDebug(
+        Core::_GetContext()->physicsManager->_DrawDebug(
             Renderer::width, Renderer::height, program.program,
             p->GetComponent<CameraComponent>()->GetCamera(), camera->GetCamera(),
             debug);
@@ -1312,7 +1312,7 @@ void RenderCore::_DrawDebug(const Program&   program,
     // Draw various debug overlays
     if (debug.Gizmos) {
         // Draw zone boundaries
-        for (std::vector<ZoneComponent*> zones = Core::_GetApp()->zoneManager->GetZones(); auto zone : zones) {
+        for (std::vector<ZoneComponent*> zones = Core::_GetContext()->zoneManager->GetZones(); auto zone : zones) {
             if (!zone || !zone->isEnabled || !m_drender) continue;
             switch (zone->GetShape()) {
                 case ZoneShape::BOX: {
@@ -1698,7 +1698,7 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     if (m_isFirstFrame) {
         m_isFirstFrame = false;
         if (Core::IsPhysicsEnabled())
-            m_drender = Core::_GetApp()->physicsManager->_GetDebugRenderer();
+            m_drender = Core::_GetContext()->physicsManager->_GetDebugRenderer();
     }
 
     if (!_PrepareRenderViews(camera)) return false;
