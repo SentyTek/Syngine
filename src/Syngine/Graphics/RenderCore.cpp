@@ -1745,7 +1745,7 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         }
     }
 
-    #if BX_CONFIG_DEBUG == 1
+    #ifndef NDEBUG
         _DrawUIDebug(camera);
     #endif
 
