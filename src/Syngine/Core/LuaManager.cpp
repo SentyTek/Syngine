@@ -383,14 +383,33 @@ sol::object _CustomRequire(sol::this_state ts, const std::string& moduleName) {
     return res;
 }
 
-void LuaManager::_RemoveBaseFuncs(sol::state& lua, bool removeError, bool noMetatables) {
+void LuaManager::_RemoveBaseFuncs(sol::state& lua,
+                                  bool        removeBase,
+                                  bool        removeError,
+                                  bool        removeMetatables,
+                                  bool        removeIo,
+                                  bool        removeOs,
+                                  bool        removeRaw,
+                                  bool        removeCoroutine,
+                                  bool        removeDebug,
+                                  bool        noSyngine) {
     // Remove potentially dangerous functions from the base library
     sol::table base = lua["base"];
     if (base.valid()) {
-        base["dofile"] = nullptr;
-        base["loadfile"] = nullptr;
-        base["loadstring"] = nullptr;
-        base["print"] = nullptr;
+        if (removeBase) {
+            base["dofile"] = nullptr;
+            base["loadfile"] = nullptr;
+            base["loadstring"] = nullptr;
+            base["collectgarbage"] = nullptr;
+            base["require"]        = _CustomRequire;
+            base["package"]        = nullptr;
+            base["load"]           = nullptr;
+            base["module"]         = nullptr;
+        }
+        if (removeDebug) {
+            lua["debug"] = nullptr;
+            base["print"] = nullptr;
+        }
         if (removeError) {
             base["error"] = nullptr;
             base["xpcall"] = nullptr;
@@ -398,22 +417,30 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua, bool removeError, bool noMeta
             base["assert"] = nullptr;
             base["warn"]   = nullptr;
         }
-        base["collectgarbage"] = nullptr;
-        base["rawset"]         = nullptr;
-        base["rawget"]         = nullptr;
-        base["rawequal"]       = nullptr;
-        base["rawlen"]         = nullptr;
-        base["require"]        = _CustomRequire;
-        if (noMetatables) {
+        if (removeIo) {
+            lua["io"] = nullptr;
+        }
+        if (removeOs) {
+            lua["os"] = nullptr;
+        }
+        if (removeRaw) {
+            base["rawset"]         = nullptr;
+            base["rawget"]         = nullptr;
+            base["rawequal"]       = nullptr;
+            base["rawlen"]         = nullptr;
+        }
+        if (removeMetatables) {
             // Optionally remove metatable functions for extra security
             base["setmetatable"] = nullptr;
             base["getmetatable"] = nullptr;
         }
 
         // Add in our own
-        lua["syngine"] = lua.create_table_with("log", _SynginePrint);
-        _RegisterEntityBindings(lua);
-        ComponentRegistry::_RegisterAllLuaBindings(lua);
+        if (!noSyngine) {
+            lua["syngine"] = lua.create_table_with("log", _SynginePrint);
+            _RegisterEntityBindings(lua);
+            ComponentRegistry::_RegisterAllLuaBindings(lua);
+        }
     }
 }
 
@@ -426,40 +453,34 @@ LuaManager::LuaManager(LuaLibs args) {
         return;
     }
 
+    // Lambda to help figure out which libraries to close
+    auto has = [args](LuaLibs f) {
+        return (static_cast<uint32_t>(args) & static_cast<uint32_t>(f)) != 0;
+    };
+
     // Open libraries based on the specified flags
-    if (args == LuaLibs::DEFAULT) {
-        m_luaState->open_libraries(
-            sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::table);
-        _RemoveBaseFuncs(*m_luaState);
-    } else if (args == LuaLibs::ALL) {
-        m_luaState->open_libraries(sol::lib::base,
-                                   sol::lib::package,
-                                   sol::lib::string,
-                                   sol::lib::math,
-                                   sol::lib::table,
-                                   sol::lib::io,
-                                   sol::lib::os,
-                                   sol::lib::debug);
-    } else if (args == LuaLibs::DEBUG) {
-        m_luaState->open_libraries(sol::lib::debug);
-        _RemoveBaseFuncs(*m_luaState);
-    } else if (args == LuaLibs::IO) {
-        m_luaState->open_libraries(sol::lib::io, sol::lib::base);
-        _RemoveBaseFuncs(*m_luaState);
-    } else if (args == LuaLibs::OS) {
-        m_luaState->open_libraries(sol::lib::os, sol::lib::base);
-        _RemoveBaseFuncs(*m_luaState);
-    } else if (args == LuaLibs::ERRHAND) {
-        m_luaState->open_libraries(sol::lib::base);
-        _RemoveBaseFuncs(*m_luaState, false); // Keep error handling functions
-    } else if (args == LuaLibs::NONE) {
-        m_luaState->open_libraries(); // Open no libraries
-    } else if (args == LuaLibs::NOMETATABLES) {
-        m_luaState->open_libraries(sol::lib::base, sol::lib::string, sol::lib::math, sol::lib::table);
-        _RemoveBaseFuncs(*m_luaState, true, true);
-    } else {
-        Logger::Error("Invalid LuaLibs flag specified. No libraries opened.");
-    }
+    m_luaState->open_libraries(sol::lib::base,
+                               sol::lib::string,
+                               sol::lib::utf8,
+                               sol::lib::math,
+                               sol::lib::table,
+                               sol::lib::package,
+                               sol::lib::coroutine,
+                               sol::lib::debug,
+                               sol::lib::io,
+                               sol::lib::os);
+
+    _RemoveBaseFuncs(*m_luaState,
+                     !has(LuaLibs::DEFAULT),
+                     !has(LuaLibs::ERRHAND),
+                     has(LuaLibs::NOMETATABLES),
+                     !has(LuaLibs::IO),
+                     !has(LuaLibs::OS),
+                     !has(LuaLibs::RAWFAMILY),
+                     !has(LuaLibs::COROUTINES),
+                     !has(LuaLibs::DEBUG),
+                     has(LuaLibs::NOSYNGINE));
+
     m_initialized = true;
 }
 
