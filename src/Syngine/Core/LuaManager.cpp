@@ -159,10 +159,7 @@ sol::object _SynginePrint(sol::variadic_args va) {
 
 void LuaManager::_RegisterEntityBindings(sol::state& lua) {
     // Register GameObject as a usertype
-    auto gameObjectType = lua.new_usertype<Syngine::GameObject>(
-        "GameObject",
-        sol::constructors<Syngine::GameObject(
-            std::string, std::string, std::string)>());
+    auto gameObjectType = lua.new_usertype<Syngine::GameObject>("GameObject");
     gameObjectType["name"] = &Syngine::GameObject::name;
     gameObjectType["type"] = &Syngine::GameObject::type;
     gameObjectType["enabled"] = &Syngine::GameObject::enabled;
@@ -209,7 +206,7 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                     comp = obj->AddComponent<MeshComponent>(arg0.as<std::string>(), arg1.as<std::string>(), arg2.as<bool>());
                 } else {
                     Logger::LogF(LogLevel::ERR,
-                                 "Invalid arguments for adding MeshComponent in Lua. Expected (path, hasTextures) or (bundle, path) or (bundle, path, hasTextures).");
+                                 "Invalid arguments for adding MeshComponent in Lua. Expected (bundle, path) or (bundle, path, hasTextures).");
                     return sol::lua_nil;
                 }
             }
@@ -240,18 +237,27 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
             }
             return sol::make_object(lua, comp);
         } else if (normalizedType == "BillboardComponent") {
-            std::string texturePath;
+            if (args.size() < 2) {
+                Logger::LogF(LogLevel::ERR,
+                             "Invalid arguments for adding BillboardComponent in Lua. Expected (bundlePath, imagePath[, mode[, size]]).");
+                return sol::lua_nil;
+            }
+
             std::string bundlePath;
+            std::string texturePath;
             BillboardMode mode = BillboardMode::CAMERA_ALIGNED;
             float size = 1.0f;
 
-            // Parse args in order: (texturePath), (bundlePath, texturePath),
-            // (texturePath, mode, size), (bundlePath, texturePath, mode, size)
+            // Parse args in order: (bundlePath, imagePath[, mode[, size]])
             if (args.size() >= 1 && args[0].is<std::string>()) {
-                texturePath = args[0].as<std::string>();
+                bundlePath = args[0].as<std::string>();
             }
             if (args.size() >= 2 && args[1].is<std::string>()) {
-                bundlePath = args[1].as<std::string>();
+                texturePath = args[1].as<std::string>();
+            } else {
+                Logger::LogF(LogLevel::ERR,
+                             "Invalid arguments for adding BillboardComponent in Lua. imagePath must be a string.");
+                return sol::lua_nil;
             }
             if (args.size() >= 3 && args[2].is<std::string>()) {
                 std::string modeStr = args[2].as<std::string>();
@@ -267,11 +273,11 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                                  modeStr.c_str());
                 }
             }
-            if (args.size() >= 4 && args[3].is<float>()) {
-                size = args[3].as<float>();
+            if (args.size() >= 4 && args[3].is<double>()) {
+                size = static_cast<float>(args[3].as<double>());
             }
 
-            BillboardComponent* comp = obj->AddComponent<BillboardComponent>(texturePath, bundlePath, mode, size);
+            BillboardComponent* comp = obj->AddComponent<BillboardComponent>(bundlePath, texturePath, mode, size);
             if (!comp) {
                 Logger::LogF(LogLevel::ERR,
                              "Failed to add component '%s' in Lua (already exists?)",
@@ -316,9 +322,13 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
 
     // Create the scene namespace as a table
     sol::table scene = lua.create_table();
-    scene["createGameObject"] = [&lua](std::string name) -> sol::object {
+    scene["createGameObject"] = [&lua](std::string name,
+                                         sol::optional<std::string> shader,
+                                         sol::optional<std::string> tag) -> sol::object {
         // Create a new GameObject
-        GameObject* go = new GameObject(name, "default", "default");
+        GameObject* go = new GameObject(name,
+                                        shader.value_or("default"),
+                                        tag.value_or(""));
         return sol::make_object(lua, go);
     };
     lua["scene"] = scene;
@@ -340,15 +350,8 @@ sol::object _AddComponent(sol::state_view lua, GameObject* obj, std::string type
 }
 
 // Custom require function that looks for Lua scripts in the "scripts" directory
-sol::object _CustomRequire(sol::this_state ts) {
+sol::object _CustomRequire(sol::this_state ts, const std::string& moduleName) {
     sol::state_view lua(ts);
-
-    sol::optional<std::string> maybeName = lua["..."];
-    if (!maybeName) {
-        return sol::lua_nil;
-    }
-
-    std::string moduleName = *maybeName;
     if (moduleName.empty()) {
         return sol::lua_nil;
     }

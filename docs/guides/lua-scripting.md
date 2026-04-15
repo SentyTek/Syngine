@@ -94,6 +94,3 @@ local rigidbodyParams = {
 }
 go:AddComponent("Rigidbody", rigidbodyParams)
 ```
-
-### Creating a Billboard
-```lua
