@@ -27,7 +27,7 @@ namespace Syngine {
 // Forward declare
 class ZoneManager;
 class Window;
-class LuaManager;
+//class LuaManager;
 
 /// @brief Struct to hold hardware specifications
 /// @section Core
@@ -58,7 +58,9 @@ struct EngineConfig {
     std::string windowTitle = "SyngineGame";  //* Title of the game window
     int         windowWidth = 800;  //* Width of the game window in pixels
     int         windowHeight = 600; //* Height of the game window in pixels
-    bool        usePhysics = true; //* Whether to initialize the physics system
+    bool        usePhysics = true;  //* Whether to initialize the physics system
+    bool        useLua = true;      //* Whether to initialize the Lua scripting system
+    LuaManager::LuaLibs luaLibs = LuaManager::LuaLibs::DEFAULT; //* Which Lua libraries to load if useLua is true
 };
 
 /// @brief the various debug modes possible

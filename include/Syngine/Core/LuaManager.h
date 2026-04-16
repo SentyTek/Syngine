@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
 
 namespace sol {

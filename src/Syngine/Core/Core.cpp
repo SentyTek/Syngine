@@ -153,11 +153,15 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
             m_context->physicsManager->_Init();
         }
 
-        m_context->luaState = std::make_unique<LuaManager>(LuaManager::LuaLibs::DEFAULT);
-        if (!m_context->luaState) {
-            Logger::Error("Failed to create Lua state. Check the log for more details.");
+        if (m_context->config.useLua) {
+            m_context->luaState = std::make_unique<LuaManager>(m_context->config.luaLibs);
+            if (!m_context->luaState) {
+                Logger::Error("Failed to create Lua state. Check the log for more details.");
+            } else {
+                Logger::Log("Lua state initialized successfully.");
+            }
         } else {
-            Logger::Log("Lua state initialized successfully.");
+            m_context->luaState = nullptr;
         }
     } catch(const std::exception& e) {
         Syngine::Logger::LogF(
@@ -234,7 +238,7 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
     }
 
     // Do the lua script in appdata
-    {
+    if (m_context->luaState) { // Also checks if lua is enabled
         std::string scriptPath =
             _GetAppDataPath(m_context->config.windowTitle).string() + "/init.lua";
         if (std::filesystem::exists(scriptPath)) {
