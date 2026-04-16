@@ -236,7 +236,7 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
     // Do the lua script in appdata
     {
         std::string scriptPath =
-            _GetAppDataPath(m_context->config.windowTitle) / "init.lua";
+            _GetAppDataPath(m_context->config.windowTitle).string() + "/init.lua";
         if (std::filesystem::exists(scriptPath)) {
             m_context->luaState->SafeFile(scriptPath);
         }
