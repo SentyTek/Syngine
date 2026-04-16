@@ -163,9 +163,27 @@ sol::object _SynginePrint(sol::variadic_args va) {
 void LuaManager::_RegisterEntityBindings(sol::state& lua) {
     // Register GameObject as a usertype
     auto gameObjectType = lua.new_usertype<Syngine::GameObject>("GameObject");
-    gameObjectType["name"] = &Syngine::GameObject::name;
-    gameObjectType["type"] = &Syngine::GameObject::type;
-    gameObjectType["enabled"] = &Syngine::GameObject::enabled;
+    gameObjectType["name"] = sol::property(
+        [](Syngine::GameObject& self) -> const std::string& {
+            return self.name;
+        },
+        [](Syngine::GameObject& self, const std::string& value) {
+            self.name = value;
+        });
+    gameObjectType["type"] = sol::property(
+        [](Syngine::GameObject& self) -> const std::string& {
+            return self.type;
+        },
+        [](Syngine::GameObject& self, const std::string& value) {
+            self.type = value;
+        });
+    gameObjectType["enabled"] = sol::property(
+        [](Syngine::GameObject& self) -> bool {
+            return self.enabled;
+        },
+        [](Syngine::GameObject& self, bool value) {
+            self.enabled = value;
+        });
     gameObjectType["AddComponent"] = [&lua](sol::this_state,
                                              Syngine::GameObject* obj,
                                              std::string          type,
