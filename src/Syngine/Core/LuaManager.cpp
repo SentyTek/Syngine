@@ -46,6 +46,9 @@ std::string _NormalizeComponentType(const std::string& rawType) {
     if (lowered == "billboard" || lowered == "billboardcomponent") {
         return "BillboardComponent";
     }
+    if (lowered == "zone" || lowered == "zonecomponent") {
+        return "ZoneComponent";
+    }
 
     return rawType;
 }
@@ -285,6 +288,73 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                 return sol::lua_nil;
             }
             return sol::make_object(lua, comp);
+        } else if (normalizedType == "ZoneComponent") {
+            if (args.size() < 3) {
+                Logger::LogF(LogLevel::ERR,
+                             "Invalid arguments for adding ZoneComponent in Lua. Expected (shape, position, size[, oneShot]).");
+                return sol::lua_nil;
+            }
+
+            ZoneShape shape = ZoneShape::BOX;
+            std::string shapeStr = "BOX";
+            float pos[3] = {0.0f, 0.0f, 0.0f};
+            float size[3] = {1.0f, 1.0f, 1.0f};
+            bool oneShot = false;
+
+            // Parse args in order: (shape, position, size[, oneShot])
+            if (args.size() == 4 && args[0].is<std::string>() &&
+                args[1].is<sol::table>() && args[2].is<sol::table>() &&
+                args[3].is<bool>()) {
+                shapeStr = args[0].as<std::string>();
+                // Defaults to box so only check sphere
+                if (shapeStr == "BOX") {
+                    shape = ZoneShape::BOX;
+                } else if (shapeStr == "SPHERE") {
+                    shape = ZoneShape::SPHERE;
+                } else {
+                    Logger::LogF(LogLevel::ERR,
+                                 "Invalid zone shape '%s' specified in Lua. Defaulting to BOX.",
+                                 shapeStr.c_str());
+                }
+                sol::table posTable = args[1].as<sol::table>();
+                sol::table sizeTable = args[2].as<sol::table>();
+                for (size_t i = 0; i < 3; ++i) {
+                    pos[i] = posTable.get_or(i + 1, pos[i]);
+                    size[i] = sizeTable.get_or(i + 1, size[i]);
+                }
+                oneShot = args[3].as<bool>();
+            } else if (args.size() == 3 && args[0].is<std::string>() &&
+                       args[1].is<sol::table>() && args[2].is<sol::table>()) {
+                shapeStr = args[0].as<std::string>();
+                if (shapeStr == "BOX") {
+                    shape = ZoneShape::BOX;
+                } else if (shapeStr == "SPHERE") {
+                    shape = ZoneShape::SPHERE;
+                } else {
+                    Logger::LogF(LogLevel::ERR,
+                                 "Invalid zone shape '%s' specified in Lua. Defaulting to BOX.",
+                                 shapeStr.c_str());
+                }
+                sol::table posTable = args[1].as<sol::table>();
+                sol::table sizeTable = args[2].as<sol::table>();
+                for (size_t i = 0; i < 3; ++i) {
+                    pos[i] = posTable.get_or(i + 1, pos[i]);
+                    size[i] = sizeTable.get_or(i + 1, size[i]);
+                }
+            } else {
+                Logger::LogF(LogLevel::ERR,
+                             "Invalid arguments for adding ZoneComponent in Lua. Expected (shape, position, size[, oneShot]) with correct types.");
+                return sol::lua_nil;
+            }
+
+            ZoneComponent* comp = obj->AddComponent<ZoneComponent>(shape, pos, size, oneShot);
+            if (!comp) {
+                Logger::LogF(LogLevel::ERR,
+                             "Failed to add component '%s' in Lua (already exists?)",
+                             type.c_str());
+                return sol::lua_nil;
+            }
+            return sol::make_object(lua, comp);
         } else {
             Logger::LogF(LogLevel::ERR,
                          "Unknown component type '%s' requested in Lua",
@@ -322,14 +392,28 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
 
     // Create the scene namespace as a table
     sol::table scene = lua.create_table();
-    scene["createGameObject"] = [&lua](std::string name,
-                                         sol::optional<std::string> shader,
-                                         sol::optional<std::string> tag) -> sol::object {
+    scene["createGameObject"] =
+        [&lua](std::string                name,
+               sol::optional<std::string> shader,
+               sol::optional<std::string> tag) -> sol::object {
         // Create a new GameObject
         GameObject* go = new GameObject(name,
                                         shader.value_or("default"),
                                         tag.value_or(""));
         return sol::make_object(lua, go);
+    };
+    scene["deleteGameObject"] = [](GameObject* obj) {
+        if (obj) {
+            delete obj;
+        }
+    };
+    scene["getGameObject"] = [](std::string name, sol::this_state ts) {
+        GameObject* obj = Registry::GetGameObjectByName(name);
+        if (obj) {
+            sol::state_view lua(ts);
+            return sol::make_object(lua, obj);
+        }
+        return sol::object(sol::lua_nil);
     };
     lua["scene"] = scene;
 }
@@ -433,6 +517,9 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
             // Optionally remove metatable functions for extra security
             base["setmetatable"] = nullptr;
             base["getmetatable"] = nullptr;
+        }
+        if (removeCoroutine) {
+            lua["coroutine"] = nullptr;
         }
 
         // Add in our own

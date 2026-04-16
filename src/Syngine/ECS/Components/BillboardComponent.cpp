@@ -147,6 +147,7 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
         return std::make_unique<BillboardComponent>(owner, bundlePath, texturePath, mode, size);
     },
 
+    // Lua bindings
     [](sol::state& lua) {
         lua.new_usertype<BillboardComponent>("BillboardComponent",
             // Methods

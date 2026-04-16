@@ -6,27 +6,30 @@
 
 ---
 
-## Available Base Libraries in OYTD
+## Available Base Libraries
 - `math.*`
 - `string.*`
 - `table.*`
+- `utf8.*`
 - `setmetatable`/`getmetatable`
 
-## Added Functions in OYTD
+## Added Functions
 - `require(moduleName)` - Searches in `%AppData%/SentyTek/SyngineDemo/scripts` (or your OS equivalent) for a `.lua` file with the specified name.
 - `syngine`:
     - `.log(message)` - Logs a message to the log file.
 
 - `scene`:
     - `.createGameObject(name: string[, shader: string = "default", tag: string = ""])` -> `GameObject` usertype
+    - `.deleteGameObject(GameObject)`
+    - `.getGameObject(name: string)`
 
 - `GameObject` usertype:
     - `.name` -> string property
     - `.type` -> string property
     - `.enabled` -> bool property
     - `:AddComponent(type: string, [constructor args])` -> `Component` usertype depends on type arg
-        - type can either be `"Transform"`, `"Mesh"`, `"Rigidbody"`, or `"Billboard"` (aliases also exist, not case sensitive)
-        - see [API Docs](../index.md) for component constructor args
+        - type can either be `"Transform"`, `"Mesh"`, `"Rigidbody"`, `"Billboard"`, or `"Zone"` (aliases also exist, not case sensitive)
+        - see [API Docs](../index.md) or below for component constructor args
     - `:GetComponent(type: string)` ->` Component` usertype depends on type arg
 
 - `Transform` usertype:
@@ -58,6 +61,32 @@
         - where mode is either `"CAMERA_ALIGNED`, `"Y_ALIGNED"`, or `"FIXED"`
     - `:SetRot(x: float, y: float, z: float)`
     - `:GetRot()` -> x, y, z
+
+- `Zone` usertype:
+    - return type for `AddComponent("Zone")`
+    - constructor args: `shape: string, position: table, size: table[, oneShot: bool]`
+        - where `shape` is either `"BOX"` or `"SPHERE"`, `position` is a table of `{ x, y, z }`, and `size` is a table of `{ x, y, z }`
+    - `:GetShape()` -> string (either `"BOX"` or `"SPHERE"`)
+    - `:GetPosition()` -> x:  float, y: float, z: float
+    - `:SetPosition(x: float, y: float, z: float)`
+    - `:GetSize()` -> x: float, y: float, z: float
+    - `:SetSize(x: float, y: float, z: float)`
+    - `:GetRotation()` -> x: float, y: float, z: float (euler XYZ)
+    - `:SetRotation(x: float, y: float, z: float)` (euler XYZ)
+    - `:IsActive()` -> bool
+    - `:SetActive(bool)`
+    - `:IsOneShot()` -> bool
+    - `:AddTag(string)`
+    - `:RemoveTag(string)`
+    - `:HasTag(string)` -> bool
+    - `:GetTags()` -> table: string
+    - `:SetTags(table: string)`
+    - `:IsPointInZone(x: float, y: float, z: float)` -> bool
+    - `:IsObjectInZone(GameObject)` -> bool
+    - `:GetObjectInZone()` -> table: GameObject
+    - `:GetObjectsInZoneByTag(string)` -> table: GameObject
+    - `SetEntryCallback(function)`
+    - `SetExitCallback(function)`
 
 ## Examples
 ### Creating a renderable GameObject
@@ -94,3 +123,5 @@ local rigidbodyParams = {
 }
 go:AddComponent("Rigidbody", rigidbodyParams)
 ```
+
+### Using a Zone to detect player movement
