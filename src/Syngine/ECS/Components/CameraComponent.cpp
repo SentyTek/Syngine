@@ -94,10 +94,12 @@ void CameraComponent::Update(int viewId, int width, int height) {
     bx::Vec3 upVec = bx::cross(right, forward);
 
     bx::mtxLookAt(cam.view, eyeVec, targetVec, upVec);
-
-    bx::mtxLookAt(cam.view, eyeVec, targetVec, upVec);
-    bx::mtxProj(cam.proj, cam.fov, aspect, cam.nearPlane, cam.farPlane, bgfx::getCaps()->homogeneousDepth);
-    bgfx::setViewTransform(viewId, cam.view, cam.proj);
+    bx::mtxProj(cam.proj,
+                cam.fov,
+                aspect,
+                cam.nearPlane,
+                cam.farPlane,
+                bgfx::getCaps()->homogeneousDepth);
 }
 
 Syngine::ComponentTypeID CameraComponent::GetComponentType() {

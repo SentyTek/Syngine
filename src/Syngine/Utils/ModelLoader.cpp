@@ -12,6 +12,7 @@
 
 #include "Syngine/Utils/FsUtils.h"
 #include "assimp/color4.h"
+#include "assimp/mesh.h"
 #include "assimp/types.h"
 #include "assimp/vector3.h"
 #include "bgfx/bgfx.h"
@@ -261,13 +262,13 @@ bool AssimpLoader::processScene(MeshData&      out,
             Vertex vertex = {};
 
             // Position
-            vertex.pos[0] = aiMeshPtr->mVertices[v].x;
+            vertex.pos[0] = -aiMeshPtr->mVertices[v].x;
             vertex.pos[1] = aiMeshPtr->mVertices[v].y;
             vertex.pos[2] = aiMeshPtr->mVertices[v].z;
 
             // Normal
             if (aiMeshPtr->HasNormals()) {
-                vertex.normal[0] = aiMeshPtr->mNormals[v].x;
+                vertex.normal[0] = -aiMeshPtr->mNormals[v].x;
                 vertex.normal[1] = aiMeshPtr->mNormals[v].y;
                 vertex.normal[2] = aiMeshPtr->mNormals[v].z;
             }
@@ -303,7 +304,7 @@ bool AssimpLoader::processScene(MeshData&      out,
 
             // Tangent and bitangent
             if (aiMeshPtr->HasTangentsAndBitangents()) {
-                vertex.tangent[0] = aiMeshPtr->mTangents[v].x;
+                vertex.tangent[0] = -aiMeshPtr->mTangents[v].x;
                 vertex.tangent[1] = aiMeshPtr->mTangents[v].y;
                 vertex.tangent[2] = aiMeshPtr->mTangents[v].z;
                 // Store handedness in w component of tangent
@@ -322,9 +323,15 @@ bool AssimpLoader::processScene(MeshData&      out,
             const aiFace& face = aiMeshPtr->mFaces[f];
             if (face.mNumIndices == 3) { // Only support triangles
                 out.indices.push_back(vertexOffset + face.mIndices[0]);
-                out.indices.push_back(vertexOffset + face.mIndices[1]);
                 out.indices.push_back(vertexOffset + face.mIndices[2]);
+                out.indices.push_back(vertexOffset + face.mIndices[1]);
             }
+        }
+
+        // If this mesh has vertex colors, mark the associated material
+        if (aiMeshPtr->HasVertexColors(0) &&
+            subMesh.materialIndex < out.materials.size()) {
+            out.materials[subMesh.materialIndex].useVertexColor = true;
         }
 
         vertexOffset += aiMeshPtr->mNumVertices;
