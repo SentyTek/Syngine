@@ -53,7 +53,7 @@ struct HardwareSpecs {
 /// @section Core
 /// @since v0.0.1
 struct EngineConfig {
-    std::string windowTitle = "SyngineGame";  //* Title of the game window
+    std::string gameName = "SyngineGame";  //* Title of the game window
     int         windowWidth = 800;  //* Width of the game window in pixels
     int         windowHeight = 600; //* Height of the game window in pixels
     bool        usePhysics = true; //* Whether to initialize the physics system

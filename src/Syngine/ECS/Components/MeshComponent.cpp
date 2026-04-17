@@ -104,7 +104,7 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
         Syngine::Internal::ResolvePath(bundlePath.c_str());
     scl::stream meshStream = Serializer::_ReadFromBundle(resolvedBundlePath, texturePath);
     if (meshStream.size() == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Failed to load mesh from bundle %s with texture %s",
                               resolvedBundlePath.c_str(),
                               texturePath.c_str());
@@ -115,7 +115,7 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     AssimpLoader loader;
     if (!loader._LoadModel(
             this->meshData, &meshStream, texturePath, loadTextures)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Failed to load mesh from %s",
                               texturePath.c_str());
         return false; // Error loading mesh
@@ -125,7 +125,7 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     try {
         meshData.lastWriteTime = std::filesystem::last_write_time(resolvedBundlePath);
     } catch (const std::filesystem::filesystem_error& e) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, true,
                               "Failed to get last write time for %s: %s",
                               resolvedBundlePath.c_str(),
                               e.what()); // e.what() lol what a name
@@ -168,7 +168,7 @@ bool MeshComponent::ReloadMesh() {
     Syngine::Internal::ResolvePath(this->m_bundlePath.c_str());
     scl::stream meshStream = Serializer::_ReadFromBundle(resolvedBundlePath, this->m_texturePath);
     if (meshStream.size() == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
             "Failed to load mesh from bundle %s with texture %s",
             resolvedBundlePath.c_str(),
             this->m_texturePath.c_str());
@@ -181,7 +181,7 @@ bool MeshComponent::ReloadMesh() {
                              &meshStream,
                              this->m_texturePath,
                              this->meshData.id)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Failed to reload mesh from %s",
                               _MakeRelativeToRoot(this->m_texturePath).c_str());
         return false; // Error reloading mesh
@@ -190,7 +190,7 @@ bool MeshComponent::ReloadMesh() {
     try {
         this->meshData.lastWriteTime = std::filesystem::last_write_time(this->m_texturePath);
     } catch (const std::filesystem::filesystem_error& e) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, true,
                               "Failed to get last write time for %s: %s",
                               this->m_texturePath.c_str(),
                               e.what());
@@ -209,7 +209,7 @@ uint8_t MeshComponent::GetSubmeshMaterialIndex(uint8_t submeshIndex) const {
             this->meshData.subMeshes.empty()
                 ? -1
                 : static_cast<int>(this->meshData.subMeshes.size() - 1);
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Submesh index %d out of bounds (max %d)",
                               submeshIndex,
                               maxIndex);
@@ -224,7 +224,7 @@ bool MeshComponent::SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materi
             this->meshData.subMeshes.empty()
                 ? -1
                 : static_cast<int>(this->meshData.subMeshes.size() - 1);
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Submesh index %d out of bounds (max %d)",
                               submeshIndex,
                               maxIndex);
@@ -235,7 +235,7 @@ bool MeshComponent::SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materi
             this->meshData.materials.empty()
                 ? -1
                 : static_cast<int>(this->meshData.materials.size() - 1);
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Material index %d out of bounds (max %d)",
                               materialIndex,
                               maxIndex);
@@ -247,13 +247,13 @@ bool MeshComponent::SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materi
 
 float* MeshComponent::GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const {
     if (materialIndex >= this->meshData.numMaterials) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Material index %d out of bounds (max %d)",
                               materialIndex, this->meshData.numMaterials - 1);
         return nullptr; // Error: material index out of bounds
     }
     if (textureType > 2) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Texture type %d out of bounds (max 2)",
                               textureType);
         return nullptr; // Error: invalid texture type
@@ -263,13 +263,13 @@ float* MeshComponent::GetMaterialUVScale(uint8_t materialIndex, uint8_t textureT
 
 bool MeshComponent::SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, float uvScale[2]) {
     if (materialIndex >= this->meshData.numMaterials) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Material index %d out of bounds (max %d)",
                               materialIndex, this->meshData.numMaterials - 1);
         return false; // Error: material index out of bounds
     }
     if (textureType > 2) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Texture type %d out of bounds (max 2)",
                               textureType);
         return false; // Error: invalid texture type
@@ -380,7 +380,7 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
 
     // checks
     if (!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create vertex/index buffer");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "Failed to create vertex/index buffer");
         return false;
     }
 

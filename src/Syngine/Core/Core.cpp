@@ -72,7 +72,7 @@ Core::Core(const EngineConfig config) {
     // CheckRequiredFolders will abort if any folder is missing
     if (Syngine::_CheckRequiredFolders()) {
         Syngine::Logger::LogF(
-            LogLevel::INFO, "Using Syngine v%s", SYN_VERSION_STRING);
+            LogLevel::INFO, false, "Using Syngine v%s", SYN_VERSION_STRING);
         m_app         = new App();
         m_app->config = config;
     }
@@ -105,6 +105,7 @@ Core::~Core() {
         }
         m_instance = nullptr; // Reset the singleton instance
     }
+    Logger::_Shutdown();
     delete m_app;
     m_app = nullptr;
 }
@@ -116,6 +117,9 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
     }
 
     try {
+        Logger::_Init(m_app->config.gameName);
+        Logger::Info("Starting " + m_app->config.gameName, false);
+
         m_app->window = std::make_unique<Window>(m_app->config);
         if (!m_app->window) {
             Logger::Error("Failed to create window. Check the log for more details.");
@@ -154,7 +158,7 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
         }
     } catch(const std::exception& e) {
         Syngine::Logger::LogF(
-            LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
+            LogLevel::FATAL, false, "Failed to initialize Core: %s", e.what());
         return false;
     }
 
@@ -226,6 +230,7 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     { .onPressed = Core::_ReloadShaders });
     }
 
+    Logger::Info("Syngine initialized successfully", false);
     return true;
 }
 
@@ -250,7 +255,7 @@ bool Core::HandleEvents() {
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
         case SDL_EVENT_QUIT:
-            Logger::Info("Quit event received, will exit on next frame");
+            Logger::Info("Quit event received, will exit on next frame", true);
             m_shouldClose = true;
             break;
         case SDL_EVENT_WINDOW_RESIZED: {

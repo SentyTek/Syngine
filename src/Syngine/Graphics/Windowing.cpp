@@ -20,10 +20,10 @@ bool        Window::m_shouldClose    = false;
 SDL_Window* Window::m_window         = nullptr;
 
 Window::Window(const EngineConfig& config) {
-    m_title = config.windowTitle;
+    m_title = config.gameName;
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+        Syngine::Logger::LogF(Syngine::LogLevel::FATAL, false,
                               "Failed to initialize SDL: %s",
                               SDL_GetError());
     }
@@ -39,7 +39,7 @@ Window::Window(const EngineConfig& config) {
     );
 
     if (!m_window) {
-        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+        Syngine::Logger::LogF(Syngine::LogLevel::FATAL, false,
                               "Failed to create SDL window: %s",
                               SDL_GetError());
         SDL_Quit();
@@ -51,10 +51,11 @@ Window::Window(const EngineConfig& config) {
     SDL_ShowWindow(m_window);
     SDL_MetalView mv = SDL_Metal_CreateView(m_window);
     if (!mv) {
-        Syngine::Logger::Error("Failed to create Metal view");
+        Syngine::Logger::Error("Failed to create Metal view", false);
     }
     SDL_HideWindow(m_window);
 #endif
+    Logger::Info("Window created successfully", false);
 }
 
 Window::~Window() {
@@ -118,13 +119,13 @@ void Window::SetWindowMode(int mode) {
         switch (mode) {
             case 0: // Bordered
                 if (!SDL_SetWindowFullscreen(m_window, false)) {
-                    Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                    Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                                          "Failed to set windowed mode: %s", SDL_GetError());
                 }
                 break;
             case 1: // Fullscreen Borderless
                 if (!SDL_SetWindowFullscreen(m_window, true)) {
-                    Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                    Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                                          "Failed to set borderless fullscreen: %s", SDL_GetError());
                 }
                 break;
@@ -132,7 +133,7 @@ void Window::SetWindowMode(int mode) {
                 {
                     SDL_DisplayID displayID = SDL_GetDisplayForWindow(m_window);
                     if (!displayID) {
-                        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                                              "Failed to get display for window: %s", SDL_GetError());
                         break;
                     }
@@ -141,20 +142,20 @@ void Window::SetWindowMode(int mode) {
                     SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(displayID, &count);
 
                     if (count <= 0 || !modes) {
-                        Syngine::Logger::Error("No fullscreen display modes available");
+                        Syngine::Logger::Error("No fullscreen display modes available", false);
                         break;
                     }
 
                     // Set exclusive fullscreen with the first available mode
                     if (!SDL_SetWindowFullscreen(m_window, true)) {
-                        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                                              "Failed to enable fullscreen: %s", SDL_GetError());
                         SDL_free(modes);
                         break;
                     }
 
                     if (!SDL_SetWindowFullscreenMode(m_window, modes[0])) {
-                        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                                              "Failed to set exclusive fullscreen mode: %s", SDL_GetError());
                     }
 

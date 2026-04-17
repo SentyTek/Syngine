@@ -50,12 +50,12 @@ void Phys::TraceImpl(const char* inFMT, ...) {
     va_end(list);
 
     //print to the tty
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Jolt Trace: %s", buffer);
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, true, "Jolt Trace: %s", buffer);
 }
 
 bool Phys::AssertFailedImpl(const char* inExpression, const char* inMessage, const char* inFile, uint32_t inLine) {
     //format
-    Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Jolt Assert Failed: %s\n%s\nFile: %s\nLine: %u", inExpression, inMessage, inFile, inLine);
+    Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "Jolt Assert Failed: %s\n%s\nFile: %s\nLine: %u", inExpression, inMessage, inFile, inLine);
     return true; //true to break, false to continue
 }
 
@@ -172,7 +172,7 @@ BodyID Phys::_CreateSphere(RVec3Arg position, float radius, EMotionType motionTy
     SphereShapeSettings sphereShapeSettings(radius);
     ShapeSettings::ShapeResult sphereShapeResult = sphereShapeSettings.Create();
     if (sphereShapeResult.HasError()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateSphere: Failed to create sphere shape: %s", sphereShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateSphere: Failed to create sphere shape: %s", sphereShapeResult.GetError().c_str());
         return BodyID();
     }
     ShapeRefC sphereShape = sphereShapeResult.Get();
@@ -200,7 +200,7 @@ BodyID Phys::_CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent,
     BoxShapeSettings box_shape_settings(halfExtent);
     ShapeSettings::ShapeResult box_shape_result = box_shape_settings.Create();
     if (box_shape_result.HasError()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateBox: Failed to create box shape: %s", box_shape_result.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateBox: Failed to create box shape: %s", box_shape_result.GetError().c_str());
         return BodyID();
     }
     ShapeRefC box_shape = box_shape_result.Get();
@@ -260,7 +260,7 @@ BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData
 
     ShapeSettings::ShapeResult meshShapeResult = meshShapeSettings.Create();
     if (meshShapeResult.HasError()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateMeshBody: Failed to create mesh shape: %s", meshShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateMeshBody: Failed to create mesh shape: %s", meshShapeResult.GetError().c_str());
         return BodyID();
     }
     ShapeRefC meshShape = meshShapeResult.Get();
@@ -270,7 +270,7 @@ BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData
         ScaledShapeSettings scaledShapeSettings(meshShape, scale);
         ShapeSettings::ShapeResult scaledShapeResult = scaledShapeSettings.Create();
         if (scaledShapeResult.HasError()) {
-            Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateMeshBody: Failed to create scaled mesh shape: %s", scaledShapeResult.GetError().c_str());
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateMeshBody: Failed to create scaled mesh shape: %s", scaledShapeResult.GetError().c_str());
             return BodyID();
         }
         meshShape = scaledShapeResult.Get();
@@ -302,7 +302,7 @@ BodyID Phys::_CreateCapsule(RVec3Arg position, float radius, float halfHeight, E
     CapsuleShapeSettings capsuleShapeSettings(halfHeight, radius);
     ShapeSettings::ShapeResult capsuleShapeResult = capsuleShapeSettings.Create();
     if (capsuleShapeResult.HasError()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCapsule: Failed to create capsule shape: %s", capsuleShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateCapsule: Failed to create capsule shape: %s", capsuleShapeResult.GetError().c_str());
         return BodyID();
     }
     ShapeRefC capsuleShape = capsuleShapeResult.Get();
@@ -332,7 +332,7 @@ BodyID Phys::_CreateCylinder(RVec3Arg position, QuatArg rotation, float halfHeig
     CylinderShapeSettings cylinderShapeSettings(halfHeight, radius);
     ShapeSettings::ShapeResult cylinderShapeResult = cylinderShapeSettings.Create();
     if (cylinderShapeResult.HasError()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCylinder: Failed to create cylinder shape: %s", cylinderShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateCylinder: Failed to create cylinder shape: %s", cylinderShapeResult.GetError().c_str());
         return BodyID();
     }
     ShapeRefC cylinderShape = cylinderShapeResult.Get();
@@ -377,7 +377,7 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
             BoxShapeSettings boxSettings(halfExtents);
             auto             result = boxSettings.Create();
             if (result.HasError()) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create box shape for compound part: %s", result.GetError().c_str());
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateCompound: Failed to create box shape for compound part: %s", result.GetError().c_str());
                 continue;
             }
             partShape = result.Get();
@@ -389,7 +389,7 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
             SphereShapeSettings sphereSettings(radius);
             auto                result = sphereSettings.Create();
             if (result.HasError()) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create sphere shape for compound part: %s", result.GetError().c_str());
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateCompound: Failed to create sphere shape for compound part: %s", result.GetError().c_str());
                 continue;
             }
             partShape = result.Get();
@@ -402,7 +402,7 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
             CapsuleShapeSettings capsuleSettings(halfHeight, radius);
             auto                 result = capsuleSettings.Create();
             if (result.HasError()) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create capsule shape for compound part: %s", result.GetError().c_str());
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateCompound: Failed to create capsule shape for compound part: %s", result.GetError().c_str());
                 continue;
             }
             partShape = result.Get();
@@ -415,7 +415,7 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
             CylinderShapeSettings cylinderSettings(halfHeight, radius);
             auto                  result = cylinderSettings.Create();
             if (result.HasError()) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create cylinder shape for compound part: %s", result.GetError().c_str());
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateCompound: Failed to create cylinder shape for compound part: %s", result.GetError().c_str());
                 continue;
             }
             partShape = result.Get();
@@ -434,7 +434,7 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
 
     ShapeSettings::ShapeResult compoundShapeResult = compoundShapeSettings.Create();
     if (compoundShapeResult.HasError()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "SynginePhys::CreateCompound: Failed to create compound shape: %s", compoundShapeResult.GetError().c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "SynginePhys::CreateCompound: Failed to create compound shape: %s", compoundShapeResult.GetError().c_str());
         return BodyID();
     }
     ShapeRefC compoundShape = compoundShapeResult.Get();
@@ -450,8 +450,8 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
 
     Body* body = bodyInterface.CreateBody(bodySettings);
     if (!body) {
-        Syngine::Logger::Error(
-            "SynginePhys::CreateCompound: Failed to create compoundbody.");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
+                              "SynginePhys::CreateCompound: Failed to create compoundbody.");
         return BodyID();
     }
     bodyInterface.AddBody(body->GetID(), EActivation::Activate);

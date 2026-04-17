@@ -318,18 +318,18 @@ class Serializer {
         scl::path           resolvedBundlePath =
             Internal::ResolvePath(bundlePath.c_str()).c_str();
         if (!resolvedBundlePath.exists()) {
-            Logger::LogF(LogLevel::ERR, "Bundle file not found: %s", bundlePath.c_str());
+            Logger::LogF(LogLevel::ERR, true, "Bundle file not found: %s", bundlePath.c_str());
             return scl::stream();
         }
         if (!pack.open(resolvedBundlePath)) {
-            Logger::LogF(LogLevel::ERR, "Failed to open bundle: %s", bundlePath.c_str());
+            Logger::LogF(LogLevel::ERR, true, "Failed to open bundle: %s", bundlePath.c_str());
             return scl::stream();
         }
 
         scl::pack::PackIndex* wts = pack.openFile(assetPath.c_str());
 
         if (!wts || !wts->stream()) {
-            Logger::LogF(LogLevel::ERR, "Failed to open asset in bundle: %s", assetPath.c_str());
+            Logger::LogF(LogLevel::ERR, false, "Failed to open asset in bundle: %s", assetPath.c_str());
             pack.close();
             return scl::stream();
         }
