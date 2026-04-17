@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 namespace Syngine {
 // Forward declare
@@ -42,8 +43,8 @@ struct HardwareSpecs {
     int         screenHeight;    //* Height of the screen in pixels
     int         winWidth;        //* Width of the game window in pixels
     int         winHeight;       //* Height of the game window in pixels
-    int         gpuVendorID;     //* GPU vendor ID
-    int         gpuDeviceID;     //* GPU device ID
+    std::string gpuVendorID;     //* GPU vendor PCI ID formatted as hex
+    std::string gpuName;         //* GPU adapter name
     int         maxTextureSize;  //* Maximum texture size supported by the GPU
     bool        supportsCompute; //* Whether the GPU supports compute shaders
     bool        supports3DTextures; //* Whether the GPU supports 3D textures

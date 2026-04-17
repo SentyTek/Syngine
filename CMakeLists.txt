@@ -271,6 +271,10 @@ target_link_libraries(Syngine PRIVATE
     sol2
 )
 
+if(MSVC)
+    target_link_libraries(Syngine PRIVATE dxgi.lib)
+endif()
+
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
 clangd(Syngine
     EXCLUDE_PATHS "third_party/*"

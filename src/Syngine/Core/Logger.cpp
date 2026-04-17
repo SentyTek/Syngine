@@ -181,8 +181,11 @@ LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
     if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2) {
         const auto mode = ep->ExceptionRecord->ExceptionInformation[0]; // 0 read, 1 write, 8 execute
         const auto addr = ep->ExceptionRecord->ExceptionInformation[1];
-        Logger::LogF(LogLevel::ERR, "Access violation: mode=%llu address=0x%llX",
-                     (unsigned long long)mode, (unsigned long long)addr);
+        Logger::LogF(LogLevel::ERR,
+                     false,
+                     "Access violation: mode=%llu address=0x%llX",
+                     (unsigned long long)mode,
+                     (unsigned long long)addr);
     }
 
     Logger::Log("Generating stack trace...", LogLevel::ERR);
@@ -516,8 +519,8 @@ void Logger::LogHardwareInfo() {
     specsStr += "\tWindow Resolution: " + std::to_string(specs.winWidth) + "x" +
                 std::to_string(specs.winHeight) + "\n";
 
-    specsStr += "\tGPU Vendor ID: " + std::to_string(specs.gpuVendorID) + "\n";
-    specsStr += "\tGPU Device ID: " + std::to_string(specs.gpuDeviceID) + "\n";
+    specsStr += std::string("\tGPU Vendor ID: ") + specs.gpuVendorID + "\n";
+    specsStr += std::string("\tGPU Name: ") + specs.gpuName + "\n";
 
     specsStr +=
         "\tMax Texture Size: " + std::to_string(specs.maxTextureSize) + "\n";
