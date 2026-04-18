@@ -13,9 +13,9 @@
 #include <Windows.h>
 #include <shellapi.h> // For CommandLineToArgvW
 #include <cwchar>
+#else
+#include <cstring>
 #endif
-
-#include <iostream>
 
 #include "Syngine/Core/Logger.h"
 

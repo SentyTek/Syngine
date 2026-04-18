@@ -415,7 +415,7 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 
         // Get logical CPU count
         int cpuProc = 0;
-        size        = sizeof(cpuProc);
+        size_t size        = sizeof(cpuProc);
         sysctlbyname("machdep.cpu.core_count", &cpuProc, &size, NULL, 0);
         specs.cpuCores = cpuProc;
 
