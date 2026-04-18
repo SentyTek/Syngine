@@ -78,9 +78,15 @@ struct Program {
 
 /// @brief To manage renderer configuration
 struct RendererConfig {
+    bool loadFromFile =
+        true; //* Whether to load settings from file on initialization. This
+              // will ignore all other settings in this struct if true. But if
+              // file is not found, it will use the other settings and create a
+              // new file with them. Specially for width and height, which are
+              // set by EngineConfig instead.
     bool useShadows = true; //* Whether to use shadow mapping
-    float shadowDist = 500.0f; //* Distance for shadow rendering
-    bool  vsync      = true;   //* Whether to enable vertical sync
+    int  shadowDist = 500; //* Distance for shadow rendering
+    bool  vsync     = true;   //* Whether to enable vertical sync
     bool  usePseudoCamera =
         false; //* (only if DebugModes.Enabled == true) Pseudo camera is a
                //separate camera that all rendering will use, but the main

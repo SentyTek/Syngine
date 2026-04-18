@@ -222,7 +222,9 @@ class Core {
     /// @return Pointer to the global game config
     /// @since v0.0.1
     /// @internal
-    static EngineConfig* _GetConfig();
+    static inline EngineConfig* _GetConfig() {
+        return m_instance && m_instance->m_app ? &m_instance->m_app->config : nullptr;
+    }
 
     struct FrameCounts {
         struct DrawnObjectCount {
@@ -304,6 +306,7 @@ class Core {
     friend class PlayerComponent;
     friend class Registry;
     friend class Serializer;
+    friend class Window;
 #ifndef SYN_DEBUG_GRAPHICS
     friend class Syngine::Profiler;
 #endif

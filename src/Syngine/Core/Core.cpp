@@ -6,6 +6,7 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/Utils/Serializer.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -86,6 +87,8 @@ Core::~Core() {
     // release their BGFX resources (textures, buffers) before we shut down the renderer.
     Syngine::Registry::Clear();
 
+    Serializer::_SaveCoreSettings(m_app->config.gameName);
+
     if (m_app) {
         if (m_app->synModels) {
             // Don't call _UnloadAllMeshes() here because Registry::Clear() has
@@ -120,6 +123,8 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
     try {
         Logger::_Init(m_app->config.gameName);
         Logger::Info("Starting " + m_app->config.gameName, false);
+
+        Serializer::_LoadCoreSettings(m_app->config.gameName);
 
         m_app->window = std::make_unique<Window>(m_app->config);
         if (!m_app->window) {

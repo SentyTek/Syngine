@@ -11,6 +11,7 @@
 #include "SDL3/SDL_mouse.h"
 #include "SDL3/SDL_video.h"
 #include "Syngine/Core/Logger.h"
+#include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
 
@@ -21,6 +22,23 @@ SDL_Window* Window::m_window         = nullptr;
 
 Window::Window(const EngineConfig& config) {
     m_title = config.gameName;
+    int w, h = 0;
+    if (config.windowWidth > 0 && config.windowHeight > 0) {
+        w = config.windowWidth;
+        h = config.windowHeight;
+    } else {
+        w = 800;
+        h = 600;
+    }
+
+    auto* videoSettings = Serializer::_LoadCoreSettingsCategory<
+        Serializer::CoreSettings::Video>();
+    if (videoSettings) {
+        w = videoSettings->width;
+        h = videoSettings->height;
+        Core::_GetConfig()->windowHeight = videoSettings->height;
+        Core::_GetConfig()->windowWidth = videoSettings->width;
+    }
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         Syngine::Logger::LogF(Syngine::LogLevel::FATAL, false,
@@ -30,8 +48,8 @@ Window::Window(const EngineConfig& config) {
 
     m_window = SDL_CreateWindow(
         m_title.c_str(),
-        config.windowWidth,
-        config.windowHeight,
+        w,
+        h,
         SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN
 #if BX_PLATFORM_OSX
             | SDL_WINDOW_METAL
@@ -43,6 +61,12 @@ Window::Window(const EngineConfig& config) {
                               "Failed to create SDL window: %s",
                               SDL_GetError());
         SDL_Quit();
+    }
+
+    if (videoSettings->fullscreen) {
+        m_contextCreated = true; // Some platforms require the context to be created before setting fullscreen
+        SetWindowMode(1); // Borderless fullscreen
+        m_contextCreated = false;
     }
 
 #if BX_PLATFORM_OSX

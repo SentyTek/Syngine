@@ -17,6 +17,7 @@
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/TextureHelpers.h"
 #include "Syngine/Utils/ModelLoader.h"
+#include "Syngine/Utils/Serializer.h"
 #include "Syngine/Utils/Version.h"
 #include "Syngine/Utils/Profiler.h"
 #include "Syngine/Core/Logger.h"
@@ -109,6 +110,21 @@ std::vector<RenderCore::RenderPacket> RenderCore::m_renderPackets;
 
 bool RenderCore::_Initialize(const RendererConfig& config) {
     m_config = config;
+    if (m_config.loadFromFile) {
+        auto videoSettings = Serializer::_LoadCoreSettingsCategory<
+            Serializer::CoreSettings::Video>();
+
+        if (videoSettings) {
+            m_config.useShadows = videoSettings->useShadows;
+            m_config.shadowDist = videoSettings->shadowDist;
+            m_config.vsync = videoSettings->vSync;
+            m_config.useSSAO    = videoSettings->useSSAO;
+        } else {
+            Syngine::Logger::Warn(
+                "Failed to load video settings from file, using defaults");
+        }
+    }
+
     win = Window::_GetSDLWindow();
     if (!win) {
         Syngine::Logger::Fatal("No window to create renderer in");
@@ -665,8 +681,8 @@ bool RenderCore::_CreateSceneBuffers() {
             return false;
         }
 
-        m_cascadeSizes[2] = round(m_config.shadowDist / 3.0f);
-        m_cascadeSizes[3] = round(m_config.shadowDist);
+        m_cascadeSizes[2] = round(static_cast<float>(m_config.shadowDist) / 3.0f);
+        m_cascadeSizes[3] = static_cast<float>(m_config.shadowDist);
     }
 
     // Create scene textures
@@ -747,7 +763,9 @@ bool RenderCore::_CreateSceneBuffers() {
 
 bool RenderCore::_SetResolution(int width, int height) {
     Renderer::height = height;
-    Renderer::width = width;
+    Renderer::width  = width;
+    Serializer::m_coreSettings.video.width = width;
+    Serializer::m_coreSettings.video.height = height;
     bgfx::reset(uint32_t(width), uint32_t(height), m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
     bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
 
@@ -1592,7 +1610,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
         float cascadeSplits[NUM_CASCADES];
         _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
 
-        float farClip = m_config.shadowDist;
+        int farClip = m_config.shadowDist;
         float splits[4] = { cascadeSplits[0],
                             cascadeSplits[1],
                             cascadeSplits[2],
@@ -1604,7 +1622,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             bgfx::getCaps()->homogeneousDepth ? 1.0f
                                               : 0.0f, // Homogeneous depth
             1.0f / (float)(SHADOW_MAP_SIZE * 2),      // Inv shadow map size
-            m_config.shadowDist, // Light far plane
+            static_cast<float>(m_config.shadowDist), // Light far plane
             0.0f // Debug value, not used
         };
         Renderer::SetUniform(m_defaultUniformIds["u_default_shadowParams"], shadowParams);
