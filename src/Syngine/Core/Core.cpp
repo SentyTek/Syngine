@@ -235,6 +235,12 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     "",
                                     KeyBinding(Keycode::F6),
                                     { .onPressed = Core::_ReloadShaders });
+
+        InputAction::RegisterAction("syngine.reloadLua",
+                                    "Reload Lua State",
+                                    "",
+                                    KeyBinding(Keycode::F7),
+                                    { .onPressed = Core::_ReloadLua });
     }
 
     // Do the lua script in appdata
@@ -547,6 +553,17 @@ void Core::_ReloadChangedAssets() {
 }
 
 void Core::_ReloadShaders() { m_context->renderer->ReloadAllPrograms(); }
+
+void Core::_ReloadLua() {
+    if (m_context->luaState) {
+        m_context->luaState->_ReloadLuaState();
+        std::string scriptPath =
+            _GetAppDataPath(m_context->config.windowTitle).string() + "/init.lua";
+        if (std::filesystem::exists(scriptPath)) {
+            m_context->luaState->SafeFile(scriptPath);
+        }
+    }
+}
 
 // DEPRECATED - in favor of the new input system
 void Core::_HandleKeyEvent(const SDL_Event& event) {

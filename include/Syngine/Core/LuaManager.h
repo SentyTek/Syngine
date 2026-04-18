@@ -9,12 +9,40 @@
 #pragma once
 
 #include <Syngine/Core/Logger.h>
+#include <Syngine/ECS/GameObject.h>
 
 namespace sol {
 class state; // forward declaration
 }
 
 namespace Syngine {
+
+/// @brief Enum for specifying which Lua libraries to open
+/// @since v0.0.1
+enum class LuaLibs : uint32_t {
+    NONE = 0, //* Do not open any libraries
+    DEFAULT =
+        2, //* Open the default set of libraries (string, utf8, math, table,
+            //* require)
+    ALL   = 4, //* Open all standard Lua libraries
+    DEBUG = 8, //* Open additional libraries useful for debugging (e.g.,
+                //* debug and print)
+    IO = 16, //* Open the io library for file operations (use with caution)
+    OS = 32, //* Open the os library for operating system interactions
+    ERRHAND = 64, //* Open the default library for error handling and
+                    //* stack traces (pcall, xpcall)
+    NOMETATABLES =
+        128, //* Do not set metatables on Lua objects (for extra security)
+    COROUTINES = 256, //* Open the coroutines library for Lua coroutines
+    RAWFAMILY  = 512, //* Open the raw* functions (rawget, rawset, etc.) for
+                        //* low-level
+                        //* table manipulation (use with caution)
+    NOSYNGINE =
+        1024, //* Do not register any Syngine bindings. This disables the
+                //* ECS, logger, and input bindings, and is intended for
+                //* sandboxed environments where you want to allow Lua scripting
+                //* but not give access to engine internals.
+};
 
 /// @brief Manages the Lua state and scripting environment for the engine.
 /// @section Lua
@@ -35,35 +63,19 @@ class LuaManager {
                                  bool        removeDebug      = true,
                                  bool        noSyngine        = false);
 
-    friend class ComponentRegistrar; // Allow ComponentRegistrar to register Lua bindings
-  public:
-    /// @brief Enum for specifying which Lua libraries to open
-    /// @since v0.0.1
-    enum class LuaLibs : uint32_t {
-        NONE = 0, //* Do not open any libraries
-        DEFAULT =
-            2, //* Open the default set of libraries (string, utf8, math, table,
-               //* require)
-        ALL   = 4, //* Open all standard Lua libraries
-        DEBUG = 8, //* Open additional libraries useful for debugging (e.g.,
-                   //* debug and print)
-        IO = 16, //* Open the io library for file operations (use with caution)
-        OS = 32, //* Open the os library for operating system interactions
-        ERRHAND = 64, //* Open the default library for error handling and
-                      //* stack traces (pcall, xpcall)
-        NOMETATABLES =
-            128, //* Do not set metatables on Lua objects (for extra security)
-        COROUTINES = 256, //* Open the coroutines library for Lua coroutines
-        RAWFAMILY  = 512, //* Open the raw* functions (rawget, rawset, etc.) for
-                          //* low-level
-                          //* table manipulation (use with caution)
-        NOSYNGINE =
-            1024, //* Do not register any Syngine bindings. This disables the
-                  //* ECS, logger, and input bindings, and is intended for
-                  //* sandboxed environments where you want to allow Lua scripting
-                  //* but not give access to engine internals.
-    };
+    static void _ReloadLuaState();
 
+    static std::vector<GameObject*>
+        m_ownedObjects; // List of GameObjects owned by Lua (for cleanup)
+
+    static LuaManager* m_instance; // Singleton instance of LuaManager
+
+    static LuaLibs m_libs; // Libraries to open in the Lua state
+
+    friend struct ComponentRegistrar; // Allow ComponentRegistrar to register Lua
+                                     // bindings
+    friend class Core;
+  public:
     friend LuaLibs operator|(LuaLibs a, LuaLibs b) {
         return static_cast<LuaLibs>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
     }
@@ -73,8 +85,6 @@ class LuaManager {
     friend LuaLibs operator~(LuaLibs a) {
         return static_cast<LuaLibs>(~static_cast<uint32_t>(a));
     }
-    friend LuaLibs operator==(LuaLibs a, LuaLibs b) { return (a & b) == b; }
-    friend LuaLibs operator!=(LuaLibs a, LuaLibs b) { return (a & b) != b; }
 
     /// @brief Constructor that initializes the Lua state and opens libraries
     /// based on the specified flags

@@ -11,6 +11,7 @@
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/Utils/FsUtils.h"
+#include <vector>
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
@@ -21,6 +22,7 @@
 
 namespace Syngine {
 
+// Various helper functions for Lua bindings
 namespace {
 
 std::string _ToLowerCopy(std::string value) {
@@ -134,6 +136,9 @@ RigidbodyParameters _ParseRigidbodyParams(sol::optional<sol::table> maybeParams)
 // Static member definitions
 sol::state* LuaManager::m_luaState = nullptr;
 bool        LuaManager::m_initialized = false;
+std::vector<GameObject*> LuaManager::m_ownedObjects;
+LuaManager*              LuaManager::m_instance = nullptr;
+LuaLibs                  LuaManager::m_libs     = LuaLibs::DEFAULT;
 
 // Simply links into the logger to print info.
 sol::object _SynginePrint(sol::variadic_args va) {
@@ -415,9 +420,9 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                sol::optional<std::string> shader,
                sol::optional<std::string> tag) -> sol::object {
         // Create a new GameObject
-        GameObject* go = new GameObject(name,
-                                        shader.value_or("default"),
-                                        tag.value_or(""));
+        GameObject* go =
+            new GameObject(name, shader.value_or("default"), tag.value_or(""));
+        m_ownedObjects.push_back(go); // Track ownership for cleanup
         return sol::make_object(lua, go);
     };
     scene["deleteGameObject"] = [](GameObject* obj) {
@@ -532,7 +537,6 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
             base["rawlen"]         = nullptr;
         }
         if (removeMetatables) {
-            // Optionally remove metatable functions for extra security
             base["setmetatable"] = nullptr;
             base["getmetatable"] = nullptr;
         }
@@ -587,12 +591,15 @@ LuaManager::LuaManager(LuaLibs args) {
                      has(LuaLibs::NOSYNGINE));
 
     m_initialized = true;
+    m_instance    = this;
+    m_libs        = args;
 }
 
 LuaManager::~LuaManager() {
     if (m_luaState) {
         delete m_luaState;
         m_luaState = nullptr;
+        m_instance = nullptr;
     }
 }
 
@@ -647,6 +654,64 @@ void LuaManager::AddFunction(const std::string& name, Func func, const std::stri
         }
         tbl[name] = func;
     }
+}
+
+// Yeah I know it literally just deletes and recreates the Lua state inplace but
+// it's simple and effective
+void LuaManager::_ReloadLuaState() {
+    Logger::Log("Reloading Lua state...");
+
+    // Clean up owned GameObjects
+    for (GameObject* obj : m_ownedObjects) {
+        delete obj;
+    }
+    m_ownedObjects.clear();
+
+    // Recreate the Lua state
+    if (m_luaState) {
+        delete m_luaState;
+        m_luaState = nullptr;
+    }
+
+    m_initialized = false;
+    m_luaState    = new sol::state();
+
+    if (!m_luaState) {
+        Logger::Error("Failed to recreate Lua state during reload.");
+        return;
+    }
+
+    // Lambda to help figure out which libraries to close
+    auto has = [](LuaLibs f) {
+        return (static_cast<uint32_t>(m_libs) & static_cast<uint32_t>(f)) != 0;
+    };
+
+    // Re-open libraries based on the stored flags
+    m_luaState->open_libraries(sol::lib::base,
+                               sol::lib::string,
+                               sol::lib::utf8,
+                               sol::lib::math,
+                               sol::lib::table,
+                               sol::lib::package,
+                               sol::lib::coroutine,
+                               sol::lib::debug,
+                               sol::lib::io,
+                               sol::lib::os);
+
+    _RemoveBaseFuncs(*m_luaState,
+                     !has(LuaLibs::DEFAULT),
+                     !has(LuaLibs::ERRHAND),
+                     has(LuaLibs::NOMETATABLES),
+                     !has(LuaLibs::IO),
+                     !has(LuaLibs::OS),
+                     !has(LuaLibs::RAWFAMILY),
+                     !has(LuaLibs::COROUTINES),
+                     !has(LuaLibs::DEBUG),
+                     has(LuaLibs::NOSYNGINE));
+
+    m_initialized = true;
+
+    Logger::Log("Lua state reloaded successfully.");
 }
 
 } // namespace Syngine

@@ -361,13 +361,13 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         .end(); // stride = 72 bytes
 
     // create buffers
-    const bgfx::Memory* mem = bgfx::alloc(uint32_t(meshData.vertices.size() * sizeof(Vertex)));
-    memcpy(mem->data, meshData.vertices.data(), meshData.vertices.size() * sizeof(Vertex));
+    const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(meshData.vertices.size() * sizeof(Vertex)));
+    memcpy(mem->data, meshData.vertices.data(), static_cast<uint32_t>(meshData.vertices.size() * sizeof(Vertex)));
     bgfx::VertexBufferHandle vbh =
     bgfx::createVertexBuffer(mem, layout);
 
-    mem = bgfx::alloc(meshData.indices.size() * sizeof(uint32_t));
-    memcpy(mem->data, meshData.indices.data(), meshData.indices.size() * sizeof(uint32_t));
+    mem = bgfx::alloc(static_cast<uint32_t>(meshData.indices.size()) * sizeof(uint32_t));
+    memcpy(mem->data, meshData.indices.data(), static_cast<uint32_t>(meshData.indices.size()) * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh =
         bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
