@@ -137,10 +137,6 @@ void Phys::_DrawDebug(int                 width,
                       Syngine::Camera     finalCam,
                       DebugModes          debug) {
     if (mDebugRenderer && debug.Enabled) {
-        if (!debug.PhysWireframes && !debug.Gizmos) {
-            return;
-        }
-
         JPH::BodyManager::DrawSettings drawSettings;
         drawSettings.mDrawShapeWireframe = true;
         //drawSettings.mDrawShape = false;

@@ -27,16 +27,16 @@ class BillboardComponent; // Forward declaration
 /// @section Renderer
 /// @since v0.0.1
 enum ViewID : bgfx::ViewId {
-    VIEW_SHADOW    = 0, //* Shadow map rendering
-    VIEW_SKY       = 4, //* Skybox rendering
-    VIEW_GBUFFER   = 5, //* G-Buffer rendering for deferred shading
-    VIEW_LIGHTING  = 6, //* Lighting pass for deferred shading
-    VIEW_FORWARD   = 7, //* Forward rendering pass for translucent objects
-    VIEW_BILLBOARD = 8, //* Billboard rendering
-    VIEW_AO        = 9, //* Ambient occlusion passes (3 passes)
-    VIEW_POSTPROCESS = 12, //* Post-processing effects passes (Max 8 passes)
-    VIEW_DEBUG       = 16,  //* Debug rendering pass for debug rendering
-    VIEW_BILL_DBG    = 17, //* Billboard debug rendering
+    VIEW_SHADOW      = 0,  //* Shadow map rendering
+    VIEW_SKY         = 4,  //* Skybox rendering
+    VIEW_GBUFFER     = 5,  //* G-Buffer rendering for deferred shading
+    VIEW_LIGHTING    = 6,  //* Lighting pass for deferred shading
+    VIEW_FORWARD     = 7,  //* Forward rendering pass for translucent objects
+    VIEW_BILLBOARD   = 8,  //* Billboard rendering
+    VIEW_DEBUG       = 9,  //* Debug rendering pass for debug rendering
+    VIEW_BILL_DBG    = 10, //* Billboard debug rendering
+    VIEW_AO          = 11, //* Ambient occlusion passes (3 passes)
+    VIEW_POSTPROCESS = 14, //* Post-processing effects passes (Max 8 passes)
     VIEW_UI          = 18, //* UI rendering
     VIEW_UI_DEBUG    = 19, //* UI debug rendering
 };

@@ -1328,25 +1328,14 @@ void RenderCore::_DrawDebug(const Program&   program,
                             DebugModes       debug) {
     SYN_PROFILE_FUNCTION();
 
-    // Avoid touching the debug pipeline when no debug visuals are requested.
-    if (!debug.PhysWireframes && !debug.Gizmos && !debug.DrawBoundingBoxes) {
-        return;
-    }
-
     bgfx::setViewName(program.viewId, "Debug");
-    GameObject *p = Registry::GetGameObjectByName("player");
-    if ((debug.PhysWireframes || debug.Gizmos) && p && Core::IsPhysicsEnabled()) {
-        Core::_GetApp()->physicsManager->_DrawDebug(
-            Renderer::width, Renderer::height, program.program,
-            p->GetComponent<CameraComponent>()->GetCamera(), camera->GetCamera(),
-            debug);
-    }
+    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
 
     // Draw various debug overlays
-    if (debug.Gizmos) {
+    if (debug.Gizmos && m_drender) {
         // Draw zone boundaries
         for (std::vector<ZoneComponent*> zones = Core::_GetApp()->zoneManager->GetZones(); auto zone : zones) {
-            if (!zone || !zone->isEnabled || !m_drender) continue;
+            if (!zone || !zone->isEnabled) continue;
             switch (zone->GetShape()) {
                 case ZoneShape::BOX: {
                     float min[3], max[3], pos[3], size[3];
@@ -1381,6 +1370,29 @@ void RenderCore::_DrawDebug(const Program&   program,
             MeshAABB aabb = go->GetComponent<MeshComponent>()->GetAABB();
             m_drender->DrawBox(aabb.min, aabb.max, JPH::Color::sGreen);
         }
+    }
+
+    // Flush all queued debug lines (physics wireframes, frustums, CSM lines,
+    // zone bounds, and AABBs) in a single pass.
+    GameObject* p = Registry::GetGameObjectByName("player");
+    if (p && Core::IsPhysicsEnabled()) {
+        CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
+        if (!playerCamera) {
+            return;
+        }
+
+        // Keep player camera matrices valid even when simulation is paused.
+        const int safeWidth = std::max(Renderer::width, 1);
+        const int safeHeight = std::max(Renderer::height, 1);
+        playerCamera->Update(VIEW_DEBUG, safeWidth, safeHeight);
+
+        Core::_GetApp()->physicsManager->_DrawDebug(
+            Renderer::width,
+            Renderer::height,
+            program.program,
+            playerCamera->GetCamera(),
+            camera->GetCamera(),
+            debug);
     }
 }
 
@@ -1611,6 +1623,11 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
         return false;
     }
 
+    const int safeWidth = std::max(Renderer::width, 1);
+    const int safeHeight = std::max(Renderer::height, 1);
+    camera->Update(VIEW_FORWARD, safeWidth, safeHeight);
+    Camera cam = camera->GetCamera();
+
     const float* camPos = camera->GetPosition();
     float        viewPos[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
     Renderer::SetUniform(m_defaultUniformIds["u_default_viewPos"], viewPos);
@@ -1679,9 +1696,6 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                               uint16_t(Renderer::height));
             bgfx::setViewClear(
                 view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
-
-            camera->Update(view, Renderer::width, Renderer::height);
-            Camera cam = camera->GetCamera();
             float  skyView[16];
             bx::memCopy(skyView, cam.view, sizeof(skyView));
             skyView[12] = skyView[13] = skyView[14] = 0.0f;
@@ -1699,7 +1713,6 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                                  ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH)
                                  : (BGFX_CLEAR_NONE);
             bgfx::setViewClear(view, flags, 0x000000ff, 1.0f, 0);
-            Camera cam = camera->GetCamera();
             if (view == VIEW_AO) {
                 bgfx::setViewTransform(view, cam.view, cam.proj);
             } else {
@@ -1727,7 +1740,6 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                               uint16_t(Renderer::height));
             //bgfx::setViewClear(
             //    view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
-            Camera cam = camera->GetCamera();
             bgfx::setViewTransform(view, cam.view, cam.proj);
             break;
         }
@@ -1743,7 +1755,6 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                           uint16_t(Renderer::width),
                           uint16_t(Renderer::height));
         bgfx::setViewClear(ViewID(VIEW_AO + i + 1), flags, 0x000000ff, 1.0f, 0);
-        Camera cam = camera->GetCamera();
         bgfx::setViewTransform(ViewID(VIEW_AO + i + 1), cam.view, cam.proj);
     }
 
@@ -1789,6 +1800,8 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
             case VIEW_BILL_DBG:
+                // Debug billboard draws are submitted from VIEW_BILLBOARD using this view ID.
+                break;
             case VIEW_BILLBOARD:
                 if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
                 _DrawBillboard(program);
