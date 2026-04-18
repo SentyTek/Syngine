@@ -1327,9 +1327,15 @@ void RenderCore::_DrawDebug(const Program&   program,
                             CameraComponent* camera,
                             DebugModes       debug) {
     SYN_PROFILE_FUNCTION();
+
+    // Avoid touching the debug pipeline when no debug visuals are requested.
+    if (!debug.PhysWireframes && !debug.Gizmos && !debug.DrawBoundingBoxes) {
+        return;
+    }
+
     bgfx::setViewName(program.viewId, "Debug");
     GameObject *p = Registry::GetGameObjectByName("player");
-    if (p && Core::IsPhysicsEnabled()) {
+    if ((debug.PhysWireframes || debug.Gizmos) && p && Core::IsPhysicsEnabled()) {
         Core::_GetApp()->physicsManager->_DrawDebug(
             Renderer::width, Renderer::height, program.program,
             p->GetComponent<CameraComponent>()->GetCamera(), camera->GetCamera(),
@@ -1368,7 +1374,7 @@ void RenderCore::_DrawDebug(const Program&   program,
         }
     }
 
-    if (debug.DrawBoundingBoxes) {
+    if (debug.DrawBoundingBoxes && m_drender) {
         std::vector<GameObject*> meshObjects =
             Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH);
         for (auto go : meshObjects) {
@@ -1536,8 +1542,8 @@ void RenderCore::_DrawPostProcess(const Program& program) {
 
 void RenderCore::_DrawDbgBillboard(const Program& program) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setViewName(program.viewId, "Gizmos");
-    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
+    bgfx::setViewName(VIEW_BILL_DBG, "Gizmos");
+    bgfx::setViewFrameBuffer(VIEW_BILL_DBG, m_buffers.sceneFB);
     // Debug billboards (gizmos) are always drawn on top. Regular billboards (forward pass ig) are depth-tested normally.
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                     BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_ALWAYS;
@@ -1575,14 +1581,14 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
                 0,
                 Renderer::GetUniform(m_defaultUniformIds["s_bill_albedo"])->handle,
                 gizmo->_GetTexture()); // Use the texture from the gizmo registry
-            bgfx::submit(program.viewId, program.program);
+            bgfx::submit(VIEW_BILL_DBG, program.program);
         }
     }
 }
 
 void RenderCore::_DrawUIDebug(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setViewName(VIEW_DEBUG, "UI Debug");
+    bgfx::setViewName(VIEW_UI_DEBUG, "UI Debug");
     bgfx::setDebug(BGFX_DEBUG_TEXT);
     bgfx::dbgTextClear();
 
