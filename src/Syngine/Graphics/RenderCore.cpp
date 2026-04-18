@@ -93,7 +93,7 @@ bool         RenderCore::m_isFirstFrame = true;
 float RenderCore::m_cascadeSizes[RenderCore::NUM_CASCADES] = { 10, 40, 0, 0 };
 float RenderCore::m_cascadeTexelSizes[RenderCore::NUM_CASCADES] = { 0, 0, 0, 0 };
 
-bgfx::VertexBufferHandle RenderCore::dummy = BGFX_INVALID_HANDLE;
+bgfx::VertexBufferHandle RenderCore::dummyVbh = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_billboardVbh = BGFX_INVALID_HANDLE;
 bgfx::IndexBufferHandle  RenderCore::m_billboardIbh = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_fsQuadVbh = BGFX_INVALID_HANDLE;
@@ -560,7 +560,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
          3.0f, -1.0f, 0.99999f, 2.0f,  1.0f, // Bottom-Right (extended right)
         -1.0f, -1.0f, 0.99999f, 0.0f,  1.0f  // Bottom-Left
     };
-    m_fsQuadVbh                         = bgfx::createVertexBuffer(
+    m_fsQuadVbh = bgfx::createVertexBuffer(
         bgfx::copy(fsQuadVertices, sizeof(fsQuadVertices)), fsQuadLayout);
 
     // Dummy buffer to make metal happy
@@ -578,7 +578,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         fullscreenDummyVBH = bgfx::createVertexBuffer(
             bgfx::copy(dummyData, sizeof(dummyData)), dummyLayout);
 
-        dummy = fullscreenDummyVBH;
+        dummyVbh = fullscreenDummyVBH;
     }
 #endif
 
@@ -617,9 +617,9 @@ void RenderCore::_Shutdown() {
         bgfx::destroy(m_billboardIbh);
         m_billboardIbh = BGFX_INVALID_HANDLE;
     }
-    if(bgfx::isValid(dummy)) {
-        bgfx::destroy(dummy);
-        dummy = BGFX_INVALID_HANDLE;
+    if(bgfx::isValid(dummyVbh)) {
+        bgfx::destroy(dummyVbh);
+        dummyVbh = BGFX_INVALID_HANDLE;
     }
     if(bgfx::isValid(m_fsQuadVbh)) {
         bgfx::destroy(m_fsQuadVbh);
@@ -636,19 +636,6 @@ void RenderCore::_Shutdown() {
     });
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
     m_defaultUniformIds.clear();
-
-    if (bgfx::isValid(s_fallbackAlbedo)) {
-        bgfx::destroy(s_fallbackAlbedo);
-        s_fallbackAlbedo = BGFX_INVALID_HANDLE;
-    }
-    if (bgfx::isValid(s_fallbackNormal)) {
-        bgfx::destroy(s_fallbackNormal);
-        s_fallbackNormal = BGFX_INVALID_HANDLE;
-    }
-    if (bgfx::isValid(s_fallbackHeight)) {
-        bgfx::destroy(s_fallbackHeight);
-        s_fallbackHeight = BGFX_INVALID_HANDLE;
-    }
 
     bgfx::shutdown();
 }
@@ -698,42 +685,60 @@ bool RenderCore::_CreateSceneBuffers() {
                                           1,
                                           bgfx::TextureFormat::RGBA16F,
                                           tsFlags);
-    m_buffers.sceneDepth =
-        bgfx::createTexture2D(uint16_t(Renderer::width),
-                              uint16_t(Renderer::height),
-                              false,
-                              1,
-                              bgfx::TextureFormat::D24S8,
-                              BGFX_TEXTURE_RT);
-    m_buffers.ssaoTex = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                      uint16_t(Renderer::height),
-                                      false,
-                                      1,
-                                      bgfx::TextureFormat::R16,
-                                      tsFlags);
-    m_buffers.ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
+    m_buffers.sceneDepth  = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                                 uint16_t(Renderer::height),
+                                                 false,
+                                                 1,
+                                                 bgfx::TextureFormat::D24S8,
+                                                 BGFX_TEXTURE_RT);
+
+    if (m_config.useSSAO) {
+        m_buffers.ssaoTex = bgfx::createTexture2D(uint16_t(Renderer::width),
                                         uint16_t(Renderer::height),
                                         false,
                                         1,
                                         bgfx::TextureFormat::R16,
                                         tsFlags);
-    m_buffers.ssaoBlurFinal = bgfx::createTexture2D(uint16_t(Renderer::width),
+        m_buffers.ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
                                             uint16_t(Renderer::height),
                                             false,
                                             1,
                                             bgfx::TextureFormat::R16,
                                             tsFlags);
-    m_buffers.ssaoFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoTex, true);
-    m_buffers.ssaoBlurHFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurH, true);
-    m_buffers.ssaoBlurVFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurFinal, true);
+        m_buffers.ssaoBlurFinal = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                                uint16_t(Renderer::height),
+                                                false,
+                                                1,
+                                                bgfx::TextureFormat::R16,
+                                                tsFlags);
+        m_buffers.ssaoFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoTex, true);
+        m_buffers.ssaoBlurHFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurH, true);
+        m_buffers.ssaoBlurVFB =
+            bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurFinal, true);
+    } else {
+        // Create dummy textures if needed
+        m_buffers.ssaoTex = _CreateSolidRGBA8Texture(255, 255, 255, 255);
+        m_buffers.ssaoBlurH = _CreateSolidRGBA8Texture(255, 255, 255, 255);
+        m_buffers.ssaoBlurFinal = _CreateSolidRGBA8Texture(255, 255, 255, 255);
+
+        if (!bgfx::isValid(m_buffers.ssaoTex) ||
+            !bgfx::isValid(m_buffers.ssaoBlurH) ||
+            !bgfx::isValid(m_buffers.ssaoBlurFinal)) {
+            Syngine::Logger::Error("Failed to create dummy SSAO textures");
+            return false;
+        }
+    }
 
     // Create global scene framebuffer (MRT: 0:Color, 1:Normal, Depth)
     bgfx::TextureHandle screenTextures[] = { m_buffers.sceneColor, m_buffers.sceneNormal, m_buffers.sceneDepth };
     m_buffers.sceneFB = bgfx::createFrameBuffer(
         BX_COUNTOF(screenTextures), screenTextures, true);
 
-    if (!bgfx::isValid(m_buffers.sceneColor) || !bgfx::isValid(m_buffers.sceneDepth) ||
-        !bgfx::isValid(m_buffers.sceneNormal) || !bgfx::isValid(m_buffers.ssaoFB)) {
+    if (!bgfx::isValid(m_buffers.sceneColor) ||
+        !bgfx::isValid(m_buffers.sceneDepth) ||
+        !bgfx::isValid(m_buffers.sceneNormal) ||
+        (m_config.useSSAO && !bgfx::isValid(m_buffers.ssaoFB)) ||
+        (m_config.useShadows && !bgfx::isValid(m_buffers.shadowFB))) {
         Syngine::Logger::Error("Failed to create scene textures");
         return false;
     }
@@ -1380,7 +1385,7 @@ void RenderCore::_DrawBillboard(const Program& program) {
         Renderer::SetUniform(m_defaultUniformIds["u_billboard_mode"], billboardExtra);
 
         float lightingFlags[4] = { comp->receiveSunLight ? 1.0f : 0.0f,
-                                   comp->receiveShadows ? 1.0f : 0.0f,
+                                   (comp->receiveShadows && m_config.useShadows) ? 1.0f : 0.0f,
                                    0.0f,
                                    0.0f };
         Renderer::SetUniform(m_defaultUniformIds["u_billboard_lighting"], lightingFlags);
@@ -1419,6 +1424,7 @@ void RenderCore::_DrawPostProcess(const Program& program) {
     SYN_PROFILE_FUNCTION();
     // I'd like to use a switch here but can't convert program IDs to case labels
     if (program.id == m_internalPrograms.ssaoProgram) {
+        if (!m_config.useSSAO) return;
         bgfx::setViewName(VIEW_AO, "SSAO Main");
         bgfx::setViewFrameBuffer(VIEW_AO, m_buffers.ssaoFB);
         bgfx::setTexture(
@@ -1447,13 +1453,14 @@ void RenderCore::_DrawPostProcess(const Program& program) {
             Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_sceneTex"))
                 ->handle,
             m_buffers.sceneColor);
-        bgfx::setTexture(
-            1,
-            Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_ssaoTex"))
-                ->handle,
-            m_buffers.ssaoBlurFinal);
+        bgfx::setTexture(1,
+                            Renderer::GetUniform(
+                                m_defaultUniformIds.at("s_tonemap_ssaoTex"))
+                                ->handle,
+                            m_buffers.ssaoBlurFinal);
          _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
     } else if (program.id == m_internalPrograms.ssaoBlurProgram) {
+        if (!m_config.useSSAO) return;
         for (int i = 0; i < 2; ++i) {
             if (i == 0) { // Horizontal blur
                 bgfx::setViewName(ViewID(VIEW_AO + 1), "SSAO Blur H");

@@ -81,7 +81,11 @@ struct RendererConfig {
     bool useShadows = true; //* Whether to use shadow mapping
     float shadowDist = 500.0f; //* Distance for shadow rendering
     bool  vsync      = true;   //* Whether to enable vertical sync
-    bool usePseudoCamera = false; //* (only if DebugModes.Enabled == true) Pseudo camera is a separate camera that all rendering will use, but the main camera will still be the one drawn to the screen
+    bool  usePseudoCamera =
+        false; //* (only if DebugModes.Enabled == true) Pseudo camera is a
+               //separate camera that all rendering will use, but the main
+               //camera will still be the one drawn to the screen
+    bool useSSAO = true; //* Whether to enable SSAO
 };
 
 /// @brief Renderer class to manage rendering and shader programs

@@ -228,7 +228,7 @@ class RenderCore {
     static SDL_Window* win; //* SDL window handle
 
     static bgfx::VertexBufferHandle
-        dummy; //* Dummy vertex buffer handle for rendering
+        dummyVbh; //* Dummy vertex buffer handle for rendering
 
     static DebugRender* m_drender; //* Debug renderer instance
 
