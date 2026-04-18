@@ -477,6 +477,10 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
           Renderer::RegisterUniform(
               m_internalPrograms.ssaoProgram, "u_ssaoParams", UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert(
+        { "u_ssao_resolution",
+          Renderer::RegisterUniform(
+              m_internalPrograms.ssaoProgram, "u_ssaoResolution", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
         { "s_ssao_normalTex",
           Renderer::RegisterUniform(
               m_internalPrograms.ssaoProgram, "s_normal", UniformType::UNIFORM_SAMPLER) });
@@ -1458,9 +1462,18 @@ void RenderCore::_DrawPostProcess(const Program& program) {
         const float ssaoParams[4] = {
             0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width)
         };
+        const float ssaoResolution[4] = {
+            static_cast<float>(Renderer::width),
+            static_cast<float>(Renderer::height),
+            1.0f / static_cast<float>(Renderer::width),
+            1.0f / static_cast<float>(Renderer::height)
+        };
         Renderer::SetUniform(
             m_defaultUniformIds.at("u_ssao_params"),
             ssaoParams);
+        Renderer::SetUniform(
+            m_defaultUniformIds.at("u_ssao_resolution"),
+            ssaoResolution);
         _ScreenSpaceQuad(VIEW_AO, program);
     } else if (program.id == m_internalPrograms.tonemapProgram) {
         bgfx::setViewName(program.viewId, "Tonemap");
@@ -1680,9 +1693,24 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                                  ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH)
                                  : (BGFX_CLEAR_NONE);
             bgfx::setViewClear(view, flags, 0x000000ff, 1.0f, 0);
-            float identity[16];
-            bx::mtxIdentity(identity);
-            bgfx::setViewTransform(view, identity, identity);
+            Camera cam = camera->GetCamera();
+            if (view == VIEW_AO) {
+                bgfx::setViewTransform(view, cam.view, cam.proj);
+            } else {
+                float identity[16];
+                float orthoProj[16];
+                bx::mtxIdentity(identity);
+                bx::mtxOrtho(orthoProj,
+                             0.0f,
+                             1.0f,
+                             1.0f,
+                             0.0f,
+                             0.0f,
+                             1.0f,
+                             0.0f,
+                             bgfx::getCaps()->homogeneousDepth);
+                bgfx::setViewTransform(view, identity, orthoProj);
+            }
             break;
         }
         default: {
@@ -1709,9 +1737,8 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                           uint16_t(Renderer::width),
                           uint16_t(Renderer::height));
         bgfx::setViewClear(ViewID(VIEW_AO + i + 1), flags, 0x000000ff, 1.0f, 0);
-        float identity[16];
-        bx::mtxIdentity(identity);
-        bgfx::setViewTransform(ViewID(VIEW_AO + i + 1), identity, identity);
+        Camera cam = camera->GetCamera();
+        bgfx::setViewTransform(ViewID(VIEW_AO + i + 1), cam.view, cam.proj);
     }
 
     m_drawnCounts = DrawnObjectCount(); // Reset counts for this frame
