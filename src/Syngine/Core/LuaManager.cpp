@@ -7,11 +7,11 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/LuaManager.h"
+#include "Syngine/Core/Input.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/Utils/FsUtils.h"
-#include <vector>
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
@@ -19,6 +19,9 @@
 #include <algorithm>
 #include <cctype>
 #include <unordered_map>
+#include <list>
+#include <vector>
+#include <string>
 
 namespace Syngine {
 
@@ -456,6 +459,110 @@ sol::object _AddComponent(sol::state_view lua, GameObject* obj, std::string type
     return sol::lua_nil;
 }
 
+struct _LuaKeybind {
+    InputAction* m_action;
+    sol::optional<sol::function> m_onPressed;
+    sol::optional<sol::function> m_onReleased;
+    sol::optional<sol::function> m_onStateChanged;
+
+    _LuaKeybind(const KeyBinding& binding = KeyBinding()) {
+        static long long count = 0;
+
+        m_onPressed = sol::lua_nil;
+        m_onReleased = sol::lua_nil;
+        m_onStateChanged = sol::lua_nil;
+
+        m_action = InputAction::RegisterAction("_LUA_INTERNAL_BINDING_DO_NOT_USE_" + std::to_string(count),
+            "", "_INTERNAL", binding, {
+                .onPressed = [this]() -> void { if (m_onPressed.has_value()) m_onPressed.value()(); },
+                .onReleased = [this]() -> void { if (m_onReleased.has_value()) m_onReleased.value()(); },
+                .onStateChanged = [this]() -> void { if (m_onStateChanged.has_value()) m_onStateChanged.value()(); },
+            });
+        ++count;
+    }
+};
+
+sol::object _NewKeybindFromKey(sol::this_state lua, const std::string& key, const std::string& type) {
+    KeyBinding binding;
+
+    if (type == "keycode") {
+        binding = KeyBinding(StringToKeycode(key));
+    } else if (type == "scancode") {
+        binding = KeyBinding(StringToScancode(key));
+    } else if (type == "mouse_button") {
+    } else { // shortcuts and sequences should have different arguments, anything else is garbage
+        return sol::lua_nil;
+    }
+
+    // Conversion failed, return nil instead of an object in a strange state
+    if (binding == KeyBinding(Keycode::_UNKNOWN)
+        || binding == KeyBinding(Scancode::_UNKNOWN)
+        || binding == KeyBinding(MouseButton::_UNKNOWN))
+        return sol::lua_nil;
+
+    _LuaKeybind result = _LuaKeybind(binding);
+    return sol::make_object(lua, result);
+}
+
+sol::object _NewKeybindFromCompound(sol::this_state lua, sol::table key, const std::string& type) {
+    return sol::lua_nil; // TODO: Implement shortcuts and sequences
+}
+
+void LuaManager::_RegisterInputBindings(sol::state& lua) {
+    auto keybind = lua.new_usertype<_LuaKeybind>("Keybind");
+
+    keybind["isPressed"] = sol::property(
+        [](_LuaKeybind& self) -> bool {
+            return self.m_action->isPressed();
+        }
+    );
+
+    keybind["wasPressed"] = sol::property(
+        [](_LuaKeybind& self) -> bool {
+            return self.m_action->wasPressed();
+        }
+    );
+
+    keybind["wasReleased"] = sol::property(
+        [](_LuaKeybind& self) -> bool {
+            return self.m_action->wasReleased();
+        }
+    );
+
+    keybind["stateChanged"] = sol::property(
+        [](_LuaKeybind& self) -> bool {
+            return self.m_action->stateChanged();
+        }
+    );
+
+    keybind["onPressed"] = sol::property(
+        [](_LuaKeybind& self) -> sol::optional<sol::function> {
+            return self.m_onPressed;
+        },
+        [](_LuaKeybind& self, const sol::optional<sol::function>& callback) -> void {
+            self.m_onPressed = callback;
+        }
+    );
+
+    keybind["onReleased"] = sol::property(
+        [](_LuaKeybind& self) -> sol::optional<sol::function> {
+            return self.m_onReleased;
+        },
+        [](_LuaKeybind& self, const sol::optional<sol::function>& callback) -> void {
+            self.m_onReleased = callback;
+        }
+    );
+
+    keybind["onStateChanged"] = sol::property(
+        [](_LuaKeybind& self) -> sol::optional<sol::function> {
+            return self.m_onStateChanged;
+        },
+        [](_LuaKeybind& self, const sol::optional<sol::function>& callback) -> void {
+            self.m_onStateChanged = callback;
+        }
+    );
+}
+
 // Custom require function that looks for Lua scripts in the "scripts" directory
 sol::object _CustomRequire(sol::this_state ts, const std::string& moduleName) {
     sol::state_view lua(ts);
@@ -544,10 +651,22 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
             lua["coroutine"] = nullptr;
         }
 
+        /* sol::object _NewKeybind(sol::this_state lua, const std::string& key) {
+    return _NewKeybindFromKey(lua, key, "keycode");
+} */
+
         // Add in our own
         if (!noSyngine) {
             lua["syngine"] = lua.create_table_with("log", _SynginePrint);
+            lua["syngine"]["newKeybind"] = sol::overload(
+                &_NewKeybindFromKey,
+                &_NewKeybindFromCompound,
+                [](sol::this_state lua, const std::string& key) -> sol::object {
+                    return _NewKeybindFromKey(lua, key, "keycode");
+                }
+            );
             _RegisterEntityBindings(lua);
+            _RegisterInputBindings(lua);
             ComponentRegistry::_RegisterAllLuaBindings(lua);
         }
     }

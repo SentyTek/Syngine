@@ -56,7 +56,7 @@ Syngine::InputAction::~InputAction() {
 
 // MARK: InputAction registration implementation
 
-void Syngine::InputAction::RegisterAction(const std::string&  identifier,
+Syngine::InputAction* Syngine::InputAction::RegisterAction(const std::string&  identifier,
                                           const std::string&  name,
                                           const std::string&  category,
                                           Syngine::KeyBinding binding,
@@ -65,6 +65,7 @@ void Syngine::InputAction::RegisterAction(const std::string&  identifier,
         identifier, name, category, binding, callbacks);
     Syngine::InputAction::_Registry.back() =
         &Syngine::InputAction::_HomelessShelter.back();
+    return &_HomelessShelter.back();
 }
 
 // MARK: InputAction state getters
@@ -220,4 +221,46 @@ void Syngine::InputAction::RegisterMouseMoveEvent(
 void Syngine::InputAction::RegisterScrollEvent(
     std::function<void(float, float)> callback) {
     _ScrollCallback = callback;
+}
+
+Syngine::Scancode Syngine::StringToScancode(std::string code) {
+    for (std::pair item : _StringToScancode) {
+        if (item.first == code) {
+            return item.second;
+        }
+    }
+
+    return Scancode::_UNKNOWN;
+}
+
+std::string Syngine::ScancodeToString(Syngine::Scancode code) {
+    for (std::pair item : _StringToScancode) {
+        if (item.second == code) {
+            return item.first;
+        }
+    }
+
+    return "";
+}
+
+
+Syngine::Keycode Syngine::StringToKeycode(const std::string& key) {
+    for (std::pair item : _StringToKeycode) {
+        if (item.first == key) {
+            return item.second;
+        }
+    }
+
+    return Keycode::_UNKNOWN;
+}
+
+
+std::string Syngine::KeycodeToString(Syngine::Keycode key) {
+    for (std::pair item : _StringToKeycode) {
+        if (item.second == key) {
+            return item.first;
+        }
+    }
+
+    return "";
 }

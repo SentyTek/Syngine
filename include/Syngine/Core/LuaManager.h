@@ -52,6 +52,8 @@ class LuaManager {
     static bool        m_initialized;
 
     static void _RegisterEntityBindings(sol::state& lua);
+    static void _RegisterInputBindings(sol::state& lua);
+
     static void _RemoveBaseFuncs(sol::state& lua,
                                  bool        removeBase       = true,
                                  bool        removeError      = true,

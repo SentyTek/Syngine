@@ -192,11 +192,10 @@ struct KeySequence {
             bound[this->nextIndex];
 
         switch (subType(this->nextIndex)) {
-        case KeybindType::KEYCODE: return std::get<Keycode>(nextKey); break;
-        case KeybindType::SCANCODE: return std::get<Scancode>(nextKey); break;
+        case KeybindType::KEYCODE: return std::get<Keycode>(nextKey);
+        case KeybindType::SCANCODE: return std::get<Scancode>(nextKey);
         case KeybindType::SHORTCUT:
             return std::get<KeyShortcut>(nextKey);
-            break;
         default:
             if (bound.empty()) Logger::Error("KeySequence cannot be empty");
             Logger::Fatal("KeySequence::subType() failed");
@@ -432,10 +431,11 @@ class InputAction {
     /// organizing actions in the bindings menu
     /// @param binding The binding for the input action
     /// @param callbacks The callbacks to call when the action state updates
+    /// @returns A pointer to the registered action
     /// @note Logs a fatal error and crashes the program if the identifier is
     /// not unique
     /// @since 0.0.1
-    static void RegisterAction(const std::string& identifier,
+    static InputAction* RegisterAction(const std::string& identifier,
                                const std::string& name,
                                const std::string& category,
                                KeyBinding         binding,
@@ -515,11 +515,35 @@ class InputAction {
 
     /// @brief Logs a fatal error and halts the program if the provided
     /// identifier is not unique
-    /// @param identifer The identifier to check
+    /// @param identifier The identifier to check
     /// @since 0.0.1
     /// @internal
     static void EnsureUniqueIdentifier(const std::string& identifier);
 };
+
+/// @brief Converts an identifier to a ``Scancode``
+/// @param code The string to convert from
+/// @returns The scancode if it succeeded, or ``Scancode::_UNKNOWN`` if it failed
+/// @since 0.0.1
+Scancode StringToScancode(std::string code);
+
+/// @brief Converts a ``Scancode`` to its unique identifier
+/// @param code The ``Scancode`` to convert from
+/// @returns The identifier if it succeeded, or ``""`` if it failed
+/// @since 0.0.1
+std::string ScancodeToString(Scancode code);
+
+/// @brief Converts an identifier to a ``Keycode``
+/// @param key The string to convert from
+/// @returns The keycode if it succeeded, or ``Keycode::_UNKNOWN`` if it failed
+/// @since 0.0.1
+Keycode StringToKeycode(const std::string& key);
+
+/// @brief Converts a ``Keycode`` to its unique identifier
+/// @param key The ``Keycode`` to convert from
+/// @returns The identifier if it succeeded, or ``""`` if it failed
+/// @since 0.0.1
+std::string KeycodeToString(Keycode key);
 
 }; // namespace Syngine
 
