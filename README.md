@@ -1,6 +1,6 @@
-# Syngine
+![Syngine Logo](.github/Syngine_Logo_Banner_Rounded.png)
 
-**Syngine** is a high-performance, cross-platform, modular, and modern C++ game engine built from the ground up for open-world and simulation-heavy physics based games. It focuses on flexibility, extensibility, developer control, and an incredibly powerful Lua modding API, with support for real-time detailed physics, procedural terrain generation, and more.
+**Syngine** is a cross-platform, modular, and modern C++ game engine built from the ground up for open-world and simulation-heavy physics based games. It focuses on flexibility, extensibility, developer control, and an incredibly powerful Lua modding API, with support for real-time detailed physics, procedural terrain generation, and more.
 
 **Read the full Syngine documentation with examples and instructions [here](docs/index.md).**
 **Get Started with Syngine: ["Quick" Start](docs/start.md).**
