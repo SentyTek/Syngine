@@ -525,13 +525,13 @@ class InputAction {
 /// @param code The string to convert from
 /// @returns The scancode if it succeeded, or ``Scancode::_UNKNOWN`` if it failed
 /// @since 0.0.1
-Scancode StringToScancode(std::string code);
+Scancode StringToScancode(const std::string& code);
 
 /// @brief Converts a ``Scancode`` to its unique identifier
 /// @param code The ``Scancode`` to convert from
 /// @returns The identifier if it succeeded, or ``""`` if it failed
 /// @since 0.0.1
-std::string ScancodeToString(Scancode code);
+std::string ScancodeToString(const Scancode& code);
 
 /// @brief Converts an identifier to a ``Keycode``
 /// @param key The string to convert from
@@ -543,7 +543,11 @@ Keycode StringToKeycode(const std::string& key);
 /// @param key The ``Keycode`` to convert from
 /// @returns The identifier if it succeeded, or ``""`` if it failed
 /// @since 0.0.1
-std::string KeycodeToString(Keycode key);
+std::string KeycodeToString(const Keycode& key);
+
+std::string MouseButtonToString(const MouseButton& button);
+
+MouseButton StringToMouseButton(const std::string& button);
 
 }; // namespace Syngine
 

@@ -461,20 +461,28 @@ sol::object _AddComponent(sol::state_view lua, GameObject* obj, std::string type
 
 struct _LuaKeybind {
     InputAction* m_action;
-    sol::optional<sol::function> m_onPressed;
-    sol::optional<sol::function> m_onReleased;
-    sol::optional<sol::function> m_onStateChanged;
+    sol::optional<sol::function> m_onPressed = sol::nullopt;
+    sol::optional<sol::function> m_onReleased = sol::nullopt;
+    sol::optional<sol::function> m_onStateChanged = sol::nullopt;
+
+    _LuaKeybind& operator=(const _LuaKeybind&) = delete;
+    _LuaKeybind(const _LuaKeybind&) = delete;
+
+    _LuaKeybind& operator=(_LuaKeybind&&) = default;
+    _LuaKeybind(_LuaKeybind&&) = default;
 
     _LuaKeybind(const KeyBinding& binding = KeyBinding()) {
         static long long count = 0;
 
-        m_onPressed = sol::lua_nil;
-        m_onReleased = sol::lua_nil;
-        m_onStateChanged = sol::lua_nil;
-
         m_action = InputAction::RegisterAction("_LUA_INTERNAL_BINDING_DO_NOT_USE_" + std::to_string(count),
             "", "_INTERNAL", binding, {
-                .onPressed = [this]() -> void { if (m_onPressed.has_value()) m_onPressed.value()(); },
+                .onPressed = [this]() -> void {
+                    Logger::Log("onPressed called from Lua!");
+                    if (m_onPressed.has_value()) {
+                        Logger::Log("onPressed has a value");
+                        m_onPressed.value()();
+                    }
+                },
                 .onReleased = [this]() -> void { if (m_onReleased.has_value()) m_onReleased.value()(); },
                 .onStateChanged = [this]() -> void { if (m_onStateChanged.has_value()) m_onStateChanged.value()(); },
             });
@@ -490,21 +498,27 @@ sol::object _NewKeybindFromKey(sol::this_state lua, const std::string& key, cons
     } else if (type == "scancode") {
         binding = KeyBinding(StringToScancode(key));
     } else if (type == "mouse_button") {
-    } else { // shortcuts and sequences should have different arguments, anything else is garbage
-        return sol::lua_nil;
-    }
+    } else return sol::lua_nil;
+    // shortcuts and sequences should have different arguments so this is garbage
 
-    // Conversion failed, return nil instead of an object in a strange state
     if (binding == KeyBinding(Keycode::_UNKNOWN)
         || binding == KeyBinding(Scancode::_UNKNOWN)
         || binding == KeyBinding(MouseButton::_UNKNOWN))
         return sol::lua_nil;
+    // Conversion failed, return nil instead of an object in a strange state
 
-    _LuaKeybind result = _LuaKeybind(binding);
+    auto result = std::make_shared<_LuaKeybind>(binding);
     return sol::make_object(lua, result);
 }
 
-sol::object _NewKeybindFromCompound(sol::this_state lua, sol::table key, const std::string& type) {
+sol::object _NewKeybindFromCompound(sol::this_state lua, const sol::table& key, const std::string& type) {
+    if (type == "shortcut") {
+
+    } else if (type == "sequence") {
+
+    } else return sol::lua_nil;
+    // keycodes, scancodes, and mouse buttons should have different arguments so this is garbage
+
     return sol::lua_nil; // TODO: Implement shortcuts and sequences
 }
 

@@ -223,7 +223,7 @@ void Syngine::InputAction::RegisterScrollEvent(
     _ScrollCallback = callback;
 }
 
-Syngine::Scancode Syngine::StringToScancode(std::string code) {
+Syngine::Scancode Syngine::StringToScancode(const std::string& code) {
     for (std::pair item : _StringToScancode) {
         if (item.first == code) {
             return item.second;
@@ -233,7 +233,7 @@ Syngine::Scancode Syngine::StringToScancode(std::string code) {
     return Scancode::_UNKNOWN;
 }
 
-std::string Syngine::ScancodeToString(Syngine::Scancode code) {
+std::string Syngine::ScancodeToString(const Scancode& code) {
     for (std::pair item : _StringToScancode) {
         if (item.second == code) {
             return item.first;
@@ -255,7 +255,7 @@ Syngine::Keycode Syngine::StringToKeycode(const std::string& key) {
 }
 
 
-std::string Syngine::KeycodeToString(Syngine::Keycode key) {
+std::string Syngine::KeycodeToString(const Keycode& key) {
     for (std::pair item : _StringToKeycode) {
         if (item.second == key) {
             return item.first;
@@ -263,4 +263,12 @@ std::string Syngine::KeycodeToString(Syngine::Keycode key) {
     }
 
     return "";
+}
+
+std::string Syngine::MouseButtonToString(const MouseButton& button) {
+    return ""; // TODO: Implement me!
+}
+
+Syngine::MouseButton Syngine::StringToMouseButton(const std::string& button) {
+    return MouseButton::_UNKNOWN; // TODO: Implement me!
 }
