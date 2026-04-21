@@ -12,6 +12,7 @@
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/Utils/FsUtils.h"
+#include <sol/types.hpp>
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
@@ -145,7 +146,7 @@ LuaLibs                  LuaManager::m_libs     = LuaLibs::DEFAULT;
 
 // Simply links into the logger to print info.
 sol::object _SynginePrint(sol::variadic_args va) {
-    std::string output = "[Lua/init.lua] ";
+    std::string output = "[Lua] ";
     for (size_t i = 0; i < va.size(); ++i) {
         sol::object obj = va[i];
         if (obj.is<std::string>()) {
@@ -156,6 +157,18 @@ sol::object _SynginePrint(sol::variadic_args va) {
             output += std::to_string(obj.as<double>());
         } else if (obj.is<bool>()) {
             output += obj.as<bool>() ? "true" : "false";
+        } else if (obj.is<sol::table>()) {
+            output += "table: 0x" + std::to_string(reinterpret_cast<uintptr_t>(obj.as<sol::table>().pointer()));
+        } else if (obj.is<sol::function>()) {
+            output +=
+                "function: 0x" + std::to_string(reinterpret_cast<uintptr_t>(
+                                     obj.as<sol::function>().pointer()));
+        } else if (obj.is<sol::userdata>()) {
+            output +=
+                "userdata: 0x" + std::to_string(reinterpret_cast<uintptr_t>(
+                                     obj.as<sol::userdata>().pointer()));
+        } else if (obj.is<sol::lua_nil_t>()) {
+            output += "nil";
         } else {
             output += "<non-printable type>";
         }
@@ -584,7 +597,30 @@ sol::object _CustomRequire(sol::this_state ts, const std::string& moduleName) {
         return sol::lua_nil;
     }
 
-    std::string fullModuleName =  _GetAppDataPath("scripts/" + moduleName + ".lua").string();
+    // Remove any .lua extension from the module name if present
+    std::string sanitizedModuleName = moduleName;
+    if (sanitizedModuleName.size() >= 4 &&
+        sanitizedModuleName.substr(sanitizedModuleName.size() - 4) == ".lua") {
+        sanitizedModuleName = sanitizedModuleName.substr(0, sanitizedModuleName.size() - 4);
+    }
+    // Remove any directory traversal attempts (../ or ..\) from the module name
+    while (true) {
+        size_t pos = sanitizedModuleName.find("../");
+        if (pos == std::string::npos) {
+            break;
+        }
+        sanitizedModuleName.erase(pos, 3);
+    }
+    while (true) {
+        size_t pos = sanitizedModuleName.find("..\\");
+        if (pos == std::string::npos) {
+            break;
+        }
+        sanitizedModuleName.erase(pos, 3);
+    }
+
+    // Construct the full path to the Lua script in the "scripts" directory
+    std::string fullModuleName =  _GetAppDataPath("scripts/" + sanitizedModuleName + ".lua").string();
     Logger::LogF(
         LogLevel::INFO, "Requiring Lua module: %s", fullModuleName.c_str());
 
