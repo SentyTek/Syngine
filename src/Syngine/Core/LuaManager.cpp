@@ -477,14 +477,14 @@ struct _LuaKeybind {
         m_action = InputAction::RegisterAction("_LUA_INTERNAL_BINDING_DO_NOT_USE_" + std::to_string(count),
             "", "_INTERNAL", binding, {
                 .onPressed = [this]() -> void {
-                    Logger::Log("onPressed called from Lua!");
-                    if (m_onPressed.has_value()) {
-                        Logger::Log("onPressed has a value");
-                        m_onPressed.value()();
-                    }
+                    if (m_onPressed.has_value()) m_onPressed.value()();
                 },
-                .onReleased = [this]() -> void { if (m_onReleased.has_value()) m_onReleased.value()(); },
-                .onStateChanged = [this]() -> void { if (m_onStateChanged.has_value()) m_onStateChanged.value()(); },
+                .onReleased = [this]() -> void {
+                    if (m_onReleased.has_value()) m_onReleased.value()();
+                },
+                .onStateChanged = [this]() -> void {
+                    if (m_onStateChanged.has_value()) m_onStateChanged.value()();
+                },
             });
         ++count;
     }
