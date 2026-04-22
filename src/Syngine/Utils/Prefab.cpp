@@ -138,15 +138,10 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
 
     Serializer::DataNode node = rootGameObjectData;
     // Resolve path, delete existing file if it exists, and create new XML document
-    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.windowTitle) / path)
+    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.gameName) / path)
                    .string();
     scl::path outputPath = adp.c_str();
-    std::filesystem::remove(outputPath.cstr()); // Remove existing file if it exists
     scl::xml::XmlDocument doc;
-    if (doc.load_file(outputPath) != scl::xml::OK) {
-        Logger::Error("Couldn't open XML file at " + path);
-        return false;
-    }
 
     // Base of the file is Prefab root with GameObject child.
     scl::xml::XmlAttr* v    = doc.new_attr("Version", SYNINT_PREFAB_VERSION);
@@ -165,7 +160,7 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
 
     // Write XML document to file
     scl::stream file;
-    file.open(outputPath, scl::OpenMode::WRITE, true);
+    file.open(outputPath, scl::OpenMode::RWTRUNC, true);
     if (!file.is_open()) {
         Logger::Error("Failed to open file for writing: " + path);
         return false;
@@ -183,7 +178,7 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
 
 Serializer::Prefab Serializer::Prefab::LoadFromFile(const std::string& path) {
     Serializer::Prefab prefab;
-    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.windowTitle) / path)
+    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.gameName) / path)
                    .string();
     scl::path inputPath = adp.c_str();
     if (!inputPath.exists()) {

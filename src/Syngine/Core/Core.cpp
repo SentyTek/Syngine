@@ -6,10 +6,10 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/Utils/Serializer.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
-#include <stdio.h>
 #include <intrin.h>
 
 #elif __APPLE__
@@ -43,6 +43,7 @@
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Utils/Version.h"
 #include "Syngine/Utils/Profiler.h"
+#include "Syngine/Utils/SpecsHelpers.h"
 
 #include <SDL3/SDL.h>
 
@@ -50,6 +51,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <string>
 
 using namespace Syngine;
 
@@ -72,7 +74,7 @@ Core::Core(const EngineConfig config) {
     // CheckRequiredFolders will abort if any folder is missing
     if (Syngine::_CheckRequiredFolders()) {
         Syngine::Logger::LogF(
-            LogLevel::INFO, "Using Syngine v%s", SYN_VERSION_STRING);
+            LogLevel::INFO, false, "Using Syngine v%s", SYN_VERSION_STRING);
         m_app         = new App();
         m_app->config = config;
     }
@@ -84,6 +86,8 @@ Core::~Core() {
     // Destroy all game objects first. This ensures components (like Billboards, Meshes)
     // release their BGFX resources (textures, buffers) before we shut down the renderer.
     Syngine::Registry::Clear();
+
+    Serializer::_SaveCoreSettings(m_app->config.gameName);
 
     if (m_app) {
         if (m_app->synModels) {
@@ -105,6 +109,7 @@ Core::~Core() {
         }
         m_instance = nullptr; // Reset the singleton instance
     }
+    Logger::_Shutdown();
     delete m_app;
     m_app = nullptr;
 }
@@ -116,6 +121,11 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
     }
 
     try {
+        Logger::_Init(m_app->config.gameName);
+        Logger::Info("Starting " + m_app->config.gameName, false);
+
+        Serializer::_LoadCoreSettings(m_app->config.gameName);
+
         m_app->window = std::make_unique<Window>(m_app->config);
         if (!m_app->window) {
             Logger::Error("Failed to create window. Check the log for more details.");
@@ -154,7 +164,7 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
         }
     } catch(const std::exception& e) {
         Syngine::Logger::LogF(
-            LogLevel::FATAL, "Failed to initialize Core: %s", e.what());
+            LogLevel::FATAL, false, "Failed to initialize Core: %s", e.what());
         return false;
     }
 
@@ -226,6 +236,7 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     { .onPressed = Core::_ReloadShaders });
     }
 
+    Logger::Info("Syngine initialized successfully", false);
     return true;
 }
 
@@ -250,7 +261,7 @@ bool Core::HandleEvents() {
     while (SDL_PollEvent(&event)) {
         switch (event.type) {
         case SDL_EVENT_QUIT:
-            Logger::Info("Quit event received, will exit on next frame");
+            Logger::Info("Quit event received, will exit on next frame", true);
             m_shouldClose = true;
             break;
         case SDL_EVENT_WINDOW_RESIZED: {
@@ -376,26 +387,7 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     const char* platform = SDL_GetPlatform();
     specs.osName         = std::string(platform);
 
-    // Get CPU info (why on EARTH is this so complicated?)
-    std::string cpu;
-    int         CPUInfo[4] = { -1 };
-    char        CPUBrandString[0x40]; // Buffer for CPU brand string
-
-    // Get the highest extended function supported by CPUID
-    __cpuid(CPUInfo, 0x80000000);
-    unsigned int nExIds = CPUInfo[0];
-
-    // Get the CPU brand string if supported
-    for (unsigned int i = 0x80000002; i <= nExIds && i <= 0x80000004; ++i) {
-        __cpuid(CPUInfo, i);
-        // Copy returned values into the CPU brand string buffer
-        memcpy(
-            CPUBrandString + (i - 0x80000002) * 16, CPUInfo, sizeof(CPUInfo));
-    }
-    CPUBrandString[sizeof(CPUBrandString) - 1] =
-        '\0'; // Null-terminate the string
-    cpu            = std::string(CPUBrandString);
-    specs.cpuModel = cpu;
+    specs.cpuModel = Syngine::_GetCPUName();
 
     // Get arch
     std::string cpuArch;
@@ -419,14 +411,11 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     // On macOS, gather system information using sysctl
     specs.osName = "macOS";
     try {
-        char   cpuBrand[256];
-        size_t size = sizeof(cpuBrand);
-        sysctlbyname("machdep.cpu.brand_string", cpuBrand, &size, NULL, 0);
-        specs.cpuModel = std::string(cpuBrand);
+        specs.cpuModel = Syngine::_GetCPUName();
 
         // Get logical CPU count
         int cpuProc = 0;
-        size        = sizeof(cpuProc);
+        size_t size        = sizeof(cpuProc);
         sysctlbyname("machdep.cpu.core_count", &cpuProc, &size, NULL, 0);
         specs.cpuCores = cpuProc;
 
@@ -450,20 +439,7 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
         std::string(sysInfo.sysname) + " " + std::string(sysInfo.release);
 
     // Get CPU info (name, architecture, etc.)
-    std::ifstream cpuInfoFile("/proc/cpuinfo");
-    std::string   line;
-    std::string   cpuBrand = "Unknown";
-
-    if (cpuInfoFile.is_open()) {
-        while (std::getline(cpuInfoFile, line)) {
-            if (line.find("model name") != std::string::npos) {
-                cpuBrand = line.substr(line.find(":") + 2);
-                break;
-            }
-        }
-        cpuInfoFile.close();
-    }
-    specs.cpuModel = cpuBrand;
+    specs.cpuModel = Syngine::_GetCPUName();
 
     specs.cpuArch = std::string(sysInfo.machine);
 
@@ -498,15 +474,15 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     // Get various GPU info from bgfx
     const bgfx::Caps* caps = bgfx::getCaps();
     if (caps) {
-        specs.gpuVendorID     = caps->vendorId;
-        specs.gpuDeviceID     = caps->deviceId;
+        specs.gpuVendorID     = _FormatGpuVendorIdHex(caps->vendorId);
+        specs.gpuName         = _GetGpuName(caps);
         specs.maxTextureSize  = caps->limits.maxTextureSize;
         specs.supportsCompute = (caps->supported & BGFX_CAPS_COMPUTE) != 0;
         specs.supports3DTextures =
             (caps->supported & BGFX_CAPS_TEXTURE_3D) != 0;
     } else {
-        specs.gpuVendorID        = 0;
-        specs.gpuDeviceID        = 0;
+        specs.gpuVendorID        = "Unknown";
+        specs.gpuName            = "Unknown";
         specs.maxTextureSize     = 0;
         specs.supportsCompute    = false;
         specs.supports3DTextures = false;

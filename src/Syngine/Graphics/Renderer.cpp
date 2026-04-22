@@ -126,13 +126,14 @@ size_t Renderer::AddProgram(const std::string& path,
     if (!Renderer::IsReady())
         Syngine::Logger::Fatal("Cannot add program before renderer is ready");
     if (name.empty()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              "Program name cannot be empty");
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR, true, "Program name cannot be empty");
         return -1;
     }
 
     if (!_FileExists(path.c_str())) {
         Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+                              true,
                               "Shader file not found: %s",
                               path.c_str());
         return -1;
@@ -140,6 +141,7 @@ size_t Renderer::AddProgram(const std::string& path,
 
     if (GetProgram(name).id != 0) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              true,
                               "Program with name \"%s\" already exists",
                               name.c_str());
         return -1;
@@ -156,7 +158,10 @@ size_t Renderer::AddProgram(const std::string& path,
     }
 
     if (!bgfx::isValid(programHandle)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create program %s", name.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+                              false,
+                              "Failed to create program %s",
+                              name.c_str());
         bgfx::destroy(vs);
         bgfx::destroy(fs);
         return -1;
@@ -171,7 +176,10 @@ size_t Renderer::AddProgram(const std::string& path,
     prog.id = programHandle.idx;
 
     viewPrograms[viewId].push_back(prog); // Store program by viewId
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully", name.c_str());
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO,
+                          true,
+                          "Program %s created successfully",
+                          name.c_str());
     return prog.id;
 }
 
@@ -182,12 +190,12 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     }
     std::string resolvedBundlePath = Syngine::_ResolveOSPath(bundlePath);
     if (name.empty() || path.empty() || resolvedBundlePath.empty()) {
-         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+         Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Invalid parameters for AddProgram from bundle");
         return -1;
     }
     if (GetProgram(name).id != 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Program with name \"%s\" already exists",
                               name.c_str());
         return -1;
@@ -195,7 +203,7 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
 
     // Fallback if bundle doesn't exist
     if (!_FileExists(resolvedBundlePath.c_str())) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN, true,
                               "Bundle %s not found, falling back to regular AddProgram",
                               bundlePath.c_str());
         return AddProgram(path, name, viewId);
@@ -205,7 +213,7 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath, path + ".frag.bin");
     bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
     if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Failed to load shaders for program %s from bundle",
                               name.c_str());
         if (bgfx::isValid(vs)) bgfx::destroy(vs);
@@ -215,7 +223,7 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     programHandle = bgfx::createProgram(vs, fs, true);
 
     if (!bgfx::isValid(programHandle)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to create program %s from bundle", name.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false, "Failed to create program %s from bundle", name.c_str());
         bgfx::destroy(vs);
         bgfx::destroy(fs);
         return -1;
@@ -231,7 +239,7 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     prog.id      = programHandle.idx;
 
     viewPrograms[viewId].push_back(prog); // Store program by viewId
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Program %s created successfully from bundle", name.c_str());
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, true, "Program %s created successfully from bundle", name.c_str());
     return prog.id;
 }
 
@@ -321,7 +329,7 @@ bool Renderer::ReloadProgram(Syngine::ViewID viewId, const std::string_view& nam
             bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
 
             if (!bgfx::isValid(newProgram)) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                                       "Failed to reload program %s",
                                       name.data());
                 bgfx::destroy(vs);
@@ -382,14 +390,14 @@ size_t Renderer::RegisterUniform(size_t             program,
     Program* prog = _GetProgram(program);
     if (!prog) {
         Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR,
+            Syngine::LogLevel::ERR, true,
             "Cannot register uniform to invalid program id %zu",
             program);
         return 0;
     }
 
     if (name.empty()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Uniform name cannot be empty");
         return 0;
     }
@@ -397,7 +405,7 @@ size_t Renderer::RegisterUniform(size_t             program,
     for (const auto& u : prog->uniforms) {
         if (u.name == name) {
             Syngine::Logger::LogF(
-                Syngine::LogLevel::ERR,
+                Syngine::LogLevel::ERR, true,
                 "Uniform with name \"%s\" already exists in program \"%s\"",
                 name.c_str(),
                 prog->name.c_str());
@@ -457,7 +465,7 @@ void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
         size_t size = 0;
         switch (u->type) {
         case UNIFORM_SAMPLER:
-            SDL_Log("Cannot set texture uniform. Use bgfx::setTexture instead.");
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN, true, "Cannot set texture uniform. Use bgfx::setTexture instead.");
             break;
         case UNIFORM_VEC4:
             size = sizeof(float) * 4;
@@ -472,7 +480,7 @@ void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
             bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
             break;
         default:
-            Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Unknown uniform type");
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "Unknown uniform type");
             break;
         }
 

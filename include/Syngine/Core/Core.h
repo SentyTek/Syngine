@@ -21,6 +21,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <string>
 
 namespace Syngine {
 // Forward declare
@@ -42,8 +43,8 @@ struct HardwareSpecs {
     int         screenHeight;    //* Height of the screen in pixels
     int         winWidth;        //* Width of the game window in pixels
     int         winHeight;       //* Height of the game window in pixels
-    int         gpuVendorID;     //* GPU vendor ID
-    int         gpuDeviceID;     //* GPU device ID
+    std::string gpuVendorID;     //* GPU vendor PCI ID formatted as hex
+    std::string gpuName;         //* GPU adapter name
     int         maxTextureSize;  //* Maximum texture size supported by the GPU
     bool        supportsCompute; //* Whether the GPU supports compute shaders
     bool        supports3DTextures; //* Whether the GPU supports 3D textures
@@ -53,7 +54,7 @@ struct HardwareSpecs {
 /// @section Core
 /// @since v0.0.1
 struct EngineConfig {
-    std::string windowTitle = "SyngineGame";  //* Title of the game window
+    std::string gameName = "SyngineGame";  //* Title of the game window
     int         windowWidth = 800;  //* Width of the game window in pixels
     int         windowHeight = 600; //* Height of the game window in pixels
     bool        usePhysics = true; //* Whether to initialize the physics system
@@ -221,7 +222,9 @@ class Core {
     /// @return Pointer to the global game config
     /// @since v0.0.1
     /// @internal
-    static EngineConfig* _GetConfig();
+    static inline EngineConfig* _GetConfig() {
+        return m_instance && m_instance->m_app ? &m_instance->m_app->config : nullptr;
+    }
 
     struct FrameCounts {
         struct DrawnObjectCount {
@@ -303,6 +306,7 @@ class Core {
     friend class PlayerComponent;
     friend class Registry;
     friend class Serializer;
+    friend class Window;
 #ifndef SYN_DEBUG_GRAPHICS
     friend class Syngine::Profiler;
 #endif

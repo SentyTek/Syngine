@@ -17,6 +17,7 @@
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/TextureHelpers.h"
 #include "Syngine/Utils/ModelLoader.h"
+#include "Syngine/Utils/Serializer.h"
 #include "Syngine/Utils/Version.h"
 #include "Syngine/Utils/Profiler.h"
 #include "Syngine/Core/Logger.h"
@@ -93,7 +94,7 @@ bool         RenderCore::m_isFirstFrame = true;
 float RenderCore::m_cascadeSizes[RenderCore::NUM_CASCADES] = { 10, 40, 0, 0 };
 float RenderCore::m_cascadeTexelSizes[RenderCore::NUM_CASCADES] = { 0, 0, 0, 0 };
 
-bgfx::VertexBufferHandle RenderCore::dummy = BGFX_INVALID_HANDLE;
+bgfx::VertexBufferHandle RenderCore::dummyVbh = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_billboardVbh = BGFX_INVALID_HANDLE;
 bgfx::IndexBufferHandle  RenderCore::m_billboardIbh = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_fsQuadVbh = BGFX_INVALID_HANDLE;
@@ -109,6 +110,21 @@ std::vector<RenderCore::RenderPacket> RenderCore::m_renderPackets;
 
 bool RenderCore::_Initialize(const RendererConfig& config) {
     m_config = config;
+    if (m_config.loadFromFile) {
+        auto videoSettings = Serializer::_LoadCoreSettingsCategory<
+            Serializer::CoreSettings::Video>();
+
+        if (videoSettings) {
+            m_config.useShadows = videoSettings->useShadows;
+            m_config.shadowDist = videoSettings->shadowDist;
+            m_config.vsync = videoSettings->vSync;
+            m_config.useSSAO    = videoSettings->useSSAO;
+        } else {
+            Syngine::Logger::Warn(
+                "Failed to load video settings from file, using defaults");
+        }
+    }
+
     win = Window::_GetSDLWindow();
     if (!win) {
         Syngine::Logger::Fatal("No window to create renderer in");
@@ -461,6 +477,10 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
           Renderer::RegisterUniform(
               m_internalPrograms.ssaoProgram, "u_ssaoParams", UniformType::UNIFORM_VEC4) });
     m_defaultUniformIds.insert(
+        { "u_ssao_resolution",
+          Renderer::RegisterUniform(
+              m_internalPrograms.ssaoProgram, "u_ssaoResolution", UniformType::UNIFORM_VEC4) });
+    m_defaultUniformIds.insert(
         { "s_ssao_normalTex",
           Renderer::RegisterUniform(
               m_internalPrograms.ssaoProgram, "s_normal", UniformType::UNIFORM_SAMPLER) });
@@ -560,7 +580,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
          3.0f, -1.0f, 0.99999f, 2.0f,  1.0f, // Bottom-Right (extended right)
         -1.0f, -1.0f, 0.99999f, 0.0f,  1.0f  // Bottom-Left
     };
-    m_fsQuadVbh                         = bgfx::createVertexBuffer(
+    m_fsQuadVbh = bgfx::createVertexBuffer(
         bgfx::copy(fsQuadVertices, sizeof(fsQuadVertices)), fsQuadLayout);
 
     // Dummy buffer to make metal happy
@@ -578,7 +598,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         fullscreenDummyVBH = bgfx::createVertexBuffer(
             bgfx::copy(dummyData, sizeof(dummyData)), dummyLayout);
 
-        dummy = fullscreenDummyVBH;
+        dummyVbh = fullscreenDummyVBH;
     }
 #endif
 
@@ -617,9 +637,9 @@ void RenderCore::_Shutdown() {
         bgfx::destroy(m_billboardIbh);
         m_billboardIbh = BGFX_INVALID_HANDLE;
     }
-    if(bgfx::isValid(dummy)) {
-        bgfx::destroy(dummy);
-        dummy = BGFX_INVALID_HANDLE;
+    if(bgfx::isValid(dummyVbh)) {
+        bgfx::destroy(dummyVbh);
+        dummyVbh = BGFX_INVALID_HANDLE;
     }
     if(bgfx::isValid(m_fsQuadVbh)) {
         bgfx::destroy(m_fsQuadVbh);
@@ -636,19 +656,6 @@ void RenderCore::_Shutdown() {
     });
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
     m_defaultUniformIds.clear();
-
-    if (bgfx::isValid(s_fallbackAlbedo)) {
-        bgfx::destroy(s_fallbackAlbedo);
-        s_fallbackAlbedo = BGFX_INVALID_HANDLE;
-    }
-    if (bgfx::isValid(s_fallbackNormal)) {
-        bgfx::destroy(s_fallbackNormal);
-        s_fallbackNormal = BGFX_INVALID_HANDLE;
-    }
-    if (bgfx::isValid(s_fallbackHeight)) {
-        bgfx::destroy(s_fallbackHeight);
-        s_fallbackHeight = BGFX_INVALID_HANDLE;
-    }
 
     bgfx::shutdown();
 }
@@ -678,8 +685,8 @@ bool RenderCore::_CreateSceneBuffers() {
             return false;
         }
 
-        m_cascadeSizes[2] = round(m_config.shadowDist / 3.0f);
-        m_cascadeSizes[3] = round(m_config.shadowDist);
+        m_cascadeSizes[2] = round(static_cast<float>(m_config.shadowDist) / 3.0f);
+        m_cascadeSizes[3] = static_cast<float>(m_config.shadowDist);
     }
 
     // Create scene textures
@@ -698,42 +705,60 @@ bool RenderCore::_CreateSceneBuffers() {
                                           1,
                                           bgfx::TextureFormat::RGBA16F,
                                           tsFlags);
-    m_buffers.sceneDepth =
-        bgfx::createTexture2D(uint16_t(Renderer::width),
-                              uint16_t(Renderer::height),
-                              false,
-                              1,
-                              bgfx::TextureFormat::D24S8,
-                              BGFX_TEXTURE_RT);
-    m_buffers.ssaoTex = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                      uint16_t(Renderer::height),
-                                      false,
-                                      1,
-                                      bgfx::TextureFormat::R16,
-                                      tsFlags);
-    m_buffers.ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
+    m_buffers.sceneDepth  = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                                 uint16_t(Renderer::height),
+                                                 false,
+                                                 1,
+                                                 bgfx::TextureFormat::D24S8,
+                                                 BGFX_TEXTURE_RT);
+
+    if (m_config.useSSAO) {
+        m_buffers.ssaoTex = bgfx::createTexture2D(uint16_t(Renderer::width),
                                         uint16_t(Renderer::height),
                                         false,
                                         1,
                                         bgfx::TextureFormat::R16,
                                         tsFlags);
-    m_buffers.ssaoBlurFinal = bgfx::createTexture2D(uint16_t(Renderer::width),
+        m_buffers.ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
                                             uint16_t(Renderer::height),
                                             false,
                                             1,
                                             bgfx::TextureFormat::R16,
                                             tsFlags);
-    m_buffers.ssaoFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoTex, true);
-    m_buffers.ssaoBlurHFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurH, true);
-    m_buffers.ssaoBlurVFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurFinal, true);
+        m_buffers.ssaoBlurFinal = bgfx::createTexture2D(uint16_t(Renderer::width),
+                                                uint16_t(Renderer::height),
+                                                false,
+                                                1,
+                                                bgfx::TextureFormat::R16,
+                                                tsFlags);
+        m_buffers.ssaoFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoTex, true);
+        m_buffers.ssaoBlurHFB  = bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurH, true);
+        m_buffers.ssaoBlurVFB =
+            bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurFinal, true);
+    } else {
+        // Create dummy textures if needed
+        m_buffers.ssaoTex = _CreateSolidRGBA8Texture(255, 255, 255, 255);
+        m_buffers.ssaoBlurH = _CreateSolidRGBA8Texture(255, 255, 255, 255);
+        m_buffers.ssaoBlurFinal = _CreateSolidRGBA8Texture(255, 255, 255, 255);
+
+        if (!bgfx::isValid(m_buffers.ssaoTex) ||
+            !bgfx::isValid(m_buffers.ssaoBlurH) ||
+            !bgfx::isValid(m_buffers.ssaoBlurFinal)) {
+            Syngine::Logger::Error("Failed to create dummy SSAO textures");
+            return false;
+        }
+    }
 
     // Create global scene framebuffer (MRT: 0:Color, 1:Normal, Depth)
     bgfx::TextureHandle screenTextures[] = { m_buffers.sceneColor, m_buffers.sceneNormal, m_buffers.sceneDepth };
     m_buffers.sceneFB = bgfx::createFrameBuffer(
         BX_COUNTOF(screenTextures), screenTextures, true);
 
-    if (!bgfx::isValid(m_buffers.sceneColor) || !bgfx::isValid(m_buffers.sceneDepth) ||
-        !bgfx::isValid(m_buffers.sceneNormal) || !bgfx::isValid(m_buffers.ssaoFB)) {
+    if (!bgfx::isValid(m_buffers.sceneColor) ||
+        !bgfx::isValid(m_buffers.sceneDepth) ||
+        !bgfx::isValid(m_buffers.sceneNormal) ||
+        (m_config.useSSAO && !bgfx::isValid(m_buffers.ssaoFB)) ||
+        (m_config.useShadows && !bgfx::isValid(m_buffers.shadowFB))) {
         Syngine::Logger::Error("Failed to create scene textures");
         return false;
     }
@@ -742,7 +767,9 @@ bool RenderCore::_CreateSceneBuffers() {
 
 bool RenderCore::_SetResolution(int width, int height) {
     Renderer::height = height;
-    Renderer::width = width;
+    Renderer::width  = width;
+    Serializer::m_coreSettings.video.width = width;
+    Serializer::m_coreSettings.video.height = height;
     bgfx::reset(uint32_t(width), uint32_t(height), m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
     bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
 
@@ -1302,20 +1329,15 @@ void RenderCore::_DrawDebug(const Program&   program,
                             CameraComponent* camera,
                             DebugModes       debug) {
     SYN_PROFILE_FUNCTION();
+
     bgfx::setViewName(program.viewId, "Debug");
-    GameObject *p = Registry::GetGameObjectByName("player");
-    if (p && Core::IsPhysicsEnabled()) {
-        Core::_GetApp()->physicsManager->_DrawDebug(
-            Renderer::width, Renderer::height, program.program,
-            p->GetComponent<CameraComponent>()->GetCamera(), camera->GetCamera(),
-            debug);
-    }
+    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
 
     // Draw various debug overlays
-    if (debug.Gizmos) {
+    if (debug.Gizmos && m_drender) {
         // Draw zone boundaries
         for (std::vector<ZoneComponent*> zones = Core::_GetApp()->zoneManager->GetZones(); auto zone : zones) {
-            if (!zone || !zone->isEnabled || !m_drender) continue;
+            if (!zone || !zone->isEnabled) continue;
             switch (zone->GetShape()) {
                 case ZoneShape::BOX: {
                     float min[3], max[3], pos[3], size[3];
@@ -1343,13 +1365,36 @@ void RenderCore::_DrawDebug(const Program&   program,
         }
     }
 
-    if (debug.DrawBoundingBoxes) {
+    if (debug.DrawBoundingBoxes && m_drender) {
         std::vector<GameObject*> meshObjects =
             Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH);
         for (auto go : meshObjects) {
             MeshAABB aabb = go->GetComponent<MeshComponent>()->GetAABB();
             m_drender->DrawBox(aabb.min, aabb.max, JPH::Color::sGreen);
         }
+    }
+
+    // Flush all queued debug lines (physics wireframes, frustums, CSM lines,
+    // zone bounds, and AABBs) in a single pass.
+    GameObject* p = Registry::GetGameObjectByName("player");
+    if (p && Core::IsPhysicsEnabled()) {
+        CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
+        if (!playerCamera) {
+            return;
+        }
+
+        // Keep player camera matrices valid even when simulation is paused.
+        const int safeWidth = std::max(Renderer::width, 1);
+        const int safeHeight = std::max(Renderer::height, 1);
+        playerCamera->Update(VIEW_DEBUG, safeWidth, safeHeight);
+
+        Core::_GetApp()->physicsManager->_DrawDebug(
+            Renderer::width,
+            Renderer::height,
+            program.program,
+            playerCamera->GetCamera(),
+            camera->GetCamera(),
+            debug);
     }
 }
 
@@ -1382,7 +1427,7 @@ void RenderCore::_DrawBillboard(const Program& program) {
         Renderer::SetUniform(m_defaultUniformIds["u_billboard_mode"], billboardExtra);
 
         float lightingFlags[4] = { comp->receiveSunLight ? 1.0f : 0.0f,
-                                   comp->receiveShadows ? 1.0f : 0.0f,
+                                   (comp->receiveShadows && m_config.useShadows) ? 1.0f : 0.0f,
                                    0.0f,
                                    0.0f };
         Renderer::SetUniform(m_defaultUniformIds["u_billboard_lighting"], lightingFlags);
@@ -1421,6 +1466,7 @@ void RenderCore::_DrawPostProcess(const Program& program) {
     SYN_PROFILE_FUNCTION();
     // I'd like to use a switch here but can't convert program IDs to case labels
     if (program.id == m_internalPrograms.ssaoProgram) {
+        if (!m_config.useSSAO) return;
         bgfx::setViewName(VIEW_AO, "SSAO Main");
         bgfx::setViewFrameBuffer(VIEW_AO, m_buffers.ssaoFB);
         bgfx::setTexture(
@@ -1436,9 +1482,18 @@ void RenderCore::_DrawPostProcess(const Program& program) {
         const float ssaoParams[4] = {
             0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width)
         };
+        const float ssaoResolution[4] = {
+            static_cast<float>(Renderer::width),
+            static_cast<float>(Renderer::height),
+            1.0f / static_cast<float>(Renderer::width),
+            1.0f / static_cast<float>(Renderer::height)
+        };
         Renderer::SetUniform(
             m_defaultUniformIds.at("u_ssao_params"),
             ssaoParams);
+        Renderer::SetUniform(
+            m_defaultUniformIds.at("u_ssao_resolution"),
+            ssaoResolution);
         _ScreenSpaceQuad(VIEW_AO, program);
     } else if (program.id == m_internalPrograms.tonemapProgram) {
         bgfx::setViewName(program.viewId, "Tonemap");
@@ -1449,13 +1504,14 @@ void RenderCore::_DrawPostProcess(const Program& program) {
             Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_sceneTex"))
                 ->handle,
             m_buffers.sceneColor);
-        bgfx::setTexture(
-            1,
-            Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_ssaoTex"))
-                ->handle,
-            m_buffers.ssaoBlurFinal);
+        bgfx::setTexture(1,
+                            Renderer::GetUniform(
+                                m_defaultUniformIds.at("s_tonemap_ssaoTex"))
+                                ->handle,
+                            m_buffers.ssaoBlurFinal);
          _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
     } else if (program.id == m_internalPrograms.ssaoBlurProgram) {
+        if (!m_config.useSSAO) return;
         for (int i = 0; i < 2; ++i) {
             if (i == 0) { // Horizontal blur
                 bgfx::setViewName(ViewID(VIEW_AO + 1), "SSAO Blur H");
@@ -1500,8 +1556,8 @@ void RenderCore::_DrawPostProcess(const Program& program) {
 
 void RenderCore::_DrawDbgBillboard(const Program& program) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setViewName(program.viewId, "Gizmos");
-    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
+    bgfx::setViewName(VIEW_BILL_DBG, "Gizmos");
+    bgfx::setViewFrameBuffer(VIEW_BILL_DBG, m_buffers.sceneFB);
     // Debug billboards (gizmos) are always drawn on top. Regular billboards (forward pass ig) are depth-tested normally.
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                     BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_ALWAYS;
@@ -1539,14 +1595,14 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
                 0,
                 Renderer::GetUniform(m_defaultUniformIds["s_bill_albedo"])->handle,
                 gizmo->_GetTexture()); // Use the texture from the gizmo registry
-            bgfx::submit(program.viewId, program.program);
+            bgfx::submit(VIEW_BILL_DBG, program.program);
         }
     }
 }
 
 void RenderCore::_DrawUIDebug(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setViewName(VIEW_DEBUG, "UI Debug");
+    bgfx::setViewName(VIEW_UI_DEBUG, "UI Debug");
     bgfx::setDebug(BGFX_DEBUG_TEXT);
     bgfx::dbgTextClear();
 
@@ -1569,6 +1625,11 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
         return false;
     }
 
+    const int safeWidth = std::max(Renderer::width, 1);
+    const int safeHeight = std::max(Renderer::height, 1);
+    camera->Update(VIEW_FORWARD, safeWidth, safeHeight);
+    Camera cam = camera->GetCamera();
+
     const float* camPos = camera->GetPosition();
     float        viewPos[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
     Renderer::SetUniform(m_defaultUniformIds["u_default_viewPos"], viewPos);
@@ -1587,7 +1648,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
         float cascadeSplits[NUM_CASCADES];
         _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
 
-        float farClip = m_config.shadowDist;
+        int farClip = m_config.shadowDist;
         float splits[4] = { cascadeSplits[0],
                             cascadeSplits[1],
                             cascadeSplits[2],
@@ -1599,7 +1660,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             bgfx::getCaps()->homogeneousDepth ? 1.0f
                                               : 0.0f, // Homogeneous depth
             1.0f / (float)(SHADOW_MAP_SIZE * 2),      // Inv shadow map size
-            m_config.shadowDist, // Light far plane
+            static_cast<float>(m_config.shadowDist), // Light far plane
             0.0f // Debug value, not used
         };
         Renderer::SetUniform(m_defaultUniformIds["u_default_shadowParams"], shadowParams);
@@ -1654,9 +1715,23 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                                  ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH)
                                  : (BGFX_CLEAR_NONE);
             bgfx::setViewClear(view, flags, 0x000000ff, 1.0f, 0);
-            float identity[16];
-            bx::mtxIdentity(identity);
-            bgfx::setViewTransform(view, identity, identity);
+            if (view == VIEW_AO) {
+                bgfx::setViewTransform(view, cam.view, cam.proj);
+            } else {
+                float identity[16];
+                float orthoProj[16];
+                bx::mtxIdentity(identity);
+                bx::mtxOrtho(orthoProj,
+                             0.0f,
+                             1.0f,
+                             1.0f,
+                             0.0f,
+                             0.0f,
+                             1.0f,
+                             0.0f,
+                             bgfx::getCaps()->homogeneousDepth);
+                bgfx::setViewTransform(view, identity, orthoProj);
+            }
             break;
         }
         default: {
@@ -1667,7 +1742,6 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                               uint16_t(Renderer::height));
             //bgfx::setViewClear(
             //    view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
-            Camera cam = camera->GetCamera();
             bgfx::setViewTransform(view, cam.view, cam.proj);
             break;
         }
@@ -1683,9 +1757,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                           uint16_t(Renderer::width),
                           uint16_t(Renderer::height));
         bgfx::setViewClear(ViewID(VIEW_AO + i + 1), flags, 0x000000ff, 1.0f, 0);
-        float identity[16];
-        bx::mtxIdentity(identity);
-        bgfx::setViewTransform(ViewID(VIEW_AO + i + 1), identity, identity);
+        bgfx::setViewTransform(ViewID(VIEW_AO + i + 1), cam.view, cam.proj);
     }
 
     m_drawnCounts = DrawnObjectCount(); // Reset counts for this frame
@@ -1730,6 +1802,8 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
             case VIEW_BILL_DBG:
+                // Debug billboard draws are submitted from VIEW_BILLBOARD using this view ID.
+                break;
             case VIEW_BILLBOARD:
                 if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
                 _DrawBillboard(program);

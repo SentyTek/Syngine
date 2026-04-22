@@ -155,27 +155,27 @@ bool AssimpLoader::_LoadModel(MeshData&          out,
         stream->data(), stream->size(), flags, formatHint.c_str());
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->HasMeshes()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Error loading model: %s",
                               importer.GetErrorString());
         return false;
     }
 
     if (scene->mNumMeshes == 0) {
-        Syngine::Logger::Error("No meshes found in model.");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "No meshes found in model.");
         return false;
     }
 
     MeshData meshData;
     if (!processScene(meshData, scene, stream, loadTextures)) {
-        Syngine::Logger::Error("Failed to process model scene.");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "Failed to process model scene.");
         return false;
     }
     meshData.id          = static_cast<int>(loadedMeshes.size());
 
     meshData.valid = true; // Mark as valid after processing
 
-    Syngine::Logger::Info("Loaded mesh");
+    Syngine::Logger::Info("Loaded mesh", true);
     loadedMeshes.push_back(meshData);
     out = meshData;
     return true;
@@ -369,7 +369,7 @@ bool AssimpLoader::processScene(MeshData&      out,
 
     // checks
     if (!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Failed to create vertex/index buffer");
         return false;
     }
@@ -389,7 +389,7 @@ bool AssimpLoader::_ReloadModel(MeshData&          out,
     MeshData* mesh = _GetMeshById(id);
     if (!mesh) {
         Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR, "Mesh with ID %d not found", id);
+            Syngine::LogLevel::ERR, true, "Mesh with ID %d not found", id);
         return false;
     }
     mesh->valid = false; // Mark as invalid before reloading
@@ -403,7 +403,7 @@ bool AssimpLoader::_ReloadModel(MeshData&          out,
         stream->data(), stream->size(), flags, formatHint.c_str());
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->HasMeshes()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Error reloading model: %s",
                               importer.GetErrorString());
         return false;
@@ -448,7 +448,7 @@ bool AssimpLoader::_ReloadModel(MeshData&          out,
 
     mesh->valid = true;
 
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Reloaded mesh with ID %d", mesh->id);
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, true, "Reloaded mesh with ID %d", mesh->id);
     out = *mesh; // Update output with reloaded data
     return true;
 }
@@ -507,7 +507,7 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
         if (std::filesystem::exists(heightPath)) {
             mat.heightMap = Syngine::LoadTextureFromFile(heightPath.c_str());
         } else {
-            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN, true,
                                   "Height map not found for material %s",
                                   path.c_str());
             mat.heightMap = Syngine::CreateFlatTexture();

@@ -28,7 +28,7 @@ void Syngine::InputAction::EnsureUniqueIdentifier(
         if (binding->identifier == identifier) {
             Syngine::Logger::Log("InputAction identifier '" + identifier +
                                      "' is not unique",
-                                 LogLevel::FATAL);
+                                 LogLevel::ERR);
         }
     }
 }
