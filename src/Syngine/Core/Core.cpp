@@ -338,59 +338,63 @@ bool Core::Update() {
 
     m_frameCounts.updates++;
 
+    // Run component updates every frame so camera and visual state are not
+    // locked to the fixed physics tick rate.
+    auto& allGameObjects = Registry::GetAllGameObjects();
+    for (auto& [id, go] : allGameObjects) {
+        if (!go) continue;
+        const auto& components = go->GetComponents();
+        for (const auto& [typeId, component] : components) {
+            if (component && component->isEnabled) {
+                component->Update(deltaTime);
+            }
+        }
+    }
+
     m_internal.accumulator += deltaTime;
+    const float fixedDeltaTime = m_internal.DEFAULT_PHYSICS_TIMESTEP;
     while (m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
         // Do tick
         if (m_internal.simulate) {
             // Physics step
             if (m_context->physicsManager) {
             m_context->physicsManager->_Update(
-                m_internal.DEFAULT_PHYSICS_TIMESTEP,
+                fixedDeltaTime,
                 m_internal.DEFAULT_PHYSICS_STEPS);
-            }
-
-            // Polymorphic component update loop - iterate all GameObjects
-            auto& allGameObjects = Registry::GetAllGameObjects();
-
-            // Update all components
-            for (auto& [id, go] : allGameObjects) {
-                if (!go) continue;
-                const auto& components = go->GetComponents();
-                for (const auto& [typeId, component] : components) {
-                    if (component && component->isEnabled) {
-                        component->Update(deltaTime);
-                    }
-                }
             }
 
             // Update zones
             m_context->zoneManager->_UpdateZones();
-
-            // Post physics update - call after physics step
-            for (auto& [id, go] : allGameObjects) {
-                if (!go) continue;
-                const auto& components = go->GetComponents();
-                for (const auto& [typeId, component] : components) {
-                    if (component && component->isEnabled) {
-                        component->PostPhysicsUpdate();
-                    }
-                }
-            }
         }
 
         // Tick Lua scripts
         if (m_context->luaState) {
-            m_context->luaState->DoTick(m_internal.DEFAULT_PHYSICS_TIMESTEP,
-                                        deltaTime,
+            m_context->luaState->DoTick(fixedDeltaTime,
+                                        fixedDeltaTime,
                                         m_internal.simulate);
         }
 
-        m_internal.accumulator -= m_internal.DEFAULT_PHYSICS_TIMESTEP;
+        m_internal.accumulator -= fixedDeltaTime;
         m_frameCounter.physCounter++;
 
-        // Update frame counter and log FPS/TPS every second regardless of simulation state
+        // Update frame counter and log FPS/TPS every second regardless of
+        // simulation state
         m_frameCounter.Update(
-            deltaTime, m_internal.simulate, Registry::GetGameObjectCount());
+            fixedDeltaTime, m_internal.simulate, Registry::GetGameObjectCount());
+    }
+
+    // Run one post-physics sync per frame so render/camera-facing state tracks
+    // the latest simulation result even when physics doesn't tick this frame.
+    if (m_internal.simulate) {
+        for (auto& [id, go] : allGameObjects) {
+            if (!go) continue;
+            const auto& components = go->GetComponents();
+            for (const auto& [typeId, component] : components) {
+                if (component && component->isEnabled) {
+                    component->PostPhysicsUpdate();
+                }
+            }
+        }
     }
 
     return true;
