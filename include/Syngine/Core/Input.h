@@ -23,6 +23,7 @@
 #include <vector>
 #include <list>
 #include <functional>
+#include <unordered_set>
 
 namespace Syngine {
 
@@ -548,6 +549,12 @@ std::string KeycodeToString(const Keycode& key);
 std::string MouseButtonToString(const MouseButton& button);
 
 MouseButton StringToMouseButton(const std::string& button);
+
+/// @note The return value doesn't have any duplicates
+std::vector<std::string> KeymodToString(const Keymod& keymod);
+
+/// @note This will automatically de-duplicate names
+Keymod StringToKeymod(const std::vector<std::string>& keymod);
 
 }; // namespace Syngine
 

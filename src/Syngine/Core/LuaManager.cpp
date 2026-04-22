@@ -30,10 +30,10 @@ namespace Syngine {
 namespace {
 
 std::string _ToLowerCopy(std::string value) {
-    std::transform(value.begin(),
-                   value.end(),
-                   value.begin(),
-                   [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    std::transform(
+        value.begin(), value.end(), value.begin(), [](unsigned char c) {
+            return static_cast<char>(std::tolower(c));
+        });
     return value;
 }
 
@@ -71,19 +71,20 @@ PhysicsShapes _ParsePhysicsShape(const sol::object& shapeObj,
 
     if (shapeObj.is<std::string>()) {
         const std::string shape = _ToLowerCopy(shapeObj.as<std::string>());
-        static const std::unordered_map<std::string, PhysicsShapes> kShapeMap = {
-            { "sphere", PhysicsShapes::SPHERE },
-            { "box", PhysicsShapes::BOX },
-            { "capsule", PhysicsShapes::CAPSULE },
-            { "capsule_tapered", PhysicsShapes::CAPSULE_TAPERED },
-            { "cylinder", PhysicsShapes::CYLINDER },
-            { "cylinder_tapered", PhysicsShapes::CYLINDER_TAPERED },
-            { "cone", PhysicsShapes::CONE },
-            { "convex_hull", PhysicsShapes::CONVEX_HULL },
-            { "plane", PhysicsShapes::PLANE },
-            { "mesh", PhysicsShapes::MESH },
-            { "compound", PhysicsShapes::COMPOUND },
-        };
+        static const std::unordered_map<std::string, PhysicsShapes>
+            kShapeMap = {
+                { "sphere", PhysicsShapes::SPHERE },
+                { "box", PhysicsShapes::BOX },
+                { "capsule", PhysicsShapes::CAPSULE },
+                { "capsule_tapered", PhysicsShapes::CAPSULE_TAPERED },
+                { "cylinder", PhysicsShapes::CYLINDER },
+                { "cylinder_tapered", PhysicsShapes::CYLINDER_TAPERED },
+                { "cone", PhysicsShapes::CONE },
+                { "convex_hull", PhysicsShapes::CONVEX_HULL },
+                { "plane", PhysicsShapes::PLANE },
+                { "mesh", PhysicsShapes::MESH },
+                { "compound", PhysicsShapes::COMPOUND },
+            };
 
         auto it = kShapeMap.find(shape);
         if (it != kShapeMap.end()) {
@@ -94,7 +95,8 @@ PhysicsShapes _ParsePhysicsShape(const sol::object& shapeObj,
     return fallback;
 }
 
-RigidbodyParameters _ParseRigidbodyParams(sol::optional<sol::table> maybeParams) {
+RigidbodyParameters
+_ParseRigidbodyParams(sol::optional<sol::table> maybeParams) {
     RigidbodyParameters params{};
     if (!maybeParams) {
         return params;
@@ -102,15 +104,16 @@ RigidbodyParameters _ParseRigidbodyParams(sol::optional<sol::table> maybeParams)
 
     const sol::table paramTable = *maybeParams;
 
-    params.mass = paramTable.get_or("mass", params.mass);
-    params.friction = paramTable.get_or("friction", params.friction);
+    params.mass        = paramTable.get_or("mass", params.mass);
+    params.friction    = paramTable.get_or("friction", params.friction);
     params.restitution = paramTable.get_or("restitution", params.restitution);
 
     const sol::object shapeObj = paramTable["shape"];
-    params.shape = _ParsePhysicsShape(shapeObj, params.shape);
+    params.shape               = _ParsePhysicsShape(shapeObj, params.shape);
 
     const sol::object shapeParamsObj = paramTable["shapeParameters"];
-    if (shapeParamsObj.valid() && shapeParamsObj.get_type() == sol::type::table) {
+    if (shapeParamsObj.valid() &&
+        shapeParamsObj.get_type() == sol::type::table) {
         params.shapeParameters.clear();
         sol::table shapeParamsTable = shapeParamsObj.as<sol::table>();
         for (size_t i = 1;; ++i) {
@@ -124,7 +127,8 @@ RigidbodyParameters _ParseRigidbodyParams(sol::optional<sol::table> maybeParams)
 
     const sol::object motionTypeObj = paramTable["motionType"];
     if (motionTypeObj.valid() && motionTypeObj.is<int>()) {
-        params.motionType = static_cast<JPH::EMotionType>(motionTypeObj.as<int>());
+        params.motionType =
+            static_cast<JPH::EMotionType>(motionTypeObj.as<int>());
     }
 
     const sol::object layerObj = paramTable["layer"];
@@ -138,9 +142,9 @@ RigidbodyParameters _ParseRigidbodyParams(sol::optional<sol::table> maybeParams)
 } // namespace
 
 // Static member definitions
-sol::state* LuaManager::m_luaState = nullptr;
-bool        LuaManager::m_initialized = false;
-bool        LuaManager::m_allowTicking = true;
+sol::state*              LuaManager::m_luaState     = nullptr;
+bool                     LuaManager::m_initialized  = false;
+bool                     LuaManager::m_allowTicking = true;
 std::vector<GameObject*> LuaManager::m_ownedObjects;
 LuaManager*              LuaManager::m_instance = nullptr;
 LuaLibs                  LuaManager::m_libs     = LuaLibs::DEFAULT;
@@ -159,7 +163,8 @@ sol::object _SynginePrint(sol::variadic_args va) {
         } else if (obj.is<bool>()) {
             output += obj.as<bool>() ? "true" : "false";
         } else if (obj.is<sol::table>()) {
-            output += "table: 0x" + std::to_string(reinterpret_cast<uintptr_t>(obj.as<sol::table>().pointer()));
+            output += "table: 0x" + std::to_string(reinterpret_cast<uintptr_t>(
+                                        obj.as<sol::table>().pointer()));
         } else if (obj.is<sol::function>()) {
             output +=
                 "function: 0x" + std::to_string(reinterpret_cast<uintptr_t>(
@@ -200,24 +205,22 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
             self.type = value;
         });
     gameObjectType["enabled"] = sol::property(
-        [](Syngine::GameObject& self) -> bool {
-            return self.enabled;
-        },
-        [](Syngine::GameObject& self, bool value) {
-            self.enabled = value;
-        });
-    gameObjectType["AddComponent"] = [&lua](sol::this_state,
-                                             Syngine::GameObject* obj,
-                                             std::string          type,
-                                             sol::variadic_args   args) -> sol::object {
+        [](Syngine::GameObject& self) -> bool { return self.enabled; },
+        [](Syngine::GameObject& self, bool value) { self.enabled = value; });
+    gameObjectType["AddComponent"] =
+        [&lua](sol::this_state,
+               Syngine::GameObject* obj,
+               std::string          type,
+               sol::variadic_args   args) -> sol::object {
         const std::string normalizedType = _NormalizeComponentType(type);
 
         if (normalizedType == "TransformComponent") {
             TransformComponent* comp = obj->AddComponent<TransformComponent>();
             if (!comp) {
-                Logger::LogF(LogLevel::ERR,
-                             "Failed to add component '%s' in Lua (already exists?)",
-                             type.c_str());
+                Logger::LogF(
+                    LogLevel::ERR,
+                    "Failed to add component '%s' in Lua (already exists?)",
+                    type.c_str());
                 return sol::lua_nil;
             }
             return sol::make_object(lua, comp);
@@ -237,7 +240,8 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
 
                 // bundle, path
                 if (arg0.is<std::string>() && arg1.is<std::string>()) {
-                    comp = obj->AddComponent<MeshComponent>(arg0.as<std::string>(), arg1.as<std::string>());
+                    comp = obj->AddComponent<MeshComponent>(
+                        arg0.as<std::string>(), arg1.as<std::string>());
                 }
             } else {
                 // Try to parse as (bundle, path, hasTextures)
@@ -245,18 +249,25 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                 sol::object arg1 = args[1];
                 sol::object arg2 = args[2];
 
-                if (arg0.is<std::string>() && arg1.is<std::string>() && arg2.is<bool>()) {
-                    comp = obj->AddComponent<MeshComponent>(arg0.as<std::string>(), arg1.as<std::string>(), arg2.as<bool>());
+                if (arg0.is<std::string>() && arg1.is<std::string>() &&
+                    arg2.is<bool>()) {
+                    comp =
+                        obj->AddComponent<MeshComponent>(arg0.as<std::string>(),
+                                                         arg1.as<std::string>(),
+                                                         arg2.as<bool>());
                 } else {
                     Logger::LogF(LogLevel::ERR,
-                                 "Invalid arguments for adding MeshComponent in Lua. Expected (bundle, path) or (bundle, path, hasTextures).");
+                                 "Invalid arguments for adding MeshComponent "
+                                 "in Lua. Expected (bundle, path) or (bundle, "
+                                 "path, hasTextures).");
                     return sol::lua_nil;
                 }
             }
 
             if (!comp) {
                 Logger::LogF(LogLevel::ERR,
-                             "Failed to add MeshComponent in Lua (bad args or already exists?)",
+                             "Failed to add MeshComponent in Lua (bad args or "
+                             "already exists?)",
                              type.c_str());
                 return sol::lua_nil;
             }
@@ -271,25 +282,29 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
             }
 
             const RigidbodyParameters rbParams = _ParseRigidbodyParams(params);
-            RigidbodyComponent* comp = obj->AddComponent<RigidbodyComponent>(rbParams);
+            RigidbodyComponent*       comp =
+                obj->AddComponent<RigidbodyComponent>(rbParams);
             if (!comp) {
-                Logger::LogF(LogLevel::ERR,
-                             "Failed to add component '%s' in Lua (already exists?)",
-                             type.c_str());
+                Logger::LogF(
+                    LogLevel::ERR,
+                    "Failed to add component '%s' in Lua (already exists?)",
+                    type.c_str());
                 return sol::lua_nil;
             }
             return sol::make_object(lua, comp);
         } else if (normalizedType == "BillboardComponent") {
             if (args.size() < 2) {
-                Logger::LogF(LogLevel::ERR,
-                             "Invalid arguments for adding BillboardComponent in Lua. Expected (bundlePath, imagePath[, mode[, size]]).");
+                Logger::LogF(
+                    LogLevel::ERR,
+                    "Invalid arguments for adding BillboardComponent in Lua. "
+                    "Expected (bundlePath, imagePath[, mode[, size]]).");
                 return sol::lua_nil;
             }
 
-            std::string bundlePath;
-            std::string texturePath;
+            std::string   bundlePath;
+            std::string   texturePath;
             BillboardMode mode = BillboardMode::CAMERA_ALIGNED;
-            float size = 1.0f;
+            float         size = 1.0f;
 
             // Parse args in order: (bundlePath, imagePath[, mode[, size]])
             if (args.size() >= 1 && args[0].is<std::string>()) {
@@ -299,7 +314,8 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                 texturePath = args[1].as<std::string>();
             } else {
                 Logger::LogF(LogLevel::ERR,
-                             "Invalid arguments for adding BillboardComponent in Lua. imagePath must be a string.");
+                             "Invalid arguments for adding BillboardComponent "
+                             "in Lua. imagePath must be a string.");
                 return sol::lua_nil;
             }
             if (args.size() >= 3 && args[2].is<std::string>()) {
@@ -312,7 +328,8 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                     mode = BillboardMode::FIXED;
                 } else {
                     Logger::LogF(LogLevel::ERR,
-                                 "Invalid billboard mode '%s' specified in Lua. Defaulting to CAMERA_ALIGNED.",
+                                 "Invalid billboard mode '%s' specified in "
+                                 "Lua. Defaulting to CAMERA_ALIGNED.",
                                  modeStr.c_str());
                 }
             }
@@ -320,26 +337,30 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                 size = static_cast<float>(args[3].as<double>());
             }
 
-            BillboardComponent* comp = obj->AddComponent<BillboardComponent>(bundlePath, texturePath, mode, size);
+            BillboardComponent* comp = obj->AddComponent<BillboardComponent>(
+                bundlePath, texturePath, mode, size);
             if (!comp) {
-                Logger::LogF(LogLevel::ERR,
-                             "Failed to add component '%s' in Lua (already exists?)",
-                             type.c_str());
+                Logger::LogF(
+                    LogLevel::ERR,
+                    "Failed to add component '%s' in Lua (already exists?)",
+                    type.c_str());
                 return sol::lua_nil;
             }
             return sol::make_object(lua, comp);
         } else if (normalizedType == "ZoneComponent") {
             if (args.size() < 3) {
-                Logger::LogF(LogLevel::ERR,
-                             "Invalid arguments for adding ZoneComponent in Lua. Expected (shape, position, size[, oneShot]).");
+                Logger::LogF(
+                    LogLevel::ERR,
+                    "Invalid arguments for adding ZoneComponent in Lua. "
+                    "Expected (shape, position, size[, oneShot]).");
                 return sol::lua_nil;
             }
 
-            ZoneShape shape = ZoneShape::BOX;
+            ZoneShape   shape    = ZoneShape::BOX;
             std::string shapeStr = "BOX";
-            float pos[3] = {0.0f, 0.0f, 0.0f};
-            float size[3] = {1.0f, 1.0f, 1.0f};
-            bool oneShot = false;
+            float       pos[3]   = { 0.0f, 0.0f, 0.0f };
+            float       size[3]  = { 1.0f, 1.0f, 1.0f };
+            bool        oneShot  = false;
 
             // Parse args in order: (shape, position, size[, oneShot])
             if (args.size() == 4 && args[0].is<std::string>() &&
@@ -353,13 +374,14 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                     shape = ZoneShape::SPHERE;
                 } else {
                     Logger::LogF(LogLevel::ERR,
-                                 "Invalid zone shape '%s' specified in Lua. Defaulting to BOX.",
+                                 "Invalid zone shape '%s' specified in Lua. "
+                                 "Defaulting to BOX.",
                                  shapeStr.c_str());
                 }
-                sol::table posTable = args[1].as<sol::table>();
+                sol::table posTable  = args[1].as<sol::table>();
                 sol::table sizeTable = args[2].as<sol::table>();
                 for (size_t i = 0; i < 3; ++i) {
-                    pos[i] = posTable.get_or(i + 1, pos[i]);
+                    pos[i]  = posTable.get_or(i + 1, pos[i]);
                     size[i] = sizeTable.get_or(i + 1, size[i]);
                 }
                 oneShot = args[3].as<bool>();
@@ -372,26 +394,31 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                     shape = ZoneShape::SPHERE;
                 } else {
                     Logger::LogF(LogLevel::ERR,
-                                 "Invalid zone shape '%s' specified in Lua. Defaulting to BOX.",
+                                 "Invalid zone shape '%s' specified in Lua. "
+                                 "Defaulting to BOX.",
                                  shapeStr.c_str());
                 }
-                sol::table posTable = args[1].as<sol::table>();
+                sol::table posTable  = args[1].as<sol::table>();
                 sol::table sizeTable = args[2].as<sol::table>();
                 for (size_t i = 0; i < 3; ++i) {
-                    pos[i] = posTable.get_or(i + 1, pos[i]);
+                    pos[i]  = posTable.get_or(i + 1, pos[i]);
                     size[i] = sizeTable.get_or(i + 1, size[i]);
                 }
             } else {
                 Logger::LogF(LogLevel::ERR,
-                             "Invalid arguments for adding ZoneComponent in Lua. Expected (shape, position, size[, oneShot]) with correct types.");
+                             "Invalid arguments for adding ZoneComponent in "
+                             "Lua. Expected (shape, position, size[, oneShot]) "
+                             "with correct types.");
                 return sol::lua_nil;
             }
 
-            ZoneComponent* comp = obj->AddComponent<ZoneComponent>(shape, pos, size, oneShot);
+            ZoneComponent* comp =
+                obj->AddComponent<ZoneComponent>(shape, pos, size, oneShot);
             if (!comp) {
-                Logger::LogF(LogLevel::ERR,
-                             "Failed to add component '%s' in Lua (already exists?)",
-                             type.c_str());
+                Logger::LogF(
+                    LogLevel::ERR,
+                    "Failed to add component '%s' in Lua (already exists?)",
+                    type.c_str());
                 return sol::lua_nil;
             }
             return sol::make_object(lua, comp);
@@ -403,7 +430,7 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
         }
     };
     gameObjectType["GetComponent"] = [&lua](Syngine::GameObject* obj,
-                                             std::string          type) -> sol::object {
+                                            std::string type) -> sol::object {
         const std::string normalizedType = _NormalizeComponentType(type);
 
         if (normalizedType == "TransformComponent") {
@@ -458,7 +485,8 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
     lua["scene"] = scene;
 }
 
-sol::object _AddComponent(sol::state_view lua, GameObject* obj, std::string type) {
+sol::object
+_AddComponent(sol::state_view lua, GameObject* obj, std::string type) {
     // For simplicity, we only support TransformComponent for now. In a real
     // implementation, you would have a factory or registry to create components
     // based on the type string.
@@ -474,22 +502,26 @@ sol::object _AddComponent(sol::state_view lua, GameObject* obj, std::string type
 }
 
 struct _LuaKeybind {
-    InputAction* m_action;
-    sol::optional<sol::function> m_onPressed = sol::nullopt;
-    sol::optional<sol::function> m_onReleased = sol::nullopt;
+    InputAction*                 m_action;
+    sol::optional<sol::function> m_onPressed      = sol::nullopt;
+    sol::optional<sol::function> m_onReleased     = sol::nullopt;
     sol::optional<sol::function> m_onStateChanged = sol::nullopt;
 
     _LuaKeybind& operator=(const _LuaKeybind&) = delete;
-    _LuaKeybind(const _LuaKeybind&) = delete;
+    _LuaKeybind(const _LuaKeybind&)            = delete;
 
     _LuaKeybind& operator=(_LuaKeybind&&) = default;
-    _LuaKeybind(_LuaKeybind&&) = default;
+    _LuaKeybind(_LuaKeybind&&)            = default;
 
     _LuaKeybind(const KeyBinding& binding = KeyBinding()) {
         static long long count = 0;
 
-        m_action = InputAction::RegisterAction("_LUA_INTERNAL_BINDING_DO_NOT_USE_" + std::to_string(count),
-            "", "_INTERNAL", binding, {
+        m_action = InputAction::RegisterAction(
+            "_LUA_INTERNAL_BINDING_DO_NOT_USE_" + std::to_string(count),
+            "",
+            "_INTERNAL",
+            binding,
+            {
                 .onPressed = [this]() -> void {
                     if (m_onPressed.has_value()) m_onPressed.value()();
                 },
@@ -497,14 +529,17 @@ struct _LuaKeybind {
                     if (m_onReleased.has_value()) m_onReleased.value()();
                 },
                 .onStateChanged = [this]() -> void {
-                    if (m_onStateChanged.has_value()) m_onStateChanged.value()();
+                    if (m_onStateChanged.has_value())
+                        m_onStateChanged.value()();
                 },
             });
         ++count;
     }
 };
 
-sol::object _NewKeybindFromKey(sol::this_state lua, const std::string& key, const std::string& type) {
+sol::object _NewKeybindFromKey(sol::this_state    lua,
+                               const std::string& key,
+                               const std::string& type) {
     KeyBinding binding;
 
     if (type == "keycode") {
@@ -512,12 +547,15 @@ sol::object _NewKeybindFromKey(sol::this_state lua, const std::string& key, cons
     } else if (type == "scancode") {
         binding = KeyBinding(StringToScancode(key));
     } else if (type == "mouse_button") {
-    } else return sol::lua_nil;
-    // shortcuts and sequences should have different arguments so this is garbage
+        binding = KeyBinding(StringToMouseButton(key));
+    } else
+        return sol::lua_nil;
+    // shortcuts and sequences should have different arguments so this is
+    // garbage
 
-    if (binding == KeyBinding(Keycode::_UNKNOWN)
-        || binding == KeyBinding(Scancode::_UNKNOWN)
-        || binding == KeyBinding(MouseButton::_UNKNOWN))
+    if (binding == KeyBinding(Keycode::_UNKNOWN) ||
+        binding == KeyBinding(Scancode::_UNKNOWN) ||
+        binding == KeyBinding(MouseButton::_UNKNOWN))
         return sol::lua_nil;
     // Conversion failed, return nil instead of an object in a strange state
 
@@ -525,70 +563,79 @@ sol::object _NewKeybindFromKey(sol::this_state lua, const std::string& key, cons
     return sol::make_object(lua, result);
 }
 
-sol::object _NewKeybindFromCompound(sol::this_state lua, const sol::table& key, const std::string& type) {
-    if (type == "shortcut") {
+sol::object _NewKeybindFromShortcut(sol::this_state            lua,
+                                    const std::string&         key,
+                                    const sol::table&          mods,
+                                    sol::optional<std::string> type) {
+    KeyBinding binding;
+    std::vector<std::string> modNames = std::vector<std::string>();
+    std::string              keyType  = "keycode";
 
-    } else if (type == "sequence") {
+    if (type) keyType = type.value();
 
-    } else return sol::lua_nil;
-    // keycodes, scancodes, and mouse buttons should have different arguments so this is garbage
+    for (int i = 1; i <= mods.size(); ++i) {
+        if (mods[i].is<std::string>()) modNames.push_back(mods[i]);
+    }
 
-    return sol::lua_nil; // TODO: Implement shortcuts and sequences
+    Logger::Info(key);
+    for (auto mod : modNames) {
+        Logger::Info(mod);
+    }
+
+    Keymod parsedMods = StringToKeymod(modNames);
+
+    if (keyType == "keycode") {
+        Keycode parsedKey = StringToKeycode(key);
+        if (parsedKey == Keycode::_UNKNOWN) return sol::lua_nil;
+        binding = KeyBinding(KeyShortcut(parsedKey, parsedMods));
+    } else if (keyType == "scancode") {
+        Scancode parsedKey = StringToScancode(key);
+        if (parsedKey == Scancode::_UNKNOWN) return sol::lua_nil;
+        binding = KeyBinding(KeyShortcut(parsedKey, parsedMods));
+    } else {
+        return sol::lua_nil;
+    }
+
+    auto result = std::make_shared<_LuaKeybind>(binding);
+    return sol::make_object(lua, result);
 }
 
 void LuaManager::_RegisterInputBindings(sol::state& lua) {
     auto keybind = lua.new_usertype<_LuaKeybind>("Keybind");
 
     keybind["isPressed"] = sol::property(
-        [](_LuaKeybind& self) -> bool {
-            return self.m_action->isPressed();
-        }
-    );
+        [](_LuaKeybind& self) -> bool { return self.m_action->isPressed(); });
 
     keybind["wasPressed"] = sol::property(
-        [](_LuaKeybind& self) -> bool {
-            return self.m_action->wasPressed();
-        }
-    );
+        [](_LuaKeybind& self) -> bool { return self.m_action->wasPressed(); });
 
     keybind["wasReleased"] = sol::property(
-        [](_LuaKeybind& self) -> bool {
-            return self.m_action->wasReleased();
-        }
-    );
+        [](_LuaKeybind& self) -> bool { return self.m_action->wasReleased(); });
 
-    keybind["stateChanged"] = sol::property(
-        [](_LuaKeybind& self) -> bool {
-            return self.m_action->stateChanged();
-        }
-    );
+    keybind["stateChanged"] = sol::property([](_LuaKeybind& self) -> bool {
+        return self.m_action->stateChanged();
+    });
 
     keybind["onPressed"] = sol::property(
         [](_LuaKeybind& self) -> sol::optional<sol::function> {
             return self.m_onPressed;
         },
-        [](_LuaKeybind& self, const sol::optional<sol::function>& callback) -> void {
-            self.m_onPressed = callback;
-        }
-    );
+        [](_LuaKeybind& self, const sol::optional<sol::function>& callback)
+            -> void { self.m_onPressed = callback; });
 
     keybind["onReleased"] = sol::property(
         [](_LuaKeybind& self) -> sol::optional<sol::function> {
             return self.m_onReleased;
         },
-        [](_LuaKeybind& self, const sol::optional<sol::function>& callback) -> void {
-            self.m_onReleased = callback;
-        }
-    );
+        [](_LuaKeybind& self, const sol::optional<sol::function>& callback)
+            -> void { self.m_onReleased = callback; });
 
     keybind["onStateChanged"] = sol::property(
         [](_LuaKeybind& self) -> sol::optional<sol::function> {
             return self.m_onStateChanged;
         },
-        [](_LuaKeybind& self, const sol::optional<sol::function>& callback) -> void {
-            self.m_onStateChanged = callback;
-        }
-    );
+        [](_LuaKeybind& self, const sol::optional<sol::function>& callback)
+            -> void { self.m_onStateChanged = callback; });
 }
 
 // Custom require function that looks for Lua scripts in the "scripts" directory
@@ -602,7 +649,8 @@ sol::object _CustomRequire(sol::this_state ts, const std::string& moduleName) {
     std::string sanitizedModuleName = moduleName;
     if (sanitizedModuleName.size() >= 4 &&
         sanitizedModuleName.substr(sanitizedModuleName.size() - 4) == ".lua") {
-        sanitizedModuleName = sanitizedModuleName.substr(0, sanitizedModuleName.size() - 4);
+        sanitizedModuleName =
+            sanitizedModuleName.substr(0, sanitizedModuleName.size() - 4);
     }
     // Remove any directory traversal attempts (../ or ..\) from the module name
     while (true) {
@@ -621,7 +669,8 @@ sol::object _CustomRequire(sol::this_state ts, const std::string& moduleName) {
     }
 
     // Construct the full path to the Lua script in the "scripts" directory
-    std::string fullModuleName =  _GetAppDataPath("scripts/" + sanitizedModuleName + ".lua").string();
+    std::string fullModuleName =
+        _GetAppDataPath("scripts/" + sanitizedModuleName + ".lua").string();
     Logger::LogF(
         LogLevel::INFO, "Requiring Lua module: %s", fullModuleName.c_str());
 
@@ -662,9 +711,9 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
     sol::table base = lua["base"];
     if (base.valid()) {
         if (removeBase) {
-            base["dofile"] = nullptr;
-            base["loadfile"] = nullptr;
-            base["loadstring"] = nullptr;
+            base["dofile"]         = nullptr;
+            base["loadfile"]       = nullptr;
+            base["loadstring"]     = nullptr;
             base["collectgarbage"] = nullptr;
             base["require"]        = _CustomRequire;
             base["package"]        = nullptr;
@@ -672,11 +721,11 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
             base["module"]         = nullptr;
         }
         if (removeDebug) {
-            lua["debug"] = nullptr;
+            lua["debug"]  = nullptr;
             base["print"] = nullptr;
         }
         if (removeError) {
-            base["error"] = nullptr;
+            base["error"]  = nullptr;
             base["xpcall"] = nullptr;
             base["pcall"]  = nullptr;
             base["assert"] = nullptr;
@@ -689,10 +738,10 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
             lua["os"] = nullptr;
         }
         if (removeRaw) {
-            base["rawset"]         = nullptr;
-            base["rawget"]         = nullptr;
-            base["rawequal"]       = nullptr;
-            base["rawlen"]         = nullptr;
+            base["rawset"]   = nullptr;
+            base["rawget"]   = nullptr;
+            base["rawequal"] = nullptr;
+            base["rawlen"]   = nullptr;
         }
         if (removeMetatables) {
             base["setmetatable"] = nullptr;
@@ -702,8 +751,8 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
             lua["coroutine"] = nullptr;
         }
 
-        /* sol::object _NewKeybind(sol::this_state lua, const std::string& key) {
-    return _NewKeybindFromKey(lua, key, "keycode");
+        /* sol::object _NewKeybind(sol::this_state lua, const std::string& key)
+{ return _NewKeybindFromKey(lua, key, "keycode");
 } */
 
         // Add in our own
@@ -711,11 +760,10 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
             lua["syngine"] = lua.create_table_with("log", _SynginePrint);
             lua["syngine"]["newKeybind"] = sol::overload(
                 &_NewKeybindFromKey,
-                &_NewKeybindFromCompound,
+                &_NewKeybindFromShortcut,
                 [](sol::this_state lua, const std::string& key) -> sol::object {
                     return _NewKeybindFromKey(lua, key, "keycode");
-                }
-            );
+                });
             _RegisterEntityBindings(lua);
             _RegisterInputBindings(lua);
             ComponentRegistry::_RegisterAllLuaBindings(lua);
@@ -725,10 +773,11 @@ void LuaManager::_RemoveBaseFuncs(sol::state& lua,
 
 LuaManager::LuaManager(LuaLibs args) {
     m_initialized = false;
-    m_luaState = new sol::state();
+    m_luaState    = new sol::state();
 
     if (!m_luaState) {
-        Logger::Error("Failed to create Lua state. Check the log for more details.");
+        Logger::Error(
+            "Failed to create Lua state. Check the log for more details.");
         return;
     }
 
@@ -784,9 +833,8 @@ void LuaManager::SafeScript(const std::string& script) {
 
     if (!result.valid()) {
         const sol::error err = result;
-        Logger::LogF(LogLevel::ERR,
-                     "Lua error during script execution: %s",
-                     err.what());
+        Logger::LogF(
+            LogLevel::ERR, "Lua error during script execution: %s", err.what());
     }
 }
 
@@ -809,7 +857,9 @@ void LuaManager::SafeFile(const std::string& filePath) {
 }
 
 template <typename Func>
-void LuaManager::AddFunction(const std::string& name, Func func, const std::string& table) {
+void LuaManager::AddFunction(const std::string& name,
+                             Func               func,
+                             const std::string& table) {
     if (!m_luaState) {
         Logger::Error("Lua state is not initialized. Cannot add function.");
         return;
@@ -845,9 +895,9 @@ void LuaManager::_ReloadLuaState() {
         m_luaState = nullptr;
     }
 
-    m_initialized = false;
+    m_initialized  = false;
     m_allowTicking = true; // Re-enable ticking on reload
-    m_luaState    = new sol::state();
+    m_luaState     = new sol::state();
 
     if (!m_luaState) {
         Logger::Error("Failed to recreate Lua state during reload.");
@@ -897,7 +947,9 @@ bool LuaManager::HasObject(const std::string& name) {
     return obj.valid() && obj.get_type() != sol::type::lua_nil;
 }
 
-void LuaManager::DoFunction(const std::string& funcName, const void* data, size_t dataSize) {
+void LuaManager::DoFunction(const std::string& funcName,
+                            const void*        data,
+                            size_t             dataSize) {
     if (!m_luaState) {
         Logger::Error("Lua state is not initialized. Cannot call function.");
         return;
@@ -915,7 +967,8 @@ void LuaManager::DoFunction(const std::string& funcName, const void* data, size_
         return;
     }
 
-    std::vector<char> args = std::vector<char>((char*)data, (char*)data + dataSize);
+    std::vector<char> args =
+        std::vector<char>((char*)data, (char*)data + dataSize);
     sol::protected_function_result result = func(sol::as_args(args));
     if (!result.valid()) {
         sol::error err = result;
@@ -923,12 +976,16 @@ void LuaManager::DoFunction(const std::string& funcName, const void* data, size_
                      "Lua error during function call '%s': %s",
                      funcName.c_str(),
                      err.what());
-        m_allowTicking = false; // Prevent further calls to Lua functions until reload to avoid spamming errors
+        m_allowTicking = false; // Prevent further calls to Lua functions until
+                                // reload to avoid spamming errors
     }
 }
 
-// This is pretty much a special overload of DoFunction without logging and fixed numerical args
-void LuaManager::DoTick(float physDeltaTime, float realDeltaTime, bool isSimulating) {
+// This is pretty much a special overload of DoFunction without logging and
+// fixed numerical args
+void LuaManager::DoTick(float physDeltaTime,
+                        float realDeltaTime,
+                        bool  isSimulating) {
     if (!m_luaState) {
         return;
     }
@@ -942,13 +999,15 @@ void LuaManager::DoTick(float physDeltaTime, float realDeltaTime, bool isSimulat
         return;
     }
 
-    sol::protected_function_result result = func(physDeltaTime, realDeltaTime, isSimulating);
+    sol::protected_function_result result =
+        func(physDeltaTime, realDeltaTime, isSimulating);
     if (!result.valid()) {
         sol::error err = result;
         Logger::LogF(LogLevel::ERR,
                      "Lua error during function call 'onTick': %s",
                      err.what());
-        m_allowTicking = false; // Prevent further calls to Lua functions until reload to avoid spamming errors
+        m_allowTicking = false; // Prevent further calls to Lua functions until
+                                // reload to avoid spamming errors
     }
 }
 

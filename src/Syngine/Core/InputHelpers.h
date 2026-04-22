@@ -748,14 +748,13 @@ struct Keymod {
     /// @note Equivalent to `LEFT_GUI` and `LEFT_COMMAND`
     static constexpr uint16_t LEFT_WINDOWS = SDL_KMOD_LGUI;
 
-    /// @note Equivalent to `RIGHT_COMMANd` and `RIGHT_WINDOWS`
+    /// @note Equivalent to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
     static constexpr uint16_t RIGHT_GUI = SDL_KMOD_RGUI;
     /// @note Equivalent to `RIGHT_GUI` and `RIGHT_WINDOWS`
     static constexpr uint16_t RIGHT_COMMAND = SDL_KMOD_RGUI;
     /// @note Equivalent to `RIGHT_GUI` and `RIGHT_COMMAND`
     static constexpr uint16_t RIGHT_WINDOWS = SDL_KMOD_RGUI;
-
-    static constexpr uint16_t MODE    = SDL_KMOD_MODE;
+    
     static constexpr uint16_t CONTROL = SDL_KMOD_CTRL;
     static constexpr uint16_t SHIFT   = SDL_KMOD_SHIFT;
 
@@ -826,6 +825,14 @@ struct Keymod {
     /// @since 0.0.1
     constexpr bool operator==(const Keymod& other) const {
         return this->_rawValue == other._rawValue;
+    }
+
+    constexpr Keymod operator&&(const Keymod& other) const {
+        return this->_rawValue & other._rawValue;
+    }
+
+    constexpr bool contains(const Keymod& other) const {
+        return (*this && other) != NONE;
     }
 
     /// @brief Convert a ``SDL_Keymod`` to a ``Keymod``
