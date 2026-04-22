@@ -13,6 +13,7 @@
 
 namespace sol {
 class state; // forward declaration
+struct variadic_args;
 }
 
 namespace Syngine {
@@ -50,6 +51,7 @@ class LuaManager {
     static sol::state* m_luaState;
     static sol::state* _GetState() { return m_luaState; }
     static bool        m_initialized;
+    static bool        m_allowTicking; // Whether to allow ticking Lua scripts (set to false during reloads)
 
     static void _RegisterEntityBindings(sol::state& lua);
     static void _RegisterInputBindings(sol::state& lua);
@@ -112,6 +114,39 @@ class LuaManager {
     /// @param func The C++ function to bind to Lua
     /// @param table Optional table name to add the function to (e.g., "syngine"). If empty, the function will be added to the global namespace.
     template <typename Func>
-    static void AddFunction(const std::string& name, Func func, const std::string& table = "");
+    static void AddFunction(const std::string& name,
+                            Func               func,
+                            const std::string& table = "");
+
+    /// @brief Check if the Lua state has an object with the given name
+    /// @param name The name of the object to check for
+    /// @return True if the object exists in the Lua state, false otherwise
+    static bool HasObject(const std::string& name);
+
+    /// @brief Does a function if it exists in the Lua state, with the given
+    /// arguments
+    /// @param funcName The name of the function to call
+    /// @param data Pointer to the data to pass as arguments
+    /// @param dataSize Size of the data in bytes
+    static void
+    DoFunction(const std::string& funcName, const void* data, size_t dataSize);
+
+    /// @brief Ticks the Lua state by calling the "onTick" function if it
+    /// exists, with the given delta time
+    /// @param physDeltaTime The time elapsed since the last physics tick, in seconds
+    /// @param realDeltaTime The real time elapsed since the last tick, in seconds (not affected by time scaling)
+    /// @param simulating Whether the simulation is currently running
+    static void DoTick(float physDeltaTime, float realDeltaTime, bool simulating);
+
+    /// @brief Set whether to allow ticking Lua scripts (used to prevent ticking
+    /// during reloads)
+    /// @param allow True to allow ticking, false to prevent it
+    /// @return The previous allow ticking state
+    static inline bool SetAllowTicking(bool allow) {
+        bool previous = m_allowTicking;
+        m_allowTicking = allow;
+        return previous;
+    }
 };
+
 } // namespace Syngine

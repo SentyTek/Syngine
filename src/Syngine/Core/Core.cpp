@@ -6,6 +6,8 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
+#include <sol/variadic_args.hpp>
+#include <vector>
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -311,56 +313,81 @@ bool Core::HandleEvents() {
 
 bool Core::Update() {
     SYN_PROFILE_FUNCTION();
+
+    if (m_internal.last == 0) {
+        // Prime the timer so the first frame doesn't accumulate a huge dt.
+        m_internal.now  = SDL_GetPerformanceCounter();
+        m_internal.last = m_internal.now;
+        deltaTime       = 0.0f;
+        return true;
+    }
+
     m_internal.last = m_internal.now;
     m_internal.now  = SDL_GetPerformanceCounter();
     deltaTime       = (m_internal.now - m_internal.last) /
                 (float)SDL_GetPerformanceFrequency();
+
+    // Cap dt after stalls (breakpoints, app suspend) to avoid runaway fixed-step loops.
+    if (deltaTime > 0.25f) {
+        deltaTime = 0.25f;
+    }
+
     m_frameCounts.updates++;
 
-    // Simulate physics
-    if (m_context->physicsManager && m_internal.simulate) {
-        m_internal.accumulator += deltaTime;
+    m_internal.accumulator += deltaTime;
+    while (m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
+        // Do tick
+        if (m_internal.simulate) {
+            // Physics step
+            if (m_context->physicsManager) {
+            m_context->physicsManager->_Update(
+                m_internal.DEFAULT_PHYSICS_TIMESTEP,
+                m_internal.DEFAULT_PHYSICS_STEPS);
+            }
 
-        while (m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
-            m_context->physicsManager->_Update(m_internal.DEFAULT_PHYSICS_TIMESTEP,
-                                           m_internal.DEFAULT_PHYSICS_STEPS);
-            m_internal.accumulator -= m_internal.DEFAULT_PHYSICS_TIMESTEP;
-            m_frameCounter.physCounter++;
-        }
-    }
+            // Polymorphic component update loop - iterate all GameObjects
+            auto& allGameObjects = Registry::GetAllGameObjects();
 
-    if (m_internal.simulate) {
-        // Polymorphic component update loop - iterate all GameObjects
-        auto& allGameObjects = Registry::GetAllGameObjects();
+            // Update all components
+            for (auto& [id, go] : allGameObjects) {
+                if (!go) continue;
+                const auto& components = go->GetComponents();
+                for (const auto& [typeId, component] : components) {
+                    if (component && component->isEnabled) {
+                        component->Update(deltaTime);
+                    }
+                }
+            }
 
-        // Update all components
-        for (auto& [id, go] : allGameObjects) {
-            if (!go) continue;
-            const auto& components = go->GetComponents();
-            for (const auto& [typeId, component] : components) {
-                if (component && component->isEnabled) {
-                    component->Update(deltaTime);
+            // Update zones
+            m_context->zoneManager->_UpdateZones();
+
+            // Post physics update - call after physics step
+            for (auto& [id, go] : allGameObjects) {
+                if (!go) continue;
+                const auto& components = go->GetComponents();
+                for (const auto& [typeId, component] : components) {
+                    if (component && component->isEnabled) {
+                        component->PostPhysicsUpdate();
+                    }
                 }
             }
         }
 
-        // Update zones
-        m_context->zoneManager->_UpdateZones();
-
-        // Post physics update - call after physics step
-        for (auto& [id, go] : allGameObjects) {
-            if (!go) continue;
-            const auto& components = go->GetComponents();
-            for (const auto& [typeId, component] : components) {
-                if (component && component->isEnabled) {
-                    component->PostPhysicsUpdate();
-                }
-            }
+        // Tick Lua scripts
+        if (m_context->luaState) {
+            m_context->luaState->DoTick(m_internal.DEFAULT_PHYSICS_TIMESTEP,
+                                        deltaTime,
+                                        m_internal.simulate);
         }
-    }
 
-    m_frameCounter.Update(
-        deltaTime, m_internal.simulate, Registry::GetGameObjectCount());
+        m_internal.accumulator -= m_internal.DEFAULT_PHYSICS_TIMESTEP;
+        m_frameCounter.physCounter++;
+
+        // Update frame counter and log FPS/TPS every second regardless of simulation state
+        m_frameCounter.Update(
+            deltaTime, m_internal.simulate, Registry::GetGameObjectCount());
+    }
 
     return true;
 }

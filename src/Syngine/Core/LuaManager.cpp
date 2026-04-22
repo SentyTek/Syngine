@@ -12,7 +12,7 @@
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/Utils/FsUtils.h"
-#include <sol/types.hpp>
+#include "Syngine/Core/Core.h"
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
@@ -140,6 +140,7 @@ RigidbodyParameters _ParseRigidbodyParams(sol::optional<sol::table> maybeParams)
 // Static member definitions
 sol::state* LuaManager::m_luaState = nullptr;
 bool        LuaManager::m_initialized = false;
+bool        LuaManager::m_allowTicking = true;
 std::vector<GameObject*> LuaManager::m_ownedObjects;
 LuaManager*              LuaManager::m_instance = nullptr;
 LuaLibs                  LuaManager::m_libs     = LuaLibs::DEFAULT;
@@ -843,6 +844,7 @@ void LuaManager::_ReloadLuaState() {
     }
 
     m_initialized = false;
+    m_allowTicking = true; // Re-enable ticking on reload
     m_luaState    = new sol::state();
 
     if (!m_luaState) {
@@ -881,6 +883,71 @@ void LuaManager::_ReloadLuaState() {
     m_initialized = true;
 
     Logger::Log("Lua state reloaded successfully.");
+}
+
+bool LuaManager::HasObject(const std::string& name) {
+    if (!m_luaState) {
+        Logger::Error("Lua state is not initialized. Cannot check for object.");
+        return false;
+    }
+
+    sol::object obj = (*m_luaState)[name];
+    return obj.valid() && obj.get_type() != sol::type::lua_nil;
+}
+
+void LuaManager::DoFunction(const std::string& funcName, const void* data, size_t dataSize) {
+    if (!m_luaState) {
+        Logger::Error("Lua state is not initialized. Cannot call function.");
+        return;
+    }
+
+    if (!m_allowTicking) {
+        return;
+    }
+
+    sol::function func = (*m_luaState)[funcName];
+    if (!func.valid()) {
+        Logger::LogF(LogLevel::WARN,
+                     "Lua function '%s' does not exist. Skipping call.",
+                     funcName.c_str());
+        return;
+    }
+
+    std::vector<char> args = std::vector<char>((char*)data, (char*)data + dataSize);
+    sol::protected_function_result result = func(sol::as_args(args));
+    if (!result.valid()) {
+        sol::error err = result;
+        Logger::LogF(LogLevel::ERR,
+                     "Lua error during function call '%s': %s",
+                     funcName.c_str(),
+                     err.what());
+        m_allowTicking = false; // Prevent further calls to Lua functions until reload to avoid spamming errors
+    }
+}
+
+// This is pretty much a special overload of DoFunction without logging and fixed numerical args
+void LuaManager::DoTick(float physDeltaTime, float realDeltaTime, bool isSimulating) {
+    if (!m_luaState) {
+        return;
+    }
+
+    if (!m_allowTicking) {
+        return;
+    }
+
+    sol::function func = (*m_luaState)["onTick"];
+    if (!func.valid()) {
+        return;
+    }
+
+    sol::protected_function_result result = func(physDeltaTime, realDeltaTime, isSimulating);
+    if (!result.valid()) {
+        sol::error err = result;
+        Logger::LogF(LogLevel::ERR,
+                     "Lua error during function call 'onTick': %s",
+                     err.what());
+        m_allowTicking = false; // Prevent further calls to Lua functions until reload to avoid spamming errors
+    }
 }
 
 } // namespace Syngine
