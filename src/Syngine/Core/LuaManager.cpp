@@ -831,6 +831,8 @@ void LuaManager::AddFunction(const std::string& name, Func func, const std::stri
 void LuaManager::_ReloadLuaState() {
     Logger::Log("Reloading Lua state...");
 
+    DoFunction("onModUnload", 0, 0);
+
     // Clean up owned GameObjects
     for (GameObject* obj : m_ownedObjects) {
         delete obj;

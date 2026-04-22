@@ -88,6 +88,10 @@ Core::~Core() {
     Syngine::Registry::Clear();
 
     if (m_context) {
+        if (m_context->luaState) {
+            m_context->luaState->DoFunction("onModUnload", 0, 0);
+            m_context->luaState.reset();
+        }
         if (m_context->synModels) {
             // Don't call _UnloadAllMeshes() here because Registry::Clear() has
             // already done it for us. Doing it again causes a
