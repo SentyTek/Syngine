@@ -2,7 +2,7 @@ $input a_position a_normal a_tangent a_texcoord0 a_texcoord1
 $output v_uvMacro v_uvDetail v_normal v_tangent v_worldPos v_viewDepth v_uvScaled
 #include <bgfx_shader.sh>
 
-uniform mat3 u_normalMatrix;
+uniform mat4 u_normalMatrix;
 uniform vec4 u_uvScale; // x = uvScaleAlbedo, y = uvScaleNormal, z = uvScaleHeight, w = unused
 uniform vec4 u_materialParams1; // x = mixFactor for normal mapping, y = ambient multiplier, z = uvOverride, w = use vertex color
 
@@ -25,7 +25,7 @@ void main() {
     }
     v_uvScaled = vec4(uvScaleAlbedo, uvScaleNormal, uvScaleHeight, 0.0);
     //normals/tangents
-    v_normal    = normalize( mul(u_normalMatrix, a_normal) );
-    vec3 t      = normalize( mul(u_normalMatrix, a_tangent.xyz) );
+    v_normal    = normalize(mul(u_normalMatrix, vec4(a_normal, 0.0)).xyz);
+    vec3 t      = normalize(mul(u_normalMatrix, vec4(a_tangent.xyz, 0.0)).xyz);
     v_tangent   = vec4( t, a_tangent.w );
 }

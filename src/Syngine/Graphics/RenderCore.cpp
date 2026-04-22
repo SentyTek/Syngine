@@ -308,7 +308,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     m_defaultUniformIds.insert(
         { "u_default_normalMatrix",
           Renderer::RegisterUniform(
-              m_internalPrograms.defaultProgram, "u_normalMatrix", UniformType::UNIFORM_MAT3) });
+              m_internalPrograms.defaultProgram, "u_normalMatrix", UniformType::UNIFORM_MAT4) });
     m_defaultUniformIds.insert(
         { "u_default_floats",
           Renderer::RegisterUniform(
@@ -375,7 +375,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         { "u_texture_normalMatrix",
           Renderer::RegisterUniform(m_internalPrograms.textureProgram,
                                     "u_normalMatrix",
-                                    UniformType::UNIFORM_MAT3) });
+                                    UniformType::UNIFORM_MAT4) });
     m_defaultUniformIds.insert(
         { "u_texture_uvScales",
           Renderer::RegisterUniform(m_internalPrograms.textureProgram,
@@ -1047,16 +1047,16 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
         float modelMtx[16];
         go->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
 
-        float sx = bx::length(bx::Vec3(modelMtx[0], modelMtx[1], modelMtx[2]));
-        float sy = bx::length(bx::Vec3(modelMtx[4], modelMtx[5], modelMtx[6]));
-        float sz = bx::length(bx::Vec3(modelMtx[8], modelMtx[9], modelMtx[10]));
+        float det =
+            modelMtx[0] * (modelMtx[5] * modelMtx[10] - modelMtx[6] * modelMtx[9]) -
+            modelMtx[1] * (modelMtx[4] * modelMtx[10] - modelMtx[6] * modelMtx[8]) +
+            modelMtx[2] * (modelMtx[4] * modelMtx[9] - modelMtx[5] * modelMtx[8]);
 
-        float normal3x3[9];
-        for(int i = 0; i < 3; ++i) {
-            normal3x3[i * 3 + 0] = modelMtx[i * 4 + 0] / sx;
-            normal3x3[i * 3 + 1] = modelMtx[i * 4 + 1] / sy;
-            normal3x3[i * 3 + 2] = modelMtx[i * 4 + 2] / sz;
-        }
+        bool mirrored = det < 0.0f;
+
+        float normalMatrix[16];
+        bx::mtxInverse(normalMatrix, modelMtx);
+        bx::mtxTranspose(normalMatrix, normalMatrix);
 
         // Emit one packet per submesh
         for (size_t submeshIdx = 0; submeshIdx < meshData.subMeshes.size(); ++submeshIdx) {
@@ -1083,10 +1083,11 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             Uniform* uModel = Renderer::GetUniform(handle);
             if (uModel) {
                 matInst.uniforms.push_back(
-                    { uModel->handle, std::vector<float>(normal3x3, normal3x3 + 9), 1 });
+                    { uModel->handle, std::vector<float>(normalMatrix, normalMatrix + 16), 1 });
             }
 
-            matInst.renderState = BGFX_STATE_DEFAULT | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_CULL_CW;
+            // This looks backwards, because it is. But so are the meshes. So it cancels out.
+            matInst.renderState = (mirrored ? BGFX_STATE_CULL_CW : BGFX_STATE_FRONT_CCW);
 
             // Material and uniforms
             {
@@ -1294,7 +1295,8 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
     bgfx::setViewName(VIEW_FORWARD, "Forward");
     bgfx::setViewFrameBuffer(VIEW_FORWARD, m_buffers.sceneFB);
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
-                                 BGFX_STATE_FRONT_CCW | BGFX_STATE_CULL_CW | BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_Z;
+                                 BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_Z |
+                                 BGFX_STATE_DEPTH_TEST_LESS;
 
     for (auto& packet : m_renderPackets) {
         if (program.program.idx != packet.program.program.idx) continue; // Skip if not matching program
@@ -1696,10 +1698,10 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                               uint16_t(Renderer::height));
             bgfx::setViewClear(
                 view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
-            float  skyView[16];
-            bx::memCopy(skyView, cam.view, sizeof(skyView));
-            skyView[12] = skyView[13] = skyView[14] = 0.0f;
-            bgfx::setViewTransform(view, skyView, cam.proj);
+
+            camera->Update(view, Renderer::width, Renderer::height);
+            Camera cam = camera->GetCamera();
+            bgfx::setViewTransform(view, cam.view, cam.proj);
             break;
         }
         case VIEW_AO:
