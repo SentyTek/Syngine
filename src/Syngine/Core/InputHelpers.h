@@ -754,7 +754,7 @@ struct Keymod {
     static constexpr uint16_t RIGHT_COMMAND = SDL_KMOD_RGUI;
     /// @note Equivalent to `RIGHT_GUI` and `RIGHT_COMMAND`
     static constexpr uint16_t RIGHT_WINDOWS = SDL_KMOD_RGUI;
-    
+
     static constexpr uint16_t CONTROL = SDL_KMOD_CTRL;
     static constexpr uint16_t SHIFT   = SDL_KMOD_SHIFT;
 
