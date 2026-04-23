@@ -164,7 +164,7 @@ echo                                          .vsync           = true,
 echo                                          .usePseudoCamera = false };
 echo.
 echo     Syngine::Logger::Init^(gameName^);
-echo     Syngine::Logger::Log^("Starting " + gameName^);
+echo     Syngine::Logger::Info^("Starting " + gameName^, true^);
 echo.
 echo     // Create game
 echo     Syngine::Core engine^(config^);
@@ -174,7 +174,7 @@ echo     // Create default camera
 echo     Syngine::GameObject* camera = new Syngine::GameObject^("MainCamera"^);
 echo     Syngine::CameraComponent* cameraComp = camera-^>AddComponent^<Syngine::CameraComponent^>^(^);
 echo.
-echo     Logger::Info^("Starting event loop"^);
+echo     Logger::Info^("Starting event loop"^, true^);
 echo     while ^(engine.IsRunning^(^)^) {
 echo         Profiler::Reset^(^);
 echo         {

@@ -218,7 +218,11 @@ void RigidbodyComponent::RetryInitIfPending() {
         return;
     }
 
-    Syngine::Logger::LogF(LogLevel::INFO, "RigidbodyComponent: Retrying initialization for GameObject '%s'", m_owner->name.c_str());
+    Syngine::Logger::LogF(
+        LogLevel::INFO,
+        true,
+        "RigidbodyComponent: Retrying initialization for GameObject '%s'",
+        m_owner->name.c_str());
     Init(pendingParams);
 }
 

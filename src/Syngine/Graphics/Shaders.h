@@ -36,7 +36,7 @@ inline bgfx::ShaderHandle _LoadShader(const char* shaderPath)
     std::string path = Syngine::_ResolveOSPath(shaderPath);
     if (!fs::exists(path))
     {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                                "LoadShader: file not found: %s",
                                path.c_str());
         return BGFX_INVALID_HANDLE;
@@ -45,7 +45,7 @@ inline bgfx::ShaderHandle _LoadShader(const char* shaderPath)
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     if (!file)
     {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                                "LoadShader: unable to open: %s",
                                path.c_str());
         return BGFX_INVALID_HANDLE;
@@ -54,7 +54,7 @@ inline bgfx::ShaderHandle _LoadShader(const char* shaderPath)
     auto size = file.tellg();
     if (size <= 0)
     {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                                "LoadShader: bad size: %s",
                                path.c_str());
         return BGFX_INVALID_HANDLE;
@@ -64,7 +64,7 @@ inline bgfx::ShaderHandle _LoadShader(const char* shaderPath)
     std::vector<uint8_t> buffer((size_t)size);
     if (!file.read(reinterpret_cast<char*>(buffer.data()), size))
     {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                                "LoadShader: read failed: %s",
                                path.c_str());
         return BGFX_INVALID_HANDLE;
@@ -76,7 +76,7 @@ inline bgfx::ShaderHandle _LoadShader(const char* shaderPath)
 
 inline bgfx::ShaderHandle _LoadShaderFromMemory(const void* data, size_t size) {
     if (!data || size == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                                "LoadShaderFromMemory: invalid data or size");
         return BGFX_INVALID_HANDLE;
     }
@@ -89,7 +89,7 @@ inline bgfx::ShaderHandle _LoadShaderFromBundle(const std::string& bundlePath, c
     scl::stream stream = Serializer::_ReadFromBundle(bundlePath, shaderName);
     if (stream.size() == 0) {
         Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR,
+            Syngine::LogLevel::ERR, true,
             "LoadShaderFromBundle: failed to read shader '%s' from bundle '%s'",
             shaderName.c_str(),
             bundlePath.c_str());

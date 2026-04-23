@@ -60,16 +60,12 @@ class RenderCore {
                                           float*           outCascadeSplits);
 
     static constexpr std::array<Syngine::ViewID, 12> _allViews = {
-        Syngine::VIEW_SHADOW,
-        Syngine::VIEW_SKY,
-        Syngine::VIEW_GBUFFER,
-        Syngine::VIEW_LIGHTING,
-        Syngine::VIEW_FORWARD,
-        Syngine::VIEW_AO,
-        Syngine::VIEW_POSTPROCESS,
-        Syngine::VIEW_BILLBOARD, Syngine::VIEW_DEBUG,
-        Syngine::VIEW_BILL_DBG,  Syngine::VIEW_UI,
-        Syngine::VIEW_UI_DEBUG
+        Syngine::VIEW_SHADOW,  Syngine::VIEW_SKY,
+        Syngine::VIEW_GBUFFER, Syngine::VIEW_LIGHTING,
+        Syngine::VIEW_FORWARD, Syngine::VIEW_BILLBOARD,
+        Syngine::VIEW_DEBUG,   Syngine::VIEW_BILL_DBG,
+        Syngine::VIEW_AO,      Syngine::VIEW_POSTPROCESS,
+        Syngine::VIEW_UI,      Syngine::VIEW_UI_DEBUG
     };
 
     /// @brief Struct representing a material instance for rendering. Used for
@@ -228,7 +224,7 @@ class RenderCore {
     static SDL_Window* win; //* SDL window handle
 
     static bgfx::VertexBufferHandle
-        dummy; //* Dummy vertex buffer handle for rendering
+        dummyVbh; //* Dummy vertex buffer handle for rendering
 
     static DebugRender* m_drender; //* Debug renderer instance
 

@@ -103,7 +103,7 @@ void BillboardComponent::Init(const std::string& bundlePath, const std::string& 
         resolvedBundlePath, texturePath);
 
     if (!bgfx::isValid(this->m_texture)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Failed to load billboard texture from %s",
                               texturePath.c_str());
     }
