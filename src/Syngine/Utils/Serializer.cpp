@@ -104,7 +104,7 @@ std::vector<std::string> Serializer::DataNode::GetKeys() const {
 }
 
 void Serializer::_LoadCoreSettings(const std::string& gameName) {
-    std::filesystem::path settingsPath = Syngine::_GetAppdataPath(gameName) / "settings.xml";
+    std::filesystem::path settingsPath = Syngine::_GetAppDataPath(gameName) / "settings.xml";
     if (std::filesystem::exists(settingsPath)) {
         m_coreSettings = CoreSettings::LoadFromFile(settingsPath.string());
     } else {
@@ -113,7 +113,7 @@ void Serializer::_LoadCoreSettings(const std::string& gameName) {
 }
 
 void Serializer::_SaveCoreSettings(const std::string& gameName) {
-    std::filesystem::path settingsPath = Syngine::_GetAppdataPath(gameName) / "settings.xml";
+    std::filesystem::path settingsPath = Syngine::_GetAppDataPath(gameName) / "settings.xml";
     if (!CoreSettings::SaveToFile(settingsPath.string(), m_coreSettings)) {
         Logger::Error("Failed to save settings to file: " + settingsPath.string());
     } else {

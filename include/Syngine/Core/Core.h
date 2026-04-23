@@ -228,7 +228,7 @@ class Core {
     /// @since v0.0.1
     /// @internal
     static inline EngineConfig* _GetConfig() {
-        return m_instance && m_instance->m_app ? &m_instance->m_app->config : nullptr;
+        return m_instance && m_instance->m_context ? &m_instance->m_context->config : nullptr;
     }
 
     struct FrameCounts {
