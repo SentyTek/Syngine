@@ -20,6 +20,8 @@
 
 #endif
 
+#include <cstdint> // for miniscl
+
 #define SCL_IMPL
 #include "miniscl.hpp"
 
