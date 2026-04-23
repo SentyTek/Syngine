@@ -71,6 +71,15 @@ int Registry::RemoveGameObject(GameObject* gameObject) noexcept {
         vec.erase(std::remove(vec.begin(), vec.end(), gameObject), vec.end());
     };
 
+    // If it has a zone component, clear it from all zones to prevent dangling pointers in zone tracking
+    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_ZONE)) {
+        auto* zoneComp = gameObject->GetComponent<ZoneComponent>();
+        if (zoneComp) {
+            // Unregister the zone from the ZoneManager
+            Core::_GetContext()->zoneManager->_UnregisterZone(zoneComp);
+        }
+    }
+
     // Remove from lists
     m_AllObjects.erase(it);
     removeFrom(m_RenderableObjects);

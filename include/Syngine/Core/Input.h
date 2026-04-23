@@ -442,6 +442,13 @@ class InputAction {
                                KeyBinding         binding,
                                Callbacks          callbacks);
 
+    /// @brief Unregister all actions created through RegisterAction whose
+    /// identifiers start with a given prefix.
+    /// @param prefix Identifier prefix to match.
+    /// @returns Number of removed actions.
+    /// @since 0.0.1
+    static size_t UnregisterActionsByPrefix(const std::string& prefix);
+
     /// @brief Equality operator for ``InputAction``
     /// @param other The ``InputAction`` to compare against
     /// @returns `true` if the objects are equal, `false` otherwise

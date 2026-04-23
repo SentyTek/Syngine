@@ -884,6 +884,15 @@ void LuaManager::_ReloadLuaState() {
 
     DoFunction("onModUnload", 0, 0);
 
+    const size_t removedLuaBinds = InputAction::UnregisterActionsByPrefix(
+        "_LUA_INTERNAL_BINDING_DO_NOT_USE_");
+    if (removedLuaBinds > 0) {
+        Logger::LogF(LogLevel::INFO,
+                     true,
+                     "Cleared %zu Lua keybind action(s) during reload.",
+                     removedLuaBinds);
+    }
+
     // Clean up owned GameObjects
     for (GameObject* obj : m_ownedObjects) {
         delete obj;

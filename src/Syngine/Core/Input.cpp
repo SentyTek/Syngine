@@ -68,6 +68,20 @@ Syngine::InputAction* Syngine::InputAction::RegisterAction(const std::string&  i
     return &_HomelessShelter.back();
 }
 
+size_t Syngine::InputAction::UnregisterActionsByPrefix(
+    const std::string& prefix) {
+    if (prefix.empty()) {
+        return 0;
+    }
+
+    const auto sizeBefore = _HomelessShelter.size();
+    _HomelessShelter.remove_if([&prefix](const InputAction& action) {
+        return action.identifier.rfind(prefix, 0) == 0;
+    });
+
+    return sizeBefore - _HomelessShelter.size();
+}
+
 // MARK: InputAction state getters
 
 bool Syngine::InputAction::isPressed() { return this->currentState; }
