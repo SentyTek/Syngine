@@ -138,7 +138,7 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
 
     Serializer::DataNode node = rootGameObjectData;
     // Resolve path, delete existing file if it exists, and create new XML document
-    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.gameName) / path)
+    auto adp = (_GetAppDataPath(Core::Get()->m_context->config.gameName) / path)
                    .string();
     scl::path outputPath = adp.c_str();
     scl::xml::XmlDocument doc;
@@ -178,7 +178,7 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
 
 Serializer::Prefab Serializer::Prefab::LoadFromFile(const std::string& path) {
     Serializer::Prefab prefab;
-    auto adp = (_GetAppdataPath(Core::Get()->m_app->config.gameName) / path)
+    auto adp = (_GetAppDataPath(Core::Get()->m_context->config.gameName) / path)
                    .string();
     scl::path inputPath = adp.c_str();
     if (!inputPath.exists()) {

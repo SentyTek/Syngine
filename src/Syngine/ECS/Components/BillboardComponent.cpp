@@ -12,6 +12,8 @@
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Graphics/TextureHelpers.h"
 
+#include <sol/sol.hpp>
+
 namespace Syngine {
 BillboardComponent::BillboardComponent(GameObject* owner,
                                        std::string texturePath,
@@ -130,7 +132,8 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
     },
 
     // Instantiate: DataNode -> Component instance
-    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+    [](GameObject*                 owner,
+       const Serializer::DataNode& data) -> std::unique_ptr<Component> {
         float size = data.Has("size") ? data["size"].As<float>() : 1.0f;
         BillboardMode mode = BillboardMode::CAMERA_ALIGNED;
         if (data.Has("mode")) {
@@ -142,6 +145,23 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
         std::string texturePath = data.Has("texturePath") ? data["texturePath"].As<std::string>() : "";
         std::string bundlePath = data.Has("bundlePath") ? data["bundlePath"].As<std::string>() : "";
         return std::make_unique<BillboardComponent>(owner, bundlePath, texturePath, mode, size);
+    },
+
+    // Lua bindings
+    [](sol::state& lua) {
+        lua.new_usertype<BillboardComponent>("BillboardComponent",
+            // Methods
+            "SetRot", &BillboardComponent::SetRot,
+            "GetRot", [](BillboardComponent& self) -> std::tuple<float, float, float> {
+                float* rot;
+                float x, y, z;
+                rot = self.GetRot();
+                x = rot[0];
+                y = rot[1];
+                z = rot[2];
+                return {x, y, z};
+            }
+        );
     }
 );
 

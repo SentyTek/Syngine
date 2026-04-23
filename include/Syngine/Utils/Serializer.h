@@ -312,34 +312,55 @@ class Serializer {
     /// @internal
     static inline scl::stream _ReadFromBundle(const std::string& bundlePath,
                                        const std::string& assetPath) {
-        scl::pack::Packager pack;
-        scl::path           resolvedBundlePath =
-            Internal::ResolvePath(bundlePath.c_str()).c_str();
-        if (!resolvedBundlePath.exists()) {
-            Logger::LogF(LogLevel::ERR, true, "Bundle file not found: %s", bundlePath.c_str());
-            return scl::stream();
-        }
-        if (!pack.open(resolvedBundlePath)) {
-            Logger::LogF(LogLevel::ERR, true, "Failed to open bundle: %s", bundlePath.c_str());
-            return scl::stream();
-        }
+        try {
+            scl::pack::Packager pack;
+            scl::path           resolvedBundlePath =
+                Internal::ResolvePath(bundlePath.c_str()).c_str();
+            if (!resolvedBundlePath.exists()) {
+                Logger::LogF(LogLevel::ERR, true, "Bundle file not found: %s", bundlePath.c_str());
+                return scl::stream();
+            }
+            if (!pack.open(resolvedBundlePath)) {
+                Logger::LogF(LogLevel::ERR, true, "Failed to open bundle: %s", bundlePath.c_str());
+                return scl::stream();
+            }
 
-        scl::pack::PackIndex* wts = pack.openFile(assetPath.c_str());
+            // miniscl bug workaround:
+            // Calling openFile() for a missing asset creates an "active" index with
+            // a null stream; Packager::close()/destructor later dereferences it.
+            const auto& index = pack.index();
+            if (index.find(assetPath.c_str()) == index.end()) {
+                Logger::LogF(LogLevel::ERR, true,
+                             "Asset not found in bundle index: %s",
+                             assetPath.c_str());
+                pack.close();
+                return scl::stream();
+            }
 
-        if (!wts || !wts->stream()) {
-            Logger::LogF(LogLevel::ERR, false, "Failed to open asset in bundle: %s", assetPath.c_str());
+            scl::pack::PackIndex* wts = pack.openFile(assetPath.c_str());
+
+            if (!wts || !wts->stream()) {
+                Logger::LogF(
+                    LogLevel::ERR,
+                    false,
+                    "Failed to open asset in bundle: %s. Does the asset exist?",
+                    assetPath.c_str());
+                pack.close();
+                return scl::stream();
+            }
+
+            wts->waitable().wait();
+            scl::stream ms;
+            size_t dataSize = wts->stream()->size();
+            ms.write(wts->stream()->data(), dataSize);
+            ms.seek(scl::StreamPos::start, 0);
+
             pack.close();
+            return ms;
+        } catch (const std::exception& e) {
+            Logger::LogF(LogLevel::ERR, true, "Error reading from bundle: %s", e.what());
             return scl::stream();
         }
-
-        wts->waitable().wait();
-        scl::stream ms;
-        size_t dataSize = wts->stream()->size();
-        ms.write(wts->stream()->data(), dataSize);
-        ms.seek(scl::StreamPos::start, 0);
-
-        pack.close();
-        return ms;
     }
 
     /// @brief Internal helper to parse float arrays

@@ -56,7 +56,7 @@ Syngine::InputAction::~InputAction() {
 
 // MARK: InputAction registration implementation
 
-void Syngine::InputAction::RegisterAction(const std::string&  identifier,
+Syngine::InputAction* Syngine::InputAction::RegisterAction(const std::string&  identifier,
                                           const std::string&  name,
                                           const std::string&  category,
                                           Syngine::KeyBinding binding,
@@ -65,6 +65,7 @@ void Syngine::InputAction::RegisterAction(const std::string&  identifier,
         identifier, name, category, binding, callbacks);
     Syngine::InputAction::_Registry.back() =
         &Syngine::InputAction::_HomelessShelter.back();
+    return &_HomelessShelter.back();
 }
 
 // MARK: InputAction state getters
@@ -220,4 +221,136 @@ void Syngine::InputAction::RegisterMouseMoveEvent(
 void Syngine::InputAction::RegisterScrollEvent(
     std::function<void(float, float)> callback) {
     _ScrollCallback = callback;
+}
+
+Syngine::Scancode Syngine::StringToScancode(const std::string& code) {
+    for (std::pair item : _StringToScancode) {
+        if (item.first == code) {
+            return item.second;
+        }
+    }
+
+    return Scancode::_UNKNOWN;
+}
+
+std::string Syngine::ScancodeToString(const Scancode& code) {
+    for (std::pair item : _StringToScancode) {
+        if (item.second == code) {
+            return item.first;
+        }
+    }
+
+    return "";
+}
+
+
+Syngine::Keycode Syngine::StringToKeycode(const std::string& key) {
+    for (std::pair item : _StringToKeycode) {
+        if (item.first == key) {
+            return item.second;
+        }
+    }
+
+    return Keycode::_UNKNOWN;
+}
+
+
+std::string Syngine::KeycodeToString(const Keycode& key) {
+    for (std::pair item : _StringToKeycode) {
+        if (item.second == key) {
+            return item.first;
+        }
+    }
+
+    return "";
+}
+
+std::string Syngine::MouseButtonToString(const MouseButton& button) {
+    switch (button) {
+        case MouseButton::LEFT: return "left";
+        case MouseButton::RIGHT: return "right";
+        case MouseButton::MIDDLE: return "middle";
+        case MouseButton::FOUR: return "button_4";
+        case MouseButton::FIVE: return "button_5";
+        default: return "";
+    }
+}
+
+Syngine::MouseButton Syngine::StringToMouseButton(const std::string& button) {
+    if (button == "left" || button == "primary") {
+        return MouseButton::LEFT;
+    }
+    if (button == "right" || button == "secondary") {
+        return MouseButton::RIGHT;
+    }
+    if (button == "middle" || button == "tertiary") {
+        return MouseButton::MIDDLE;
+    }
+    if (button == "button_4") return MouseButton::FOUR;
+    if (button == "button_5") return MouseButton::FIVE;
+    return MouseButton::_UNKNOWN;
+}
+
+std::vector<std::string> Syngine::KeymodToString(const Keymod& keymod) {
+    std::vector<std::string> result = std::vector<std::string>();
+
+    if (keymod.contains(Keymod::LEFT_SHIFT))
+        result.push_back("left_shift");
+    if (keymod.contains(Keymod::RIGHT_SHIFT))
+        result.push_back("right_shift");
+    if (keymod.contains(Keymod::LEFT_CONTROL))
+        result.push_back("left_control");
+    if (keymod.contains(Keymod::RIGHT_CONTROL))
+        result.push_back("right_control");
+    if (keymod.contains(Keymod::LEFT_ALT))
+        result.push_back("left_alt");
+    if (keymod.contains(Keymod::RIGHT_ALT))
+        result.push_back("right_alt");
+    if (keymod.contains(Keymod::LEFT_GUI))
+        result.push_back("left_gui");
+    if (keymod.contains(Keymod::RIGHT_GUI))
+        result.push_back("right_gui");
+    if (keymod.contains(Keymod::CONTROL))
+        result.push_back("control");
+    if (keymod.contains(Keymod::SHIFT))
+        result.push_back("shift");
+    if (keymod.contains(Keymod::ALT))
+        result.push_back("alt");
+    if (keymod.contains(Keymod::GUI))
+        result.push_back("gui");
+
+    return result;
+}
+
+Syngine::Keymod Syngine::StringToKeymod(const std::vector<std::string>& keymod) {
+    Keymod result = Keymod::NONE;
+
+    for (const std::string& mod : keymod) {
+        if (mod == "left_shift")
+            result += Keymod::LEFT_SHIFT;
+        if (mod == "right_shift")
+            result += Keymod::RIGHT_SHIFT;
+        if (mod == "left_control")
+            result += Keymod::LEFT_CONTROL;
+        if (mod == "right_control")
+            result += Keymod::RIGHT_CONTROL;
+        if (mod == "left_alt" || mod == "left_option")
+            result += Keymod::LEFT_ALT;
+        if (mod == "right_alt" || mod == "right_option")
+            result += Keymod::RIGHT_ALT;
+        if (mod == "left_gui" || mod == "left_command" || mod == "left_windows")
+            result += Keymod::LEFT_GUI;
+        if (mod == "right_gui" || mod == "right_command" || mod == "right_windows")
+            result += Keymod::RIGHT_GUI;
+        if (mod == "control")
+            result += Keymod::CONTROL;
+        if (mod == "shift")
+            result += Keymod::SHIFT;
+        if (mod == "alt" || mod == "option")
+            result += Keymod::ALT;
+        if (mod == "gui" || mod == "command" || mod == "windows")
+            result += Keymod::GUI;
+    }
+
+    return result;
 }

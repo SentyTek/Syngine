@@ -19,6 +19,9 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
+#include <array>
+#include <utility>
 
 namespace Syngine {
 
@@ -29,7 +32,7 @@ namespace Syngine {
 /// keyboard
 /// @since 0.0.1
 enum class Scancode : uint32_t {
-    // This is a mirror of SDL_Scancode with keys ommitted as needed and
+    // This is a mirror of SDL_Scancode with keys omitted as needed and
     // convenience scancodes included
 
     _UNKNOWN = SDL_SCANCODE_UNKNOWN, // Internal, should not be used directly
@@ -122,8 +125,8 @@ enum class Scancode : uint32_t {
     DOWN       = SDL_SCANCODE_DOWN,
     UP         = SDL_SCANCODE_UP,
 
-    NUM_LOCK = SDL_SCANCODE_NUMLOCKCLEAR, //* Equivilant to `CLEAR`
-    CLEAR    = SDL_SCANCODE_NUMLOCKCLEAR, //* Equivilant to `NUM_LOCK`
+    NUM_LOCK = SDL_SCANCODE_NUMLOCKCLEAR, //* Equivalent to `CLEAR`
+    CLEAR    = SDL_SCANCODE_NUMLOCKCLEAR, //* Equivalent to `NUM_LOCK`
 
     KEYPAD_DIVIDE   = SDL_SCANCODE_KP_DIVIDE,
     KEYPAD_MULTIPLY = SDL_SCANCODE_KP_MULTIPLY,
@@ -139,44 +142,45 @@ enum class Scancode : uint32_t {
     KEYPAD_7        = SDL_SCANCODE_KP_7,
     KEYPAD_8        = SDL_SCANCODE_KP_8,
     KEYPAD_9        = SDL_SCANCODE_KP_9,
+    KEYPAD_0        = SDL_SCANCODE_KP_0,
     KEYPAD_PERIOD   = SDL_SCANCODE_KP_PERIOD,
 
-    // POWER (after compose) intentionally ommitted
+    // POWER (after compose) intentionally omitted
     NON_US_BACKSLASH = SDL_SCANCODE_NONUSBACKSLASH,
-    APPLICATION      = SDL_SCANCODE_APPLICATION, //* Equivilant to `COMPOSE`
-    COMPOSE          = SDL_SCANCODE_APPLICATION, //* Equivilant to `APPLICATION`
+    APPLICATION      = SDL_SCANCODE_APPLICATION, //* Equivalent to `COMPOSE`
+    COMPOSE          = SDL_SCANCODE_APPLICATION, //* Equivalent to `APPLICATION`
 
-    // F13 through VOLUME_DOWN and KEYPAD_EQUALS_AS_400 intentionally ommitted
+    // F13 through VOLUME_DOWN and KEYPAD_EQUALS_AS_400 intentionally omitted
     KEYPAD_EQUALS = SDL_SCANCODE_KP_EQUALS,
     KEYPAD_COMMA  = SDL_SCANCODE_KP_COMMA,
 
-    // INTERNATIONAL_1 through KEYPAD_HEXADECIMAL intentionally ommitted
+    // INTERNATIONAL_1 through KEYPAD_HEXADECIMAL intentionally omitted
 
     LEFT_CONTROL = SDL_SCANCODE_LCTRL,
     LEFT_SHIFT   = SDL_SCANCODE_LSHIFT,
-    LEFT_ALT     = SDL_SCANCODE_LALT, //* Equivilant to `LEFT_OPTION`
-    LEFT_OPTION  = SDL_SCANCODE_LALT, //* Equivilant to `LEFT_ALT`
+    LEFT_ALT     = SDL_SCANCODE_LALT, //* Equivalent to `LEFT_OPTION`
+    LEFT_OPTION  = SDL_SCANCODE_LALT, //* Equivalent to `LEFT_ALT`
     LEFT_GUI =
-        SDL_SCANCODE_LGUI, //* Equivilant to `LEFT_COMMAND` and `LEFT_WINDOWS`
+        SDL_SCANCODE_LGUI, //* Equivalent to `LEFT_COMMAND` and `LEFT_WINDOWS`
     LEFT_COMMAND =
-        SDL_SCANCODE_LGUI, //* Equivilant to `LEFT_GUI` and `LEFT_WINDOWS`
+        SDL_SCANCODE_LGUI, //* Equivalent to `LEFT_GUI` and `LEFT_WINDOWS`
     LEFT_WINDOWS =
-        SDL_SCANCODE_LGUI, //* Equivilant to `LEFT_GUI` and `LEFT_COMMAND`
+        SDL_SCANCODE_LGUI, //* Equivalent to `LEFT_GUI` and `LEFT_COMMAND`
 
     RIGHT_CONTROL = SDL_SCANCODE_RCTRL,
     RIGHT_SHIFT   = SDL_SCANCODE_RSHIFT,
-    RIGHT_ALT     = SDL_SCANCODE_RALT, //* Equivilant to `RIGHT_OPTION`
-    RIGHT_OPTION  = SDL_SCANCODE_RALT, //* Equivilant to `RIGHT_ALT`
+    RIGHT_ALT     = SDL_SCANCODE_RALT, //* Equivalent to `RIGHT_OPTION`
+    RIGHT_OPTION  = SDL_SCANCODE_RALT, //* Equivalent to `RIGHT_ALT`
     RIGHT_GUI =
-        SDL_SCANCODE_RGUI, //* Equivilant to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
+        SDL_SCANCODE_RGUI, //* Equivalent to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
     RIGHT_COMMAND =
-        SDL_SCANCODE_RGUI, //* Equivilant to `RIGHT_GUI` and `RIGHT_WINDOWS`
+        SDL_SCANCODE_RGUI, //* Equivalent to `RIGHT_GUI` and `RIGHT_WINDOWS`
     RIGHT_WINDOWS =
-        SDL_SCANCODE_RGUI, //* Equivilant to `RIGHT_GUI` and `RIGHT_COMMAND`
+        SDL_SCANCODE_RGUI, //* Equivalent to `RIGHT_GUI` and `RIGHT_COMMAND`
 
-    // MODE through END_CALL intentionally ommitted
+    // MODE through END_CALL intentionally omitted
 
-    // No need for an equivilant to SDL_SCANCODE_RESERVED or SDL_SCANCODE_COUNT
+    // No need for an equivalent to SDL_SCANCODE_RESERVED or SDL_SCANCODE_COUNT
 };
 
 /// @brief Convert a ``SDL_Scancode`` to a ``Scancode``
@@ -340,7 +344,7 @@ inline constexpr Scancode _SDLToSyn(const SDL_Scancode& scancode) {
     case SDL_SCANCODE_RESERVED:
     case SDL_SCANCODE_COUNT:
 
-        Logger::Warn("Untranslatable scancode: " +
+        Logger::Warn("Scancode could not be translated: " +
                      static_cast<std::string>(SDL_GetScancodeName(scancode)));
         return Scancode::_UNKNOWN;
 
@@ -363,7 +367,7 @@ inline constexpr SDL_Scancode _SynToSDL(const Scancode& scancode) {
 /// SynKeycode::I will correspond to I on any keyboard
 /// @since 0.0.1
 enum class Keycode : uint32_t {
-    // This is a mirror of SDL_Keycode, with keys ommitted as needed and
+    // This is a mirror of SDL_Keycode, with keys omitted as needed and
     // convenience scancodes included
 
     // No need for an equivalent to SDLK_EXTENDED_MASK, SDLK_SCANCODE_MASK, or
@@ -383,8 +387,8 @@ enum class Keycode : uint32_t {
     DOLLAR_SIGN       = SDLK_DOLLAR,
     AMPERSAND         = SDLK_AMPERSAND,
     APOSTROPHE        = SDLK_APOSTROPHE,
-    LEFT_PARENTHASIS  = SDLK_LEFTPAREN,
-    RIGHT_PARENTHASIS = SDLK_RIGHTPAREN,
+    LEFT_PARENTHESIS  = SDLK_LEFTPAREN,
+    RIGHT_PARENTHESIS = SDLK_RIGHTPAREN,
     ASTERISK          = SDLK_ASTERISK,
     PLUS              = SDLK_PLUS,
     COMMA             = SDLK_COMMA,
@@ -479,10 +483,11 @@ enum class Keycode : uint32_t {
     DOWN  = SDLK_DOWN,
     UP    = SDLK_UP,
 
-    NUM_LOCK = SDLK_NUMLOCKCLEAR, /// Equivilant to `CLEAR`
-    CLEAR    = SDLK_NUMLOCKCLEAR, /// Equivilant to `NUM_LOCK`
+    NUM_LOCK = SDLK_NUMLOCKCLEAR, /// Equivalent to `CLEAR`
+    CLEAR    = SDLK_NUMLOCKCLEAR, /// Equivalent to `NUM_LOCK`
 
     // POWER (between KEYPAD_PERIOD and KEYPAD_EQUALS) intentionally omitted
+
     KEYPAD_DIVIDE   = SDLK_KP_DIVIDE,
     KEYPAD_MULTIPLY = SDLK_KP_MULTIPLY,
     KEYPAD_MINUS    = SDLK_KP_MINUS,
@@ -518,25 +523,25 @@ enum class Keycode : uint32_t {
 
     LEFT_CONTROL = SDLK_LCTRL,
     LEFT_SHIFT   = SDLK_LSHIFT,
-    LEFT_ALT     = SDLK_LALT, /// Equivilant to `LEFT_OPTION`
-    LEFT_OPTION  = SDLK_LALT, /// Equivilant to `LEFT_ALT`
-    LEFT_GUI = SDLK_LGUI, /// Equivilant to `LEFT_COMMAND` and `LEFT_WINDOWS`
-    LEFT_COMMAND = SDLK_LGUI, /// Equivilant to `LEFT_GUI` and `LEFT_WINDOWS`
-    LEFT_WINDOWS = SDLK_LGUI, /// Equivilant to `LEFT_GUI` and `LEFT_COMMAND`
+    LEFT_ALT     = SDLK_LALT, /// Equivalent to `LEFT_OPTION`
+    LEFT_OPTION  = SDLK_LALT, /// Equivalent to `LEFT_ALT`
+    LEFT_GUI = SDLK_LGUI, /// Equivalent to `LEFT_COMMAND` and `LEFT_WINDOWS`
+    LEFT_COMMAND = SDLK_LGUI, /// Equivalent to `LEFT_GUI` and `LEFT_WINDOWS`
+    LEFT_WINDOWS = SDLK_LGUI, /// Equivalent to `LEFT_GUI` and `LEFT_COMMAND`
 
     RIGHT_CONTROL = SDLK_RCTRL,
     RIGHT_SHIFT   = SDLK_RSHIFT,
-    RIGHT_ALT     = SDLK_RALT, /// Equivilant to `RIGHT_OPTION`
-    RIGHT_OPTION  = SDLK_RALT, /// Equivilant to `RIGHT_ALT`
-    RIGHT_GUI = SDLK_RGUI, /// Equivilant to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
-    RIGHT_COMMAND = SDLK_RGUI, /// Equivilant to `RIGHT_GUI` and `RIGHT_WINDOWS`
-    RIGHT_WINDOWS = SDLK_RGUI, /// Equivilant to `RIGHT_GUI` and `RIGHT_COMMAND`
+    RIGHT_ALT     = SDLK_RALT, /// Equivalent to `RIGHT_OPTION`
+    RIGHT_OPTION  = SDLK_RALT, /// Equivalent to `RIGHT_ALT`
+    RIGHT_GUI = SDLK_RGUI, /// Equivalent to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
+    RIGHT_COMMAND = SDLK_RGUI, /// Equivalent to `RIGHT_GUI` and `RIGHT_WINDOWS`
+    RIGHT_WINDOWS = SDLK_RGUI, /// Equivalent to `RIGHT_GUI` and `RIGHT_COMMAND`
 
     // MODE through RIGHT_HYPER intentionally omitted
 };
 
 /// @brief Convert a ``SDL_Keycode`` to a ``Keycode``
-/// @param scancode The ``SDL_Keycode`` to convert
+/// @param keycode The ``SDL_Keycode`` to convert
 /// @return The converted ``Keycode``
 /// @since 0.0.1
 /// @internal
@@ -671,7 +676,7 @@ inline constexpr Keycode _SDLToSyn(const SDL_Keycode& keycode) {
     case SDLK_LHYPER:
     case SDLK_RHYPER:
 
-        Logger::Warn("Untranslatable keycode: " +
+        Logger::Warn("Keycode could not be translated: " +
                      static_cast<std::string>(SDL_GetKeyName(keycode)));
         return Keycode::_UNKNOWN;
 
@@ -680,7 +685,7 @@ inline constexpr Keycode _SDLToSyn(const SDL_Keycode& keycode) {
 }
 
 /// @brief Convert a ``Keycode`` to a ``SDL_Keycode``
-/// @param scancode The ``Keycode`` to convert
+/// @param keycode The ``Keycode`` to convert
 /// @return The converted ``SDL_Keycode``
 /// @since 0.0.1
 /// @internal
@@ -709,7 +714,7 @@ constexpr SDL_Keymod _SynToSDL(const Keymod& keymod);
 /// performance downsides from doing this
 /// @since 0.0.1
 struct Keymod {
-    // This is a mirror of SDL_Keymod, with modifiers ommitted as needed and
+    // This is a mirror of SDL_Keymod, with modifiers omitted as needed and
     // convenience modifiers included
 
   private:
@@ -726,43 +731,42 @@ struct Keymod {
     static constexpr uint16_t LEFT_CONTROL  = SDL_KMOD_LCTRL;
     static constexpr uint16_t RIGHT_CONTROL = SDL_KMOD_RCTRL;
 
-    /// @note Equivilant to `LEFT_OPTION`
+    /// @note Equivalent to `LEFT_OPTION`
     static constexpr uint16_t LEFT_ALT = SDL_KMOD_LALT;
-    /// @note Equivilant to `LEFT_ALT`
+    /// @note Equivalent to `LEFT_ALT`
     static constexpr uint16_t LEFT_OPTION = SDL_KMOD_LALT;
 
-    /// @note Equivilant to `RIGHT_OPTION`
+    /// @note Equivalent to `RIGHT_OPTION`
     static constexpr uint16_t RIGHT_ALT = SDL_KMOD_RALT;
-    /// @note Equivilant to `RIGHT_ALT`
+    /// @note Equivalent to `RIGHT_ALT`
     static constexpr uint16_t RIGHT_OPTION = SDL_KMOD_RALT;
 
-    /// @note Equivilant to `LEFT_COMMAND` and `LEFT_WINDOWS`
+    /// @note Equivalent to `LEFT_COMMAND` and `LEFT_WINDOWS`
     static constexpr uint16_t LEFT_GUI = SDL_KMOD_LGUI;
-    /// @note Equivilant to `LEFT_GUI` and `LEFT_WINDOWS`
+    /// @note Equivalent to `LEFT_GUI` and `LEFT_WINDOWS`
     static constexpr uint16_t LEFT_COMMAND = SDL_KMOD_LGUI;
-    /// @note Equivilant to `LEFT_GUI` and `LEFT_COMMAND`
+    /// @note Equivalent to `LEFT_GUI` and `LEFT_COMMAND`
     static constexpr uint16_t LEFT_WINDOWS = SDL_KMOD_LGUI;
 
-    /// @note Equivilant to `RIGHT_COMMANd` and `RIGHT_WINDOWS`
+    /// @note Equivalent to `RIGHT_COMMAND` and `RIGHT_WINDOWS`
     static constexpr uint16_t RIGHT_GUI = SDL_KMOD_RGUI;
-    /// @note Equivilant to `RIGHT_GUI` and `RIGHT_WINDOWS`
+    /// @note Equivalent to `RIGHT_GUI` and `RIGHT_WINDOWS`
     static constexpr uint16_t RIGHT_COMMAND = SDL_KMOD_RGUI;
-    /// @note Equivilant to `RIGHT_GUI` and `RIGHT_COMMAND`
+    /// @note Equivalent to `RIGHT_GUI` and `RIGHT_COMMAND`
     static constexpr uint16_t RIGHT_WINDOWS = SDL_KMOD_RGUI;
-
-    static constexpr uint16_t MODE    = SDL_KMOD_MODE;
+    
     static constexpr uint16_t CONTROL = SDL_KMOD_CTRL;
     static constexpr uint16_t SHIFT   = SDL_KMOD_SHIFT;
 
-    /// @note Equivilant to `OPTION`
+    /// @note Equivalent to `OPTION`
     static constexpr uint16_t ALT = SDL_KMOD_ALT;
-    /// @note Equivilant to `ALT`
+    /// @note Equivalent to `ALT`
     static constexpr uint16_t OPTION = SDL_KMOD_ALT;
-    /// @note Equivilant to `COMMAND` and `WINDOWS`
+    /// @note Equivalent to `COMMAND` and `WINDOWS`
     static constexpr uint16_t GUI = SDL_KMOD_GUI;
-    /// @note Equivilant to `GUI` and `WINDOWS`
+    /// @note Equivalent to `GUI` and `WINDOWS`
     static constexpr uint16_t COMMAND = SDL_KMOD_GUI;
-    /// @note Equivilant to `GUI` and `COMMAND`
+    /// @note Equivalent to `GUI` and `COMMAND`
     static constexpr uint16_t WINDOWS = SDL_KMOD_GUI;
 
     /// @brief Construct an empty ``Keymod``
@@ -770,12 +774,14 @@ struct Keymod {
     constexpr Keymod() : _rawValue(NONE) {}
 
     /// @brief Construct a ``Keymod`` from a raw value
+    /// @param rawValue The raw integer representation of the ``Keymod``
+    /// @note This may be removed from the public API at some point
     /// @since 0.0.1
     constexpr Keymod(uint16_t rawValue) : _rawValue(rawValue) {}
 
     /// @brief Merge two ``Keymod``s together
     /// @param other The ``Keymod`` to combine
-    /// @return A keymod equivilant to the union of the two given keymods
+    /// @return A keymod equivalent to the union of the two given keymods
     /// @since 0.0.1
     constexpr Keymod operator+(const Keymod& other) const {
         return Keymod(this->_rawValue | other._rawValue);
@@ -783,7 +789,7 @@ struct Keymod {
 
     /// @brief Subtract a ``Keymod`` from another `Keymod`
     /// @param other The ``Keymod`` to subtract
-    /// @return A keymod equivilant to the first ``Keymod`` with every modifier
+    /// @return A keymod equivalent to the first ``Keymod`` with every modifier
     /// from the second `Keymod` removed
     /// @since 0.0.1
     constexpr Keymod operator-(const Keymod& other) const {
@@ -792,7 +798,7 @@ struct Keymod {
 
     /// @brief Merge a ``Keymod`` into an existing `Keymod`
     /// @param other The ``Keymod`` to combine
-    /// @return A keymod equivilant to the union of the two given keymods
+    /// @return A keymod equivalent to the union of the two given keymods
     /// @post The keymod this is called on will be modified to the value of the
     /// returned keymod
     /// @since 0.0.1
@@ -803,7 +809,7 @@ struct Keymod {
 
     /// @brief Subtract a ``Keymod`` out of an existing `Keymod`
     /// @param other The ``Keymod`` to subtract
-    /// @return A keymod equivilant to the first ``Keymod`` with every modifier
+    /// @return A keymod equivalent to the first ``Keymod`` with every modifier
     /// from the second `Keymod` removed
     /// @post The keymod this is called on will be modified to the value of the
     /// returned keymod
@@ -821,8 +827,16 @@ struct Keymod {
         return this->_rawValue == other._rawValue;
     }
 
+    constexpr Keymod operator&&(const Keymod& other) const {
+        return this->_rawValue & other._rawValue;
+    }
+
+    constexpr bool contains(const Keymod& other) const {
+        return (*this && other) != NONE;
+    }
+
     /// @brief Convert a ``SDL_Keymod`` to a ``Keymod``
-    /// @param scancode The ``SDL_Keymod`` to convert
+    /// @param keymod The ``SDL_Keymod`` to convert
     /// @return The converted ``Keymod``
     /// @since 0.0.1
     /// @internal
@@ -851,7 +865,7 @@ struct Keymod {
                 if (!first) omittedMods += ", ";
                 omittedMods += "Scroll Lock";
             }
-            Logger::Warn("Untranslatable modifiers: '" + omittedMods +
+            Logger::Warn("Modifiers could not be translated: '" + omittedMods +
                          "'. All other modifiers will be translated.");
         }
 
@@ -861,7 +875,7 @@ struct Keymod {
     }
 
     /// @brief Convert a ``Keymod`` to a ``SDL_Keymod``
-    /// @param scancode The ``Keymod`` to convert
+    /// @param keymod The ``Keymod`` to convert
     /// @return The converted ``SDL_Keymod``
     /// @since 0.0.1
     /// @internal
@@ -873,21 +887,22 @@ struct Keymod {
 /// @brief A mouse button
 /// @since 0.0.1
 /// @section Input
+/// @internal
 enum class MouseButton : uint8_t {
     _UNKNOWN  = 0,                 /// Internal, should not be used directly
-    LEFT      = SDL_BUTTON_LEFT,   /// Equivilant to `PRIMARY`
-    PRIMARY   = SDL_BUTTON_LEFT,   /// Equivilant to `LEFT`
-    RIGHT     = SDL_BUTTON_RIGHT,  /// Equivilant to `SECONDARY`
-    SECONDARY = SDL_BUTTON_RIGHT,  /// Equivilant to `RIGHT`
-    MIDDLE    = SDL_BUTTON_MIDDLE, /// Equivilant to `TERTIARY`
-    TERTIARY  = SDL_BUTTON_MIDDLE, /// Equivilant to `MIDDLE`
+    LEFT      = SDL_BUTTON_LEFT,   /// Equivalent to `PRIMARY`
+    PRIMARY   = SDL_BUTTON_LEFT,   /// Equivalent to `LEFT`
+    RIGHT     = SDL_BUTTON_RIGHT,  /// Equivalent to `SECONDARY`
+    SECONDARY = SDL_BUTTON_RIGHT,  /// Equivalent to `RIGHT`
+    MIDDLE    = SDL_BUTTON_MIDDLE, /// Equivalent to `TERTIARY`
+    TERTIARY  = SDL_BUTTON_MIDDLE, /// Equivalent to `MIDDLE`
     FOUR      = SDL_BUTTON_X1,
     FIVE      = SDL_BUTTON_X2
 };
 
 /// @brief Convert a ``SDL_MouseButtonFlags`` as a `uint8_t` to a
 /// ``MouseButton``
-/// @param scancode The ``uint8_t`` to convert
+/// @param button The ``uint8_t`` to convert
 /// @return The converted ``MouseButton``
 /// @note Cannot accept `SDL_MouseButtonFlags` directly as the overload is
 /// ambiguous due to `SDL_MouseButtonFlags` being a macro typedef of uint32_t
@@ -903,14 +918,310 @@ constexpr MouseButton _SDLToSyn(const uint8_t& button) {
     }
 }
 
-/// @brief Convert a ``SDL_Scancode`` to a ``Scancode``
-/// @param scancode The ``SDL_Scancode`` to convert
-/// @return The converted ``Scancode``
+/// @brief Convert a ``MouseButton`` to a ``SDL_MouseButtonFlags``
+/// @param button The ``MouseButton`` to convert
+/// @return The converted ``SDL_MouseButtonFlags``
 /// @since 0.0.1
 /// @internal
 constexpr SDL_MouseButtonFlags _SynToSDL(const MouseButton& button) {
     return static_cast<SDL_MouseButtonFlags>(button);
 }
+
+/// @brief A mapping between ``Keycode`` and a lower_snake_case formatted name
+/// @since 0.0.1
+/// @internal
+inline constexpr auto _StringToKeycode = std::array {
+    std::pair { "enter", Keycode::ENTER },
+    std::pair { "escape", Keycode::ESCAPE },
+    std::pair { "backspace", Keycode::BACKSPACE },
+    std::pair { "tab", Keycode::TAB },
+    std::pair { "space", Keycode::SPACE },
+
+    std::pair { "exclamation_mark", Keycode::EXCLAMATION_MARK },
+    std::pair { "quotation_mark", Keycode::QUOTATION_MARK },
+    std::pair { "pound_sign", Keycode::POUND_SIGN },
+    std::pair { "dollar_sign", Keycode::DOLLAR_SIGN },
+    std::pair { "ampersand", Keycode::AMPERSAND },
+    std::pair { "apostrophe", Keycode::APOSTROPHE },
+    std::pair { "left_parenthesis", Keycode::LEFT_PARENTHESIS },
+    std::pair { "right_parenthesis", Keycode::RIGHT_PARENTHESIS },
+    std::pair { "asterisk", Keycode::ASTERISK },
+    std::pair { "plus", Keycode::PLUS },
+    std::pair { "comma", Keycode::COMMA },
+    std::pair { "minus", Keycode::MINUS },
+    std::pair { "period", Keycode::PERIOD },
+    std::pair { "slash", Keycode::SLASH },
+
+    std::pair { "0", Keycode::NUM_0 },
+    std::pair { "1", Keycode::NUM_1 },
+    std::pair { "2", Keycode::NUM_2 },
+    std::pair { "3", Keycode::NUM_3 },
+    std::pair { "4", Keycode::NUM_4 },
+    std::pair { "5", Keycode::NUM_5 },
+    std::pair { "6", Keycode::NUM_6 },
+    std::pair { "7", Keycode::NUM_7 },
+    std::pair { "8", Keycode::NUM_8 },
+    std::pair { "9", Keycode::NUM_9 },
+
+    std::pair { "colon", Keycode::COLON },
+    std::pair { "semicolon", Keycode::SEMICOLON },
+    std::pair { "less_than", Keycode::LESS_THAN },
+    std::pair { "equals", Keycode::EQUALS },
+    std::pair { "greater_than", Keycode::GREATER_THAN },
+    std::pair { "question_mark", Keycode::QUESTION_MARK },
+    std::pair { "at_sign", Keycode::AT_SIGN },
+    std::pair { "left_bracket", Keycode::LEFT_BRACKET },
+    std::pair { "backslash", Keycode::BACKSLASH },
+    std::pair { "right_bracket", Keycode::RIGHT_BRACKET },
+    std::pair { "caret", Keycode::CARET },
+    std::pair { "underscore", Keycode::UNDERSCORE },
+
+    std::pair { "a", Keycode::A },
+    std::pair { "b", Keycode::B },
+    std::pair { "c", Keycode::C },
+    std::pair { "d", Keycode::D },
+    std::pair { "e", Keycode::E },
+    std::pair { "f", Keycode::F },
+    std::pair { "g", Keycode::G },
+    std::pair { "h", Keycode::H },
+    std::pair { "i", Keycode::I },
+    std::pair { "j", Keycode::J },
+    std::pair { "k", Keycode::K },
+    std::pair { "l", Keycode::L },
+    std::pair { "m", Keycode::M },
+    std::pair { "n", Keycode::N },
+    std::pair { "o", Keycode::O },
+    std::pair { "p", Keycode::P },
+    std::pair { "q", Keycode::Q },
+    std::pair { "r", Keycode::R },
+    std::pair { "s", Keycode::S },
+    std::pair { "t", Keycode::T },
+    std::pair { "u", Keycode::U },
+    std::pair { "v", Keycode::V },
+    std::pair { "w", Keycode::W },
+    std::pair { "x", Keycode::X },
+    std::pair { "y", Keycode::Y },
+    std::pair { "z", Keycode::Z },
+
+    std::pair { "left_curly_bracket", Keycode::LEFT_CURLY_BRACKET },
+    std::pair { "pipe", Keycode::PIPE },
+    std::pair { "right_curly_bracket", Keycode::RIGHT_CURLY_BRACKET },
+    std::pair { "tilde", Keycode::TILDE },
+    std::pair { "delete", Keycode::DELETE_KEY },
+    std::pair { "plus_minus", Keycode::PLUS_MINUS },
+    std::pair { "caps_lock", Keycode::CAPS_LOCK },
+
+    std::pair { "f1", Keycode::F1 },
+    std::pair { "f2", Keycode::F2 },
+    std::pair { "f3", Keycode::F3 },
+    std::pair { "f4", Keycode::F4 },
+    std::pair { "f5", Keycode::F5 },
+    std::pair { "f6", Keycode::F6 },
+    std::pair { "f7", Keycode::F7 },
+    std::pair { "f8", Keycode::F8 },
+    std::pair { "f9", Keycode::F9 },
+    std::pair { "f10", Keycode::F10 },
+    std::pair { "f11", Keycode::F11 },
+    std::pair { "f12", Keycode::F12 },
+
+    std::pair { "print_screen", Keycode::PRINT_SCREEN },
+    std::pair { "scroll_lock", Keycode::SCROLL_LOCK },
+    std::pair { "pause", Keycode::PAUSE },
+    std::pair { "insert", Keycode::INSERT },
+    std::pair { "home", Keycode::HOME },
+    std::pair { "page_up", Keycode::PAGE_UP },
+    std::pair { "end", Keycode::END },
+    std::pair { "page_down", Keycode::PAGE_DOWN },
+
+    std::pair { "right", Keycode::RIGHT },
+    std::pair { "left", Keycode::LEFT },
+    std::pair { "down", Keycode::DOWN },
+    std::pair { "up", Keycode::UP },
+
+    std::pair { "num_lock", Keycode::NUM_LOCK },
+    std::pair { "clear", Keycode::CLEAR },
+
+    std::pair { "keypad_divide", Keycode::KEYPAD_DIVIDE },
+    std::pair { "keypad_multiply", Keycode::KEYPAD_MULTIPLY },
+    std::pair { "keypad_minus", Keycode::KEYPAD_MINUS },
+    std::pair { "keypad_plus", Keycode::KEYPAD_PLUS },
+    std::pair { "keypad_enter", Keycode::KEYPAD_ENTER },
+    std::pair { "keypad_0", Keycode::KEYPAD_0 },
+    std::pair { "keypad_1", Keycode::KEYPAD_1 },
+    std::pair { "keypad_2", Keycode::KEYPAD_2 },
+    std::pair { "keypad_3", Keycode::KEYPAD_3 },
+    std::pair { "keypad_4", Keycode::KEYPAD_4 },
+    std::pair { "keypad_5", Keycode::KEYPAD_5 },
+    std::pair { "keypad_6", Keycode::KEYPAD_6 },
+    std::pair { "keypad_7", Keycode::KEYPAD_7 },
+    std::pair { "keypad_8", Keycode::KEYPAD_8 },
+    std::pair { "keypad_9", Keycode::KEYPAD_9 },
+    std::pair { "keypad_period", Keycode::KEYPAD_PERIOD },
+    std::pair { "keypad_equals", Keycode::KEYPAD_EQUALS },
+
+    std::pair { "f13", Keycode::F13 },
+    std::pair { "f14", Keycode::F14 },
+    std::pair { "f15", Keycode::F15 },
+    std::pair { "f16", Keycode::F16 },
+    std::pair { "f17", Keycode::F17 },
+    std::pair { "f18", Keycode::F18 },
+    std::pair { "f19", Keycode::F19 },
+    std::pair { "f20", Keycode::F20 },
+    std::pair { "f21", Keycode::F21 },
+    std::pair { "f22", Keycode::F22 },
+    std::pair { "f23", Keycode::F23 },
+    std::pair { "f24", Keycode::F24 },
+
+    std::pair { "left_control", Keycode::LEFT_CONTROL },
+    std::pair { "left_shift", Keycode::LEFT_SHIFT },
+    std::pair { "left_alt", Keycode::LEFT_ALT },
+    std::pair { "left_option", Keycode::LEFT_OPTION },
+    std::pair { "left_gui", Keycode::LEFT_GUI },
+    std::pair { "left_command" , Keycode::LEFT_COMMAND },
+    std::pair { "left_windows", Keycode::LEFT_WINDOWS },
+
+    std::pair { "right_control", Keycode::RIGHT_CONTROL },
+    std::pair { "right_shift", Keycode::RIGHT_SHIFT },
+    std::pair { "right_alt", Keycode::RIGHT_ALT },
+    std::pair { "right_option", Keycode::RIGHT_OPTION },
+    std::pair { "right_gui", Keycode::RIGHT_GUI },
+    std::pair { "right_command" , Keycode::RIGHT_COMMAND },
+    std::pair { "right_windows", Keycode::RIGHT_WINDOWS },
+};
+
+/// @brief A mapping between ``Scancode`` and a lower_snake_case formatted name
+/// @since 0.0.1
+/// @internal
+inline constexpr auto _StringToScancode = std::array {
+    std::pair { "a", Scancode::A },
+    std::pair { "b", Scancode::B },
+    std::pair { "c", Scancode::C },
+    std::pair { "d", Scancode::D },
+    std::pair { "e", Scancode::E },
+    std::pair { "f", Scancode::F },
+    std::pair { "g", Scancode::G },
+    std::pair { "h", Scancode::H },
+    std::pair { "i", Scancode::I },
+    std::pair { "j", Scancode::J },
+    std::pair { "k", Scancode::K },
+    std::pair { "l", Scancode::L },
+    std::pair { "m", Scancode::M },
+    std::pair { "n", Scancode::N },
+    std::pair { "o", Scancode::O },
+    std::pair { "p", Scancode::P },
+    std::pair { "q", Scancode::Q },
+    std::pair { "r", Scancode::R },
+    std::pair { "s", Scancode::S },
+    std::pair { "t", Scancode::T },
+    std::pair { "u", Scancode::U },
+    std::pair { "v", Scancode::V },
+    std::pair { "w", Scancode::W },
+    std::pair { "x", Scancode::X },
+    std::pair { "y", Scancode::Y },
+    std::pair { "z", Scancode::Z },
+
+    std::pair { "1", Scancode::NUM_1 },
+    std::pair { "2", Scancode::NUM_2 },
+    std::pair { "3", Scancode::NUM_3 },
+    std::pair { "4", Scancode::NUM_4 },
+    std::pair { "5", Scancode::NUM_5 },
+    std::pair { "6", Scancode::NUM_6 },
+    std::pair { "7", Scancode::NUM_7 },
+    std::pair { "8", Scancode::NUM_8 },
+    std::pair { "9", Scancode::NUM_9 },
+    std::pair { "0", Scancode::NUM_0 },
+
+    std::pair { "enter", Scancode::ENTER },
+    std::pair { "escape", Scancode::ESCAPE },
+    std::pair { "backspace", Scancode::BACKSPACE },
+    std::pair { "tab", Scancode::TAB },
+    std::pair { "space", Scancode::SPACE },
+
+    std::pair { "minus", Scancode::MINUS },
+    std::pair { "equals", Scancode::EQUALS },
+    std::pair { "left_bracket", Scancode::LEFT_BRACKET },
+    std::pair { "right_bracket", Scancode::RIGHT_BRACKET },
+    std::pair { "backslash", Scancode::BACKSLASH },
+    std::pair { "semicolon", Scancode::SEMICOLON },
+    std::pair { "apostrophe", Scancode::APOSTROPHE },
+    std::pair { "grave", Scancode::GRAVE },
+    std::pair { "comma", Scancode::COMMA },
+    std::pair { "period", Scancode::PERIOD },
+    std::pair { "slash", Scancode::SLASH },
+
+    std::pair { "capslock", Scancode::CAPSLOCK },
+
+    std::pair { "f1", Scancode::F1 },
+    std::pair { "f2", Scancode::F2 },
+    std::pair { "f3", Scancode::F3 },
+    std::pair { "f4", Scancode::F4 },
+    std::pair { "f5", Scancode::F5 },
+    std::pair { "f6", Scancode::F6 },
+    std::pair { "f7", Scancode::F7 },
+    std::pair { "f8", Scancode::F8 },
+    std::pair { "f9", Scancode::F9 },
+    std::pair { "f10", Scancode::F10 },
+    std::pair { "f11", Scancode::F11 },
+    std::pair { "f12", Scancode::F12 },
+
+    std::pair { "print_screen", Scancode::PRINT_SCREEN },
+    std::pair { "scroll_lock", Scancode::SCROLL_LOCK },
+    std::pair { "pause", Scancode::PAUSE },
+    std::pair { "insert", Scancode::INSERT },
+
+    std::pair { "home", Scancode::HOME },
+    std::pair { "page_up", Scancode::PAGE_UP },
+    std::pair { "delete", Scancode::DELETE_KEY },
+    std::pair { "end", Scancode::END },
+    std::pair { "page_down", Scancode::PAGE_DOWN },
+    std::pair { "right", Scancode::RIGHT },
+    std::pair { "left", Scancode::LEFT },
+    std::pair { "down", Scancode::DOWN },
+    std::pair { "up", Scancode::UP },
+
+    std::pair { "num_lock", Scancode::NUM_LOCK },
+    std::pair { "clear", Scancode::CLEAR },
+
+    std::pair { "keypad_divide", Scancode::KEYPAD_DIVIDE },
+    std::pair { "keypad_multiply", Scancode::KEYPAD_MULTIPLY },
+    std::pair { "keypad_minus", Scancode::KEYPAD_MINUS },
+    std::pair { "keypad_plus", Scancode::KEYPAD_PLUS },
+    std::pair { "keypad_enter", Scancode::KEYPAD_ENTER },
+    std::pair { "keypad_1", Scancode::KEYPAD_1 },
+    std::pair { "keypad_2", Scancode::KEYPAD_2 },
+    std::pair { "keypad_3", Scancode::KEYPAD_3 },
+    std::pair { "keypad_4", Scancode::KEYPAD_4 },
+    std::pair { "keypad_5", Scancode::KEYPAD_5 },
+    std::pair { "keypad_6", Scancode::KEYPAD_6 },
+    std::pair { "keypad_7", Scancode::KEYPAD_7 },
+    std::pair { "keypad_8", Scancode::KEYPAD_8 },
+    std::pair { "keypad_9", Scancode::KEYPAD_9 },
+    std::pair { "keypad_0", Scancode::KEYPAD_0 },
+    std::pair { "keypad_period", Scancode::KEYPAD_PERIOD },
+
+    std::pair { "non_us_backslash", Scancode::NON_US_BACKSLASH },
+    std::pair { "application", Scancode::APPLICATION },
+    std::pair { "compose", Scancode::COMPOSE },
+
+    std::pair { "keypad_equals", Scancode::KEYPAD_EQUALS },
+    std::pair { "keypad_comma", Scancode::KEYPAD_COMMA },
+
+    std::pair { "left_control", Scancode::LEFT_CONTROL },
+    std::pair { "left_shift", Scancode::LEFT_SHIFT },
+    std::pair { "left_alt", Scancode::LEFT_ALT },
+    std::pair { "left_option", Scancode::LEFT_OPTION },
+    std::pair { "left_gui", Scancode::LEFT_GUI },
+    std::pair { "left_command", Scancode::LEFT_COMMAND },
+    std::pair { "left_windows", Scancode::LEFT_WINDOWS },
+
+    std::pair { "right_control", Scancode::RIGHT_CONTROL },
+    std::pair { "right_shift", Scancode::RIGHT_SHIFT },
+    std::pair { "right_alt", Scancode::RIGHT_ALT },
+    std::pair { "right_option", Scancode::RIGHT_OPTION },
+    std::pair { "right_gui", Scancode::RIGHT_GUI },
+    std::pair { "right_command", Scancode::RIGHT_COMMAND },
+    std::pair { "right_windows", Scancode::RIGHT_WINDOWS },
+};
 
 } /* namespace Syngine */
 

@@ -196,11 +196,11 @@ void Registry::_NotifyComponentAdded(GameObject*         gameobject,
         case Syngine::SYN_COMPONENT_CAMERA:
             if (std::find(m_Gizmos.begin(), m_Gizmos.end(), gameobject) == m_Gizmos.end()) {
                 m_Gizmos.push_back(gameobject);
-                Syngine::Core::_GetApp()->renderer->_RegisterGizmo("camera_render");
+                Syngine::Core::_GetContext()->renderer->_RegisterGizmo("camera_render");
             }
             break;
         case Syngine::SYN_COMPONENT_ZONE:
-            Core::_GetApp()->zoneManager->_RegisterZone(
+            Core::_GetContext()->zoneManager->_RegisterZone(
                 gameobject->GetComponent<ZoneComponent>());
             break;
         default:
@@ -234,7 +234,7 @@ void Registry::_NotifyComponentRemoved(GameObject*         gameobject,
             removeFrom(m_Gizmos);
             break;
         case Syngine::SYN_COMPONENT_ZONE:
-            Core::_GetApp()->zoneManager->_UnregisterZone(
+            Core::_GetContext()->zoneManager->_UnregisterZone(
                 gameobject->GetComponent<ZoneComponent>());
             break;
         default:

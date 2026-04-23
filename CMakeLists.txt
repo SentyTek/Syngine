@@ -67,6 +67,7 @@ add_library(Syngine STATIC
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
     src/Syngine/Core/ZoneManager.cpp
+    src/Syngine/Core/LuaManager.cpp
 
     # Graphics
     src/Syngine/Graphics/Renderer.cpp

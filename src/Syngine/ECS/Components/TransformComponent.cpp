@@ -10,13 +10,14 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/GameObject.h"
-
 #include "Syngine/Utils/Serializer.h"
-#include "bx/math.h"
-#include <cmath>
 
+#include <cmath>
 #include <algorithm>
 #include <vector>
+
+#include "bx/math.h"
+#include <sol/sol.hpp>
 
 namespace Syngine {
 TransformComponent::TransformComponent(GameObject* owner) {
@@ -434,13 +435,52 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
     },
 
     // Instantiate
-    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+    [](GameObject*                 owner,
+       const Serializer::DataNode& data) -> std::unique_ptr<Component> {
         std::vector<float> pos = data["position"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
         std::vector<float> rot = data["rotation"].As<std::vector<float>>({0.0f, 0.0f, 0.0f, 1.0f});
         std::vector<float> scale = data["scale"].As<std::vector<float>>({0.5f, 0.5f, 0.5f});
         auto comp = std::make_unique<TransformComponent>(owner);
         comp->Init(pos, rot, scale); // This probably isn't Good Practice
         return comp;
+    },
+
+    // Lua bindings
+    [](sol::state& lua) {
+        lua.new_usertype<TransformComponent>(
+            "TransformComponent",
+            // Methods
+            "SetPosition", &TransformComponent::SetPosition,
+            "SetRotationEuler", &TransformComponent::SetRotationEuler,
+            "SetRotationQuat", &TransformComponent::SetRotationQuat,
+            "SetScale", &TransformComponent::SetScale,
+            "GetPosition", [](TransformComponent& self) -> std::tuple<float, float, float> {
+                float x, y, z;
+                float* pos = self.GetPosition();
+                x = pos[0];
+                y = pos[1];
+                z = pos[2];
+                return { x, y, z };
+            },
+            "GetScale", [](TransformComponent& self) -> std::tuple<float, float, float> {
+                float x, y, z;
+                float* scale = self.GetScale();
+                x = scale[0];
+                y = scale[1];
+                z = scale[2];
+                return { x, y, z };
+            },
+            "GetRotationEuler", [](TransformComponent& self) -> std::tuple<float, float, float> {
+                float x, y, z;
+                self.GetRotationEuler(x, y, z);
+                return { x, y, z };
+            },
+            "GetRotationQuat", [](TransformComponent& self)
+                -> std::tuple<float, float, float, float> {
+                float x, y, z, w;
+                self.GetRotationQuaternion(x, y, z, w);
+                return { x, y, z, w };
+            });
     }
 );
 

@@ -6,7 +6,6 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Utils/Serializer.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -56,7 +55,7 @@
 using namespace Syngine;
 
 Syngine::Core*      Syngine::Core::m_instance = nullptr;
-Syngine::Core::App* Syngine::Core::m_app      = nullptr;
+Syngine::Core::Context* Syngine::Core::m_context      = nullptr;
 Core::_internal     Syngine::Core::m_internal;
 Core::_FrameCounter Syngine::Core::m_frameCounter;
 
@@ -75,8 +74,8 @@ Core::Core(const EngineConfig config) {
     if (Syngine::_CheckRequiredFolders()) {
         Syngine::Logger::LogF(
             LogLevel::INFO, false, "Using Syngine v%s", SYN_VERSION_STRING);
-        m_app         = new App();
-        m_app->config = config;
+        m_context         = new Context();
+        m_context->config = config;
     }
 }
 
@@ -87,80 +86,95 @@ Core::~Core() {
     // release their BGFX resources (textures, buffers) before we shut down the renderer.
     Syngine::Registry::Clear();
 
-    Serializer::_SaveCoreSettings(m_app->config.gameName);
+    Serializer::_SaveCoreSettings(m_context->config.gameName);
 
-    if (m_app) {
-        if (m_app->synModels) {
+    if (m_context) {
+        if (m_context->luaState) {
+            m_context->luaState->DoFunction("onModUnload", 0, 0);
+            m_context->luaState.reset();
+        }
+        if (m_context->synModels) {
             // Don't call _UnloadAllMeshes() here because Registry::Clear() has
             // already done it for us. Doing it again causes a
             // BGFX assertion errors due to double-freeing. Please don't have
             // orphaned meshes.
-            m_app->synModels.reset();
+            m_context->synModels.reset();
         }
-        if (m_app->renderer) {
-            m_app->renderer.reset();
+        if (m_context->renderer) {
+            m_context->renderer.reset();
         }
-        if (m_app->window) {
-            m_app->window.reset();
+        if (m_context->window) {
+            m_context->window.reset();
         }
-        if (m_app->physicsManager) {
-            m_app->physicsManager->_Shutdown();
-            m_app->physicsManager.reset();
+        if (m_context->physicsManager) {
+            m_context->physicsManager->_Shutdown();
+            m_context->physicsManager.reset();
         }
         m_instance = nullptr; // Reset the singleton instance
     }
     Logger::_Shutdown();
-    delete m_app;
-    m_app = nullptr;
+    delete m_context;
+    m_context = nullptr;
 }
 
 bool Core::Initialize(const RendererConfig rendererConfig) {
-    if (!m_app) {
+    if (!m_context) {
         Syngine::Logger::Fatal("Core not initialized properly. App is null.");
         return false;
     }
 
     try {
-        Logger::_Init(m_app->config.gameName);
-        Logger::Info("Starting " + m_app->config.gameName, false);
+        Logger::_Init(m_context->config.gameName);
+        Logger::Info("Starting " + m_context->config.gameName, false);
 
-        Serializer::_LoadCoreSettings(m_app->config.gameName);
+        Serializer::_LoadCoreSettings(m_context->config.gameName);
 
-        m_app->window = std::make_unique<Window>(m_app->config);
-        if (!m_app->window) {
+        m_context->window = std::make_unique<Window>(m_context->config);
+        if (!m_context->window) {
             Logger::Error("Failed to create window. Check the log for more details.");
         }
 
-        m_app->renderer = std::make_unique<Renderer>(m_app->config.windowWidth,
-                                                     m_app->config.windowHeight,
+        m_context->renderer = std::make_unique<Renderer>(m_context->config.windowWidth,
+                                                     m_context->config.windowHeight,
                                                      rendererConfig);
-        if (!m_app->renderer) {
+        if (!m_context->renderer) {
             Logger::Error("Failed to create renderer. Check the log for more details.");
         }
 
         Syngine::Logger::LogHardwareInfo();
 
-        m_app->synModels = std::make_unique<AssimpLoader>();
-        if (!m_app->synModels) {
+        m_context->synModels = std::make_unique<AssimpLoader>();
+        if (!m_context->synModels) {
             Logger::Error("Failed to create AssimpLoader. Check the log for more details.");
         }
 
-        if (m_app->config.usePhysics) {
-            m_app->physicsManager = std::make_unique<Phys>();
-            if (!m_app->physicsManager) {
+        if (m_context->config.usePhysics) {
+            m_context->physicsManager = std::make_unique<Phys>();
+            if (!m_context->physicsManager) {
                 Logger::Error("Failed to create PhysicsManager. Check the log for more details.");
             }
         } else {
-            m_app->physicsManager = nullptr;
+            m_context->physicsManager = nullptr;
         }
 
-        m_app->zoneManager = std::make_unique<ZoneManager>();
-        if (!m_app->zoneManager) {
+        m_context->zoneManager = std::make_unique<ZoneManager>();
+        if (!m_context->zoneManager) {
             Logger::Error("Failed to create ZoneManager. Check the log for more details.");
         }
 
-        if (m_app->config.usePhysics && m_app->physicsManager) {
-            m_app->physicsManager->_Init();
+        if (m_context->config.usePhysics && m_context->physicsManager) {
+            m_context->physicsManager->_Init();
+        }
+
+        if (m_context->config.useLua) {
+            m_context->luaState = std::make_unique<LuaManager>(m_context->config.luaLibs);
+            if (!m_context->luaState) {
+                Logger::Error("Failed to create Lua state. Check the log for more details.");
+            } else {
+                Logger::Log("Lua state initialized successfully.");
+            }
+        } else {
+            m_context->luaState = nullptr;
         }
     } catch(const std::exception& e) {
         Syngine::Logger::LogF(
@@ -234,6 +248,21 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     "",
                                     KeyBinding(Keycode::F6),
                                     { .onPressed = Core::_ReloadShaders });
+
+        InputAction::RegisterAction("syngine.reloadLua",
+                                    "Reload Lua State",
+                                    "",
+                                    KeyBinding(Keycode::F7),
+                                    { .onPressed = Core::_ReloadLua });
+    }
+
+    // Do the lua script in appdata
+    if (m_context->luaState) { // Also checks if lua is enabled
+        std::string scriptPath =
+            _GetAppDataPath(m_context->config.gameName).string() + "/init.lua";
+        if (std::filesystem::exists(scriptPath)) {
+            m_context->luaState->SafeFile(scriptPath);
+        }
     }
 
     Logger::Info("Syngine initialized successfully", false);
@@ -241,14 +270,14 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
 }
 
 Syngine::Core* Syngine::Core::Get() { return m_instance; }
-Syngine::Core::App*  Syngine::Core::_GetApp() {
-    return m_instance ? m_instance->m_app : nullptr;
+Syngine::Core::Context*  Syngine::Core::_GetContext() {
+    return m_instance ? m_instance->m_context : nullptr;
 }
 
-Syngine::Phys* Core::GetPhysicsManager() { return m_app->physicsManager.get(); }
+Syngine::Phys* Core::GetPhysicsManager() { return m_context->physicsManager.get(); }
 
 bool Core::IsRunning() {
-    return !m_shouldClose && !m_app->window->ShouldClose();
+    return !m_shouldClose && !m_context->window->ShouldClose();
 }
 
 void Core::SetSimulationState(bool simulate) { m_internal.simulate = simulate; }
@@ -296,43 +325,75 @@ bool Core::HandleEvents() {
 
 bool Core::Update() {
     SYN_PROFILE_FUNCTION();
+
+    if (m_internal.last == 0) {
+        // Prime the timer so the first frame doesn't accumulate a huge dt.
+        m_internal.now  = SDL_GetPerformanceCounter();
+        m_internal.last = m_internal.now;
+        deltaTime       = 0.0f;
+        return true;
+    }
+
     m_internal.last = m_internal.now;
     m_internal.now  = SDL_GetPerformanceCounter();
     deltaTime       = (m_internal.now - m_internal.last) /
                 (float)SDL_GetPerformanceFrequency();
+
+    // Cap dt after stalls (breakpoints, app suspend) to avoid runaway fixed-step loops.
+    if (deltaTime > 0.25f) {
+        deltaTime = 0.25f;
+    }
+
     m_frameCounts.updates++;
 
-    // Simulate physics
-    if (m_app->physicsManager && m_internal.simulate) {
-        m_internal.accumulator += deltaTime;
-
-        while (m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
-            m_app->physicsManager->_Update(m_internal.DEFAULT_PHYSICS_TIMESTEP,
-                                           m_internal.DEFAULT_PHYSICS_STEPS);
-            m_internal.accumulator -= m_internal.DEFAULT_PHYSICS_TIMESTEP;
-            m_frameCounter.physCounter++;
+    // Run component updates every frame so camera and visual state are not
+    // locked to the fixed physics tick rate.
+    auto& allGameObjects = Registry::GetAllGameObjects();
+    for (auto& [id, go] : allGameObjects) {
+        if (!go) continue;
+        const auto& components = go->GetComponents();
+        for (const auto& [typeId, component] : components) {
+            if (component && component->isEnabled) {
+                component->Update(deltaTime);
+            }
         }
     }
 
-    if (m_internal.simulate) {
-        // Polymorphic component update loop - iterate all GameObjects
-        auto& allGameObjects = Registry::GetAllGameObjects();
-
-        // Update all components
-        for (auto& [id, go] : allGameObjects) {
-            if (!go) continue;
-            const auto& components = go->GetComponents();
-            for (const auto& [typeId, component] : components) {
-                if (component && component->isEnabled) {
-                    component->Update(deltaTime);
-                }
+    m_internal.accumulator += deltaTime;
+    const float fixedDeltaTime = m_internal.DEFAULT_PHYSICS_TIMESTEP;
+    while (m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
+        // Do tick
+        if (m_internal.simulate) {
+            // Physics step
+            if (m_context->physicsManager) {
+            m_context->physicsManager->_Update(
+                fixedDeltaTime,
+                m_internal.DEFAULT_PHYSICS_STEPS);
             }
+
+            // Update zones
+            m_context->zoneManager->_UpdateZones();
         }
 
-        // Update zones
-        m_app->zoneManager->_UpdateZones();
+        // Tick Lua scripts
+        if (m_context->luaState) {
+            m_context->luaState->DoTick(fixedDeltaTime,
+                                        fixedDeltaTime,
+                                        m_internal.simulate);
+        }
 
-        // Post physics update - call after physics step
+        m_internal.accumulator -= fixedDeltaTime;
+        m_frameCounter.physCounter++;
+
+        // Update frame counter and log FPS/TPS every second regardless of
+        // simulation state
+        m_frameCounter.Update(
+            fixedDeltaTime, m_internal.simulate, Registry::GetGameObjectCount());
+    }
+
+    // Run one post-physics sync per frame so render/camera-facing state tracks
+    // the latest simulation result even when physics doesn't tick this frame.
+    if (m_internal.simulate) {
         for (auto& [id, go] : allGameObjects) {
             if (!go) continue;
             const auto& components = go->GetComponents();
@@ -344,9 +405,6 @@ bool Core::Update() {
         }
     }
 
-    m_frameCounter.Update(
-        deltaTime, m_internal.simulate, Registry::GetGameObjectCount());
-
     return true;
 }
 
@@ -357,7 +415,7 @@ bool Core::Render(CameraComponent* camera) {
         m_frameCounter.frameCount++;
         m_frameCounter.frameDisplay++;
 
-        m_app->renderer->_RenderFrame(camera, m_app->debug);
+        m_context->renderer->_RenderFrame(camera, m_context->debug);
         m_frameCounts.drawnObjects.debug = RenderCore::m_drawnCounts.debug;
         m_frameCounts.drawnObjects.sky   = RenderCore::m_drawnCounts.sky;
         m_frameCounts.drawnObjects.forward = RenderCore::m_drawnCounts.forward;
@@ -453,7 +511,7 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 #endif
 
     // Get display size
-    SDL_DisplayID dId = SDL_GetDisplayForWindow(m_app->window->_GetSDLWindow());
+    SDL_DisplayID dId = SDL_GetDisplayForWindow(m_context->window->_GetSDLWindow());
     if (dId == 0) {
         Logger::Error("Failed to get display for window: " +
                       std::string(SDL_GetError()));
@@ -467,7 +525,7 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 
     // Get window resolution
     int w, h;
-    SDL_GetWindowSize(m_app->window->_GetSDLWindow(), &w, &h);
+    SDL_GetWindowSize(m_context->window->_GetSDLWindow(), &w, &h);
     specs.winWidth  = w;
     specs.winHeight = h;
 
@@ -502,7 +560,18 @@ void Core::_ReloadChangedAssets() {
     }
 }
 
-void Core::_ReloadShaders() { m_app->renderer->ReloadAllPrograms(); }
+void Core::_ReloadShaders() { m_context->renderer->ReloadAllPrograms(); }
+
+void Core::_ReloadLua() {
+    if (m_context->luaState) {
+        m_context->luaState->_ReloadLuaState();
+        std::string scriptPath =
+            _GetAppDataPath(m_context->config.gameName).string() + "/init.lua";
+        if (std::filesystem::exists(scriptPath)) {
+            m_context->luaState->SafeFile(scriptPath);
+        }
+    }
+}
 
 // DEPRECATED - in favor of the new input system
 void Core::_HandleKeyEvent(const SDL_Event& event) {
@@ -511,8 +580,8 @@ void Core::_HandleKeyEvent(const SDL_Event& event) {
             // Toggle debug modes
             case SDLK_F1: {
                 // Toggle physics wireframes
-                this->m_app->debug.PhysWireframes = !this->m_app->debug.PhysWireframes;
-                if (this->m_app->debug.PhysWireframes) {
+                this->m_context->debug.PhysWireframes = !this->m_context->debug.PhysWireframes;
+                if (this->m_context->debug.PhysWireframes) {
                     Syngine::Logger::Info("Physics wireframes enabled");
                 } else {
                     Syngine::Logger::Info("Physics wireframes disabled");
@@ -521,8 +590,8 @@ void Core::_HandleKeyEvent(const SDL_Event& event) {
             }
             case SDLK_F2: {
                 // Toggle gizmos
-                this->m_app->debug.Gizmos = !this->m_app->debug.Gizmos;
-                if (this->m_app->debug.Gizmos) {
+                this->m_context->debug.Gizmos = !this->m_context->debug.Gizmos;
+                if (this->m_context->debug.Gizmos) {
                     Syngine::Logger::Info("Gizmos enabled");
                 } else {
                     Syngine::Logger::Info("Gizmos disabled");
@@ -531,8 +600,8 @@ void Core::_HandleKeyEvent(const SDL_Event& event) {
             }
             case SDLK_F3: {
                 // Toggle CSM bounds
-                this->m_app->debug.CSMBounds = !this->m_app->debug.CSMBounds;
-                if (this->m_app->debug.CSMBounds) {
+                this->m_context->debug.CSMBounds = !this->m_context->debug.CSMBounds;
+                if (this->m_context->debug.CSMBounds) {
                     Syngine::Logger::Info("CSM Bounds enabled");
                 } else {
                     Syngine::Logger::Info("CSM Bounds disabled");
@@ -555,7 +624,7 @@ void Core::_HandleKeyEvent(const SDL_Event& event) {
             }
             case SDLK_F6: {
                 // Reload all shaders
-                m_app->renderer->ReloadAllPrograms();
+                m_context->renderer->ReloadAllPrograms();
             }
         }
     }
