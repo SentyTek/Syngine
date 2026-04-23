@@ -32,8 +32,8 @@
 - [IsPhysicsEnabled](#coreisphysicsenabled)
 - [SetDebugMode](#coresetdebugmode)
 - [GetDebugMode](#coregetdebugmode)
-- [App](#coreapp)
-- [_GetApp](#core_getapp)
+- [Context](#corecontext)
+- [_GetContext](#core_getcontext)
 - [_GetConfig](#core_getconfig)
 - [_FrameCounter](#core_framecounter)
 - [_HandleKeyEvent](#core_handlekeyevent)
@@ -66,8 +66,8 @@ struct HardwareSpecs
 | `int` | `screenHeight` | Height of the screen in pixels |
 | `int` | `winWidth` | Width of the game window in pixels |
 | `int` | `winHeight` | Height of the game window in pixels |
-| `int` | `gpuVendorID` | GPU vendor ID |
-| `int` | `gpuDeviceID` | GPU device ID |
+| `std::string` | `gpuVendorID` | GPU vendor PCI ID formatted as hex |
+| `std::string` | `gpuName` | GPU adapter name |
 | `int` | `maxTextureSize` | Maximum texture size supported by the GPU |
 | `bool` | `supportsCompute` | Whether the GPU supports compute shaders |
 | `bool` | `supports3DTextures` | Whether the GPU supports 3D textures |
@@ -91,10 +91,12 @@ struct EngineConfig
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `std::string` | `windowTitle` | Title of the game window |
+| `std::string` | `gameName` | Title of the game window |
 | `int` | `windowWidth` | Width of the game window in pixels |
 | `int` | `windowHeight` | Height of the game window in pixels |
 | `bool` | `usePhysics` | Whether to initialize the physics system |
+| `bool` | `useLua` | Whether to initialize the Lua scripting system |
+| `LuaLibs` | `luaLibs` | Which Lua libraries to load if useLua is true |
 
 **This function has been available since:** v0.0.1
 
@@ -390,7 +392,7 @@ Signature:
 
 ---
 
-#### **`Core::App`**
+#### **`Core::Context`**
 
 
  Struct to hold application state
@@ -398,7 +400,7 @@ Signature:
 Signature:
 
 ```cpp
- struct App
+ struct Context
 ```
 
 **Members:**
@@ -411,13 +413,14 @@ Signature:
 | `std::unique_ptr<ModelLoader>` | `synModels` | Pointer to the model loader |
 | `std::unique_ptr<Phys>` | `physicsManager` | Pointer to the physics manager |
 | `std::unique_ptr<ZoneManager>` | `zoneManager` | Pointer to the zone manager |
+| `std::unique_ptr<LuaManager>` | `luaState` | Pointer to the Lua state |
 | `DebugModes` | `debug` | Debug modes flags |
 
 **This function has been available since:** v0.0.1
 
 ---
 
-#### **`Core::_GetApp`**
+#### **`Core::_GetContext`**
 
 
  Get the global App instance
@@ -428,10 +431,10 @@ Signature:
 Signature:
 
 ```cpp
- static App* _GetApp();
+ static Context* _GetContext();
 ```
 
-**Returns:** Pointer to the global App instance
+**Returns:** Pointer to the global Context instance
 
 **This function has been available since:** v0.0.1
 
@@ -448,7 +451,7 @@ Signature:
 Signature:
 
 ```cpp
- static EngineConfig* _GetConfig();
+ static inline EngineConfig* _GetConfig();
 ```
 
 **Returns:** Pointer to the global game config
@@ -500,7 +503,7 @@ Signature:
 | Type | Name | Description |
 | --- | --- | --- | 
 | `Core*` | `m_instance` | Pointer to the global Core instance |
-| `App*` | `m_app` | Pointer to the global App instance |
+| `Context*` | `m_context` | Pointer to the global Context instance |
 | `bool` | `m_shouldClose` | Whether the application should close |
 | `_internal` | `m_internal` | Internal state struct |
 | `_FrameCounter` | `m_frameCounter` | Frame counter for FPS/TPS tracking |

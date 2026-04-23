@@ -97,10 +97,10 @@ enum ViewID : bgfx::ViewId
 | `VIEW_LIGHTING` | Lighting pass for deferred shading |
 | `VIEW_FORWARD` | Forward rendering pass for translucent objects |
 | `VIEW_BILLBOARD` | Billboard rendering |
-| `VIEW_AO` | Ambient occlusion passes (3 passes) |
-| `VIEW_POSTPROCESS` | Post-processing effects passes (Max 8 passes) |
 | `VIEW_DEBUG` | Debug rendering pass for debug rendering |
 | `VIEW_BILL_DBG` | Billboard debug rendering |
+| `VIEW_AO` | Ambient occlusion passes (3 passes) |
+| `VIEW_POSTPROCESS` | Post-processing effects passes (Max 8 passes) |
 | `VIEW_UI` | UI rendering |
 | `VIEW_UI_DEBUG` | UI debug rendering |
 
@@ -199,10 +199,12 @@ struct RendererConfig
 
 | Type | Name | Description |
 | --- | --- | --- | 
+| `true` | `Whether` | to load settings from file on initialization. This |
 | `bool` | `useShadows` | Whether to use shadow mapping |
-| `float` | `shadowDist` | Distance for shadow rendering |
+| `int` | `shadowDist` | Distance for shadow rendering |
 | `bool` | `vsync` | Whether to enable vertical sync |
-| `bool` | `usePseudoCamera` | (only if DebugModes.Enabled == true) Pseudo camera is a separate camera that all rendering will use, but the main camera will still be the one drawn to the screen |
+| `false` | `(only` | if DebugModes.Enabled == true) Pseudo camera is a |
+| `bool` | `useSSAO` | Whether to enable SSAO |
 
 ---
 

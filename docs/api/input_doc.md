@@ -43,6 +43,12 @@
 - [_Registry](#inputaction_registry)
 - [_HomelessShelter](#inputaction_homelessshelter)
 - [EnsureUniqueIdentifier](#inputactionensureuniqueidentifier)
+- [StringToScancode](#inputactionstringtoscancode)
+- [ScancodeToString](#inputactionscancodetostring)
+- [StringToKeycode](#inputactionstringtokeycode)
+- [KeycodeToString](#inputactionkeycodetostring)
+- [KeymodToString](#inputactionkeymodtostring)
+- [StringToKeymod](#inputactionstringtokeymod)
 
 ---
 
@@ -467,7 +473,7 @@ Signature:
 Signature:
 
 ```cpp
- static void RegisterAction(const std::string& identifier, const std::string& name, const std::string& category, KeyBinding binding, Callbacks callbacks);
+ static InputAction* RegisterAction(const std::string& identifier, const std::string& name, const std::string& category, KeyBinding binding, Callbacks callbacks);
 ```
 
 **Parameters:**
@@ -477,6 +483,8 @@ Signature:
 - `category`: The category for the input action. This is used for organizing actions in the bindings menu
 - `binding`: The binding for the input action
 - `callbacks`: The callbacks to call when the action state updates
+
+**Returns:** A pointer to the registered action
 
 **This function has been available since:** 0.0.1
 
@@ -655,9 +663,123 @@ Signature:
 
 **Parameters:**
 
-- `identifer`: The identifier to check
+- `identifier`: The identifier to check
 
 **This function has been available since:** 0.0.1
+
+---
+
+#### **`InputAction::StringToScancode`**
+
+
+ Converts an identifier to a ``Scancode``
+
+Signature:
+
+```cpp
+Scancode StringToScancode(const std::string& code);
+```
+
+**Parameters:**
+
+- `code`: The string to convert from
+
+**Returns:** The scancode if it succeeded, or ``Scancode::_UNKNOWN`` if it failed
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`InputAction::ScancodeToString`**
+
+
+ Converts a ``Scancode`` to its unique identifier
+
+Signature:
+
+```cpp
+std::string ScancodeToString(const Scancode& code);
+```
+
+**Parameters:**
+
+- `code`: The ``Scancode`` to convert from
+
+**Returns:** The identifier if it succeeded, or ``""`` if it failed
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`InputAction::StringToKeycode`**
+
+
+ Converts an identifier to a ``Keycode``
+
+Signature:
+
+```cpp
+Keycode StringToKeycode(const std::string& key);
+```
+
+**Parameters:**
+
+- `key`: The string to convert from
+
+**Returns:** The keycode if it succeeded, or ``Keycode::_UNKNOWN`` if it failed
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`InputAction::KeycodeToString`**
+
+
+ Converts a ``Keycode`` to its unique identifier
+
+Signature:
+
+```cpp
+std::string KeycodeToString(const Keycode& key);
+```
+
+**Parameters:**
+
+- `key`: The ``Keycode`` to convert from
+
+**Returns:** The identifier if it succeeded, or ``""`` if it failed
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`InputAction::KeymodToString`**
+
+
+
+
+**Note:** The return value doesn't have any duplicates
+
+Signature:
+
+```cpp
+std::vector<std::string> KeymodToString(const Keymod& keymod);
+```
+
+---
+
+#### **`InputAction::StringToKeymod`**
+
+
+
+
+**Note:** This will automatically de-duplicate names
+
+Signature:
+
+```cpp
+Keymod StringToKeymod(const std::vector<std::string>& keymod);
+```
 
 ---
 

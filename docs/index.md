@@ -19,12 +19,6 @@ We have several pages of documentation available. Note the API reference is auto
 
 ## Table of Contents
 
-### Guides
-- [Creating Your First Syngine Game](guides/first-game.md)
-- [Using Prefabs in Syngine](guides/prefab.md)
-- [Making Your Own Components](guides/components.md)
-- [Profiling Your Syngine Game](guides/profiler.md)
-- [Lua Scripting in Syngine](guides/lua-scripting.md)
 
 - [Code Format Policy](policy.md)
 
@@ -37,6 +31,7 @@ We have several pages of documentation available. Note the API reference is auto
 - [Core](api/core_doc.md)
 - [Input](api/input_doc.md)
 - [Logger](api/logger_doc.md)
+- [Luamanager](api/luamanager_doc.md)
 - [Registry](api/registry_doc.md)
 - [Zonemanager](api/zonemanager_doc.md)
 
@@ -79,4 +74,5 @@ We have several pages of documentation available. Note the API reference is auto
 - [Modelloader](api/modelloader_doc.md)
 - [Profiler](api/profiler_doc.md)
 - [Serializer](api/serializer_doc.md)
+- [Specshelpers](api/specshelpers_doc.md)
 

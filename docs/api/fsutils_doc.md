@@ -13,7 +13,7 @@
 ## Goto: 
 
 
-- [_GetAppDataPath](#syngine_GetAppDataPath)
+- [_GetAppDataPath](#syngine_getappdatapath)
 - [_ResolveOSPath](#syngine_resolveospath)
 - [_CheckRequiredFolders](#syngine_checkrequiredfolders)
 - [_MakeRelativeToRoot](#syngine_makerelativetoroot)

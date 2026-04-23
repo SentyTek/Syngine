@@ -17,6 +17,7 @@
 - [Register](#componentregistryregister)
 - [ParseXml](#componentregistryparsexml)
 - [Instantiate](#componentregistryinstantiate)
+- [RegisterLuaBindings](#componentregistryregisterluabindings)
 
 ---
 
@@ -43,7 +44,7 @@ Signature:
 Signature:
 
 ```cpp
- static void Register(Syngine::ComponentTypeID type, ParseXmlFn parseFn, InstantiateFn instantiateFn);
+ static void Register(Syngine::ComponentTypeID type, ParseXmlFn parseFn, InstantiateFn instantiateFn, RegisterLuaFn registerLuaFn = nullptr);
 ```
 
 **Parameters:**
@@ -96,6 +97,23 @@ Signature:
 - `data`: The DataNode containing the component's data
 
 **Returns:** A unique pointer to the new component instance, or nullptr if the type is not registered
+
+---
+
+#### **`ComponentRegistry::RegisterLuaBindings`**
+
+
+ Register Lua bindings for component creation and manipulation
+
+Signature:
+
+```cpp
+ static void RegisterLuaBindings(sol::state& lua);
+```
+
+**Parameters:**
+
+- `lua`: The Lua state to register the bindings with
 
 ---
 
