@@ -16,7 +16,7 @@ You can create a basic GameObject specifying its name and a type.
 #include "Syngine/Syngine.h"
 
 // Instantiate a new GameObject
-// GameObject(name, shader[, tags])
+// GameObject(name[, shader="default", tags])
 auto* myObject = new Syngine::GameObject("Player", "default", "PlayerTag");
 ```
 *Note: In Syngine, GameObjects are usually registered and managed centrally by the `Registry`.*
@@ -35,7 +35,7 @@ auto* transform = myObject->AddComponent<Syngine::TransformComponent>();
 transform->SetPosition(0.f, 5.f, 0.f);
 
 // 2. Add visual representation
-myObject->AddComponent<Syngine::MeshComponent>("meshes/box.gltf"); //All paths are based out of assets/
+myObject->AddComponent<Syngine::MeshComponent>("meshes/meshes.spk", "box.glb", false); //All paths are based out of rom/ (same as assets/)
 
 // 3. Add game physics
 Syngine::RigidbodyParameters params;

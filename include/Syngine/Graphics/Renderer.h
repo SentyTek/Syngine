@@ -27,16 +27,16 @@ class BillboardComponent; // Forward declaration
 /// @section Renderer
 /// @since v0.0.1
 enum ViewID : bgfx::ViewId {
-    VIEW_SHADOW    = 0, //* Shadow map rendering
-    VIEW_SKY       = 4, //* Skybox rendering
-    VIEW_GBUFFER   = 5, //* G-Buffer rendering for deferred shading
-    VIEW_LIGHTING  = 6, //* Lighting pass for deferred shading
-    VIEW_FORWARD   = 7, //* Forward rendering pass for translucent objects
-    VIEW_BILLBOARD = 8, //* Billboard rendering
-    VIEW_AO        = 9, //* Ambient occlusion passes (3 passes)
-    VIEW_POSTPROCESS = 12, //* Post-processing effects passes (Max 8 passes)
-    VIEW_DEBUG       = 16,  //* Debug rendering pass for debug rendering
-    VIEW_BILL_DBG    = 17, //* Billboard debug rendering
+    VIEW_SHADOW      = 0,  //* Shadow map rendering
+    VIEW_SKY         = 4,  //* Skybox rendering
+    VIEW_GBUFFER     = 5,  //* G-Buffer rendering for deferred shading
+    VIEW_LIGHTING    = 6,  //* Lighting pass for deferred shading
+    VIEW_FORWARD     = 7,  //* Forward rendering pass for translucent objects
+    VIEW_BILLBOARD   = 8,  //* Billboard rendering
+    VIEW_DEBUG       = 9,  //* Debug rendering pass for debug rendering
+    VIEW_BILL_DBG    = 10, //* Billboard debug rendering
+    VIEW_AO          = 11, //* Ambient occlusion passes (3 passes)
+    VIEW_POSTPROCESS = 14, //* Post-processing effects passes (Max 8 passes)
     VIEW_UI          = 18, //* UI rendering
     VIEW_UI_DEBUG    = 19, //* UI debug rendering
 };
@@ -78,10 +78,20 @@ struct Program {
 
 /// @brief To manage renderer configuration
 struct RendererConfig {
+    bool loadFromFile =
+        true; //* Whether to load settings from file on initialization. This
+              // will ignore all other settings in this struct if true. But if
+              // file is not found, it will use the other settings and create a
+              // new file with them. Specially for width and height, which are
+              // set by EngineConfig instead.
     bool useShadows = true; //* Whether to use shadow mapping
-    float shadowDist = 500.0f; //* Distance for shadow rendering
-    bool  vsync      = true;   //* Whether to enable vertical sync
-    bool usePseudoCamera = false; //* (only if DebugModes.Enabled == true) Pseudo camera is a separate camera that all rendering will use, but the main camera will still be the one drawn to the screen
+    int  shadowDist = 500; //* Distance for shadow rendering
+    bool  vsync     = true;   //* Whether to enable vertical sync
+    bool  usePseudoCamera =
+        false; //* (only if DebugModes.Enabled == true) Pseudo camera is a
+               //separate camera that all rendering will use, but the main
+               //camera will still be the one drawn to the screen
+    bool useSSAO = true; //* Whether to enable SSAO
 };
 
 /// @brief Renderer class to manage rendering and shader programs

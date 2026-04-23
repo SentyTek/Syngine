@@ -75,6 +75,7 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
     stbi_uc* pixels = stbi_load_from_memory(data, static_cast<int>(size), &w, &h, &channels, 4);
     if (!pixels) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                               false,
                                "Failed to load embedded texture");
         return BGFX_INVALID_HANDLE;
     }
@@ -128,7 +129,7 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
     stbi_image_free(pixels);
 
     if (!bgfx::isValid(tex)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Failed to create texture %s (%dx%d)",
                               name ? name : "<memory>",
                               w,
@@ -142,7 +143,7 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
 bgfx::TextureHandle Syngine::LoadTextureFromFile(const char* path) {
     SDL_IOStream* rw = SDL_IOFromFile(path, "rb");
     if (!rw) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                                "Failed to open file %s",
                                path);
         return BGFX_INVALID_HANDLE;
@@ -160,7 +161,7 @@ bgfx::TextureHandle Syngine::LoadTextureFromBundle(const std::string& bundlePath
     scl::stream ms =
         Syngine::Serializer::_ReadFromBundle(bundlePath, textureName);
     if (ms.size() == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                                "Failed to load texture %s from bundle %s",
                                textureName.c_str(),
                                bundlePath.c_str());

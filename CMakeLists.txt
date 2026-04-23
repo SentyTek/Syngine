@@ -67,6 +67,7 @@ add_library(Syngine STATIC
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
     src/Syngine/Core/ZoneManager.cpp
+    src/Syngine/Core/LuaManager.cpp
 
     # Graphics
     src/Syngine/Graphics/Renderer.cpp
@@ -270,6 +271,10 @@ target_link_libraries(Syngine PRIVATE
     lua
     sol2
 )
+
+if(MSVC)
+    target_link_libraries(Syngine PRIVATE dxgi.lib)
+endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
 clangd(Syngine

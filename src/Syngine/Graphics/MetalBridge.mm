@@ -19,7 +19,11 @@
 static NSView* FindTaggedView(NSView* root, NSInteger tag) {
     if (root.tag == tag) return root;
     if (!root.subviews || root.subviews.count == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "View with tag %ld has no subviews. Renderer cannot be created.", (long)tag);
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR,
+            false,
+            "View with tag %ld has no subviews. Renderer cannot be created.",
+            (long)tag);
         return nil;
     }
 
@@ -47,9 +51,12 @@ extern "C" void* _GetSYNMetalView(SDL_Window* win) {
     void* nsWindowPtr = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
     int64_t tag = SDL_GetNumberProperty(props, SDL_PROP_WINDOW_COCOA_METAL_VIEW_TAG_NUMBER, 0);
     if (!nsWindowPtr || tag <= 0 || tag == 255) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              "Failed to get valid Metal view (tag=%ld, win=%p)",
-                              (long)tag, nsWindowPtr);
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR,
+            false,
+            "Failed to get valid Metal view (tag=%ld, win=%p)",
+            (long)tag,
+            nsWindowPtr);
         // As a last resort, return the content view; bgfx may attach a layer.
         void* cocoaView = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
         return cocoaView;
@@ -59,7 +66,9 @@ extern "C" void* _GetSYNMetalView(SDL_Window* win) {
     NSView* contentView = [nsWindow contentView];
     NSView* found = FindTaggedView(contentView, (NSInteger)tag);
     if (!found) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, "Failed to find Metal subview by tag");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
+                              "Failed to find Metal subview by tag");
         void* cocoaView = SDL_GetPointerProperty(props, SDL_PROP_WINDOW_COCOA_WINDOW_POINTER, NULL);
         return cocoaView;
     }

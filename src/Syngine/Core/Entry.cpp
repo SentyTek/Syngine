@@ -13,9 +13,9 @@
 #include <Windows.h>
 #include <shellapi.h> // For CommandLineToArgvW
 #include <cwchar>
+#else
+#include <cstring>
 #endif
-
-#include <iostream>
 
 #include "Syngine/Core/Logger.h"
 
@@ -55,7 +55,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
     for (int i = 0; i < argc; ++i) {
         if (wcscmp(argvW[i], L"--console") == 0) {
             EnableConsole();
-            break;
+        }
+        if (wcscmp(argvW[i], L"--verbose") == 0) {
+            Syngine::Logger::SetVerbose(true);
         }
     }
 
@@ -81,6 +83,12 @@ int WINAPI WinMain(HINSTANCE hInstance,
 }
 #else
 int main(int argc, char* argv[]) {
+    for (int i = 1; i < argc; ++i) {
+        if (std::strcmp(argv[i], "--verbose") == 0) {
+            Syngine::Logger::SetVerbose(true);
+        }
+    }
+
     int result = 0;
     try {
         result = AppMain(argc, argv);

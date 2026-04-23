@@ -159,7 +159,7 @@ int AppMain(int argc, char* argv[]) {
                                          .usePseudoCamera = false };
 
     Syngine::Logger::Init(gameName);
-    Syngine::Logger::Log("Starting " + gameName);
+    Syngine::Logger::Info("Starting " + gameName, true);
 
     // Create game
     Syngine::Core engine(config);
@@ -170,7 +170,7 @@ int AppMain(int argc, char* argv[]) {
     Syngine::CameraComponent* cameraComp = camera->AddComponent<Syngine::CameraComponent>();
 
 
-    Logger::Info("Starting event loop");
+    Logger::Info("Starting event loop", true);
     while (engine.IsRunning()) {
         Profiler::Reset();
         {

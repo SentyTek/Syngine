@@ -17,8 +17,6 @@
 - [Logger](#loggerlogger)
 - [_GetTimestamp](#logger_gettimestamp)
 - [_LogLevelToString](#logger_logleveltostring)
-- [Init](#loggerinit)
-- [Shutdown](#loggershutdown)
 - [Log](#loggerlog)
 - [LogF](#loggerlogf)
 - [Error](#loggererror)
@@ -34,6 +32,8 @@
 - [GetMinLogLevel](#loggergetminloglevel)
 - [SetupCrashHandler](#loggersetupcrashhandler)
 - [PrintStackTrace](#loggerprintstacktrace)
+- [SetVerbose](#loggersetverbose)
+- [IsVerbose](#loggerisverbose)
 
 ---
 
@@ -122,51 +122,6 @@ Signature:
 
 ---
 
-#### **`Logger::Init`**
-
-
- Initialize the logger with the name of the app and an optional log path, relative to the app's data directory.
-
-**Note:** Should be called once at the start of the application.
-
-Signature:
-
-```cpp
- static void Init(const std::string& appname, const std::filesystem::path& logPath = std::filesystem::path("log.txt"));
-```
-
-**Parameters:**
-
-- `appname`: Name of the application
-- `logPath`: Path to the log file, defaults to "log.txt" in the app's data directory
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
-**Throws:** Could throw std::runtime_error if the log file cannot be opened
-
----
-
-#### **`Logger::Shutdown`**
-
-
- Shutdown the logger
-
-**Note:** Should be called once at the end of the application.
-
-Signature:
-
-```cpp
- static void Shutdown();
-```
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
-
 #### **`Logger::Log`**
 
 
@@ -175,7 +130,7 @@ Signature:
 Signature:
 
 ```cpp
- static void Log(const std::string_view message, LogLevel level = LogLevel::INFO, bool toConsole = true);
+ static void Log(const std::string_view message, LogLevel level = LogLevel::INFO, bool writeOnlyInDebug = true, bool toConsole = true);
 ```
 
 **Parameters:**
@@ -183,6 +138,7 @@ Signature:
 - `message`: Message to log
 - `level`: Log level, defaults to LogLevel::INFO
 - `toConsole`: Whether to log to the console, defaults to true
+- `writeOnlyInDebug`: When true, only in debug mode will this message be written to disk. In release mode, it will be ignored. Defaults to false.
 
 **Thread Safety:** not-safe
 
@@ -200,12 +156,13 @@ Signature:
 Signature:
 
 ```cpp
- static void LogF(LogLevel level, const char* fmt, ...);
+ static void LogF(LogLevel level, bool writeOnlyInDebug, const char* fmt, ...);
 ```
 
 **Parameters:**
 
 - `level`: Log level, defaults to LogLevel::INFO
+- `writeOnlyInDebug`: When true, only in debug mode will this message be written to disk. In release mode, it will be ignored. Defaults to false.
 - `fmt`: Format string
 - `...`: Format string arguments
 
@@ -225,12 +182,13 @@ Signature:
 Signature:
 
 ```cpp
- static void Error(const std::string_view message);
+ static void Error(const std::string_view message, bool writeOnlyInDebug = false);
 ```
 
 **Parameters:**
 
 - `message`: Error message to log
+- `writeOnlyInDebug`: When true, only in debug mode will this message be written to disk. In release mode, it will be ignored. Defaults to false.
 
 **Thread Safety:** not-safe
 
@@ -246,12 +204,13 @@ Signature:
 Signature:
 
 ```cpp
- static void Info(const std::string_view message);
+ static void Info(const std::string_view message, bool writeOnlyInDebug = false);
 ```
 
 **Parameters:**
 
 - `message`: Informational message to log
+- `writeOnlyInDebug`: When true, only in debug mode will this message be written to disk. In release mode, it will be ignored. Defaults to false.
 
 **Thread Safety:** not-safe
 
@@ -288,12 +247,13 @@ Signature:
 Signature:
 
 ```cpp
- static void Warn(const std::string_view message);
+ static void Warn(const std::string_view message, bool writeOnlyInDebug = false);
 ```
 
 **Parameters:**
 
 - `message`: Warning message to log
+- `writeOnlyInDebug`: When true, only in debug mode will this message be written to disk. In release mode, it will be ignored. Defaults to false.
 
 **Thread Safety:** not-safe
 
@@ -469,6 +429,46 @@ Signature:
 ```
 
 **Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Logger::SetVerbose`**
+
+
+ Set the verbose mode. When verbose, certain messages that are normally only logged in debug mode will also be logged in release mode.
+
+Signature:
+
+```cpp
+ static void SetVerbose(bool verbose);
+```
+
+**Parameters:**
+
+- `verbose`: Whether to enable verbose mode
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`Logger::IsVerbose`**
+
+
+ Get whether verbose mode is enabled
+
+Signature:
+
+```cpp
+ static bool IsVerbose();
+```
+
+**Returns:** True if verbose mode is enabled, false otherwise
+
+**Thread Safety:** safe
 
 **This function has been available since:** v0.0.1
 
