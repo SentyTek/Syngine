@@ -34,6 +34,7 @@
 - [setOnReleasedCallback](#inputactionsetonreleasedcallback)
 - [setOnStateChangedCallback](#inputactionsetonstatechangedcallback)
 - [RegisterAction](#inputactionregisteraction)
+- [UnregisterActionsByPrefix](#inputactionunregisteractionsbyprefix)
 - [Operator == overload](#inputactionoperator==overload)
 - [_HandleEvent](#inputaction_handleevent)
 - [RegisterMouseMoveEvent](#inputactionregistermousemoveevent)
@@ -485,6 +486,27 @@ Signature:
 - `callbacks`: The callbacks to call when the action state updates
 
 **Returns:** A pointer to the registered action
+
+**This function has been available since:** 0.0.1
+
+---
+
+#### **`InputAction::UnregisterActionsByPrefix`**
+
+
+ Unregister all actions created through RegisterAction whose identifiers start with a given prefix.
+
+Signature:
+
+```cpp
+ static size_t UnregisterActionsByPrefix(const std::string& prefix);
+```
+
+**Parameters:**
+
+- `prefix`: Identifier prefix to match.
+
+**Returns:** Number of removed actions.
 
 **This function has been available since:** 0.0.1
 
