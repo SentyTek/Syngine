@@ -1054,9 +1054,10 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
         bool mirrored = det < 0.0f;
 
+        float invModelMtx[16];
+        bx::mtxInverse(invModelMtx, modelMtx);
         float normalMatrix[16];
-        bx::mtxInverse(normalMatrix, modelMtx);
-        bx::mtxTranspose(normalMatrix, normalMatrix);
+        bx::mtxTranspose(normalMatrix, invModelMtx);
 
         // Emit one packet per submesh
         for (size_t submeshIdx = 0; submeshIdx < meshData.subMeshes.size(); ++submeshIdx) {
