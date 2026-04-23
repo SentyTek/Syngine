@@ -285,12 +285,12 @@ void DebugRender::RenderLines(const float*        view,
                               int                 width,
                               int                 height,
                               bgfx::ProgramHandle program) {
+    if (debugLines.empty()) return;
+
     unsigned short viewId = ViewID::VIEW_DEBUG; // Why the hell does anyone use shorts
     bgfx::setViewTransform(viewId, view, proj);
     bgfx::setViewRect(viewId, 0, 0, width, height);
     bgfx::touch(viewId);
-
-    if (debugLines.empty()) return;
 
     bgfx::TransientVertexBuffer tvb;
     bgfx::allocTransientVertexBuffer(

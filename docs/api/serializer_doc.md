@@ -40,6 +40,9 @@
 - [_ParseFloatArray](#datanode_parsefloatarray)
 - [_ParseIntArray](#datanode_parseintarray)
 - [_ParseStringArray](#datanode_parsestringarray)
+- [_LoadCoreSettings](#datanode_loadcoresettings)
+- [_SaveCoreSettings](#datanode_savecoresettings)
+- [_LoadCoreSettingsCategory](#datanode_loadcoresettingscategory)
 
 ---
 
@@ -61,7 +64,7 @@ Signature:
 #### **`DataNode::using`**
 
 
- A flexible data node that can represent various data types and hierarchical structures (like JSON or YAML).
+ A flexible data node that can represent various data types and hierarchical structures (like JSON or XML).
 
 Signature:
 
@@ -452,15 +455,17 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `uint32_t` | `width` | Default 1080p |
-| `uint32_t` | `height` | Default 1080p |
+| `int` | `width` | Default 1080p |
+| `int` | `height` | Default 1080p |
 | `bool` | `fullscreen` | Windowed by default |
 | `float` | `brightness` | Normal brightness |
 | `bool` | `vSync` | V-Sync enabled by default |
-| `DataNode` | `Serialize()` | const Helper to serialize video settings |
+| `bool` | `useShadows` | Shadows enabled by default |
+| `int` | `shadowDist` | Shadow draw distance |
+| `bool` | `useSSAO` | SSAO enabled by default |
+| `DataNode` | `customSettings` | Custom video settings as DataNode tree |
 | `float` | `masterVolume` | Master volume (0.0 to 1.0) |
 | `float[8]` | `channels` | Volume for 8 audio channels |
-| `DataNode` | `Serialize()` | const Helper to serialize audio settings |
 | `float` | `mouseSensitivity` | Normal sensitivity |
 | `bool` | `invertY` | Y-axis not inverted by default |
 | `DataNode` | `binds` | Key bindings as a map of action -> key |
@@ -637,6 +642,74 @@ Signature:
 - `value`: The string value to parse (expected format: "str1,str2,str3")
 
 **Returns:** A vector of strings with the parsed values, or an empty vector if parsing fails
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`DataNode::_LoadCoreSettings`**
+
+
+ Load CoreSetting into memory
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ static void _LoadCoreSettings(const std::string& gameName);
+```
+
+**Parameters:**
+
+- `gameName`: The name of the game (used to determine settings file path)
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`DataNode::_SaveCoreSettings`**
+
+
+ Save the current CoreSettings in memory to disk
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ static void _SaveCoreSettings(const std::string& gameName);
+```
+
+**Parameters:**
+
+- `gameName`: The name of the game (used to determine settings file)
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`DataNode::_LoadCoreSettingsCategory`**
+
+
+ Load a section of CoreSettings
+
+#### This function is internal use only and not intended for public use!
+
+
+Signature:
+
+```cpp
+ template <typename T> static T* _LoadCoreSettingsCategory();
+```
+
+**Template Parameters:**
+
+- `T`: The type of the section to load (Video, Audio, Controls)
+
+**Returns:** The loaded section data
 
 **This function has been available since:** v0.0.1
 

@@ -18,14 +18,15 @@ std::unordered_map<Syngine::ComponentTypeID, ComponentRegistry::Entry>& Componen
 }
 
 void ComponentRegistry::Register(Syngine::ComponentTypeID type,
-                                 ParseXmlFn    parseXml,
-                                 InstantiateFn instantiate) {
+                                 ParseXmlFn               parseXml,
+                                 InstantiateFn            instantiate,
+                                 RegisterLuaFn            registerLua) {
     // Prevent duplicates
     if (m_registry().find(type) != m_registry().end()) {
         Logger::Error("ComponentRegistry: Component type " + std::to_string(type) + " is already registered");
         return;
     }
-    m_registry()[type] = { type, std::move(parseXml), std::move(instantiate) };
+    m_registry()[type] = { type, std::move(parseXml), std::move(instantiate), std::move(registerLua) };
 }
 
 Serializer::DataNode ComponentRegistry::ParseXml(Syngine::ComponentTypeID type, const scl::xml::XmlElem* elem) {
@@ -45,6 +46,14 @@ std::unique_ptr<Component> ComponentRegistry::Instantiate(Syngine::ComponentType
         return nullptr;
     }
     return it->second.instantiate(owner, data);
+}
+
+void ComponentRegistry::_RegisterAllLuaBindings(sol::state& lua) {
+    for (const auto& [type, entry] : m_registry()) {
+        if (entry.registerLua) {
+            entry.registerLua(lua);
+        }
+    }
 }
 
 } // namespace Syngine

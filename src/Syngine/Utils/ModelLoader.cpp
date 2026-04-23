@@ -12,6 +12,7 @@
 
 #include "Syngine/Utils/FsUtils.h"
 #include "assimp/color4.h"
+#include "assimp/mesh.h"
 #include "assimp/types.h"
 #include "assimp/vector3.h"
 #include "bgfx/bgfx.h"
@@ -29,6 +30,16 @@
 namespace Syngine {
 
 namespace {
+
+aiVector3D _MirrorX(const aiVector3D& v) {
+    return aiVector3D(-v.x, v.y, v.z);
+}
+
+aiVector3D _Normalized(const aiVector3D& v) {
+    aiVector3D out = v;
+    out.Normalize();
+    return out;
+}
 
 std::string _GetAssimpFormatHint(const std::string& assetPath) {
     const size_t dotPos = assetPath.find_last_of('.');
@@ -154,27 +165,27 @@ bool AssimpLoader::_LoadModel(MeshData&          out,
         stream->data(), stream->size(), flags, formatHint.c_str());
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->HasMeshes()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Error loading model: %s",
                               importer.GetErrorString());
         return false;
     }
 
     if (scene->mNumMeshes == 0) {
-        Syngine::Logger::Error("No meshes found in model.");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "No meshes found in model.");
         return false;
     }
 
     MeshData meshData;
     if (!processScene(meshData, scene, stream, loadTextures)) {
-        Syngine::Logger::Error("Failed to process model scene.");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "Failed to process model scene.");
         return false;
     }
     meshData.id          = static_cast<int>(loadedMeshes.size());
 
     meshData.valid = true; // Mark as valid after processing
 
-    Syngine::Logger::Info("Loaded mesh");
+    Syngine::Logger::Info("Loaded mesh", true);
     loadedMeshes.push_back(meshData);
     out = meshData;
     return true;
@@ -260,16 +271,20 @@ bool AssimpLoader::processScene(MeshData&      out,
         for (uint32_t v = 0; v < aiMeshPtr->mNumVertices; ++v) {
             Vertex vertex = {};
 
+            const aiVector3D pos = _MirrorX(aiMeshPtr->mVertices[v]);
+
             // Position
-            vertex.pos[0] = aiMeshPtr->mVertices[v].x;
-            vertex.pos[1] = aiMeshPtr->mVertices[v].y;
-            vertex.pos[2] = aiMeshPtr->mVertices[v].z;
+            vertex.pos[0] = pos.x;
+            vertex.pos[1] = pos.y;
+            vertex.pos[2] = pos.z;
 
             // Normal
             if (aiMeshPtr->HasNormals()) {
-                vertex.normal[0] = aiMeshPtr->mNormals[v].x;
-                vertex.normal[1] = aiMeshPtr->mNormals[v].y;
-                vertex.normal[2] = aiMeshPtr->mNormals[v].z;
+                const aiVector3D n = _Normalized(aiMeshPtr->mNormals[v]);
+                const aiVector3D nMirrored = _MirrorX(n);
+                vertex.normal[0] = nMirrored.x;
+                vertex.normal[1] = nMirrored.y;
+                vertex.normal[2] = nMirrored.z;
             }
 
             // UV0
@@ -303,15 +318,22 @@ bool AssimpLoader::processScene(MeshData&      out,
 
             // Tangent and bitangent
             if (aiMeshPtr->HasTangentsAndBitangents()) {
-                vertex.tangent[0] = aiMeshPtr->mTangents[v].x;
-                vertex.tangent[1] = aiMeshPtr->mTangents[v].y;
-                vertex.tangent[2] = aiMeshPtr->mTangents[v].z;
+                const aiVector3D t = _Normalized(aiMeshPtr->mTangents[v]);
+                const aiVector3D b = _Normalized(aiMeshPtr->mBitangents[v]);
+
+                const aiVector3D tMirrored = _MirrorX(t);
+                const aiVector3D bMirrored = _MirrorX(b);
+
+                vertex.tangent[0] = tMirrored.x;
+                vertex.tangent[1] = tMirrored.y;
+                vertex.tangent[2] = tMirrored.z;
                 // Store handedness in w component of tangent
                 // sign(dot(cross(normal, tangent), bitangent))
-                aiVector3D cross = aiMeshPtr->mNormals[v] ^
-                                    aiMeshPtr->mTangents[v];
+                aiVector3D cross = aiVector3D(vertex.normal[0],
+                                              vertex.normal[1],
+                                              vertex.normal[2]) ^ tMirrored;
                 vertex.tangent[3] =
-                    (cross * aiMeshPtr->mBitangents[v]) < 0.0f ? -1.0f : 1.0f;
+                    (cross * bMirrored) < 0.0f ? -1.0f : 1.0f;
             }
 
             out.vertices.push_back(vertex);
@@ -322,9 +344,15 @@ bool AssimpLoader::processScene(MeshData&      out,
             const aiFace& face = aiMeshPtr->mFaces[f];
             if (face.mNumIndices == 3) { // Only support triangles
                 out.indices.push_back(vertexOffset + face.mIndices[0]);
-                out.indices.push_back(vertexOffset + face.mIndices[1]);
                 out.indices.push_back(vertexOffset + face.mIndices[2]);
+                out.indices.push_back(vertexOffset + face.mIndices[1]);
             }
+        }
+
+        // If this mesh has vertex colors, mark the associated material
+        if (aiMeshPtr->HasVertexColors(0) &&
+            subMesh.materialIndex < out.materials.size()) {
+            out.materials[subMesh.materialIndex].useVertexColor = true;
         }
 
         vertexOffset += aiMeshPtr->mNumVertices;
@@ -362,7 +390,7 @@ bool AssimpLoader::processScene(MeshData&      out,
 
     // checks
     if (!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Failed to create vertex/index buffer");
         return false;
     }
@@ -382,21 +410,21 @@ bool AssimpLoader::_ReloadModel(MeshData&          out,
     MeshData* mesh = _GetMeshById(id);
     if (!mesh) {
         Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR, "Mesh with ID %d not found", id);
+            Syngine::LogLevel::ERR, true, "Mesh with ID %d not found", id);
         return false;
     }
     mesh->valid = false; // Mark as invalid before reloading
 
     Assimp::Importer importer;
-    const uint16_t   flags = aiProcess_JoinIdenticalVertices |
-                           aiProcess_CalcTangentSpace |
-                           aiProcess_GenSmoothNormals;
+    const int        flags = aiProcess_JoinIdenticalVertices |
+                      aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
+                      aiProcess_DropNormals;
     const std::string formatHint = _GetAssimpFormatHint(assetPath);
     const aiScene* scene = importer.ReadFileFromMemory(
         stream->data(), stream->size(), flags, formatHint.c_str());
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->HasMeshes()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Error reloading model: %s",
                               importer.GetErrorString());
         return false;
@@ -441,7 +469,7 @@ bool AssimpLoader::_ReloadModel(MeshData&          out,
 
     mesh->valid = true;
 
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO, "Reloaded mesh with ID %d", mesh->id);
+    Syngine::Logger::LogF(Syngine::LogLevel::INFO, true, "Reloaded mesh with ID %d", mesh->id);
     out = *mesh; // Update output with reloaded data
     return true;
 }
@@ -500,7 +528,7 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
         if (std::filesystem::exists(heightPath)) {
             mat.heightMap = Syngine::LoadTextureFromFile(heightPath.c_str());
         } else {
-            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN, true,
                                   "Height map not found for material %s",
                                   path.c_str());
             mat.heightMap = Syngine::CreateFlatTexture();

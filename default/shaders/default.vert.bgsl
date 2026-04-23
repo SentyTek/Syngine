@@ -7,7 +7,7 @@ $output v_worldPos v_normal v_viewDepth v_vertexColor v_uvScaled v_uvMacro v_uvD
 // u_projection is the projection matrix
 // u_modelViewProj is u_proj * u_view * u_model
 
-uniform mat3 u_normalMatrix; // should be the inverse transpose of the model matrix
+uniform mat4 u_normalMatrix; // should be the inverse transpose of the model matrix
 uniform vec4 u_uvScale; // x = uvScaleAlbedo, y = uvScaleNormal, z = uvScaleHeight, w = unused
 uniform vec4 u_materialParams1; // x = mixFactor for normal mapping, y = ambient multiplier, z = uvOverride, w = use vertex color
 
@@ -16,7 +16,7 @@ void main() {
     vec4 worldPos = mul(u_model[0], vec4(a_position, 1.0));
     v_worldPos = worldPos.xyz;
     v_viewDepth = mul(u_view, worldPos).z;
-    v_normal = normalize(mul(u_normalMatrix, a_normal));
+    v_normal = normalize(mul(u_normalMatrix, vec4(a_normal, 0.0)).xyz);
     v_vertexColor = a_color0;
 
     //two UV sets

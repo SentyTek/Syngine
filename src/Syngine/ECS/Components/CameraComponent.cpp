@@ -15,6 +15,7 @@
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace Syngine {
@@ -77,7 +78,9 @@ void CameraComponent::Update(int viewId, int width, int height) {
     Syngine::Camera& cam = this->camera;
     float* eye = this->camera.eye;
     bx::Vec3 eyeVec = { eye[0], eye[1], eye[2] };
-    float aspect = float(width) / float(height);
+    const int safeWidth = std::max(width, 1);
+    const int safeHeight = std::max(height, 1);
+    float aspect = float(safeWidth) / float(safeHeight);
 
     bx::Vec3 forward = {
         cosf(cam.pitch) * sinf(cam.yaw),
@@ -94,10 +97,12 @@ void CameraComponent::Update(int viewId, int width, int height) {
     bx::Vec3 upVec = bx::cross(right, forward);
 
     bx::mtxLookAt(cam.view, eyeVec, targetVec, upVec);
-
-    bx::mtxLookAt(cam.view, eyeVec, targetVec, upVec);
-    bx::mtxProj(cam.proj, cam.fov, aspect, cam.nearPlane, cam.farPlane, bgfx::getCaps()->homogeneousDepth);
-    bgfx::setViewTransform(viewId, cam.view, cam.proj);
+    bx::mtxProj(cam.proj,
+                cam.fov,
+                aspect,
+                cam.nearPlane,
+                cam.farPlane,
+                bgfx::getCaps()->homogeneousDepth);
 }
 
 Syngine::ComponentTypeID CameraComponent::GetComponentType() {

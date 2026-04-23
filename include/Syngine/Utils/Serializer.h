@@ -43,7 +43,7 @@ class Serializer {
     struct Mat4   { float data[16]; };
 
     /// @brief A flexible data node that can represent various data types
-    /// and hierarchical structures (like JSON or YAML).
+    /// and hierarchical structures (like JSON or XML).
     /// @since v0.0.1
     class DataNode {
       public:
@@ -207,14 +207,15 @@ class Serializer {
     /// @since v0.0.1
     struct CoreSettings {
         struct Video {
-            uint32_t width = 1920; //* Default 1080p
-            uint32_t height = 1080; //* Default 1080p
+            int width = 1920; //* Default 1080p
+            int height = 1080; //* Default 1080p
             bool     fullscreen = false; //* Windowed by default
-            float    brightness = 1.0f; //* Normal brightness
-            bool     vSync = true; //* V-Sync enabled by default
-
-            DataNode Serialize() const; //* Helper to serialize video settings
-            void Deserialize(const DataNode& node); //* Helper to deserialize video settings
+            float    brightness = 1.0f;  //* Normal brightness
+            bool     vSync      = true;  //* V-Sync enabled by default
+            bool     useShadows = true;  //* Shadows enabled by default
+            int      shadowDist = 500;   //* Shadow draw distance
+            bool     useSSAO    = true;  //* SSAO enabled by default
+            DataNode customSettings; //* Custom video settings as DataNode tree
         } video;
 
         /// @brief Audio settings like master volume and channel volumes
@@ -222,9 +223,6 @@ class Serializer {
         struct Audio {
             float masterVolume = 1.0f; //* Master volume (0.0 to 1.0)
             float channels[8] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f}; //* Volume for 8 audio channels
-
-            DataNode Serialize() const; //* Helper to serialize audio settings
-            void Deserialize(const DataNode& node); //* Helper to deserialize audio settings
         } audio;
 
         /// @brief Control settings like mouse sensitivity and key bindings
@@ -314,34 +312,55 @@ class Serializer {
     /// @internal
     static inline scl::stream _ReadFromBundle(const std::string& bundlePath,
                                        const std::string& assetPath) {
-        scl::pack::Packager pack;
-        scl::path           resolvedBundlePath =
-            Internal::ResolvePath(bundlePath.c_str()).c_str();
-        if (!resolvedBundlePath.exists()) {
-            Logger::LogF(LogLevel::ERR, "Bundle file not found: %s", bundlePath.c_str());
-            return scl::stream();
-        }
-        if (!pack.open(resolvedBundlePath)) {
-            Logger::LogF(LogLevel::ERR, "Failed to open bundle: %s", bundlePath.c_str());
-            return scl::stream();
-        }
+        try {
+            scl::pack::Packager pack;
+            scl::path           resolvedBundlePath =
+                Internal::ResolvePath(bundlePath.c_str()).c_str();
+            if (!resolvedBundlePath.exists()) {
+                Logger::LogF(LogLevel::ERR, true, "Bundle file not found: %s", bundlePath.c_str());
+                return scl::stream();
+            }
+            if (!pack.open(resolvedBundlePath)) {
+                Logger::LogF(LogLevel::ERR, true, "Failed to open bundle: %s", bundlePath.c_str());
+                return scl::stream();
+            }
 
-        scl::pack::PackIndex* wts = pack.openFile(assetPath.c_str());
+            // miniscl bug workaround:
+            // Calling openFile() for a missing asset creates an "active" index with
+            // a null stream; Packager::close()/destructor later dereferences it.
+            const auto& index = pack.index();
+            if (index.find(assetPath.c_str()) == index.end()) {
+                Logger::LogF(LogLevel::ERR, true,
+                             "Asset not found in bundle index: %s",
+                             assetPath.c_str());
+                pack.close();
+                return scl::stream();
+            }
 
-        if (!wts || !wts->stream()) {
-            Logger::LogF(LogLevel::ERR, "Failed to open asset in bundle: %s", assetPath.c_str());
+            scl::pack::PackIndex* wts = pack.openFile(assetPath.c_str());
+
+            if (!wts || !wts->stream()) {
+                Logger::LogF(
+                    LogLevel::ERR,
+                    false,
+                    "Failed to open asset in bundle: %s. Does the asset exist?",
+                    assetPath.c_str());
+                pack.close();
+                return scl::stream();
+            }
+
+            wts->waitable().wait();
+            scl::stream ms;
+            size_t dataSize = wts->stream()->size();
+            ms.write(wts->stream()->data(), dataSize);
+            ms.seek(scl::StreamPos::start, 0);
+
             pack.close();
+            return ms;
+        } catch (const std::exception& e) {
+            Logger::LogF(LogLevel::ERR, true, "Error reading from bundle: %s", e.what());
             return scl::stream();
         }
-
-        wts->waitable().wait();
-        scl::stream ms;
-        size_t dataSize = wts->stream()->size();
-        ms.write(wts->stream()->data(), dataSize);
-        ms.seek(scl::StreamPos::start, 0);
-
-        pack.close();
-        return ms;
     }
 
     /// @brief Internal helper to parse float arrays
@@ -411,6 +430,34 @@ class Serializer {
         #pragma warning(pop)
         return tags;
     }
+
+  private:
+    static CoreSettings
+        m_coreSettings; //* Cached core settings in memory for quick access
+
+    /// @brief Load CoreSetting into memory
+    /// @param gameName The name of the game (used to determine settings file
+    /// path)
+    /// @since v0.0.1
+    /// @internal
+    static void _LoadCoreSettings(const std::string& gameName);
+
+    /// @brief Save the current CoreSettings in memory to disk
+    /// @param gameName The name of the game (used to determine settings file)
+    /// @since v0.0.1
+    /// @internal
+    static void _SaveCoreSettings(const std::string& gameName);
+
+    /// @brief Load a section of CoreSettings
+    /// @tparam T The type of the section to load (Video, Audio, Controls)
+    /// @return The loaded section data
+    /// @since v0.0.1
+    /// @internal
+    template <typename T> static T* _LoadCoreSettingsCategory();
+
+    friend class Core;
+    friend class RenderCore;
+    friend class Window;
 };
 
 // Template implementations for DataNode
@@ -585,6 +632,20 @@ template <typename T>
 inline Serializer::DataNode& Serializer::DataNode::operator=(const T& value) {
     m_data = value;
     return *this;
+}
+
+// CoreSettings things
+template <typename T>
+inline T* Serializer::_LoadCoreSettingsCategory() {
+    if constexpr (std::is_same_v<T, CoreSettings::Video>) {
+        return &m_coreSettings.video;
+    } else if constexpr (std::is_same_v<T, CoreSettings::Audio>) {
+        return &m_coreSettings.audio;
+    } else if constexpr (std::is_same_v<T, CoreSettings::Controls>) {
+        return &m_coreSettings.controls;
+    } else {
+        static_assert(false, "Unsupported CoreSettings category");
+    }
 }
 
 } // namespace Syngine

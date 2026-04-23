@@ -7,11 +7,16 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/ECS/Components/ZoneComponent.h"
+#include "Syngine/Core/LuaManager.h"
 #include "Syngine/Core/Registry.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
+
+#include <sol/sol.hpp>
+#include <sol/types.hpp>
+#include <string>
 
 namespace Syngine {
 
@@ -289,7 +294,8 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
     },
 
     // Instantiate
-    [](GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+    [](GameObject*                 owner,
+       const Serializer::DataNode& data) -> std::unique_ptr<Component> {
         ZoneShape shape = static_cast<ZoneShape>(data["shape"].As<int>(0));
         std::vector<float> pos = data["position"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
         std::vector<float> size = data["size"].As<std::vector<float>>({1.0f, 1.0f, 1.0f});
@@ -300,7 +306,101 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
         comp->SetActive(data["active"].As<bool>(true));
         comp->SetTags(data["tags"].As<std::vector<std::string>>({}));
         return comp;
+    },
+
+    // Lua bindings
+    // clang-format off
+    [](sol::state& lua) {
+        lua.new_usertype<ZoneComponent>("ZoneComponent",
+            // Methods
+            "GetShape", [](ZoneComponent& self) {
+                return self.GetShape() == ZoneShape::BOX ? "BOX" : "SPHERE";
+             },
+            "GetPosition", [](ZoneComponent& self) -> std::tuple<float, float, float> {
+                float pos[3];
+                self.GetPosition(pos);
+                return {pos[0], pos[1], pos[2]};
+            },
+            "SetPosition", [](ZoneComponent& self, float x, float y, float z) {
+                float pos[3] = {x, y, z};
+                self.SetPosition(pos);
+            },
+            "GetSize", [](ZoneComponent& self) -> std::tuple<float, float, float> {
+                float size[3];
+                self.GetSize(size);
+                return {size[0], size[1], size[2]};
+            },
+            "SetSize", [](ZoneComponent& self, float x, float y, float z) {
+                float size[3] = {x, y, z};
+                self.SetSize(size);
+            },
+            "GetRotation", [](ZoneComponent& self) -> std::tuple<float, float, float> {
+                float rot[3];
+                self.GetRotation(rot);
+                return {rot[0], rot[1], rot[2]};
+            },
+            "SetRotation", [](ZoneComponent& self, float x, float y, float z) {
+                float rot[3] = {x, y, z};
+                self.SetRotation(rot);
+            },
+            "IsActive", &ZoneComponent::IsActive,
+            "SetActive", &ZoneComponent::SetActive,
+            "IsOneShot", &ZoneComponent::IsOneShot,
+            "AddTag", &ZoneComponent::AddTag,
+            "RemoveTag", &ZoneComponent::RemoveTag,
+            "HasTag", &ZoneComponent::HasTag,
+            "GetTags", [](ZoneComponent& self, sol::this_state ts) {
+                std::vector<std::string> tags = self.GetTags();
+                sol::state_view lua(ts);
+                sol::table tagsTable = lua.create_table();
+                for (size_t i = 0; i < tags.size(); ++i) {
+                    tagsTable[i + 1] = tags[i];
+                }
+                return tagsTable;
+            },
+            "SetTags", [](ZoneComponent& self, sol::table tagsTable) {
+                std::vector<std::string> tags;
+                for (size_t i = 1; i <= tagsTable.size(); ++i) {
+                    if (tagsTable[i].is<std::string>()) {
+                        tags.push_back(tagsTable[i]);
+                    }
+                }
+                self.SetTags(tags);
+            },
+            "IsPointInZone", [](ZoneComponent& self, float x, float y, float z) {
+                float point[3] = {x, y, z};
+                return self.IsInZone(point);
+            },
+            "IsObjectInZone", [](ZoneComponent& self, GameObject* obj) {
+                return self.IsInZone(obj);
+            },
+            "GetObjectsInZone", [](ZoneComponent& self, sol::this_state ts) {
+                std::vector<GameObject*> objects = self.GetObjectsInZone();
+                sol::state_view lua(ts);
+                sol::table objTable = lua.create_table();
+                for (size_t i = 0; i < objects.size(); ++i) {
+                    objTable[i + 1] = objects[i];
+                }
+                return objTable;
+            },
+            "GetObjectsInZoneByTag", [](ZoneComponent& self, const std::string& tag, sol::this_state ts) {
+                std::vector<GameObject*> objects = self.GetObjectsInZoneByTag(tag);
+                sol::state_view lua(ts);
+                sol::table objTable = lua.create_table();
+                for (size_t i = 0; i < objects.size(); ++i) {
+                    objTable[i + 1] = objects[i];
+                }
+                return objTable;
+            },
+            "SetEntryCallback", [](ZoneComponent& self, sol::function callback) {
+                self.OnEnter = callback;
+            },
+            "SetExitCallback", [](ZoneComponent& self, sol::function callback) {
+                self.OnExit = callback;
+            }
+        );
     }
+    // clang-format on
 );
 
 } // namespace Syngine

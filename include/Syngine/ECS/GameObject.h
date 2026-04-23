@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "Syngine/Core/Registry.h"
+#include "Syngine/Core/LuaManager.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/Utils/Serializer.h"

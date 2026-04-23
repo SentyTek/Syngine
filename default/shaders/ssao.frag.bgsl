@@ -5,9 +5,12 @@ $input v_texcoord0
 SAMPLER2D(s_depth, 0);
 SAMPLER2D(s_normal, 1);
 
-uniform vec4 u_ssaoParams; // x: radius, y: bias (angle), z: intensity, w: renderWidth
+uniform vec4 u_ssaoParams; // x: radius, y: bias (angle), z: intensity, w: reserved
+uniform vec4 u_ssaoResolution; // x: width, y: height, z: invWidth, w: invHeight
 
 #define PI 3.14159265
+#define SSAO_DIRECTIONS 8
+#define SSAO_STEPS 6
 
 // FIX: Robust Position Reconstruction
 // This handles the D3D vs OpenGL coordinate flip automatically
@@ -44,20 +47,17 @@ void main() {
     if (depth >= 1.0) { gl_FragColor = vec4_splat(1.0); return; } // Skybox
 
     vec3 viewPos = reconstructPosition(uv, depth);
-    vec3 viewDir = normalize(-viewPos); // Vector from surface to camera
-
-    int numDirections = 3;   // Number of slice rotations (Quality)
-    int numSteps = 4;        // Samples along each slice (Range)
     float radius = u_ssaoParams.x;
 
-    // Calculate screen-space radius (approximate)
-    // 500.0 is an arbitrary focal length constant, adjust for FOV
-    float projScale = 500.0 / viewPos.z;
-    float screenRadius = radius * projScale;
+    // Approximate world-space radius projected into UV space.
+    float viewDepth = max(abs(viewPos.z), 0.001);
+    float projScale = u_proj[1][1] / viewDepth;
+    float screenRadius = radius * projScale * 0.5;
+    float minScreenRadius = max(u_ssaoResolution.z, u_ssaoResolution.w) * 2.0;
+    screenRadius = clamp(screenRadius, minScreenRadius, 0.08);
 
     // Noise for rotation jitter
-    // Get screen pixel coordinates (approximate if u_viewRect is unavailable)
-    vec2 screenPixel = uv * vec2(1600.0, 900.0); // Or pass uniform u_resolution
+    vec2 screenPixel = uv * u_ssaoResolution.xy;
     float randomVal = InterleavedGradientNoise(screenPixel);
 
     // Use randomVal to spin the GTAO slice
@@ -67,21 +67,21 @@ void main() {
 
     // Do the thing
     // TODO: XeGTAO once compute shaders are supported
-    UNROLL for(int d = 0; d < numDirections; ++d) {
+    UNROLL for(int d = 0; d < SSAO_DIRECTIONS; ++d) {
         // Compute direction in 2D Screen Space
-        float angle = (float(d) / float(numDirections)) * PI + randomAngle;
+        float angle = (float(d) / float(SSAO_DIRECTIONS)) * PI + randomAngle;
         vec2 dir = vec2(cos(angle), sin(angle));
 
         // We will track the "highest" horizon angle found in this direction
         float maxHorizonAngle = -1.0;
 
-        UNROLL for(int s = 1; s <= numSteps; ++s) {
+        UNROLL for(int s = 1; s <= SSAO_STEPS; ++s) {
             // March along the 2D direction in screen space
             // Power function (s*s) pushes samples further out for better range
-            float stepDist = (float(s) + randomVal) / float(numSteps + 1);
+            float stepDist = (float(s) + randomVal) / float(SSAO_STEPS + 1);
             stepDist *= stepDist; // Exponential stepping
 
-            vec2 sampleUV = uv + dir * stepDist * 0.05; // 0.05 is Max Screen Radius
+            vec2 sampleUV = uv + dir * stepDist * screenRadius;
 
             // Guard against screen edges
             if(sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) continue;
@@ -114,7 +114,7 @@ void main() {
     }
 
     // Average the directions
-    visibility /= float(numDirections);
+    visibility /= float(SSAO_DIRECTIONS);
 
     // Intensity
     visibility = pow(visibility, u_ssaoParams.z);

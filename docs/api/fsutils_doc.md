@@ -13,7 +13,7 @@
 ## Goto: 
 
 
-- [_GetAppdataPath](#syngine_getappdatapath)
+- [_GetAppDataPath](#syngine_getappdatapath)
 - [_ResolveOSPath](#syngine_resolveospath)
 - [_CheckRequiredFolders](#syngine_checkrequiredfolders)
 - [_MakeRelativeToRoot](#syngine_makerelativetoroot)
@@ -21,7 +21,7 @@
 
 ---
 
-#### **`Syngine::_GetAppdataPath`**
+#### **`Syngine::_GetAppDataPath`**
 
 
  Get the path to the application data directory for the specified application.
@@ -34,7 +34,7 @@
 Signature:
 
 ```cpp
-std::filesystem::path _GetAppdataPath(const std::string& appName);
+std::filesystem::path _GetAppDataPath(const std::string& appName);
 ```
 
 **Parameters:**

@@ -23,7 +23,7 @@ namespace Syngine {
 /// @return The path to the application data directory
 /// @since v0.0.1
 /// @internal
-std::filesystem::path _GetAppdataPath(const std::string& appName);
+std::filesystem::path _GetAppDataPath(const std::string& appName);
 
 /// @brief Resolves the full relative path to resourced files based on platform.
 /// macOS uses a different path structure than others because of the app bundle
@@ -89,7 +89,7 @@ inline bool _CheckRequiredFolders() {
     for (const char* folder : requiredFolders) {
         std::string fullPath = Syngine::_ResolveOSPath(folder);
         if (!SDL_GetPathInfo(fullPath.c_str(), nullptr)) {
-            Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+            Syngine::Logger::LogF(Syngine::LogLevel::FATAL, false,
                                  "Required folder '%s' does not exist in game dir: %s",
                                  folder,
                                  fullPath.c_str());
