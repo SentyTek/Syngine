@@ -268,6 +268,7 @@ class Core {
                 oneSecond    = 0.0f;
                 physCounter  = 0;
 
+#ifndef NDEBUG
                 SDL_Log("Frame: %d, GameObjects: %zu, Sim: %s, FPS/TPS: %d/%d, "
                         "Updates: %d, Drawn Objects - Shadows: %d, Forward: "
                         "%d, Billboards: %d - Culled (Frustum/Size): %d/%d",
@@ -282,6 +283,7 @@ class Core {
                         m_frameCounts.drawnObjects.billboard,
                         m_frameCounts.drawnObjects.culledFrustum,
                         m_frameCounts.drawnObjects.culledSize);
+#endif
 
                 m_frameCounts.updates = 0;
                 m_frameCounts.drawnObjects = FrameCounts::DrawnObjectCount();
