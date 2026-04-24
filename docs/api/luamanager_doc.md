@@ -15,6 +15,7 @@
 
 - [Constructor](#class-constructor)
 - [LuaLibs](#synginelualibs)
+- [_UnregisterLuaOwnedObject](#luamanager_unregisterluaownedobject)
 - [SafeScript](#luamanagersafescript)
 - [SafeFile](#luamanagersafefile)
 - [AddFunction](#luamanageraddfunction)
@@ -80,6 +81,23 @@ enum class LuaLibs : uint32_t
 | `1024` | Do not register any Syngine bindings. This disables the ECS, logger, and input bindings, and is intended for sandboxed environments where you want to allow Lua scripting but not give access to engine internals. |
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`LuaManager::_UnregisterLuaOwnedObject`**
+
+
+ Unregister a GameObject from Lua ownership tracking (called automatically on GameObject destruction)
+
+Signature:
+
+```cpp
+ static void _UnregisterLuaOwnedObject(GameObject* obj);
+```
+
+**Parameters:**
+
+- `obj`: The GameObject to unregister
 
 ---
 
