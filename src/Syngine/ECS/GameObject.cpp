@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Registry.h"
+#include "Syngine/Core/LuaManager.h"
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/RigidbodyComponent.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
@@ -112,6 +113,7 @@ GameObject& GameObject::operator=(const GameObject& other) {
 
 GameObject::~GameObject() {
     Registry::RemoveGameObject(this);
+    Syngine::LuaManager::_UnregisterLuaOwnedObject(this);
 }
 
 void GameObject::SetActive(bool active) noexcept { this->isActive = active; }

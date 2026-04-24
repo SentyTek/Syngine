@@ -158,13 +158,13 @@ void Logger::_CrashHandler(int signal) {
         default:      signalName = "Unknown (Signal)"; break;
     }
 
-    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR);
-    Logger::Log("Signal: " + std::string(signalName), LogLevel::ERR);
-    Logger::Log("Generating stack trace...", LogLevel::ERR);
+    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR, false);
+    Logger::Log("Signal: " + std::string(signalName), LogLevel::ERR, false);
+    Logger::Log("Generating stack trace...", LogLevel::ERR, false);
 
     PrintStackTrace();
 
-    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR);
+    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR, false);
     Logger::Log(m_appName + " has crashed. Press OK to exit. This should be "
                           "reported to the developers.",
                 LogLevel::FATAL);
@@ -173,10 +173,10 @@ void Logger::_CrashHandler(int signal) {
 #ifdef _WIN32
 LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
     const DWORD code = ep->ExceptionRecord->ExceptionCode;
-    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR);
-    Logger::Log("Exception Code: " + std::to_string(code), LogLevel::ERR);
-    Logger::Log("Exception Address: " + std::to_string((uintptr_t)ep->ExceptionRecord->ExceptionAddress), LogLevel::ERR);
-    Logger::Log("Exception Type: " + std::string(SehCodeToString(code)), LogLevel::ERR);
+    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR, false);
+    Logger::Log("Exception Code: " + std::to_string(code), LogLevel::ERR, false);
+    Logger::Log("Exception Address: " + std::to_string((uintptr_t)ep->ExceptionRecord->ExceptionAddress), LogLevel::ERR, false);
+    Logger::Log("Exception Type: " + std::string(SehCodeToString(code)), LogLevel::ERR, false);
 
     if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2) {
         const auto mode = ep->ExceptionRecord->ExceptionInformation[0]; // 0 read, 1 write, 8 execute
@@ -188,13 +188,13 @@ LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
                      (unsigned long long)addr);
     }
 
-    Logger::Log("Generating stack trace...", LogLevel::ERR);
+    Logger::Log("Generating stack trace...", LogLevel::ERR, false);
 
     PrintStackTrace();
 
-    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR);
+    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR, false);
     Logger::Log(m_appName + " has crashed. Press OK to exit. This should be "
-                          "reported to the developers.",
+                            "reported to the developers.",
                 LogLevel::FATAL);
 
     return EXCEPTION_EXECUTE_HANDLER;
@@ -269,7 +269,7 @@ void Logger::PrintStackTrace() {
             }
         }
 
-        Logger::Log(frameInfo, LogLevel::ERR);
+        Logger::Log(frameInfo, LogLevel::ERR, false);
         frameNum++;
     }
 #elif defined(__linux__) || defined(__APPLE__)
@@ -306,7 +306,7 @@ void Logger::PrintStackTrace() {
             frameInfo += symbols[i];
         }
 
-        Logger::Log(frameInfo, LogLevel::ERR);
+        Logger::Log(frameInfo, LogLevel::ERR, false);
     }
 
     free(symbols);

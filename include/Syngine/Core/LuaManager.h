@@ -70,6 +70,10 @@ class LuaManager {
 
     static void _ReloadLuaState();
 
+    /// @brief Unregister a GameObject from Lua ownership tracking (called automatically on GameObject destruction)
+    /// @param obj The GameObject to unregister
+    static void _UnregisterLuaOwnedObject(GameObject* obj);
+
     static std::vector<GameObject*>
         m_ownedObjects; // List of GameObjects owned by Lua (for cleanup)
 
@@ -80,6 +84,7 @@ class LuaManager {
     friend struct ComponentRegistrar; // Allow ComponentRegistrar to register Lua
                                      // bindings
     friend class Core;
+    friend class GameObject;
 
     // Template specializations for common signatures
     template <typename Func>
