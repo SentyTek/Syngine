@@ -857,26 +857,6 @@ void LuaManager::SafeFile(const std::string& filePath) {
     }
 }
 
-template <typename Func>
-void LuaManager::AddFunction(const std::string& name,
-                             Func               func,
-                             const std::string& table) {
-    if (!m_luaState) {
-        Logger::Error("Lua state is not initialized. Cannot add function.");
-        return;
-    }
-
-    if (table.empty()) {
-        (*m_luaState)[name] = func;
-    } else {
-        sol::table tbl = (*m_luaState)[table];
-        if (!tbl.valid()) {
-            tbl = (*m_luaState)[table] = m_luaState->create_table();
-        }
-        tbl[name] = func;
-    }
-}
-
 // Yeah I know it literally just deletes and recreates the Lua state inplace but
 // it's simple and effective
 void LuaManager::_ReloadLuaState() {
@@ -1018,6 +998,73 @@ void LuaManager::DoTick(float physDeltaTime,
                      err.what());
         m_allowTicking = false; // Prevent further calls to Lua functions until
                                 // reload to avoid spamming errors
+    }
+}
+
+// Specialization for void()
+template <>
+void LuaManager::_AddFunctionImpl<std::function<void()>>(
+    const std::string& name, std::function<void()> func,
+    const std::string& namespace_) {
+    if (namespace_.empty()) {
+        (*m_luaState)[name] = func;
+    } else {
+        sol::table globals = m_luaState->globals();
+        sol::object ns_obj = globals[namespace_];
+        if (ns_obj.get_type() != sol::type::table) {
+            globals[namespace_] = m_luaState->create_table();
+        }
+        globals[namespace_][name] = func;
+    }
+}
+
+// Specialization for void(bool)
+template <>
+void LuaManager::_AddFunctionImpl<std::function<void(bool)>>(
+    const std::string& name, std::function<void(bool)> func,
+    const std::string& namespace_) {
+    if (namespace_.empty()) {
+        (*m_luaState)[name] = [func](const sol::variadic_args& args) {
+            if (args.size() > 0) {
+                func(args[0].as<bool>());
+            }
+        };
+    } else {
+        sol::table globals = m_luaState->globals();
+        sol::object ns_obj = globals[namespace_];
+        if (ns_obj.get_type() != sol::type::table) {
+            globals[namespace_] = m_luaState->create_table();
+        }
+        globals[namespace_][name] = [func](const sol::variadic_args& args) {
+            if (args.size() > 0) {
+                func(args[0].as<bool>());
+            }
+        };
+    }
+}
+
+// Specialization for void(int)
+template <>
+void LuaManager::_AddFunctionImpl<std::function<void(int)>>(
+    const std::string& name, std::function<void(int)> func,
+    const std::string& namespace_) {
+    if (namespace_.empty()) {
+        (*m_luaState)[name] = [func](const sol::variadic_args& args) {
+            if (args.size() > 0) {
+                func(args[0].as<int>());
+            }
+        };
+    } else {
+        sol::table globals = m_luaState->globals();
+        sol::object ns_obj = globals[namespace_];
+        if (ns_obj.get_type() != sol::type::table) {
+            globals[namespace_] = m_luaState->create_table();
+        }
+        globals[namespace_][name] = [func](const sol::variadic_args& args) {
+            if (args.size() > 0) {
+                func(args[0].as<int>());
+            }
+        };
     }
 }
 

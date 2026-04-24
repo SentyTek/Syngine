@@ -478,7 +478,7 @@ void Logger::Log(const std::string_view message,
             SDL_LOG_CATEGORY_APPLICATION, "Fatal error: %s", message.data());
         std::string finalMessage = m_appName + " has encountered a fatal error and needs to close:\n\n" + message.data();
         SDL_ShowSimpleMessageBox(
-            SDL_MESSAGEBOX_ERROR, "Fatal Error", finalMessage.c_str(), nullptr);
+            SDL_MESSAGEBOX_ERROR, "Fatal Error", finalMessage.c_str(), m_mainWindow);
 
         // Break if debug is on
         /*
@@ -559,7 +559,7 @@ void Logger::LogF(LogLevel level, bool writeOnlyInDebug, const char* fmt, ...) {
 
 void Logger::InfoPopup(const std::string_view message) {
     Log(message, LogLevel::INFO, false);
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", message.data(), nullptr);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", message.data(), m_mainWindow);
 }
 
 void Logger::Error(const std::string_view message, bool writeOnlyInDebug) { Log(message, LogLevel::ERR, writeOnlyInDebug); }

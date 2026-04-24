@@ -258,15 +258,6 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     { .onPressed = Core::_ReloadLua });
     }
 
-    // Do the lua script in appdata
-    if (m_context->luaState) { // Also checks if lua is enabled
-        std::string scriptPath =
-            _GetAppDataPath(m_context->config.gameName).string() + "/init.lua";
-        if (std::filesystem::exists(scriptPath)) {
-            m_context->luaState->SafeFile(scriptPath);
-        }
-    }
-
     Logger::Info("Syngine initialized successfully", false);
     return true;
 }
@@ -429,6 +420,17 @@ bool Core::Render(CameraComponent* camera) {
         m_frameCounts.drawnObjects.culledSize = RenderCore::m_drawnCounts.culledSize;
     }
     return true;
+}
+
+void Core::RunLua() {
+    // Do the lua script in appdata
+    if (m_context->luaState) { // Also checks if lua is enabled
+        std::string scriptPath =
+            _GetAppDataPath(m_context->config.gameName).string() + "/init.lua";
+        if (std::filesystem::exists(scriptPath)) {
+            m_context->luaState->SafeFile(scriptPath);
+        }
+    }
 }
 
 Syngine::HardwareSpecs Core::GetSystemSpecifications() {

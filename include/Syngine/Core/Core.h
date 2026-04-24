@@ -149,6 +149,9 @@ class Core {
     /// @since v0.0.1
     static bool IsInitialized() noexcept { return m_instance != nullptr; };
 
+    /// @brief Runs the main Lua script
+    static void RunLua();
+
     /// @brief Check if physics is enabled in the engine config
     /// @return True if physics is enabled, false otherwise
     /// @since v0.0.1
