@@ -17,6 +17,7 @@
 - [Logger](#loggerlogger)
 - [_GetTimestamp](#logger_gettimestamp)
 - [_LogLevelToString](#logger_logleveltostring)
+- [_SetMainWindow](#logger_setmainwindow)
 - [Log](#loggerlog)
 - [LogF](#loggerlogf)
 - [Error](#loggererror)
@@ -119,6 +120,27 @@ Signature:
 **This function has been available since:** v0.0.1
 
 **The return value of this function must not be discarded.**
+
+---
+
+#### **`Logger::_SetMainWindow`**
+
+
+ Set the main window for error dialogs
+
+Signature:
+
+```cpp
+ static inline void _SetMainWindow(SDL_Window* window) noexcept;
+```
+
+**Parameters:**
+
+- `window`: SDL window pointer
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
 
 ---
 
@@ -330,7 +352,7 @@ Signature:
 Signature:
 
 ```cpp
- static void Flush();
+ static void Flush(); /// @brief Returns true if the log file is open
 ```
 
 **Thread Safety:** not-safe
@@ -342,7 +364,7 @@ Signature:
 #### **`Logger::IsOpen`**
 
 
- Returns true if the log file is open
+
 
 Signature:
 

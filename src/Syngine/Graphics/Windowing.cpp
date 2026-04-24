@@ -63,6 +63,8 @@ Window::Window(const EngineConfig& config) {
         SDL_Quit();
     }
 
+    Logger::_SetMainWindow(m_window);
+
     if (videoSettings->fullscreen) {
         m_contextCreated = true; // Some platforms require the context to be created before setting fullscreen
         SetWindowMode(1); // Borderless fullscreen

@@ -20,6 +20,9 @@
     - `.newKeybind(key: string[, type: string])` -> `Keybind` usertype — Creates a keybind from a single key. `type` can be `"keycode"` (default), `"scancode"`, or `"mouse_button"`.
     - `.newKeybind(key: string, mods: table[, type: string])` -> `Keybind` usertype — Creates a keyboard shortcut. `mods` is a table of modifier name strings. `type` can be `"keycode"` (default) or `"scancode"`.
 
+- `game`:
+    - `.setDefaultObjectsDisabled(disabled: bool)` - Enables or disables the game's default object spawning logic.
+
 - `scene`:
     - `.createGameObject(name: string[, shader: string = "default", tag: string = ""])` -> `GameObject` usertype
     - `.deleteGameObject(GameObject)`

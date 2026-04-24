@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "sol/forward.hpp"
 #include <Syngine/Core/Logger.h>
 #include <Syngine/ECS/GameObject.h>
 
@@ -79,6 +80,32 @@ class LuaManager {
     friend struct ComponentRegistrar; // Allow ComponentRegistrar to register Lua
                                      // bindings
     friend class Core;
+
+    // Template specializations for common signatures
+    template <typename Func>
+    static void _AddFunctionImpl(const std::string& name,
+                                 Func               func,
+                                 const std::string& namespace_);
+
+    // void() - no args
+    template <>
+    void _AddFunctionImpl<std::function<void()>>(const std::string&    name,
+                                                 std::function<void()> func,
+                                                 const std::string& namespace_);
+
+    // void(bool)
+    template <>
+    void
+    _AddFunctionImpl<std::function<void(bool)>>(const std::string&        name,
+                                                std::function<void(bool)> func,
+                                                const std::string& namespace_);
+
+    // void(int)
+    template <>
+    void
+    _AddFunctionImpl<std::function<void(int)>>(const std::string&       name,
+                                               std::function<void(int)> func,
+                                               const std::string& namespace_);
   public:
     friend LuaLibs operator|(LuaLibs a, LuaLibs b) {
         return static_cast<LuaLibs>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
@@ -109,14 +136,21 @@ class LuaManager {
     /// @param filePath The path to the Lua file to execute
     static void SafeFile(const std::string& filePath);
 
-    /// @brief Add a function to the Lua state
-    /// @param name The name of the function in Lua
-    /// @param func The C++ function to bind to Lua
-    /// @param table Optional table name to add the function to (e.g., "syngine"). If empty, the function will be added to the global namespace.
+    /// @brief Add a function to the Lua state with the given name and category
+    /// @param name The name of the function to add
+    /// @tparam Func The function type (e.g., std::function<void(int)>)
+    /// @param namespace_ The namespace to add the function under (e.g., "game",
+    /// "input", etc.)
     template <typename Func>
     static void AddFunction(const std::string& name,
                             Func               func,
-                            const std::string& table = "");
+                            const std::string& namespace_ = "") {
+        if (!m_luaState) {
+            Logger::Error("Lua state is not initialized. Cannot add function.");
+            return;
+        }
+        _AddFunctionImpl(name, func, namespace_);
+    }
 
     /// @brief Check if the Lua state has an object with the given name
     /// @param name The name of the object to check for
