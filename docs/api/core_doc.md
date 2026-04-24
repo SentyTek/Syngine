@@ -29,6 +29,7 @@
 - [SetSimulationState](#coresetsimulationstate)
 - [GetSimulationState](#coregetsimulationstate)
 - [IsInitialized](#coreisinitialized)
+- [RunLua](#corerunlua)
 - [IsPhysicsEnabled](#coreisphysicsenabled)
 - [SetDebugMode](#coresetdebugmode)
 - [GetDebugMode](#coregetdebugmode)
@@ -334,6 +335,19 @@ Signature:
 **Returns:** True if initialized, false otherwise
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::RunLua`**
+
+
+ Runs the main Lua script
+
+Signature:
+
+```cpp
+ static void RunLua();
+```
 
 ---
 

@@ -120,19 +120,22 @@ Signature:
 #### **`LuaManager::AddFunction`**
 
 
- Add a function to the Lua state
+ Add a function to the Lua state with the given name and category
 
 Signature:
 
 ```cpp
- template <typename Func> static void AddFunction(const std::string& name, Func func, const std::string& table = "");
+ template <typename Func> static void AddFunction(const std::string& name, Func func, const std::string& namespace_ = "");
 ```
+
+**Template Parameters:**
+
+- `Func`: The function type (e.g., std::function<void(int)>)
 
 **Parameters:**
 
-- `name`: The name of the function in Lua
-- `func`: The C++ function to bind to Lua
-- `table`: Optional table name to add the function to (e.g., "syngine"). If empty, the function will be added to the global namespace.
+- `name`: The name of the function to add
+- `namespace_`: The namespace to add the function under (e.g., "game", "input", etc.)
 
 ---
 
