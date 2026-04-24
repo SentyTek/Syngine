@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <functional>
 #include <unordered_map>
 #include <list>
 #include <vector>
@@ -138,6 +139,48 @@ _ParseRigidbodyParams(sol::optional<sol::table> maybeParams) {
     }
 
     return params;
+}
+
+struct _RegisteredVoidBinding {
+    std::string           name;
+    std::string           namespace_;
+    std::function<void()> func;
+};
+
+struct _RegisteredBoolBinding {
+    std::string               name;
+    std::string               namespace_;
+    std::function<void(bool)> func;
+};
+
+struct _RegisteredIntBinding {
+    std::string              name;
+    std::string              namespace_;
+    std::function<void(int)> func;
+};
+
+std::vector<_RegisteredVoidBinding> _g_registeredVoidBindings;
+std::vector<_RegisteredBoolBinding> _g_registeredBoolBindings;
+std::vector<_RegisteredIntBinding>  _g_registeredIntBindings;
+bool                                 _g_isReplayingHostBindings = false;
+
+void _ReplayRegisteredHostBindings() {
+    _g_isReplayingHostBindings = true;
+
+    for (const _RegisteredVoidBinding& binding : _g_registeredVoidBindings) {
+        LuaManager::AddFunction<std::function<void()>>(
+            binding.name, binding.func, binding.namespace_);
+    }
+    for (const _RegisteredBoolBinding& binding : _g_registeredBoolBindings) {
+        LuaManager::AddFunction<std::function<void(bool)>>(
+            binding.name, binding.func, binding.namespace_);
+    }
+    for (const _RegisteredIntBinding& binding : _g_registeredIntBindings) {
+        LuaManager::AddFunction<std::function<void(int)>>(
+            binding.name, binding.func, binding.namespace_);
+    }
+
+    _g_isReplayingHostBindings = false;
 }
 
 } // namespace
@@ -471,9 +514,22 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
         return sol::make_object(lua, go);
     };
     scene["deleteGameObject"] = [](GameObject* obj) {
-        if (obj) {
-            delete obj;
+        if (!obj) {
+            return;
         }
+
+        auto newEnd =
+            std::remove(m_ownedObjects.begin(), m_ownedObjects.end(), obj);
+        if (newEnd == m_ownedObjects.end()) {
+            Logger::Warn(
+                "Lua attempted to delete a GameObject that is not Lua-owned. "
+                "Skipping delete to avoid invalid ownership teardown.",
+                true);
+            return;
+        }
+
+        m_ownedObjects.erase(newEnd, m_ownedObjects.end());
+        delete obj;
     };
     scene["getGameObject"] = [](std::string name, sol::this_state ts) {
         GameObject* obj = Registry::GetGameObjectByName(name);
@@ -875,7 +931,8 @@ void LuaManager::_ReloadLuaState() {
 
     // Clean up owned GameObjects
     for (GameObject* obj : m_ownedObjects) {
-        delete obj;
+        if (obj)
+            delete obj;
     }
     m_ownedObjects.clear();
 
@@ -922,9 +979,21 @@ void LuaManager::_ReloadLuaState() {
                      !has(LuaLibs::DEBUG),
                      has(LuaLibs::NOSYNGINE));
 
+    _ReplayRegisteredHostBindings();
+
     m_initialized = true;
 
     Logger::Log("Lua state reloaded successfully.", LogLevel::INFO, true);
+}
+
+void LuaManager::_UnregisterLuaOwnedObject(GameObject* obj) {
+    if (!obj) {
+        return;
+    }
+    auto newEnd = std::remove(m_ownedObjects.begin(), m_ownedObjects.end(), obj);
+    if (newEnd != m_ownedObjects.end()) {
+        m_ownedObjects.erase(newEnd, m_ownedObjects.end());
+    }
 }
 
 bool LuaManager::HasObject(const std::string& name) {
@@ -1006,6 +1075,14 @@ template <>
 void LuaManager::_AddFunctionImpl<std::function<void()>>(
     const std::string& name, std::function<void()> func,
     const std::string& namespace_) {
+    if (!_g_isReplayingHostBindings) {
+        _g_registeredVoidBindings.push_back({
+            .name = name,
+            .namespace_ = namespace_,
+            .func = func,
+        });
+    }
+
     if (namespace_.empty()) {
         (*m_luaState)[name] = func;
     } else {
@@ -1023,6 +1100,14 @@ template <>
 void LuaManager::_AddFunctionImpl<std::function<void(bool)>>(
     const std::string& name, std::function<void(bool)> func,
     const std::string& namespace_) {
+    if (!_g_isReplayingHostBindings) {
+        _g_registeredBoolBindings.push_back({
+            .name = name,
+            .namespace_ = namespace_,
+            .func = func,
+        });
+    }
+
     if (namespace_.empty()) {
         (*m_luaState)[name] = [func](const sol::variadic_args& args) {
             if (args.size() > 0) {
@@ -1048,6 +1133,14 @@ template <>
 void LuaManager::_AddFunctionImpl<std::function<void(int)>>(
     const std::string& name, std::function<void(int)> func,
     const std::string& namespace_) {
+    if (!_g_isReplayingHostBindings) {
+        _g_registeredIntBindings.push_back({
+            .name = name,
+            .namespace_ = namespace_,
+            .func = func,
+        });
+    }
+
     if (namespace_.empty()) {
         (*m_luaState)[name] = [func](const sol::variadic_args& args) {
             if (args.size() > 0) {
