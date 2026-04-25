@@ -149,14 +149,14 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     // Set platform data
 #if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
     // Check whether sdl is using x11 or wayland
-    std::string _sdldriver = std::string(SDL_GetCurrentVideoDriver());
+    const char* _sdldriver = SDL_GetCurrentVideoDriver();
     if (!_sdldriver) {
         Syngine::Logger::Error("Failed to query SDL video driver");
         SDL_DestroyWindow(win);
         SDL_Quit();
         return false;
     }
-    if (_sdldriver == "x11") {
+    if (!strcmp(_sdldriver, "x11")) {
         // Init for x11
         bgInit.platformData.ndt = SDL_GetPointerProperty(
             sdlProps, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
@@ -170,7 +170,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
             SDL_Quit();
             return false;
         }
-    } else if (_sdldriver == "wayland") {
+    } else if (!strcmp(_sdldriver, "wayland")) {
         // Init for wayland
         bgInit.platformData.ndt = SDL_GetPointerProperty(
             sdlProps, SDL_PROP_DISPLAY_WAYLAND_DISPLAY_POINTER, NULL);
