@@ -173,7 +173,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     } else if (!strcmp(_sdldriver, "wayland")) {
         // Init for wayland
         bgInit.platformData.ndt = SDL_GetPointerProperty(
-            sdlProps, SDL_PROP_DISPLAY_WAYLAND_DISPLAY_POINTER, NULL);
+            sdlProps, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
         bgInit.platformData.nwh = (void*)SDL_GetPointerProperty(
             sdlProps, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
         if (bgInit.platformData.nwh == NULL ||
