@@ -173,9 +173,14 @@ void Logger::_CrashHandler(int signal) {
 #ifdef _WIN32
 LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
     const DWORD code = ep->ExceptionRecord->ExceptionCode;
+    std::string addrStr;
+    uintptr_t addr = (uintptr_t)ep->ExceptionRecord->ExceptionAddress;
+    char        buf[32];
+    sprintf_s(buf, sizeof(buf), "0x%016llX", (unsigned long long)addr);
+    addrStr = buf;
     Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR, false);
     Logger::Log("Exception Code: " + std::to_string(code), LogLevel::ERR, false);
-    Logger::Log("Exception Address: " + std::to_string((uintptr_t)ep->ExceptionRecord->ExceptionAddress), LogLevel::ERR, false);
+    Logger::Log("Exception Address: " + addrStr, LogLevel::ERR, false);
     Logger::Log("Exception Type: " + std::string(SehCodeToString(code)), LogLevel::ERR, false);
 
     if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2) {
@@ -256,7 +261,7 @@ void Logger::PrintStackTrace() {
 
         DWORD64 address = stackFrame.AddrPC.Offset;
         char    addrStr[32];
-        sprintf(addrStr, "0x%016llX", address);
+        sprintf_s(addrStr, "0x%016llX", address);
         std::string frameInfo = "Frame " + std::to_string(frameNum) + ": " + addrStr;
 
         if (SymFromAddr(process, address, NULL, symbol)) {
