@@ -92,6 +92,8 @@ class Logger {
 
     static void _Shutdown();
 
+    static bool _IsLogFileAvailable();
+
     friend class Core;
     friend class Window;
   public:

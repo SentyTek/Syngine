@@ -207,6 +207,7 @@ LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
 #endif
 
 void Logger::PrintStackTrace() {
+const int MAX_FRAMES = 50;
 #ifdef _WIN32
     // Windows stack trace provided by dbghelp
     HANDLE process = GetCurrentProcess();
@@ -257,7 +258,7 @@ void Logger::PrintStackTrace() {
                        SymFunctionTableAccess64,
                        SymGetModuleBase64,
                        NULL)) {
-        if (frameNum > 50) break; // Prevent infinite loops
+        if (frameNum >= MAX_FRAMES) break; // Prevent infinite loops
 
         DWORD64 address = stackFrame.AddrPC.Offset;
         char    addrStr[32];
@@ -279,8 +280,8 @@ void Logger::PrintStackTrace() {
     }
 #elif defined(__linux__) || defined(__APPLE__)
     // Linux/Mac stack trace using backtrace()
-    void* array[50];
-    size_t size = backtrace(array, 50);
+    void* array[MAX_FRAMES];
+    size_t size = backtrace(array, MAX_FRAMES);
     char** symbols = backtrace_symbols(array, size);
 
     if (symbols == NULL) {
@@ -288,7 +289,7 @@ void Logger::PrintStackTrace() {
         return;
     }
 
-    for (size_t i = 0; i < size; i++) {
+    for (size_t i = 0; i < MAX_FRAMES && i < size; i++) {
         std::string frameInfo = "Frame " + std::to_string(i) + ": ";
 
         // Try to demangle C++ symbols
@@ -401,7 +402,7 @@ void Logger::_Init(const std::string&           appname,
 }
 
 void Logger::_Shutdown() {
-    if (m_logFile && m_logFile->is_open()) {
+    if (!Logger::_IsLogFileAvailable()) {
         // The mutex is already locked if called from Log(FATAL),
         // so we write directly to the file instead of calling Log().
         (*m_logFile) << "[" << _GetTimestamp() << "] "
@@ -417,7 +418,7 @@ void Logger::Log(const std::string_view message,
                  LogLevel               level,
                  bool                   writeOnlyInDebug,
                  bool                   toConsole) {
-    if (!m_logFile || !m_logFile->is_open()) {
+    if (!Logger::_IsLogFileAvailable()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Attempted to log while file is not open. Message: %s", message.data());
         return;
     }
@@ -503,7 +504,7 @@ void Logger::Log(const std::string_view message,
 }
 
 void Logger::LogHardwareInfo() {
-    if (!m_logFile || !m_logFile->is_open()) {
+    if (!Logger::_IsLogFileAvailable()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log file is not open.");
         return;
     }
@@ -574,9 +575,14 @@ void Logger::Fatal(const std::string_view message) { Log(message, LogLevel::FATA
 
 void Logger::Flush() {
     std::lock_guard<std::mutex> lock(m_logMutex);
-    if (m_logFile && m_logFile->is_open()) {
+    if (Logger::_IsLogFileAvailable()) {
         m_logFile->flush();
     }
+}
+
+bool Logger::_IsLogFileAvailable() {
+    std::lock_guard<std::mutex> lock(m_logMutex);
+    return m_logFile && m_logFile->is_open();
 }
 
 } // namespace Syngine

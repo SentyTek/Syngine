@@ -571,11 +571,6 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
                                         "s_depth",
                                         UniformType::UNIFORM_SAMPLER) });
         m_defaultUniformIds.insert(
-            { "s_ssao_noiseTex",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoProgram,
-                                        "s_noise",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
             { "s_ssaob_ssaoTex",
               Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
                                         "s_ssao",
@@ -807,21 +802,21 @@ bool RenderCore::_CreateSceneBuffers() {
                                                  BGFX_TEXTURE_RT);
 
     if (m_config.useSSAO) {
-        m_buffers.ssaoTex   = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                  uint16_t(Renderer::height),
+        m_buffers.ssaoTex   = bgfx::createTexture2D(uint16_t(Renderer::width / 2),
+                                                  uint16_t(Renderer::height / 2),
                                                   false,
                                                   1,
                                                   bgfx::TextureFormat::R16,
                                                   tsFlags);
-        m_buffers.ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                    uint16_t(Renderer::height),
+        m_buffers.ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width / 2),
+                                                    uint16_t(Renderer::height / 2),
                                                     false,
                                                     1,
                                                     bgfx::TextureFormat::R16,
                                                     tsFlags);
         m_buffers.ssaoBlurFinal =
-            bgfx::createTexture2D(uint16_t(Renderer::width),
-                                  uint16_t(Renderer::height),
+            bgfx::createTexture2D(uint16_t(Renderer::width / 2),
+                                  uint16_t(Renderer::height / 2),
                                   false,
                                   1,
                                   bgfx::TextureFormat::R16,
@@ -1637,8 +1632,9 @@ void RenderCore::_DrawPostProcess(const Program& program) {
             Renderer::GetUniform(m_defaultUniformIds.at("s_ssao_normalTex"))
                 ->handle,
             m_buffers.sceneNormal);
+
         const float ssaoParams[4] = {
-            0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width)
+            0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width / 2.0f)
         };
         const float ssaoResolution[4] = {
             static_cast<float>(Renderer::width),
@@ -1698,11 +1694,12 @@ void RenderCore::_DrawPostProcess(const Program& program) {
                                  ->handle,
                              m_buffers.sceneNormal);
 
-            const float ssaoBlurParams[4] = { 3.0f,
+            const float ssaoBlurParams[4] = { 1.5f,
                                               static_cast<float>(i),
                                               static_cast<float>(
-                                                  uint16_t(Renderer::width)),
-                                              0.f };
+                                                  Renderer::width),
+                                              static_cast<float>(
+                                                  Renderer::height) };
             Renderer::SetUniform(m_defaultUniformIds.at("u_ssaob_params"),
                                  ssaoBlurParams);
             _ScreenSpaceQuad(ViewID(VIEW_AO + i + 1), program);
@@ -1883,8 +1880,8 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             bgfx::setViewRect(view,
                               0,
                               0,
-                              uint16_t(Renderer::width),
-                              uint16_t(Renderer::height));
+                              uint16_t(view == VIEW_AO ? Renderer::width / 2 : Renderer::width),
+                              uint16_t(view == VIEW_AO ? Renderer::height / 2 : Renderer::height));
             uint16_t flags = view == VIEW_AO
                                  ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH)
                                  : (BGFX_CLEAR_NONE);
@@ -1923,14 +1920,14 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
         }
     }
 
-    // Update addition AO views
+    // Update additional AO views
     uint16_t flags = BGFX_CLEAR_NONE;
     for (int i = 0; i < 2; ++i) {
         bgfx::setViewRect(ViewID(VIEW_AO + i + 1),
                           0,
                           0,
-                          uint16_t(Renderer::width),
-                          uint16_t(Renderer::height));
+                          uint16_t(Renderer::width / 2),
+                          uint16_t(Renderer::height / 2));
         bgfx::setViewClear(ViewID(VIEW_AO + i + 1), flags, 0x000000ff, 1.0f, 0);
         bgfx::setViewTransform(ViewID(VIEW_AO + i + 1), cam.view, cam.proj);
     }

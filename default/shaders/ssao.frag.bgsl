@@ -9,11 +9,9 @@ uniform vec4 u_ssaoParams; // x: radius, y: bias (angle), z: intensity, w: reser
 uniform vec4 u_ssaoResolution; // x: width, y: height, z: invWidth, w: invHeight
 
 #define PI 3.14159265
-#define SSAO_DIRECTIONS 8
+#define SSAO_DIRECTIONS 4
 #define SSAO_STEPS 6
 
-// FIX: Robust Position Reconstruction
-// This handles the D3D vs OpenGL coordinate flip automatically
 vec3 reconstructPosition(vec2 uv, float depth) {
     vec2 clipXY = uv * 2.0 - 1.0;
     clipXY.y = -clipXY.y; // Fix D3D Flip
@@ -22,14 +20,6 @@ vec3 reconstructPosition(vec2 uv, float depth) {
     return view.xyz / view.w;
 }
 
-// Fast spatial offset generator
-vec2 getOffsetDirection(vec2 uv, float index, float count) {
-    // Rotates the sampling direction based on noise
-    float angle = (index + uv.x * uv.y * 100.0) / count * PI * 2.0;
-    return vec2(cos(angle), sin(angle));
-}
-
-// Add this function above main()
 float InterleavedGradientNoise(vec2 position_screen) {
     vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);
     return fract(magic.z * fract(dot(position_screen, magic.xy)));
@@ -38,15 +28,31 @@ float InterleavedGradientNoise(vec2 position_screen) {
 void main() {
     vec2 uv = v_texcoord0;
 
+    // Pick a stable representative sample from the matching 2x2 full-res block.
+    vec2 halfResSize = u_ssaoResolution.xy * 0.5;
+    vec2 sourceTexel = u_ssaoResolution.zw;
+    vec2 aoPixel = uv * halfResSize;
+    vec2 sourceBlock = floor(aoPixel) * 2.0;
+
+    float d00 = texture2D(s_depth, (sourceBlock + vec2(0.5, 0.5)) * sourceTexel).x;
+    float d10 = texture2D(s_depth, (sourceBlock + vec2(1.5, 0.5)) * sourceTexel).x;
+    float d01 = texture2D(s_depth, (sourceBlock + vec2(0.5, 1.5)) * sourceTexel).x;
+    float d11 = texture2D(s_depth, (sourceBlock + vec2(1.5, 1.5)) * sourceTexel).x;
+
+    float depth = d00;
+    vec2 sourceUV = (sourceBlock + vec2(0.5, 0.5)) * sourceTexel;
+    if (d10 < depth) { depth = d10; sourceUV = (sourceBlock + vec2(1.5, 0.5)) * sourceTexel; }
+    if (d01 < depth) { depth = d01; sourceUV = (sourceBlock + vec2(0.5, 1.5)) * sourceTexel; }
+    if (d11 < depth) { depth = d11; sourceUV = (sourceBlock + vec2(1.5, 1.5)) * sourceTexel; }
+
     // Decode Normal: [0,1] -> [-1,1]
-    vec3 worldNormal = texture2D(s_normal, uv).xyz * 2.0 - 1.0;
+    vec3 worldNormal = texture2D(s_normal, sourceUV).xyz * 2.0 - 1.0;
     // Transform to View Space (w=0 to ignore translation)
     vec3 viewNormal = normalize(mul(u_view, vec4(worldNormal, 0.0)).xyz);
 
-    float depth = texture2D(s_depth, uv).x;
     if (depth >= 1.0) { gl_FragColor = vec4_splat(1.0); return; } // Skybox
 
-    vec3 viewPos = reconstructPosition(uv, depth);
+    vec3 viewPos = reconstructPosition(sourceUV, depth);
     float radius = u_ssaoParams.x;
 
     // Approximate world-space radius projected into UV space.
@@ -57,7 +63,7 @@ void main() {
     screenRadius = clamp(screenRadius, minScreenRadius, 0.08);
 
     // Noise for rotation jitter
-    vec2 screenPixel = uv * u_ssaoResolution.xy;
+    vec2 screenPixel = floor(aoPixel);
     float randomVal = InterleavedGradientNoise(screenPixel);
 
     // Use randomVal to spin the GTAO slice
@@ -67,7 +73,8 @@ void main() {
 
     // Do the thing
     // TODO: XeGTAO once compute shaders are supported
-    UNROLL for(int d = 0; d < SSAO_DIRECTIONS; ++d) {
+    UNROLL
+    for(int d = 0; d < SSAO_DIRECTIONS; ++d) {
         // Compute direction in 2D Screen Space
         float angle = (float(d) / float(SSAO_DIRECTIONS)) * PI + randomAngle;
         vec2 dir = vec2(cos(angle), sin(angle));
@@ -75,13 +82,14 @@ void main() {
         // We will track the "highest" horizon angle found in this direction
         float maxHorizonAngle = -1.0;
 
-        UNROLL for(int s = 1; s <= SSAO_STEPS; ++s) {
+        UNROLL
+        for(int s = 1; s <= SSAO_STEPS; ++s) {
             // March along the 2D direction in screen space
             // Power function (s*s) pushes samples further out for better range
             float stepDist = (float(s) + randomVal) / float(SSAO_STEPS + 1);
             stepDist *= stepDist; // Exponential stepping
 
-            vec2 sampleUV = uv + dir * stepDist * screenRadius;
+            vec2 sampleUV = sourceUV + dir * stepDist * screenRadius;
 
             // Guard against screen edges
             if(sampleUV.x < 0.0 || sampleUV.x > 1.0 || sampleUV.y < 0.0 || sampleUV.y > 1.0) continue;
@@ -109,7 +117,7 @@ void main() {
         }
 
         // Integrate visibility for this slice
-        // The bias (u_ssaoParams.y) removes artifacts on flat surfaces (try 0.1)
+        // The bias (u_ssaoParams.y) removes artifacts on flat surfaces
         visibility += clamp(1.0 - (maxHorizonAngle - u_ssaoParams.y), 0.0, 1.0);
     }
 

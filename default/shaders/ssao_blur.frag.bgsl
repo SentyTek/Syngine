@@ -5,13 +5,28 @@ $input v_texcoord0
 SAMPLER2D(s_ssao, 0);
 SAMPLER2D(s_depth, 1);
 SAMPLER2D(s_normal, 2);
-uniform vec4 u_floats; // x = radius, y = vertical (1.0) or horizontal (0.0) blur, z = width, w = unused
+uniform vec4 u_floats; // x = radius, y = vertical (1.0) or horizontal (0.0) blur, z = width, w = height
 
-float getLinearDistance(vec2 uv) {
-    float depth = texture2D(s_depth, uv).r;
-    if (depth >= 1.0) return 1000.0; // Far plane
-    float z_ndc = depth * 2.0 - 1.0;
-    return u_proj[3][2] / (z_ndc - u_proj[2][2]);
+void GatherDepthNormal(vec2 uv, out float outDepth, out vec3 outNormal) {
+    vec2 fullResSize = vec2(u_floats.z, u_floats.w);
+    vec2 halfResSize = fullResSize * 0.5;
+    vec2 sourceTexel = 1.0 / fullResSize;
+    vec2 aoPixel = uv * halfResSize;
+    vec2 sourceBlock = floor(aoPixel) * 2.0;
+
+    float d00 = texture2D(s_depth, (sourceBlock + vec2(0.5, 0.5)) * sourceTexel).x;
+    float d10 = texture2D(s_depth, (sourceBlock + vec2(1.5, 0.5)) * sourceTexel).x;
+    float d01 = texture2D(s_depth, (sourceBlock + vec2(0.5, 1.5)) * sourceTexel).x;
+    float d11 = texture2D(s_depth, (sourceBlock + vec2(1.5, 1.5)) * sourceTexel).x;
+
+    float depth = d00;
+    vec2 sourceUV = (sourceBlock + vec2(0.5, 0.5)) * sourceTexel;
+    if (d10 < depth) { depth = d10; sourceUV = (sourceBlock + vec2(1.5, 0.5)) * sourceTexel; }
+    if (d01 < depth) { depth = d01; sourceUV = (sourceBlock + vec2(0.5, 1.5)) * sourceTexel; }
+    if (d11 < depth) { depth = d11; sourceUV = (sourceBlock + vec2(1.5, 1.5)) * sourceTexel; }
+
+    outDepth = depth;
+    outNormal = texture2D(s_normal, sourceUV).xyz * 2.0 - 1.0;
 }
 
 void main() {
@@ -26,34 +41,35 @@ void main() {
     } else {
         direction = vec2(0.0, 1.0);
     }
-    vec2 stride = direction * texelSize * u_floats.x; // Multiply by radius
 
-    float centerDepth = texture2D(s_depth, uv).r;
-    vec3 centerNormal = texture2D(s_normal, uv).xyz * 2.0 - 1.0;
+    float centerDepth;
+    vec3 centerNormal;
+    GatherDepthNormal(uv, centerDepth, centerNormal);
+
     float centerAO = texture2D(s_ssao, uv).r;
     ao += centerAO;
     weightSum += 1.0;
 
-    float sigma = u_floats.x / 2.0;
-    float twoSigmaSq = 2.0 * sigma * sigma;
-
     // Depth and normal based bilateral blur
-    for (int i = -4; i <= 4; i++) {
+    UNROLL
+    for (int i = -2; i <= 2; i++) {
         if (i == 0) continue; // Skip center sample
 
-        vec2 offset = direction * float(i) * texelSize * u_floats.x;
+        vec2 offsetUV = uv + direction * float(i) * texelSize;
 
-        float sampleAO = texture2D(s_ssao, uv + offset).r;
-        float sampleDepth = texture2D(s_depth, uv + offset).r;
-        vec3 sampleNormal = texture2D(s_normal, uv + offset).xyz * 2.0 - 1.0;
+        float sampleAO = texture2D(s_ssao, offsetUV).r;
 
-        float w = exp(-float(i*i) / twoSigmaSq); // Gaussian weight
+        float sampleDepth;
+        vec3 sampleNormal;
+        GatherDepthNormal(offsetUV, sampleDepth, sampleNormal);
+
+        float w = 1.0; // Uniform weight (box filter) averages IGN pattern seamlessly
 
         float depthDiff = abs(sampleDepth - centerDepth);
-        w *= smoothstep(0.1, 0.0, depthDiff); // Depth weight (softened)
+        w *= smoothstep(0.05, 0.0, depthDiff); // Depth weight (stricter)
 
         float normalDiff = max(dot(sampleNormal, centerNormal), 0.0);
-        w *= pow(normalDiff, 2.0); // Normal weight (stricter to preserve edges)
+        w *= pow(normalDiff, 4.0); // Normal weight (stricter to preserve edges)
 
         ao += sampleAO * w;
         weightSum += w;
