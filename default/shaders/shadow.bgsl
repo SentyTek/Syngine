@@ -83,15 +83,23 @@ float sampleShadowPoisson16(vec2 uv, float compareDepth, float bias, float texel
 
 float findBlocker(vec2 uv, float compareDepth, float searchRadius, float texelSize, float bias, vec4 bounds, float noise) {
     // Must be defined in a function scope in BGFX
-    vec2 poissonDisk8[8];
-    poissonDisk8[0] = vec2(-0.7071, 0.7071);
-    poissonDisk8[1] = vec2(-0.0000, -0.8750);
-    poissonDisk8[2] = vec2(0.5303, 0.5303);
-    poissonDisk8[3] = vec2(-0.6250, -0.0000);
-    poissonDisk8[4] = vec2(0.3536, -0.3536);
-    poissonDisk8[5] = vec2(-0.3536, 0.3536);
-    poissonDisk8[6] = vec2(0.8750, 0.0000);
-    poissonDisk8[7] = vec2(0.0000, 0.6250);
+    vec2 poissonDisk16[16];
+    poissonDisk16[0] = vec2(-0.94201624, -0.39906216);
+    poissonDisk16[1] = vec2(0.94558609, -0.76890725);
+    poissonDisk16[2] = vec2(-0.09418410, -0.92938870);
+    poissonDisk16[3] = vec2(0.34495938, 0.29387760);
+    poissonDisk16[4] = vec2(-0.91588581, 0.45771432);
+    poissonDisk16[5] = vec2(-0.81544232, -0.87912464);
+    poissonDisk16[6] = vec2(-0.38277543, 0.27676845);
+    poissonDisk16[7] = vec2(0.97484398, 0.75648379);
+    poissonDisk16[8] = vec2(0.44323325, -0.97511554);
+    poissonDisk16[9] = vec2(0.53742981, -0.47373420);
+    poissonDisk16[10] = vec2(-0.26496911, -0.41893023);
+    poissonDisk16[11] = vec2(0.79197514, 0.19090188);
+    poissonDisk16[12] = vec2(-0.24188840, 0.99706507);
+    poissonDisk16[13] = vec2(-0.81409955, 0.91437590);
+    poissonDisk16[14] = vec2(0.19984126, 0.78641367);
+    poissonDisk16[15] = vec2(0.14383161, -0.14100790);
 
     float blockers = 0.0;
     float avgBlockerDepth = 0.0;
@@ -101,8 +109,8 @@ float findBlocker(vec2 uv, float compareDepth, float searchRadius, float texelSi
     float s_rm = sin(noise);
 
     UNROLL
-    for (int i = 0; i < 8; i++) {
-        vec2 dir = poissonDisk8[i];
+    for (int i = 0; i < 16; i++) {
+        vec2 dir = poissonDisk16[i];
         vec2 rotDir = vec2(dir.x * c_rm - dir.y * s_rm, dir.x * s_rm + dir.y * c_rm);
         vec2 offset = rotDir * searchRadius * texelSize;
 
@@ -210,11 +218,10 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec4 lightDir, float viewD
     float noise = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453) * 6.2831853;
 
     // Sample current cascade
+    const float LIGHT_SIZE_TEXELS = 8.0;
     if (c == 0) {
         // Dynamic PCSS for nearest cascade
-        const float LIGHT_SIZE_TEXELS = 12.0;
         float searchRadius = LIGHT_SIZE_TEXELS;
-
         float blockerDepth = findBlocker(uv, normalizedZ, searchRadius, texelSize, totalBias, cascadeBounds, noise);
 
         if (blockerDepth == -1.0) {
@@ -260,19 +267,19 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec4 lightDir, float viewD
             float prevShadow;
             if (c - 1 == 0) {
                 // Dynamically calculate C0's PCSS again for the blend region
-                float blockerDepth = findBlocker(prevUv, prevProj.z, 12.0, texelSize, totalBias, prevBounds, noise);
+                float blockerDepth = findBlocker(prevUv, prevProj.z, LIGHT_SIZE_TEXELS, texelSize, totalBias, prevBounds, noise);
                 if (blockerDepth == -1.0) {
                     prevShadow = 0.0;
                 } else {
                     float depthDiff = max(prevProj.z - blockerDepth, 0.0);
-                    float origPenumbra = min(max(depthDiff * 400.0, 1.0), 12.0);
+                    float origPenumbra = min(max(depthDiff * 400.0, 1.0), LIGHT_SIZE_TEXELS);
 
-                    float blendedPenumbra = mix(origPenumbra, 12.0, fade);
+                    float blendedPenumbra = mix(origPenumbra, LIGHT_SIZE_TEXELS, fade);
 
                     prevShadow = sampleShadowPoisson16(prevUv, prevProj.z, totalBias, texelSize, blendedPenumbra, prevBounds, noise);
                 }
             } else if (c - 1 == 1) {
-                float staticRadiusC1 = max(12.0 * (u_csmTexelSize.x / u_csmTexelSize.y), 1.0);
+                float staticRadiusC1 = max(LIGHT_SIZE_TEXELS * (u_csmTexelSize.x / u_csmTexelSize.y), 1.0);
                 // Also smoothly mix C1 into C2 so there is no change in blur size at the c1->c2 fringe
                 float blendedPenumbraC1 = mix(staticRadiusC1, 1.0, fade);
                 prevShadow = sampleShadowPoisson16(prevUv, prevProj.z, totalBias, texelSize, blendedPenumbraC1, prevBounds, noise);
