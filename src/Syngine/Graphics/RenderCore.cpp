@@ -1447,6 +1447,8 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         if (program.program.idx != packet.program.program.idx)
             continue; // Skip if not matching program
         bgfx::setState(renderState | packet.material.renderState);
+        uint32_t flags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                    BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
         packet.material.Bind(); // Set uniforms and textures
 
@@ -1457,8 +1459,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
                     m_defaultUniformIds.at("u_" + program.name + "_shadowMap"))
                     ->handle,
                 m_buffers.shadowDepth,
-                BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                    BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
+                flags);
         }
 
         bgfx::setTransform(packet.modelMtx);

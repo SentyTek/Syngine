@@ -47,7 +47,7 @@ void main() {
     // Micro shadowing from normal map
     // Softer attenuation for grazing angles
     float microShadow = clamp(dot(Nmicro, lightDirToSun) * 2.0 + 0.3, 0.0, 1.0);
-    float shadow = getShadowFactor(v_worldPos, vN, N, u_lightDir, v_viewDepth);
+    float shadow = getShadowFactor(v_worldPos, vN, u_lightDir, v_viewDepth);
     shadow = mix(1.0, shadow, smoothstep(0.1, 0.3, sunElevation)); // Fade shadows to full light (1.0) at low sun angles
 
     float sunIntensity = smoothstep(-0.1, 0.1, sunElevation);
