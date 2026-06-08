@@ -9,6 +9,7 @@
 #include "Syngine/Graphics/RenderCore.h"
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/ZoneManager.h"
+#include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
@@ -1152,6 +1153,18 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             continue;
         }
 
+        MeshAABB aabb = meshComp->GetAABB();
+        bx::Vec3 min  = { aabb.center[0] - aabb.halfExtents[0],
+                          aabb.center[1] - aabb.halfExtents[1],
+                          aabb.center[2] - aabb.halfExtents[2] };
+        bx::Vec3 max  = { aabb.center[0] + aabb.halfExtents[0],
+                          aabb.center[1] + aabb.halfExtents[1],
+                          aabb.center[2] + aabb.halfExtents[2] };
+        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
+            m_drawnCounts.culledFrustum++;
+            continue;
+        }
+
         bgfx::ProgramHandle program = Renderer::GetProgram(go->type).program;
         if (!bgfx::isValid(program)) continue;
 
@@ -1545,7 +1558,7 @@ void RenderCore::_DrawDebug(const Program&   program,
     }
 }
 
-void RenderCore::_DrawBillboard(const Program& program) {
+void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program.viewId, "Billboards");
     bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
@@ -1559,6 +1572,25 @@ void RenderCore::_DrawBillboard(const Program& program) {
     for (auto go : billboards) {
         auto* comp = go->GetComponent<BillboardComponent>();
         if (!comp || !comp->isEnabled) continue;
+
+        // Since we can't use _ShouldCullBySize for billboards (they don't have mesh data), we do a simple distance check here and skip if they're too far away to be visible
+        const float* camPos = camera->GetPosition();
+        const float  dx     = go->GetComponent<TransformComponent>()->GetPosition()[0] - camPos[0];
+        const float  dy     = go->GetComponent<TransformComponent>()->GetPosition()[1] - camPos[1];
+        const float  dz     = go->GetComponent<TransformComponent>()->GetPosition()[2] - camPos[2];
+        const float  distance = sqrtf(dx * dx + dy * dy + dz * dz);
+        if (distance > m_maxSmallObjDistance) {
+            m_drawnCounts.culledSize++;
+            continue;
+        }
+
+        bx::Vec3 min = { -comp->size * 0.5f, 0.0f, -comp->size * 0.5f };
+        bx::Vec3 max = { comp->size * 0.5f, comp->size, comp->size * 0.5f };
+        if (!camera->_aabbInsideFrustum(
+                camera->_extractFrustum(), min, max)) {
+            m_drawnCounts.culledFrustum++;
+            continue;
+        }
 
         const float* pos =
             go->GetComponent<TransformComponent>()->GetPosition();
@@ -1977,7 +2009,7 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 break;
             case VIEW_BILLBOARD:
                 if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
-                _DrawBillboard(program);
+                _DrawBillboard(program, camera);
                 break;
             case VIEW_POSTPROCESS:
             case VIEW_AO: _DrawPostProcess(program); break;
