@@ -1353,9 +1353,7 @@ void RenderCore::_DrawShadows(const Program&   program,
                               CameraComponent* camera,
                               uint8_t          cascade) {
     SYN_PROFILE_FUNCTION();
-    const uint64_t renderState = BGFX_STATE_WRITE_Z |
-                                 BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA |
-                                 BGFX_STATE_CULL_CW;
+    const uint64_t renderState = BGFX_STATE_DEFAULT & ~BGFX_STATE_WRITE_RGB; // Don't write color, only depth
 
     if (Core::_GetContext()->debug.CSMBounds) {
         if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
@@ -1452,9 +1450,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_FORWARD, "Forward");
     bgfx::setViewFrameBuffer(VIEW_FORWARD, m_buffers.sceneFB);
-    const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA |
-                                 BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_Z |
-                                 BGFX_STATE_DEPTH_TEST_LESS;
+    const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA;
 
     for (auto& packet : m_renderPackets) {
         if (program.program.idx != packet.program.program.idx)
@@ -1562,7 +1558,7 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program.viewId, "Billboards");
     bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
-    const uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
+    const uint64_t renderState = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                            BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LEQUAL |
                            BGFX_STATE_MSAA;
 
@@ -1575,19 +1571,23 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
 
         // Since we can't use _ShouldCullBySize for billboards (they don't have mesh data), we do a simple distance check here and skip if they're too far away to be visible
         const float* camPos = camera->GetPosition();
-        const float  dx     = go->GetComponent<TransformComponent>()->GetPosition()[0] - camPos[0];
-        const float  dy     = go->GetComponent<TransformComponent>()->GetPosition()[1] - camPos[1];
-        const float  dz     = go->GetComponent<TransformComponent>()->GetPosition()[2] - camPos[2];
+        const float* goPos  = go->GetComponent<TransformComponent>()->GetPosition();
+        const float  dx     = goPos[0] - camPos[0];
+        const float  dy     = goPos[1] - camPos[1];
+        const float  dz     = goPos[2] - camPos[2];
         const float  distance = sqrtf(dx * dx + dy * dy + dz * dz);
         if (distance > m_maxSmallObjDistance) {
             m_drawnCounts.culledSize++;
             continue;
         }
 
-        bx::Vec3 min = { -comp->size * 0.5f, 0.0f, -comp->size * 0.5f };
-        bx::Vec3 max = { comp->size * 0.5f, comp->size, comp->size * 0.5f };
-        if (!camera->_aabbInsideFrustum(
-                camera->_extractFrustum(), min, max)) {
+        bx::Vec3 min = { goPos[0] - comp->size * 0.5f,
+                         goPos[1],
+                         goPos[2] - comp->size * 0.5f };
+        bx::Vec3 max = { goPos[0] + comp->size * 0.5f,
+                         goPos[1] + comp->size,
+                         goPos[2] + comp->size * 0.5f };
+        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
             m_drawnCounts.culledFrustum++;
             continue;
         }
@@ -1620,7 +1620,7 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
         float modelMtx[16];
         bx::mtxIdentity(modelMtx);
 
-        bgfx::setState(state);
+        bgfx::setState(renderState);
         bgfx::setTransform(modelMtx);
         bgfx::setVertexBuffer(0, m_billboardVbh);
         bgfx::setIndexBuffer(m_billboardIbh);
