@@ -395,7 +395,6 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
 }
 
 MeshAABB& MeshComponent::GetAABB() {
-    SYN_PROFILE_FUNCTION();
     uint64_t currentTransformVersion = 0;
     if (this->m_owner && this->m_owner->HasComponent(SYN_COMPONENT_TRANSFORM)) {
         TransformComponent* transform = this->m_owner->GetComponent<TransformComponent>();

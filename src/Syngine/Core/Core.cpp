@@ -342,6 +342,8 @@ bool Core::Update() {
     // Run component updates every frame so camera and visual state are not
     // locked to the fixed physics tick rate.
     auto& allGameObjects = Registry::GetAllGameObjects();
+    {
+    SYN_PROFILE_SCOPE("Component Updates")
     for (auto& [id, go] : allGameObjects) {
         if (!go) continue;
         const auto& components = go->GetComponents();
@@ -351,10 +353,12 @@ bool Core::Update() {
             }
         }
     }
+    }
 
     m_internal.accumulator += deltaTime;
     const float fixedDeltaTime = m_internal.DEFAULT_PHYSICS_TIMESTEP;
     while (m_internal.accumulator >= m_internal.DEFAULT_PHYSICS_TIMESTEP) {
+        SYN_PROFILE_SCOPE("Fixed Update");
         // Do tick
         if (m_internal.simulate) {
             // Physics step
@@ -370,6 +374,7 @@ bool Core::Update() {
 
         // Tick Lua scripts
         if (m_context->luaState) {
+            SYN_PROFILE_SCOPE("Modded Lua Tick")
             m_context->luaState->DoTick(fixedDeltaTime,
                                         fixedDeltaTime,
                                         m_internal.simulate);
@@ -387,6 +392,7 @@ bool Core::Update() {
     // Run one post-physics sync per frame so render/camera-facing state tracks
     // the latest simulation result even when physics doesn't tick this frame.
     if (m_internal.simulate) {
+        SYN_PROFILE_SCOPE("Post Update")
         for (auto& [id, go] : allGameObjects) {
             if (!go) continue;
             const auto& components = go->GetComponents();
@@ -423,6 +429,7 @@ bool Core::Render(CameraComponent* camera) {
 }
 
 void Core::RunLua() {
+    SYN_PROFILE_FUNCTION();
     // Do the lua script in appdata
     if (m_context->luaState) { // Also checks if lua is enabled
         std::string scriptPath =

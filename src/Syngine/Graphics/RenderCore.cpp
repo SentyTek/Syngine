@@ -1136,6 +1136,7 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
 }
 
 void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
+    SYN_PROFILE_FUNCTION();
     m_renderPackets.clear();
 
     // Iterate registry
@@ -1337,7 +1338,6 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 }
 
 void RenderCore::_ScreenSpaceQuad(ViewID view, Program program) {
-    SYN_PROFILE_FUNCTION();
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_CULL_CW);
 
@@ -1367,61 +1367,46 @@ void RenderCore::_DrawShadows(const Program&   program,
     }
 
     std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
-    {
-        SYN_PROFILE_SCOPE("Set Shadow View");
-        bgfx::setViewName(program.viewId + cascade, "Shadow Cascade");
-    }
-    {
-        SYN_PROFILE_SCOPE("Draw Shadow Cascade");
-        for (auto& gameObject : gameObjects) {
-            if (!gameObject) continue;
+    bgfx::setViewName(program.viewId + cascade, "Shadow Cascade");
+    for (auto& gameObject : gameObjects) {
+        if (!gameObject) continue;
 
-            auto*    meshComp = gameObject->GetComponent<MeshComponent>();
-            MeshData meshData = meshComp->meshData;
+        auto*    meshComp = gameObject->GetComponent<MeshComponent>();
+        MeshData meshData = meshComp->meshData;
 
-            if (!meshData.valid || !meshComp->isEnabled ||
-                !meshComp->castShadows)
-                continue;
+        if (!meshData.valid || !meshComp->isEnabled ||
+            !meshComp->castShadows)
+            continue;
 
-            // Size-based shadow culling from light's perspective
-            if (_ShouldCullBySizeShadow(gameObject, camera, cascade)) {
-                m_drawnCounts.culledShadowSize++;
-                continue;
-            }
-
-            MeshAABB aabb = meshComp->GetAABB();
-            bx::Vec3 min  = { aabb.min[0], aabb.min[1], aabb.min[2] };
-            bx::Vec3 max  = { aabb.max[0], aabb.max[1], aabb.max[2] };
-            if (!camera->_aabbInsideFrustum(
-                    _GetCascadeFrustum(cascade, camera), min, max)) {
-                m_drawnCounts.culledShadowFrustum++;
-                continue;
-            }
-
-            bgfx::setState(renderState);
-
-            // Get the transform for this object
-            {
-                SYN_PROFILE_SCOPE("Set transform");
-                float modelMtx[16];
-                gameObject->GetComponent<TransformComponent>()->GetModelMatrix(
-                    modelMtx);
-                bgfx::setTransform(modelMtx);
-            }
-
-            {
-                SYN_PROFILE_SCOPE("Set buffers");
-                bgfx::setVertexBuffer(0, meshData.vbh);
-                bgfx::setIndexBuffer(meshData.ibh);
-            }
-
-            {
-                SYN_PROFILE_SCOPE("Submit shadow");
-                // Shadow shaders are simple, just output depth
-                bgfx::submit(program.viewId + cascade, program.program);
-                m_drawnCounts.shadows++;
-            }
+        // Size-based shadow culling from light's perspective
+        if (_ShouldCullBySizeShadow(gameObject, camera, cascade)) {
+            m_drawnCounts.culledShadowSize++;
+            continue;
         }
+
+        MeshAABB aabb = meshComp->GetAABB();
+        bx::Vec3 min  = { aabb.min[0], aabb.min[1], aabb.min[2] };
+        bx::Vec3 max  = { aabb.max[0], aabb.max[1], aabb.max[2] };
+        if (!camera->_aabbInsideFrustum(
+                _GetCascadeFrustum(cascade, camera), min, max)) {
+            m_drawnCounts.culledShadowFrustum++;
+            continue;
+        }
+
+        bgfx::setState(renderState);
+
+        // Get the transform for this object
+        float modelMtx[16];
+        gameObject->GetComponent<TransformComponent>()->GetModelMatrix(
+            modelMtx);
+        bgfx::setTransform(modelMtx);
+
+        bgfx::setVertexBuffer(0, meshData.vbh);
+        bgfx::setIndexBuffer(meshData.ibh);
+
+        // Shadow shaders are simple, just output depth
+        bgfx::submit(program.viewId + cascade, program.program);
+        m_drawnCounts.shadows++;
     }
 }
 
@@ -1490,6 +1475,8 @@ void RenderCore::_DrawDebug(const Program&   program,
     // Draw various debug overlays
     if (debug.Gizmos && m_drender) {
         // Draw zone boundaries
+
+        SYN_PROFILE_SCOPE("Draw Zones");
         for (std::vector<ZoneComponent*> zones =
                  Core::_GetContext()->zoneManager->GetZones();
              auto zone : zones) {
@@ -1522,6 +1509,7 @@ void RenderCore::_DrawDebug(const Program&   program,
     }
 
     if (debug.DrawBoundingBoxes && m_drender) {
+        SYN_PROFILE_SCOPE("Draw AABBs");
         std::vector<GameObject*> meshObjects =
             Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH);
         for (auto go : meshObjects) {
@@ -1532,6 +1520,7 @@ void RenderCore::_DrawDebug(const Program&   program,
 
     // Flush all queued debug lines (physics wireframes, frustums, CSM lines,
     // zone bounds, and AABBs) in a single pass.
+    // TODO: Rework this to draw camera frustums as gizmos instead of hardcoded
     GameObject* p = Registry::GetGameObjectByName("player");
     if (p && Core::IsPhysicsEnabled()) {
         CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
