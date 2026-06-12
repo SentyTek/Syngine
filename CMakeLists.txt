@@ -98,6 +98,11 @@ add_library(Syngine STATIC
     src/Syngine/ECS/ComponentRegistry.cpp
 )
 
+set_target_properties(Syngine PROPERTIES FOLDER "Engine")
+
+# Call the testing cmake
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tests ${CMAKE_BINARY_DIR}/engine_tests EXCLUDE_FROM_ALL)
+
 # Uncomment to enable graphics debugging.
 # This is done because programs like RenderDoc do not work if window's `dbghelp.dll` is loaded, which we use for crash handling/logging.
 # And so this macro prevents those features from being compiled in. This also disables the Syngine Profiler, which may cause compile-time errors. Use at your own risk.
