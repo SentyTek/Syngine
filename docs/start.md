@@ -78,7 +78,7 @@ After it's configured, simply run `ninja` in the build directory to compile. Thi
 
 **After it's built, you may need to rerun the CMake command and Ninja to compile shaders**, but this will only take a second.
 
-After it is built, you can run the executable or app bundle found in either the `build/bin` folder or the `build/{release_mode}` folder alongside some tool executables. If all is good, the game should launch immediately and without presenting any errors, and the window should be titled your game, displaying a skydome.
+After it is built, you can run the executable or app bundle found in either the `build/bin` folder or the `build/{release_mode}/bin` folder alongside some tool executables. If all is good, the game should launch immediately and without presenting any errors, and the window should be titled your game, displaying a skydome.
 
 ## Conclusion
 Congratulations, you've just built your first project with Syngine! Now, you can view the [API Reference](index.md#api-reference) to learn more on what features Syngine has at your disposal.

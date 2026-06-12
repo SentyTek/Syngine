@@ -7,7 +7,6 @@
 # ╰──────────────────────────────────────╯
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
 
-
 cmake_minimum_required(VERSION 3.16)
 project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
@@ -106,7 +105,7 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tests ${CMAKE_BINARY_DIR}/engine_test
 # Uncomment to enable graphics debugging.
 # This is done because programs like RenderDoc do not work if window's `dbghelp.dll` is loaded, which we use for crash handling/logging.
 # And so this macro prevents those features from being compiled in. This also disables the Syngine Profiler, which may cause compile-time errors. Use at your own risk.
-# target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
+target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
 
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
@@ -201,6 +200,21 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/assimp ${CMAKE_BINARY_DIR
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/sol2 ${CMAKE_BINARY_DIR}/third_party/sol2 EXCLUDE_FROM_ALL)
+
+# Add the third party things to respective folders
+set_target_properties(SDL_uclibc PROPERTIES FOLDER "ThirdParty/SDL")
+set_target_properties(SDL3_test PROPERTIES FOLDER "ThirdParty/SDL")
+set_target_properties(SDL3-static PROPERTIES FOLDER "ThirdParty/SDL")
+set_target_properties(bgfx PROPERTIES FOLDER "ThirdParty/bgfx")
+set_target_properties(bx PROPERTIES FOLDER "ThirdParty/bgfx")
+set_target_properties(bimg PROPERTIES FOLDER "ThirdParty/bgfx")
+set_target_properties(assimp PROPERTIES FOLDER "ThirdParty/assimp")
+set_target_properties(Jolt PROPERTIES FOLDER "ThirdParty/JoltPhysics")
+set_target_properties(lua PROPERTIES FOLDER "ThirdParty/sol2")
+set_target_properties(zlibstatic PROPERTIES FOLDER "ThirdParty/assimp")
+set_target_properties(UpdateAssimpLibsDebugSymbolsAndDLLs PROPERTIES FOLDER "Engine") # this sucks
+
+set_target_properties(shaderc PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>/tools") # shaderc is a tool, so put it in the tools folder
 
 # Allow not building SynTools if not needed
 option(SYNGINE_BUILD_TOOLS "Build Syngine Tools (Shader Compiler, Asset Packager)" ON)

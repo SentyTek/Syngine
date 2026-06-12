@@ -34,6 +34,7 @@ project(\"$PROJECT_NAME\")
 set(EXECUTABLE_NAME \${PROJECT_NAME})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 20)
+set_property(GLOBAL PROPERTY USE_FOLDERS ON \"Enable folder grouping in IDEs\")
 
 # Set the current year for copyright notices
 set(CURRENT_YEAR 2025)
@@ -46,7 +47,7 @@ else()
 endif()
 
 if(APPLE)
-# set the minimum deployment version for the asset compiler
+    # set the minimum deployment version for the asset compiler
     set(MINIMUM_MACOS_VERSION 26.0)
     # set the bundle identifier for xcode
     set(BUNDLE_IDENTIFIER \"com.example.$PROJECT_NAME\")
@@ -69,7 +70,9 @@ add_subdirectory(engine)
 add_subdirectory(game)
 
 # And finally the editor
-# add_subdirectory(editor)" > CMakeLists.txt
+# add_subdirectory(editor)
+
+set_target_properties(\${EXECUTABLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"\${CMAKE_BINARY_DIR}/\$<CONFIGURATION>/bin\")" > CMakeLists.txt
 
 cd game
 touch CMakeLists.txt
