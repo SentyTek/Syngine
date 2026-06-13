@@ -183,10 +183,6 @@ elseif(MSVC)
     set_default_option(SDL_RENDER_DISABLED ON "Disable SDL rendering subsystem on Windows platforms")
 
     set_default_option(ASSIMP_MSVC_STATIC_RUNTIME ON "Force Assimp to use static MSVC runtime (/MT or /MTd)")
-
-    if (TARGET JOLT)
-        target_compile_options(Jolt PRIVATE /wd4865 /WX-) # Disable "the underlying type of ... will change when '/Zc:enumTypes' is specified on the command line" warning and don't treat as error
-    endif()
 else() # Linux and other Unix-like systems
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF "Disable Direct3D 12 Renderer")
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")
@@ -207,6 +203,10 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/assimp ${CMAKE_BINARY_DIR
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE_BINARY_DIR}/third_party/JoltPhysics EXCLUDE_FROM_ALL)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/sol2 ${CMAKE_BINARY_DIR}/third_party/sol2 EXCLUDE_FROM_ALL)
+
+if (MSVC AND TARGET Jolt)
+    target_compile_options(Jolt PRIVATE /wd4865 /WX-) # Disable "the underlying type of ... will change when '/Zc:enumTypes' is specified on the command line" warning and don't treat as error
+endif()
 
 # Add the third party things to respective folders
 set_target_properties(SDL_uclibc PROPERTIES FOLDER "ThirdParty/SDL")
