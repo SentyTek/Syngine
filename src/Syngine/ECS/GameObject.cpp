@@ -14,8 +14,6 @@
 #include "Syngine/Utils/Serializer.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/ECS/ComponentRegistry.h"
-#include <unordered_map>
-
 
 using namespace Syngine;
 
@@ -67,8 +65,10 @@ GameObject::GameObject(const GameObject& other) {
     this->name = other.name;
     this->type = other.type;
     this->gizmo = other.gizmo;
+    this->tags = other.tags;
     this->id   = other.id;
     this->isActive = other.isActive;
+    this->enabled = other.enabled;
 
     // Deep copy components
     for (const auto& [type, comp] : other.components) {
@@ -90,8 +90,10 @@ GameObject& GameObject::operator=(const GameObject& other) {
     this->name = other.name;
     this->type = other.type;
     this->gizmo = other.gizmo;
+    this->tags = other.tags;
     this->id   = other.id;
     this->isActive = other.isActive;
+    this->enabled = other.enabled;
 
     // Clear existing components
     this->components.clear();
@@ -141,15 +143,15 @@ size_t GameObject::GetComponentCount() const noexcept {
     return this->components.size();
 }
 
-int GameObject::RemoveComponent(Syngine::ComponentTypeID type) {
+bool GameObject::RemoveComponent(Syngine::ComponentTypeID type) {
     auto it = this->components.find(type);
     if (it == this->components.end()) {
-        return -1; // Component not found
+        return false; // Component not found
     }
 
     this->components.erase(it);
     Registry::_NotifyComponentRemoved(this, type);
-    return 0;
+    return true;
 }
 
 bool GameObject::HasComponent(Syngine::ComponentTypeID type) {

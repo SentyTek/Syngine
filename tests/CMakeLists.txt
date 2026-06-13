@@ -16,7 +16,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(engine_tests
-    ECS/AddRemoveComponents.cpp
+    ECS/GameObjectLifecycle.cpp
 )
 
 if (MSVC)
@@ -47,5 +47,4 @@ include(CTest)
 list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
 include(Catch)
 
-# This will now properly register because CTest was initialized in the root
 catch_discover_tests(engine_tests)

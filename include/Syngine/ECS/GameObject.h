@@ -125,10 +125,10 @@ class GameObject {
 
     /// @brief Remove a component from the GameObject
     /// @param type Type of the component to remove
-    /// @return 0 on success, -1 if the component was not found
+    /// @return True if the component was removed successfully
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int RemoveComponent(Syngine::ComponentTypeID type);
+    bool RemoveComponent(Syngine::ComponentTypeID type);
 
     /// @brief Check if the GameObject has a component of the specified type
     /// @param type Type of the component to check

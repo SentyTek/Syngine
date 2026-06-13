@@ -66,11 +66,11 @@ size_t Serializer::DataNode::Size() const {
     return std::get<NodeArray>(m_data).size();
 }
 
-Serializer::DataNode& Serializer::DataNode::At(size_t index) {
+const Serializer::DataNode& Serializer::DataNode::At(size_t index) const {
     if (!IsArray()) {
         throw std::runtime_error("DataNode is not an array");
     }
-    auto& arr = std::get<NodeArray>(m_data);
+    const auto& arr = std::get<NodeArray>(m_data);
     if (index >= arr.size()) {
         throw std::out_of_range("Index out of range in DataNode array");
     }

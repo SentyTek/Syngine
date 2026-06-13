@@ -180,6 +180,10 @@ elseif(MSVC)
     set_default_option(SDL_RENDER_DISABLED ON "Disable SDL rendering subsystem on Windows platforms")
 
     set_default_option(ASSIMP_MSVC_STATIC_RUNTIME ON "Force Assimp to use static MSVC runtime (/MT or /MTd)")
+
+    if (TARGET JOLT)
+        target_compile_options(Jolt PRIVATE /wd4865 /WX-) # Disable "the underlying type of ... will change when '/Zc:enumTypes' is specified on the command line" warning and don't treat as error
+    endif()
 else() # Linux and other Unix-like systems
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF "Disable Direct3D 12 Renderer")
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")
