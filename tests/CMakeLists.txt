@@ -36,9 +36,11 @@ set_target_properties(Catch2 PROPERTIES FOLDER "Tests")
 set_target_properties(Catch2WithMain PROPERTIES FOLDER "Tests")
 set_target_properties(engine_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>/tests")
 
+# Apparently Catch2 needs to be linked first otherwise it and Syngine fight over main
+# Entirely my fault but whatevs
 target_link_libraries(engine_tests PRIVATE
-    Syngine
     Catch2::Catch2WithMain
+    Syngine
 )
 
 include(CTest)

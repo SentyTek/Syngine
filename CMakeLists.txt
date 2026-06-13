@@ -12,6 +12,9 @@ project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
 set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
 
+# Enable CTest in the engine project so standalone engine CI can discover tests.
+include(CTest)
+
 # Generate Version.h for all engine builds (including engine-only CI).
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/versioning.cmake)
 define_version()
@@ -215,8 +218,10 @@ set_target_properties(bimg PROPERTIES FOLDER "ThirdParty/bgfx")
 set_target_properties(assimp PROPERTIES FOLDER "ThirdParty/assimp")
 set_target_properties(Jolt PROPERTIES FOLDER "ThirdParty/JoltPhysics")
 set_target_properties(lua PROPERTIES FOLDER "ThirdParty/sol2")
-set_target_properties(zlibstatic PROPERTIES FOLDER "ThirdParty/assimp")
-set_target_properties(UpdateAssimpLibsDebugSymbolsAndDLLs PROPERTIES FOLDER "Engine") # this sucks
+if(MSVC) # these are windows only targets (i dont know man)
+    set_target_properties(zlibstatic PROPERTIES FOLDER "ThirdParty/assimp")
+    set_target_properties(UpdateAssimpLibsDebugSymbolsAndDLLs PROPERTIES FOLDER "Engine") # this sucks
+endif()
 
 set_target_properties(shaderc PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>/tools") # shaderc is a tool, so put it in the tools folder
 
