@@ -220,8 +220,15 @@ void GameObject::SetParent(GameObject* parent) {
         }
         return;
     }
-    this->GetComponent<TransformComponent>()->SetParent(parent->GetComponent<TransformComponent>());
-    parent->AddChild(this);
+    TransformComponent* tComp = this->GetComponent<TransformComponent>();
+    TransformComponent* parentTComp = parent->GetComponent<TransformComponent>();
+    if (tComp && parentTComp) {
+        tComp->SetParent(parentTComp);
+        parent->AddChild(this);
+    } else {
+        Syngine::Logger::Warn(
+            "GameObject has no TransformComponent, cannot set parent");
+    }
 }
 
 GameObject* GameObject::GetParent() const {
