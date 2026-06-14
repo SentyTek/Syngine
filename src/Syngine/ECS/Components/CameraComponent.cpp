@@ -220,7 +220,6 @@ bool CameraComponent::_aabbInsidePlane(const Plane& plane, const bx::Vec3& min, 
 bool CameraComponent::_aabbInsideFrustum(const Frustum&  frustum,
                                          const bx::Vec3& min,
                                          const bx::Vec3& max) {
-    SYN_PROFILE_FUNCTION();
     return _aabbInsidePlane(frustum.left, min, max) &&
            _aabbInsidePlane(frustum.right, min, max) &&
            _aabbInsidePlane(frustum.top, min, max) &&
