@@ -11,6 +11,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include "../defines.h"
 
 #include <Syngine/Core/Registry.h>
 #include <Syngine/ECS/GameObject.h>
@@ -18,7 +19,8 @@
 
 using namespace Syngine;
 using namespace Catch::Matchers;
-#define FLOAT_MARGIN 0.001f
+
+// Collection of tests for GameObject lifecycle management
 
 // Tests for component lifecycle management, including adding, removing, and
 // copying components on GameObjects. Also tests that the Registry correctly

@@ -17,6 +17,7 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(engine_tests
     ECS/GameObjectLifecycle.cpp
+    ECS/TransformHierarchy.cpp
 )
 
 if (MSVC)
