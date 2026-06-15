@@ -16,6 +16,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(engine_tests
+    Core/StartStop.cpp
+
     ECS/GameObjectLifecycle.cpp
     ECS/TransformHierarchy.cpp
 )
