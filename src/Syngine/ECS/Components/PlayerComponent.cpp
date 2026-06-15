@@ -37,6 +37,12 @@
 #include <string>
 
 namespace Syngine {
+namespace {
+float CapsuleCenterOffset(float height) {
+    return height * 0.5f;
+}
+} // namespace
+
 PlayerComponent::PlayerComponent(GameObject*               owner,
                                  Syngine::CameraComponent* camera) {
     if (!Core::IsPhysicsEnabled()) return;
@@ -65,7 +71,10 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
     this->m_deltaTime = other.m_deltaTime;
     this->m_targetMoveSpeed = other.m_targetMoveSpeed;
     this->m_targetEyeHeight = other.m_targetEyeHeight;
-    this->m_targetFov = other.m_targetFov;
+    this->m_eyeHeight       = other.m_eyeHeight;
+    this->m_crouchEyeHeight = other.m_crouchEyeHeight;
+    this->m_moveDirection = other.m_moveDirection;
+    this->m_realMoveSpeed   = other.m_realMoveSpeed;
 
     // Copy configuration parameters
     this->moveSpeed = other.moveSpeed;
@@ -78,7 +87,13 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
     this->crouchHeight = other.crouchHeight;
     this->playerRadius = other.playerRadius;
     this->mouseSens = other.mouseSens;
-    this->maxPitchAngle = other.maxPitchAngle;
+    this->maxPitchAngle   = other.maxPitchAngle;
+    this->normalFov       = other.normalFov;
+    this->sprintFov       = other.sprintFov;
+    this->crouchFov       = other.crouchFov;
+    this->slideFov        = other.slideFov;
+    this->slideDecay      = other.slideDecay;
+    this->slideSpeedMult  = other.slideSpeedMult;
 
     // Re-initialize the character
     if (this->m_transform) {
@@ -86,12 +101,12 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
         settings->mMaxSlopeAngle                  = bx::kPi / 4.0f; // 45 degrees
         settings->mLayer = Syngine::Layers::MOVING; // Set to the moving layer
         settings->mShape =
-            new JPH::CapsuleShape(standHeight, playerRadius); // Half (quarter?) height and radius
+            new JPH::CapsuleShape(standHeight / 2, playerRadius); // Half height and radius
         settings->mFriction = 0.45f;
         settings->mMass     = 80.0f;
 
         float* pos = m_transform->GetPosition();
-        JPH::RVec3 initialPosition(pos[0], pos[1], pos[2]);
+        JPH::RVec3 initialPosition(pos[0], pos[1] + CapsuleCenterOffset(standHeight), pos[2]);
         this->m_character =
             new JPH::Character(settings,
                                initialPosition,
@@ -99,7 +114,7 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
                                0,
                                &this->m_physicsManager->_GetPhysicsSystem());
         this->m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
-        this->m_camera->SetPosition(pos[0], pos[1], pos[2]);
+        this->m_camera->SetPosition(pos[0], pos[1] + m_eyeHeight, pos[2]);
     }
 }
 
@@ -116,7 +131,13 @@ Serializer::DataNode PlayerComponent::Serialize() const {
     node["crouchHeight"] = crouchHeight;
     node["playerRadius"] = playerRadius;
     node["mouseSens"] = mouseSens;
-    node["maxPitchAngle"] = maxPitchAngle;
+    node["maxPitchAngle"]   = maxPitchAngle;
+    node["normalFov"]       = normalFov;
+    node["sprintFov"]       = sprintFov;
+    node["crouchFov"]       = crouchFov;
+    node["slideFov"]        = slideFov;
+    node["slideDecay"]      = slideDecay;
+    node["slideSpeedMult"]  = slideSpeedMult;
     return node;
 }
 
@@ -133,16 +154,22 @@ void PlayerComponent::Init(Syngine::CameraComponent* camera) {
         return;
     }
 
+    float halfHeight =
+        (standHeight / 2.0f) -
+        playerRadius; // Capsule half height minus radius to get the real half
+                      // height, since Jolt does not include the spherical caps
+                      // in the half height parameter
+
     JPH::Ref<JPH::CharacterSettings> settings = new JPH::CharacterSettings();
     settings->mMaxSlopeAngle                  = bx::kPi / 4.0f; // 45 degrees
     settings->mLayer = Syngine::Layers::MOVING; // Set to the moving layer
     settings->mShape =
-        new JPH::CapsuleShape(standHeight, playerRadius); // Half (quarter?) height and radius
+        new JPH::CapsuleShape(halfHeight, playerRadius); // Half height and radius
     settings->mFriction = 0.45f;
     settings->mMass     = 80.0f;
 
     float* pos = m_transform->GetPosition();
-    JPH::RVec3 initialPosition(pos[0], pos[1], pos[2]);
+    JPH::RVec3 initialPosition(pos[0], pos[1] + CapsuleCenterOffset(standHeight), pos[2]);
 
     m_character = new JPH::Character(settings,
                                      initialPosition,
@@ -151,7 +178,7 @@ void PlayerComponent::Init(Syngine::CameraComponent* camera) {
                                      &m_physicsManager->_GetPhysicsSystem());
     m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
 
-    m_camera->SetPosition(pos[0], pos[1], pos[2]);
+    m_camera->SetPosition(pos[0], pos[1] + m_eyeHeight, pos[2]);
 }
 
 PlayerComponent::~PlayerComponent() {
@@ -188,8 +215,12 @@ void PlayerComponent::_HandleInput(const SDL_Event& event) {
             float x = w / 2.0f, y = h / 2.0f;
             SDL_WarpMouseInWindow(m_window, x, y);
         } else if (event.type == SDL_EVENT_KEY_UP) {
-            if (event.key.key == SDLK_LCTRL && m_playerState == PlayerState::SLIDING) {
-                m_playerState = PlayerState::IDLE; // Stop sliding when releasing crouch
+            if (event.key.key == SDLK_LCTRL) {
+                if (m_playerState == PlayerState::SLIDING) {
+                    m_playerState = PlayerState::WALKING; // Stop sliding when releasing crouch
+                } else if (m_playerState == PlayerState::CROUCHING) {
+                    m_playerState = PlayerState::IDLE; // Stand up immediately on crouch release
+                }
             }
         }
     }
@@ -204,7 +235,6 @@ void PlayerComponent::Update(float deltaTime) {
     // Fetch keyboard state internally
     const bool* keystate = SDL_GetKeyboardState(NULL);
 
-    m_prevPlayerState = m_playerState;
     m_deltaTime = deltaTime;
 
     // Sliding persists between frames, so we don't reset it here
@@ -212,6 +242,9 @@ void PlayerComponent::Update(float deltaTime) {
         m_playerState = PlayerState::IDLE;
     }
 
+    // Local variables to allow for smooth transitions without affecting the actual target values immediately
+    float l_targetEyeHeight = m_targetEyeHeight;
+    float l_targetFov       = normalFov;
     if (m_simulate) {
         bool isGrounded = m_character->GetGroundState() ==
                           JPH::Character::EGroundState::OnGround;
@@ -224,35 +257,33 @@ void PlayerComponent::Update(float deltaTime) {
         if (m_playerState != PlayerState::SLIDING) {
             m_targetMoveSpeed = moveSpeed;
         }
-        m_targetEyeHeight = 0.5f;
-        m_targetFov       = 70.0f;
         if (enableSprinting && keystate[SDL_SCANCODE_LSHIFT] && m_playerState != PlayerState::SLIDING) {
             m_targetMoveSpeed *= sprintMult;
-            m_targetFov = 90.0f;
+            l_targetFov = sprintFov;
             m_playerState = PlayerState::SPRINTING;
         }
         if (enableCrouching && keystate[SDL_SCANCODE_LCTRL] && m_playerState != PlayerState::SLIDING) {
             m_targetMoveSpeed *= crouchSpeed;
             //m_targetEyeHeight = 0.7f;
-            m_targetFov       = 60.0f;
+            l_targetFov       = crouchFov;
             m_playerState = PlayerState::CROUCHING;
         }
 
         // If both sprint and crouch are pressed, we slide
         if (enableSliding && keystate[SDL_SCANCODE_LSHIFT] && keystate[SDL_SCANCODE_LCTRL] && isGrounded && m_prevPlayerState == PlayerState::SPRINTING) {
             m_playerState = PlayerState::SLIDING;
-            m_targetMoveSpeed *= sprintMult * 1.45f; // Increase speed while sliding
+            m_targetMoveSpeed *= sprintMult * slideSpeedMult; // Increase speed while sliding
             //m_targetEyeHeight = 0.7f;
-            m_targetFov       = 100.0f;
+            l_targetFov       = slideFov;
         }
 
         // Low friction when sliding
         if (m_playerState == PlayerState::SLIDING) {
             BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
             bodyInterface.SetFriction(m_character->GetBodyID(), 0.25f);
-            m_targetFov = 100.0f;
+            l_targetFov = slideFov;
             //m_targetEyeHeight = 0.7f; // Lower eye height when sliding
-            m_targetMoveSpeed -= 4.5f * m_deltaTime;
+            m_targetMoveSpeed -= slideDecay * m_deltaTime;
             if (m_targetMoveSpeed < 0.01f) {
                 m_targetMoveSpeed = 0.0f;
             }
@@ -265,24 +296,43 @@ void PlayerComponent::Update(float deltaTime) {
 
         // Shrink collider when crouching or sliding
         if (m_playerState == PlayerState::CROUCHING || m_playerState == PlayerState::SLIDING) {
-            if (m_prevPlayerState != PlayerState::CROUCHING && m_prevPlayerState != PlayerState::SLIDING) {
-                m_character->SetShape(new JPH::CapsuleShape(crouchHeight, playerRadius), 0.1f); // Half height and radius
+            if (m_prevPlayerState != PlayerState::CROUCHING &&
+                m_prevPlayerState != PlayerState::SLIDING) {
+                float halfHeight =
+                    (crouchHeight / 2.0f) -
+                    playerRadius; // New half height for crouching (Note: See
+                                  // the earlier comment about how Jolt handles
+                                  // capsule heights)
+                m_character->SetShape(new JPH::CapsuleShape(halfHeight, playerRadius), 0.1f); // Half height and radius
+
+                float* feetPos = m_transform->GetPosition();
+                m_character->SetPosition(JPH::RVec3(feetPos[0], feetPos[1] + CapsuleCenterOffset(crouchHeight), feetPos[2]));
             }
-            m_targetEyeHeight = 0.2f; // Lower eye height when crouching or sliding
+            l_targetEyeHeight =
+                m_crouchEyeHeight; // Lower eye height when crouching or sliding
+
+            if (m_newVelocity.Length() < 0.5f &&
+                m_playerState == PlayerState::SLIDING) {
+                m_playerState = PlayerState::CROUCHING;
+            }
 
         } else { // Reset sizes only when state changes
             if (m_prevPlayerState == PlayerState::CROUCHING || m_prevPlayerState == PlayerState::SLIDING) {
-                // Adjust position so collider actually changes size
-                float* pos = m_transform->GetPosition();
-                pos[1] += (standHeight - crouchHeight);
-                m_character->SetPosition(JPH::RVec3(pos[0], pos[1], pos[2]));
+
+                float* feetPos = m_transform->GetPosition();
+                m_character->SetPosition(JPH::RVec3(feetPos[0], feetPos[1] + CapsuleCenterOffset(standHeight), feetPos[2]));
 
                 // Reset to normal size
+                float halfHeight =
+                    (standHeight / 2.0f) -
+                    playerRadius; // New half height for standing (Note: See the
+                                  // earlier comment about how Jolt handles
+                                  // capsule heights)
                 m_character->SetShape(
-                    new JPH::CapsuleShape(standHeight, playerRadius),
+                    new JPH::CapsuleShape(halfHeight, playerRadius),
                     0.1f); // Reset to normal size
             }
-            m_targetEyeHeight = 0.5f; // Normal eye height
+            l_targetEyeHeight = m_targetEyeHeight; // Normal eye height
         }
 
         // For ground movement, typically we want to ignore the Y component
@@ -337,6 +387,7 @@ void PlayerComponent::Update(float deltaTime) {
                 Syngine::Logger::Error("PlayerComponent has no character object!");
             }
     }
+    m_prevPlayerState = m_playerState;
 
     // Update the character
     m_character->SetLinearVelocity(m_newVelocity);
@@ -347,8 +398,8 @@ void PlayerComponent::Update(float deltaTime) {
     const float eyeHeightLerpSpeed = 8.0f;
     const float moveSpeedLerpSpeed = 10.0f;
 
-    m_camera->SetFOV(bx::lerp(m_camera->GetFOV(), m_targetFov, 1.0f - bx::exp(-fovLerpSpeed * m_deltaTime)));
-    m_eyeHeight = bx::lerp(m_eyeHeight, m_targetEyeHeight, 1.0f - bx::exp(-eyeHeightLerpSpeed * m_deltaTime));
+    m_camera->SetFOV(bx::lerp(m_camera->GetFOV(), l_targetFov, 1.0f - bx::exp(-fovLerpSpeed * m_deltaTime)));
+    m_eyeHeight = bx::lerp(m_eyeHeight, l_targetEyeHeight, 1.0f - bx::exp(-eyeHeightLerpSpeed * m_deltaTime));
     m_realMoveSpeed = bx::lerp(m_realMoveSpeed, m_targetMoveSpeed, 1.0f - bx::exp(-moveSpeedLerpSpeed * m_deltaTime));
 }
 
@@ -363,16 +414,23 @@ void PlayerComponent::PostPhysicsUpdate() {
         m_character->PostSimulation(maxSeparationDistance);
     }
 
-    // Update transform
-    float* playerPos = m_transform->GetPosition();
-    JPH::RVec3 charPos    = m_character->GetPosition();
-    bx::Vec3   targetPos  = { charPos.GetX(), charPos.GetY(), charPos.GetZ() };
+    // Update transform from the character center, then convert back to feet.
+    JPH::RVec3 charPos = m_character->GetPosition();
+    const float colliderHeight =
+        (m_playerState == PlayerState::CROUCHING || m_playerState == PlayerState::SLIDING)
+            ? crouchHeight
+            : standHeight;
+    bx::Vec3 targetPos = {
+        charPos.GetX(),
+        charPos.GetY() - CapsuleCenterOffset(colliderHeight),
+        charPos.GetZ()
+    };
 
     float* pos = m_transform->GetPosition();
-    bx::Vec3   currentPos = { pos[0], pos[1], pos[2] };
+    bx::Vec3 currentPos = { pos[0], pos[1], pos[2] };
 
     const float positionLerpSpeed = 12.0f;
-    bx::Vec3   newPos     = bx::lerp(currentPos, targetPos, 1.0f - bx::exp(-positionLerpSpeed * m_deltaTime));
+    bx::Vec3 newPos = bx::lerp(currentPos, targetPos, 1.0f - bx::exp(-positionLerpSpeed * m_deltaTime));
     m_transform->SetPosition(newPos.x, newPos.y, newPos.z);
 
     // Update camera position and orientation
@@ -438,6 +496,18 @@ static Syngine::ComponentRegistrar s_playerRegistrar(
                 node[key] = std::stof(value);
             } else if (key == "maxPitchAngle") {
                 node[key] = std::stof(value);
+            } else if (key == "normalFov") {
+                node[key] = std::stof(value);
+            } else if (key == "sprintFov") {
+                node[key] = std::stof(value);
+            } else if (key == "crouchFov") {
+                node[key] = std::stof(value);
+            } else if (key == "slideFov") {
+                node[key] = std::stof(value);
+            } else if (key == "slideDecay") {
+                node[key] = std::stof(value);
+            } else if (key == "slideSpeedMult") {
+                node[key] = std::stof(value);
             }
         }
         return node;
@@ -456,7 +526,13 @@ static Syngine::ComponentRegistrar s_playerRegistrar(
         playerComp->crouchHeight = data["crouchHeight"].As<float>(1.0f);
         playerComp->playerRadius = data["playerRadius"].As<float>(0.3f);
         playerComp->mouseSens = data["mouseSens"].As<float>(0.1f);
-        playerComp->maxPitchAngle = data["maxPitchAngle"].As<float>(89.0f);
+        playerComp->maxPitchAngle   = data["maxPitchAngle"].As<float>(89.0f);
+        playerComp->normalFov       = data["normalFov"].As<float>(70.0f);
+        playerComp->sprintFov       = data["sprintFov"].As<float>(90.0f);
+        playerComp->crouchFov       = data["crouchFov"].As<float>(60.0f);
+        playerComp->slideFov        = data["slideFov"].As<float>(100.0f);
+        playerComp->slideDecay      = data["slideDecay"].As<float>(4.5f);
+        playerComp->slideSpeedMult  = data["slideSpeedMult"].As<float>(1.45f);
         return playerComp;
     }
 );
