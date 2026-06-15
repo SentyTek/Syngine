@@ -929,12 +929,16 @@ void LuaManager::_ReloadLuaState() {
                      removedLuaBinds);
     }
 
-    // Clean up owned GameObjects
-    for (GameObject* obj : m_ownedObjects) {
+    // Clean up owned GameObjects.
+    // Swap into a local first so that GameObject::~GameObject() calling
+    // _UnregisterLuaOwnedObject() doesn't mutate m_ownedObjects while we are
+    // iterating it (iterator invalidation crash).
+    std::vector<GameObject*> toDelete;
+    std::swap(toDelete, m_ownedObjects);
+    for (GameObject* obj : toDelete) {
         if (obj)
             delete obj;
     }
-    m_ownedObjects.clear();
 
     // Recreate the Lua state
     if (m_luaState) {

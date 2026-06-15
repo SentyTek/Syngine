@@ -563,6 +563,31 @@ void Logger::LogF(LogLevel level, bool writeOnlyInDebug, const char* fmt, ...) {
     Log(std::string(buffer.data()), level, writeOnlyInDebug);
 }
 
+void Logger::ToConsole(const char* fmt, ...) {
+    if (!fmt) return;
+
+    va_list args;
+    va_start(args, fmt);
+
+    // Get required buffer data
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+    int len = vsnprintf(nullptr, 0, fmt, argsCopy);
+    va_end(argsCopy);
+
+    if (len < 0) {
+        va_end(args);
+        return;
+    }
+
+    // Allocate buffer and format the string
+    std::vector<char> buffer(len + 1);
+    vsnprintf(buffer.data(), buffer.size(), fmt, args);
+    va_end(args);
+
+    SDL_Log("%s", buffer.data());
+}
+
 void Logger::InfoPopup(const std::string_view message) {
     Log(message, LogLevel::INFO, false);
     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", message.data(), m_mainWindow);

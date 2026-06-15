@@ -164,6 +164,12 @@ class Logger {
     /// @since v0.0.1
     static void Fatal(const std::string_view message);
 
+    /// @brief Log a message directly to the console, bypassing the log file
+    /// @param fmt Format string
+    /// @param ... Format string arguments
+    /// @threadsafety not-safe
+    static void ToConsole(const char* fmt, ...);
+
     /// @brief Log hardware information
     /// @threadsafety not-safe
     /// @since v0.0.1
