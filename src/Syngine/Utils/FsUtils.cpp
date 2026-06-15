@@ -32,6 +32,10 @@ namespace Syngine {
 
 std::filesystem::path _GetAppDataPath(const std::string& appName) {
     std::filesystem::path appDataFolder;
+    if (appName.empty()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "App name is empty, cannot determine AppData path.");
+        return "";
+    }
 #ifdef _WIN32
     // On Windows, use the user's Roaming AppData folder.
     PWSTR path = nullptr;

@@ -71,9 +71,12 @@ Core::Core(const EngineConfig config) {
     }
     m_instance = this;
 
+    Logger::_Init(config.gameName);
+    Logger::Info("Starting " + config.gameName, false);
+
     // Check if required folders exist (shaders, meshes)
     // CheckRequiredFolders will abort if any folder is missing
-    if (Syngine::_CheckRequiredFolders()) {
+    if (Syngine::_CheckRequiredFolders(config.headless)) {
         Syngine::Logger::LogF(
             LogLevel::INFO, false, "Using Syngine v%s", SYN_VERSION_STRING);
         m_context         = new Context();
@@ -121,26 +124,33 @@ Core::~Core() {
 
 bool Core::Initialize(const RendererConfig rendererConfig) {
     if (!m_context) {
-        Syngine::Logger::Fatal("Core not initialized properly. App is null.");
+        Syngine::Logger::Fatal("Core not initialized properly. Context is null.");
+        return false;
+    }
+    if (m_instance->m_context->synModels || m_instance->m_context->renderer ||
+        m_instance->m_context->window) {
+        Syngine::Logger::Fatal("Core is already initialized. Multiple calls to "
+                               "Initialize() are not allowed.");
         return false;
     }
 
     try {
-        Logger::_Init(m_context->config.gameName);
-        Logger::Info("Starting " + m_context->config.gameName, false);
-
         Serializer::_LoadCoreSettings(m_context->config.gameName);
 
-        m_context->window = std::make_unique<Window>(m_context->config);
-        if (!m_context->window) {
-            Logger::Error("Failed to create window. Check the log for more details.");
-        }
+        if (!m_context->config.headless) {
+            m_context->window = std::make_unique<Window>(m_context->config);
+            if (!m_context->window) {
+                Logger::Error("Failed to create window. Check the log for more details.");
+            }
 
-        m_context->renderer = std::make_unique<Renderer>(m_context->config.windowWidth,
-                                                     m_context->config.windowHeight,
-                                                     rendererConfig);
-        if (!m_context->renderer) {
-            Logger::Error("Failed to create renderer. Check the log for more details.");
+            m_context->renderer = std::make_unique<Renderer>(m_context->config.windowWidth,
+                                                        m_context->config.windowHeight,
+                                                        rendererConfig);
+            if (!m_context->renderer) {
+                Logger::Error("Failed to create renderer. Check the log for more details.");
+            }
+        } else {
+            Logger::Info("Running in headless mode, skipping renderer initialization.");
         }
 
         Syngine::Logger::LogHardwareInfo();
@@ -287,6 +297,7 @@ bool Core::HandleEvents() {
             m_shouldClose = true;
             break;
         case SDL_EVENT_WINDOW_RESIZED: {
+            if (m_context->config.headless) break; // Should never happen, but just in case
             int         w, h;
             SDL_Window* resizedWindow =
                 SDL_GetWindowFromID(event.window.windowID);

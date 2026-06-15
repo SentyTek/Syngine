@@ -77,14 +77,19 @@ static inline std::string _ResolveOSPath(std::string path) {
 }
 
 /// @brief Checks if required folders exist in the game directory
+/// @param headless Whether the engine is running in headless mode (if true,
+/// some folders may not be required)
 /// @return True if all required folders exist, false otherwise
 /// @since v0.0.1
 /// @internal
-inline bool _CheckRequiredFolders() {
+inline bool _CheckRequiredFolders(bool headless) {
     const char* requiredFolders[] = {
         "shaders",
         "gizmos", // Should meshes be considered required?
     };
+    if (headless) {
+        return true;
+    }
 
     for (const char* folder : requiredFolders) {
         std::string fullPath = Syngine::_ResolveOSPath(folder);

@@ -61,7 +61,10 @@ struct EngineConfig {
     int         windowHeight = 600; //* Height of the game window in pixels
     bool        usePhysics = true;  //* Whether to initialize the physics system
     bool        useLua = true;      //* Whether to initialize the Lua scripting system
-    LuaLibs luaLibs = LuaLibs::DEFAULT; //* Which Lua libraries to load if useLua is true
+    LuaLibs     luaLibs =
+        LuaLibs::DEFAULT; //* Which Lua libraries to load if useLua is true
+    bool headless = false; //* Whether to run in headless mode (no window, for
+                           //servers or testing)
 };
 
 /// @brief the various debug modes possible
@@ -318,6 +321,8 @@ class Core {
     friend class Registry;
     friend class Serializer;
     friend class Window;
+    friend class Phys;
+    friend class Logger;
 #ifndef SYN_DEBUG_GRAPHICS
     friend class Syngine::Profiler;
 #endif
