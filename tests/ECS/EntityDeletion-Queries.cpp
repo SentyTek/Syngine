@@ -6,6 +6,7 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
+#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "../defines.h"
@@ -80,11 +81,28 @@ TEST_CASE("Querying the Registry of various types of GameObjects", "[ECS]") {
         Registry::GetGameObjectsWithComponent(TransformComponent::componentType)
             .size() == 3);
 
-    REQUIRE(Registry::GetGameObjectsByType("default").front() == go1);
-    REQUIRE(Registry::GetGameObjectsByType("notdefault").front() == go2);
-    REQUIRE(
-        Registry::GetGameObjectsWithComponent(TransformComponent::componentType)
-            .front() == go1);
+    const auto defaultGameObjects = Registry::GetGameObjectsByType("default");
+    REQUIRE(std::find(defaultGameObjects.begin(),
+                      defaultGameObjects.end(),
+                      go1) != defaultGameObjects.end());
+
+    const auto notDefaultGameObjects =
+        Registry::GetGameObjectsByType("notdefault");
+    REQUIRE(std::find(notDefaultGameObjects.begin(),
+                      notDefaultGameObjects.end(),
+                      go2) != notDefaultGameObjects.end());
+
+    const auto gameObjectsWithTransform = Registry::GetGameObjectsWithComponent(
+        TransformComponent::componentType);
+    REQUIRE(std::find(gameObjectsWithTransform.begin(),
+                      gameObjectsWithTransform.end(),
+                      go1) != gameObjectsWithTransform.end());
+    REQUIRE(std::find(gameObjectsWithTransform.begin(),
+                      gameObjectsWithTransform.end(),
+                      go2) != gameObjectsWithTransform.end());
+    REQUIRE(std::find(gameObjectsWithTransform.begin(),
+                      gameObjectsWithTransform.end(),
+                      go3) != gameObjectsWithTransform.end());
 
     // Clean up
     delete go1;

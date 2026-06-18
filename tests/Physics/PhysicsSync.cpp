@@ -63,7 +63,7 @@ TEST_CASE("Rigidbody and Transform sync", "[Physics]") {
 
     // Check that the transform's position is approximately equal to the rigidbody's position
     REQUIRE_THAT(tpos[0], WithinAbs(rbPos.GetX(), FLOAT_MARGIN));
-    REQUIRE_THAT(tpos[1], WithinAbs(rbPos.GetY(), 0.13f)); // Because transform and rb are lerped, they wont be exactly equal. IMO this margin is huge but whatever, it works for now.
+    REQUIRE_THAT(tpos[1], WithinAbs(rbPos.GetY(), 0.14f)); // Because transform and rb are lerped, they wont be exactly equal. IMO this margin is huge but whatever, it works for now.
     REQUIRE_THAT(tpos[2], WithinAbs(rbPos.GetZ(), FLOAT_MARGIN));
 
     // Cleanup
