@@ -193,6 +193,15 @@ std::vector<GameObject*> LuaManager::m_ownedObjects;
 LuaManager*              LuaManager::m_instance = nullptr;
 LuaLibs                  LuaManager::m_libs     = LuaLibs::DEFAULT;
 
+// Static storage for last Lua result
+sol::object _g_lastResult;
+
+// Helper to safely clear the last result before Lua state destruction
+void _ClearLastResult() {
+    // Explicitly destroy and recreate as empty to avoid reference issues
+    _g_lastResult = sol::object();
+}
+
 // Simply links into the logger to print info.
 sol::object _SynginePrint(sol::variadic_args va) {
     std::string output = "[Lua] ";
@@ -872,6 +881,7 @@ LuaManager::LuaManager(LuaLibs args) {
 }
 
 LuaManager::~LuaManager() {
+    _ClearLastResult();
     if (m_luaState) {
         delete m_luaState;
         m_luaState = nullptr;
@@ -918,6 +928,9 @@ void LuaManager::SafeFile(const std::string& filePath) {
 void LuaManager::_ReloadLuaState() {
     Logger::Log("Reloading Lua state...", LogLevel::INFO, true);
 
+    // Clear result before reload to prevent stale references
+    _ClearLastResult();
+
     DoFunction("onModUnload", 0, 0);
 
     const size_t removedLuaBinds = InputAction::UnregisterActionsByPrefix(
@@ -939,6 +952,9 @@ void LuaManager::_ReloadLuaState() {
         if (obj)
             delete obj;
     }
+
+    // Clear the result before destroying the Lua state
+    _ClearLastResult();
 
     // Recreate the Lua state
     if (m_luaState) {
@@ -1042,6 +1058,7 @@ void LuaManager::DoFunction(const std::string& funcName,
         m_allowTicking = false; // Prevent further calls to Lua functions until
                                 // reload to avoid spamming errors
     }
+    _g_lastResult = result.get<sol::object>();
 }
 
 // This is pretty much a special overload of DoFunction without logging and
@@ -1162,6 +1179,70 @@ void LuaManager::_AddFunctionImpl<std::function<void(int)>>(
                 func(args[0].as<int>());
             }
         };
+    }
+}
+
+// Template specializations for GetLastResult
+template <>
+int LuaManager::GetLastResult<int>() {
+    try {
+        if (!_g_lastResult.valid() || _g_lastResult.get_type() == sol::type::lua_nil) {
+            Logger::Log("Last Lua result is nil or invalid.",
+                        LogLevel::WARN, true);
+            return 0;
+        }
+        return _g_lastResult.as<int>();
+    } catch (const sol::error& e) {
+        Logger::LogF(LogLevel::ERR, true,
+                     "Failed to convert last Lua result to int: %s",
+                     e.what());
+        return 0;
+    }
+}
+
+template <>
+bool LuaManager::GetLastResult<bool>() {
+    try {
+        if (!_g_lastResult.valid() || _g_lastResult.get_type() == sol::type::lua_nil) {
+            Logger::Log("Last Lua result is nil or invalid.",
+                        LogLevel::WARN, true);
+            return false;
+        }
+        return _g_lastResult.as<bool>();
+    } catch (const sol::error& e) {
+        Logger::LogF(LogLevel::ERR, true,
+                     "Failed to convert last Lua result to bool: %s",
+                     e.what());
+        return false;
+    }
+}
+
+template <>
+float LuaManager::GetLastResult<float>() {
+    try {
+        if (!_g_lastResult.valid() || _g_lastResult.get_type() == sol::type::lua_nil) {
+            Logger::Log("Last Lua result is nil or invalid.",
+                        LogLevel::WARN, true);
+            return 0.0f;
+        }
+        return _g_lastResult.as<float>();
+    } catch (const sol::error& e) {
+        Logger::LogF(LogLevel::ERR, true,
+                     "Failed to convert last Lua result to float: %s",
+                     e.what());
+        return 0.0f;
+    }
+}
+
+template <>
+std::string LuaManager::GetLastResult<std::string>() {
+    try {
+        return _g_lastResult.as<std::string>();
+    } catch (const sol::error& e) {
+        Logger::LogF(LogLevel::ERR, true,
+                     "Failed to convert last Lua result to string: %s",
+                     e.what());
+        return "";
     }
 }
 

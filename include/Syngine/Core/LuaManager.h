@@ -12,11 +12,6 @@
 #include <Syngine/Core/Logger.h>
 #include <Syngine/ECS/GameObject.h>
 
-namespace sol {
-class state; // forward declaration
-struct variadic_args;
-}
-
 namespace Syngine {
 
 /// @brief Enum for specifying which Lua libraries to open
@@ -53,6 +48,13 @@ class LuaManager {
     static sol::state* _GetState() { return m_luaState; }
     static bool        m_initialized;
     static bool        m_allowTicking; // Whether to allow ticking Lua scripts (set to false during reloads)
+
+#if defined(SYNGINE_TEST_ACCESS)
+    public:
+        // Test-only access to the underlying Lua state.
+        static sol::state* GetStateForTests() { return m_luaState; }
+    private:
+#endif
 
     static void _RegisterEntityBindings(sol::state& lua);
     static void _RegisterInputBindings(sol::state& lua);
@@ -186,6 +188,27 @@ class LuaManager {
         m_allowTicking = allow;
         return previous;
     }
+
+    /// @brief Get the last result from a Lua function call, converted to type T
+    /// @note This will return of a FUNCTION CALL ONLY, make sure DoFunction has
+    /// been called at least once before this on a function with a return value.
+    /// Otherwise, this returns nothing.
+    /// @tparam T The type to convert the result to
+    /// @return The converted result, or default T if conversion failed
+    template <typename T>
+    static T GetLastResult();
+
+    template <>
+    int GetLastResult<int>();
+
+    template <>
+    bool GetLastResult<bool>();
+
+    template <>
+    float GetLastResult<float>();
+
+    template <> std::string GetLastResult<std::string>();
+
 };
 
 } // namespace Syngine
