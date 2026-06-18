@@ -316,7 +316,7 @@ bool Core::HandleEvents() {
             auto players =
                 Registry::GetGameObjectsWithComponent(SYN_COMPONENT_PLAYER);
             for (auto go : players) {
-                if (!go) continue;
+                if (!go || !go->IsActive()) continue;
                 PlayerComponent* pc = go->GetComponent<PlayerComponent>();
                 if (!pc) continue;
                 pc->_HandleInput(event);
@@ -360,7 +360,7 @@ bool Core::Update() {
     {
     SYN_PROFILE_SCOPE("Component Updates")
     for (auto& [id, go] : allGameObjects) {
-        if (!go) continue;
+        if (!go || !go->IsActive()) continue;
         const auto& components = go->GetComponents();
         for (const auto& [typeId, component] : components) {
             if (component && component->isEnabled) {
@@ -409,7 +409,7 @@ bool Core::Update() {
     if (m_internal.simulate) {
         SYN_PROFILE_SCOPE("Post Update")
         for (auto& [id, go] : allGameObjects) {
-            if (!go) continue;
+            if (!go || !go->IsActive()) continue;
             const auto& components = go->GetComponents();
             for (const auto& [typeId, component] : components) {
                 if (component && component->isEnabled) {

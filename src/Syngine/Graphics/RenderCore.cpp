@@ -1142,7 +1142,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
     // Iterate registry
     auto gameObjects = Registry::GetRenderableObjects();
     for (auto& go : gameObjects) {
-        if (!go || !go->enabled) continue;
+        if (!go || !go->IsActive()) continue;
 
         auto meshComp = go->GetComponent<MeshComponent>();
         if (!meshComp || !meshComp->isEnabled) continue;

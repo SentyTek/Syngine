@@ -68,7 +68,6 @@ GameObject::GameObject(const GameObject& other) {
     this->tags = other.tags;
     this->id   = other.id;
     this->isActive = other.isActive;
-    this->enabled = other.enabled;
 
     // Deep copy components
     for (const auto& [type, comp] : other.components) {
@@ -93,7 +92,6 @@ GameObject& GameObject::operator=(const GameObject& other) {
     this->tags = other.tags;
     this->id   = other.id;
     this->isActive = other.isActive;
-    this->enabled = other.enabled;
 
     // Clear existing components
     this->components.clear();

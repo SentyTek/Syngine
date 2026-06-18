@@ -85,7 +85,7 @@ class GameObject {
     /// inactive
     /// @threadsafety safe
     /// @since v0.0.1
-    void SetActive(bool active) noexcept;
+    void SetActive(bool active = true) noexcept;
 
     /// @brief Get the tags of the GameObject
     /// @return Vector of tags of the GameObject
@@ -202,15 +202,6 @@ class GameObject {
     /// @threadsafety safe
     /// @since v0.0.2
     const std::vector<GameObject*>& GetChildren() const;
-
-    /// @brief Sets the enabled state of the GameObject, which determines
-    /// whether it is rendered and updated
-    /// @param enabled true to enable the GameObject, false to disable it
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    void SetEnabled(bool enabled = true);
-
-    bool enabled = true; //* Whether the GameObject is enabled for rendering and updates
 
   private:
     long id; // Unique ID for the GameObject

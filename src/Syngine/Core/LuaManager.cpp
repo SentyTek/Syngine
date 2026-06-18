@@ -257,9 +257,9 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
         [](Syngine::GameObject& self, const std::string& value) {
             self.type = value;
         });
-    gameObjectType["enabled"] = sol::property(
-        [](Syngine::GameObject& self) -> bool { return self.enabled; },
-        [](Syngine::GameObject& self, bool value) { self.enabled = value; });
+    gameObjectType["active"] = sol::property(
+        [](Syngine::GameObject& self) -> bool { return self.IsActive(); },
+        [](Syngine::GameObject& self, bool value) { self.SetActive(value); });
     gameObjectType["AddComponent"] =
         [&lua](sol::this_state,
                Syngine::GameObject* obj,
