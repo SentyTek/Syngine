@@ -197,6 +197,12 @@ class GameObject {
     /// @since v0.0.1
     void RemoveChild(GameObject* child);
 
+    /// @brief Get the children of the GameObject
+    /// @return Vector of pointers to the child GameObjects
+    /// @threadsafety safe
+    /// @since v0.0.1
+    const std::vector<GameObject*>& GetChildren() const;
+
     /// @brief Sets the enabled state of the GameObject, which determines
     /// whether it is rendered and updated
     /// @param enabled true to enable the GameObject, false to disable it

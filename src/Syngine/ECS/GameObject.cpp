@@ -193,9 +193,9 @@ Serializer::DataNode GameObject::Serialize() const {
     TransformComponent* tComp = this->GetComponent<TransformComponent>();
     if (tComp) {
         Serializer::DataNode childrenNodes;
-        for (TransformComponent* child : tComp->GetChildren()) {
-            if (child && child->m_owner) {
-                Serializer::DataNode childNode = child->m_owner->Serialize();
+        for (GameObject* child : this->GetChildren()) {
+            if (child) {
+                Serializer::DataNode childNode = child->Serialize();
                 childrenNodes.Append(childNode);
             }
         }
@@ -270,4 +270,22 @@ void GameObject::AddChild(GameObject* child) {
     } else {
         Syngine::Logger::Error("Child GameObject must have a TransformComponent to be added as a child");
     }
+}
+
+const std::vector<GameObject*>& GameObject::GetChildren() const {
+    TransformComponent* tComp = this->GetComponent<TransformComponent>();
+    static std::vector<GameObject*> children;
+    // can't just return the transform's children because that would just return
+    // a bunch of transforms, so we have to construct the vector ourselves from
+    // the transforms owners
+    if (tComp) {
+        auto childTComps = tComp->GetChildren();
+        children.clear();
+        for (TransformComponent* childTComp : childTComps) {
+            if (childTComp && childTComp->m_owner) {
+                children.push_back(childTComp->m_owner);
+            }
+        }
+    }
+    return children; // Return empty vector if no TransformComponent
 }
