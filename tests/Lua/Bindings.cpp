@@ -58,7 +58,7 @@ TEST_CASE("Using Sol2 to create new usertype and binding it to Lua", "[Lua]") {
         int value;
     };
 
-#if defined(SYNGINE_TEST_ACCESS)
+#if defined(SYN_TEST_MODE)
     sol::state& lua = *LuaManager::GetStateForTests();
     auto        myClassType =
         lua.new_usertype<MyClass>("MyClass",
@@ -81,6 +81,6 @@ TEST_CASE("Using Sol2 to create new usertype and binding it to Lua", "[Lua]") {
     int result = LuaManager::GetLastResult<int>();
     REQUIRE(result == 20);
 #else
-    FAIL("SYNGINE_TEST_ACCESS is not enabled for test build");
+    FAIL("SYN_TEST_MODE is not enabled for test build");
 #endif
 }

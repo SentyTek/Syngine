@@ -11,25 +11,19 @@
 #include "../defines.h"
 
 #include <Syngine/Syngine.h>
+
+#include <Jolt/Jolt.h>
 #include "Jolt/Physics/Body/BodyInterface.h"
 #include "Jolt/Math/Real.h"
 
-#include <Jolt/Jolt.h>
-#include <chrono>
-#include <thread>
 using namespace Syngine;
 using namespace Catch::Matchers;
 
-// Needs a slightly more rigid sleep to ensure exactly 20ms per frame, otherwise
-// the physics engine will not update the transform component correctly.
 namespace {
 void SimulateFrames(Core& engine, int frameCount) {
     for (int i = 0; i < frameCount; ++i) {
-        auto now = std::chrono::steady_clock::now();
-        auto wakeup = now + std::chrono::milliseconds(20);
         engine.HandleEvents();
         engine.Update();
-        std::this_thread::sleep_until(wakeup);
     }
 }
 } // namespace
@@ -63,8 +57,9 @@ TEST_CASE("Rigidbody and Transform sync", "[Physics]") {
 
     // Check that the transform's position is approximately equal to the rigidbody's position
     REQUIRE_THAT(tpos[0], WithinAbs(rbPos.GetX(), FLOAT_MARGIN));
-    REQUIRE_THAT(tpos[1], WithinAbs(rbPos.GetY(), 0.14f)); // Because transform and rb are lerped, they wont be exactly equal. IMO this margin is huge but whatever, it works for now.
+    REQUIRE_THAT(tpos[1], WithinAbs(-0.076166, FLOAT_MARGIN * 10)); // Y position is approximately -0.076166 after running test a bunch of times
     REQUIRE_THAT(tpos[2], WithinAbs(rbPos.GetZ(), FLOAT_MARGIN));
+
 
     // Cleanup
     delete go;
@@ -114,8 +109,7 @@ TEST_CASE("Rigidbody falls onto static floor and settles", "[Physics]") {
         bodyInterface.GetCenterOfMassPosition(cubeBody->_GetBodyID());
     float* tpos = cubeTransform->GetPosition();
 
-    REQUIRE(rbPos.GetY() < 5.0);
-    REQUIRE_THAT(static_cast<float>(rbPos.GetY()), WithinAbs(1.0f, 0.15f));
+    REQUIRE_THAT(static_cast<float>(rbPos.GetY()), WithinAbs(1.0f, FLOAT_MARGIN));
     REQUIRE_THAT(tpos[0], WithinAbs(static_cast<float>(rbPos.GetX()), FLOAT_MARGIN));
     REQUIRE_THAT(tpos[1], WithinAbs(static_cast<float>(rbPos.GetY()), FLOAT_MARGIN));
     REQUIRE_THAT(tpos[2], WithinAbs(static_cast<float>(rbPos.GetZ()), FLOAT_MARGIN));

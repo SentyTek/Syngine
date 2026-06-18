@@ -37,10 +37,16 @@ if (MSVC)
     )
 endif()
 target_compile_definitions(engine_tests PRIVATE
-    SYNGINE_TEST_ACCESS=1
+    SYN_TEST_MODE=1
     "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
     "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
 )
+
+# Core.cpp is compiled into the Syngine target, so test-mode defines must be
+# applied there as well.
+if(TARGET Syngine)
+    target_compile_definitions(Syngine PRIVATE SYN_TEST_MODE=1)
+endif()
 
 # Tests that include <sol/sol.hpp> need direct access to Lua C headers.
 target_include_directories(engine_tests PRIVATE

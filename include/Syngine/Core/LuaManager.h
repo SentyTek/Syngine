@@ -49,7 +49,7 @@ class LuaManager {
     static bool        m_initialized;
     static bool        m_allowTicking; // Whether to allow ticking Lua scripts (set to false during reloads)
 
-#if defined(SYNGINE_TEST_ACCESS)
+#if defined(SYN_TEST_MODE)
     public:
         // Test-only access to the underlying Lua state.
         static sol::state* GetStateForTests() { return m_luaState; }

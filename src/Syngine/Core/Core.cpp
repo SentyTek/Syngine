@@ -329,6 +329,10 @@ bool Core::HandleEvents() {
 bool Core::Update() {
     SYN_PROFILE_FUNCTION();
 
+#if defined(SYN_TEST_MODE)
+    // During testing, it's a fixed 20ms per frame
+    deltaTime = 0.02f;
+#else
     if (m_internal.last == 0) {
         // Prime the timer so the first frame doesn't accumulate a huge dt.
         m_internal.now  = SDL_GetPerformanceCounter();
@@ -341,6 +345,7 @@ bool Core::Update() {
     m_internal.now  = SDL_GetPerformanceCounter();
     deltaTime       = (m_internal.now - m_internal.last) /
                 (float)SDL_GetPerformanceFrequency();
+#endif
 
     // Cap dt after stalls (breakpoints, app suspend) to avoid runaway fixed-step loops.
     if (deltaTime > 0.25f) {
