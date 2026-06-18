@@ -37,3 +37,10 @@ using namespace Syngine;
     go->AddComponent<RigidbodyComponent>(params);
     return go;
 }
+
+inline void SimulateFrames(Core& engine, int frameCount) {
+    for (int i = 0; i < frameCount; ++i) {
+        engine.HandleEvents();
+        engine.Update();
+    }
+}

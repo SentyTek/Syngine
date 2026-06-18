@@ -19,15 +19,6 @@
 using namespace Syngine;
 using namespace Catch::Matchers;
 
-namespace {
-void SimulateFrames(Core& engine, int frameCount) {
-    for (int i = 0; i < frameCount; ++i) {
-        engine.HandleEvents();
-        engine.Update();
-    }
-}
-} // namespace
-
 // Test to ensure that physics and transform components stay in sync when forces
 // are applied.
 

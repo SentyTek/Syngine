@@ -95,7 +95,6 @@ TEST_CASE("ECS copy construction clones components", "[ECS]") {
     auto* original = new GameObject("Original", "default", "root");
     original->AddTag("gameplay");
     original->SetActive(false);
-    original->enabled = false;
 
     auto* originalTransform = original->AddComponent<TransformComponent>();
     REQUIRE(originalTransform != nullptr);
@@ -110,7 +109,6 @@ TEST_CASE("ECS copy construction clones components", "[ECS]") {
     REQUIRE(copy.type == original->type);
     REQUIRE(copy.GetTags() == original->GetTags());
     REQUIRE(copy.IsActive() == original->IsActive());
-    REQUIRE(copy.enabled == original->enabled);
     REQUIRE(copy.GetComponentCount() == original->GetComponentCount());
 
     auto* copyTransform = copy.GetComponent<TransformComponent>();
@@ -140,7 +138,6 @@ TEST_CASE("ECS copy assignment clones components", "[ECS]") {
     auto* source = new GameObject("Source", "default", "root");
     source->AddTag("shared");
     source->SetActive(false);
-    source->enabled = false;
 
     auto* sourceTransform = source->AddComponent<TransformComponent>();
     REQUIRE(sourceTransform != nullptr);
@@ -157,7 +154,6 @@ TEST_CASE("ECS copy assignment clones components", "[ECS]") {
     REQUIRE(target.type == source->type);
     REQUIRE(target.GetTags() == source->GetTags());
     REQUIRE(target.IsActive() == source->IsActive());
-    REQUIRE(target.enabled == source->enabled);
 
     auto* targetTransform = target.GetComponent<TransformComponent>();
     REQUIRE(targetTransform != nullptr);
@@ -240,4 +236,52 @@ TEST_CASE("ECS parenting is reflected in serialization", "[ECS]") {
     REQUIRE(std::find(parentTransform->GetChildren().begin(),
                       parentTransform->GetChildren().end(),
                       childTransform) == parentTransform->GetChildren().end());
+}
+
+// Tests that an inactive GameObject does not have its components updated during
+// the engine update cycle, and that activating the GameObject allows its
+// components to be updated as expected.
+TEST_CASE("ECS inactive GameObjects do not update components", "[ECS]") {
+    SYN_STARTENGINE
+
+    // This test creates 3 GOs: one with physics, one with a transform, and one
+    // with a zone. The zone and RB one are disabled. We then move the transform
+    // GO into the zone and check that the zone's OnEnter callback is not called
+    // because the zone GO is inactive. We also check that the RB GO does not
+    // move because it is inactive.
+
+    auto* zoneGO = new GameObject("ZoneGO", "default");
+    zoneGO->SetActive(false);
+    float pos[3] = { 0.0f, -5.0f, 0.0f };
+    float size[3] = { 3.0f, 3.0f, 3.0f };
+    auto* zone = zoneGO->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
+    zone->OnEnter = [&](GameObject* obj) {
+        FAIL("Zone should not be entered when inactive");
+    };
+
+    auto* rbGO = CreateRigidbodyObject();
+    rbGO->SetActive(false);
+
+    auto* transformGO = new GameObject("TransformGO", "default");
+    auto* transform   = transformGO->AddComponent<TransformComponent>();
+
+    // Act: Move the transform GO into the zone over several frames and check
+    // that the zone is not entered and the RB GO does not move
+    engine.SetSimulationState(true);
+    for (int i = 0; i < 60; ++i) {
+        transform->SetPosition(0.0f, -5.0f + i * 1.0f, 0.0f);
+        engine.HandleEvents();
+        engine.Update();
+    }
+
+    // Check that the RB GO has not moved from its initial position
+    auto* rbTransform = rbGO->GetComponent<TransformComponent>();
+    REQUIRE_THAT(rbTransform->GetLocalPosition()[1],
+                 WithinAbs(0.0f, FLOAT_MARGIN));
+    REQUIRE_THAT(transform->GetPosition()[1], WithinAbs(54.0f, FLOAT_MARGIN));
+
+    // Clean up
+    delete zoneGO;
+    delete rbGO;
+    delete transformGO;
 }
