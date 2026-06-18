@@ -33,8 +33,7 @@ namespace Syngine {
 std::filesystem::path _GetAppDataPath(const std::string& appName) {
     std::filesystem::path appDataFolder;
     if (appName.empty()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "App name is empty, cannot determine AppData path.");
-        return "";
+        throw std::invalid_argument("App name cannot be empty when getting AppData path.");
     }
 #ifdef _WIN32
     // On Windows, use the user's Roaming AppData folder.
@@ -45,8 +44,7 @@ std::filesystem::path _GetAppDataPath(const std::string& appName) {
         appDataFolder = std::filesystem::path(path) / "SentyTek" / appName;
         CoTaskMemFree(path);
     } else {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "Failed to get AppData path.");
+        throw std::runtime_error("Failed to get AppData path.");
     }
 
 #elif __APPLE__
@@ -59,15 +57,12 @@ std::filesystem::path _GetAppDataPath(const std::string& appName) {
     OSStatus status =
         FSFindFolder(kUserDomain, folderType, kCreateFolder, &ref);
     if (status != noErr) {
-        std::cerr << "Error finding Application Support folder: " << status
-                  << std::endl;
-        return "";
+        throw std::runtime_error("Error finding Application Support folder: " + std::to_string(status));
     }
 
     // Convert FSRef to a filesystem path.
     if (FSRefMakePath(&ref, (UInt8*)path, sizeof(path)) != noErr) {
-        std::cerr << "Error converting FSRef to path." << std::endl;
-        return "";
+        throw std::runtime_error("Error converting FSRef to path.");
     }
 
     // Compose the Appdata folder path: ~/Library/Application Support/SentyTek/<appName>
@@ -85,8 +80,7 @@ std::filesystem::path _GetAppDataPath(const std::string& appName) {
         // Fallback to manual home directory resolution
         homeDir = std::getenv("HOME");
         if (!homeDir) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                "HOME environment variable not set for AppData path.");
+            throw std::runtime_error("HOME environment variable not set for AppData path.");
         }
 
         homePath = std::string(homeDir) + "/.local/share"; // Default fallback to ~/.local/share
@@ -99,9 +93,16 @@ std::filesystem::path _GetAppDataPath(const std::string& appName) {
 #endif
     // Log an error if the path could not be determined.
     if (appDataFolder.empty()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
-                     "Failed to determine AppData folder path.");
+        throw std::runtime_error("Failed to determine AppData folder path.");
     }
+
+    // In addition, tell the OS to make the folder if it doesn't exist, since we'll be writing files there.
+    try {
+        std::filesystem::create_directories(appDataFolder);
+    } catch (const std::filesystem::filesystem_error& e) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create AppData directory: %s", e.what());
+    }
+
     return appDataFolder;
 }
 

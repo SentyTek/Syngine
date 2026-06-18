@@ -91,9 +91,8 @@ Core::~Core() {
     // release their BGFX resources (textures, buffers) before we shut down the renderer.
     Syngine::Registry::Clear();
 
-    Serializer::_SaveCoreSettings(m_context->config.gameName);
-
     if (m_context) {
+        Serializer::_SaveCoreSettings(m_context->config.gameName);
         if (m_context->luaState) {
             m_context->luaState->DoFunction("onModUnload", 0, 0);
             m_context->luaState.reset();

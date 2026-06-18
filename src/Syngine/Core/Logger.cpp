@@ -430,13 +430,17 @@ void Logger::Log(const std::string_view message,
                 m_appName +
                 " has encountered a fatal error and needs to close:\n\n" +
                 message.data();
-            if (Core::_GetContext()->config.headless) {
-                throw std::runtime_error(finalMessage);
+            if (Core::_GetContext()) {
+                if (Core::_GetContext()->config.headless) {
+                    throw std::runtime_error(finalMessage);
+                } else {
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                            "Fatal Error",
+                                            finalMessage.c_str(),
+                                            m_mainWindow);
+                }
             } else {
-                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-                                         "Fatal Error",
-                                         finalMessage.c_str(),
-                                         m_mainWindow);
+                throw std::runtime_error(finalMessage); // If no context, just throw an exception
             }
         }
         return;
@@ -505,28 +509,32 @@ void Logger::Log(const std::string_view message,
             m_appName +
             " has encountered a fatal error and needs to close:\n\n" +
             message.data();
-        if (Core::_GetContext()->config.headless) {
-            throw std::runtime_error(finalMessage);
-        } else {
-            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-                                     "Fatal Error",
-                                     finalMessage.c_str(),
-                                     m_mainWindow);
+        if (Core::_GetContext()) {
+            if (Core::_GetContext()->config.headless) {
+                throw std::runtime_error(finalMessage);
+            } else {
+                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                        "Fatal Error",
+                                        finalMessage.c_str(),
+                                        m_mainWindow);
 
-            // Break if debug is on
-            /*
-                !!!
-                DEVELOPER:
-                LOOK AT STACK TRACE
-                The program is already safed by this point, so you can inspect the state.
-                When done, resume execution. This will terminate the program.
-                !!!
-            */
+                // Break if debug is on
+                /*
+                    !!!
+                    DEVELOPER:
+                    LOOK AT STACK TRACE
+                    The program is already safed by this point, so you can inspect the state.
+                    When done, resume execution. This will terminate the program.
+                    !!!
+                */
 
 #ifdef _DEBUG
-            DEBUG_BREAK();
+                DEBUG_BREAK();
 #endif
-            exit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            throw std::runtime_error(finalMessage); // If no context, just throw an exception
         }
     }
 }
