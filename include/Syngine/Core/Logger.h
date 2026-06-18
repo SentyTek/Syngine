@@ -168,6 +168,7 @@ class Logger {
     /// @param fmt Format string
     /// @param ... Format string arguments
     /// @threadsafety not-safe
+    /// @since v0.0.2
     static void ToConsole(const char* fmt, ...);
 
     /// @brief Log hardware information

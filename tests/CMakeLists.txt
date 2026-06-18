@@ -27,6 +27,7 @@ add_executable(engine_tests
     Physics/PhysicsSync.cpp
     Lua/ScriptLoading.cpp
     Lua/Bindings.cpp
+    ECS/Zones.cpp
 )
 
 if (MSVC)

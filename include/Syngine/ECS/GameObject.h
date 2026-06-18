@@ -200,7 +200,7 @@ class GameObject {
     /// @brief Get the children of the GameObject
     /// @return Vector of pointers to the child GameObjects
     /// @threadsafety safe
-    /// @since v0.0.1
+    /// @since v0.0.2
     const std::vector<GameObject*>& GetChildren() const;
 
     /// @brief Sets the enabled state of the GameObject, which determines
