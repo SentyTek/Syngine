@@ -103,7 +103,10 @@ add_library(Syngine STATIC
 set_target_properties(Syngine PROPERTIES FOLDER "Engine")
 
 # Call the testing cmake
-add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tests ${CMAKE_BINARY_DIR}/engine_tests EXCLUDE_FROM_ALL)
+option(SYN_ENABLE_TEST_MODE "Enable test mode" OFF)
+if(SYN_ENABLE_TEST_MODE)
+    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/tests ${CMAKE_BINARY_DIR}/engine_tests EXCLUDE_FROM_ALL)
+endif()
 
 # Uncomment to enable graphics debugging.
 # This is done because programs like RenderDoc do not work if window's `dbghelp.dll` is loaded, which we use for crash handling/logging.

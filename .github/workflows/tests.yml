@@ -48,6 +48,7 @@ jobs:
           -DCMAKE_C_COMPILER=cl
           -DCMAKE_CXX_COMPILER=cl
           -DSYNGINE_BUILD_TOOLS=OFF
+          -DSYN_ENABLE_TEST_MODE=ON
 
       - name: Configure (Linux/macOS)
         if: runner.os != 'Windows'
@@ -58,6 +59,7 @@ jobs:
           -DCMAKE_C_COMPILER=clang
           -DCMAKE_CXX_COMPILER=clang++
           -DSYNGINE_BUILD_TOOLS=OFF
+          -DSYN_ENABLE_TEST_MODE=ON
           ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
 
       - name: Build
