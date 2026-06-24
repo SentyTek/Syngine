@@ -177,6 +177,9 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
             sdlProps, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
         bgInit.platformData.nwh = (void*)SDL_GetPointerProperty(
             sdlProps, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+
+        bgInit.platformData.type = bgfx::NativeWindowHandleType::Wayland;
+        
         if (bgInit.platformData.nwh == NULL ||
             bgInit.platformData.ndt == NULL) {
             Syngine::Logger::Error(
