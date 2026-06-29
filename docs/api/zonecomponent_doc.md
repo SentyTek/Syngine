@@ -89,6 +89,13 @@ Signature:
 enum class ZoneShape
 ```
 
+**Members:**
+
+| Name | Description |
+| --- | --- | 
+| `BOX` | Axis-aligned box shape |
+| `SPHERE` | Sphere shape (size[0] is radius, size[1] and size[2] are ignored) |
+
 ---
 
 #### **`ZoneComponent::m_size`**

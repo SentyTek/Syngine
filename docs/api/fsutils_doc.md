@@ -82,8 +82,12 @@ static inline std::string _ResolveOSPath(const char* path);
 Signature:
 
 ```cpp
-inline bool _CheckRequiredFolders();
+inline bool _CheckRequiredFolders(bool headless);
 ```
+
+**Parameters:**
+
+- `headless`: Whether the engine is running in headless mode (if true, some folders may not be required)
 
 **Returns:** True if all required folders exist, false otherwise
 

@@ -25,6 +25,7 @@
 - [InfoPopup](#loggerinfopopup)
 - [Warn](#loggerwarn)
 - [Fatal](#loggerfatal)
+- [ToConsole](#loggertoconsole)
 - [LogHardwareInfo](#loggerloghardwareinfo)
 - [SetAutoFlush](#loggersetautoflush)
 - [Flush](#loggerflush)
@@ -303,6 +304,28 @@ Signature:
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`Logger::ToConsole`**
+
+
+ Log a message directly to the console, bypassing the log file
+
+Signature:
+
+```cpp
+ static void ToConsole(const char* fmt, ...);
+```
+
+**Parameters:**
+
+- `fmt`: Format string
+- `...`: Format string arguments
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.2
 
 ---
 

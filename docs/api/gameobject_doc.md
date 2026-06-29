@@ -37,7 +37,7 @@
 - [GetParent](#gameobjectgetparent)
 - [AddChild](#gameobjectaddchild)
 - [RemoveChild](#gameobjectremovechild)
-- [SetEnabled](#gameobjectsetenabled)
+- [GetChildren](#gameobjectgetchildren)
 
 ---
 
@@ -162,7 +162,7 @@ Signature:
 Signature:
 
 ```cpp
- void SetActive(bool active) noexcept;
+ void SetActive(bool active = true) noexcept;
 ```
 
 **Parameters:**
@@ -303,14 +303,14 @@ Signature:
 Signature:
 
 ```cpp
- int RemoveComponent(Syngine::ComponentTypeID type);
+ bool RemoveComponent(Syngine::ComponentTypeID type);
 ```
 
 **Parameters:**
 
 - `type`: Type of the component to remove
 
-**Returns:** 0 on success, -1 if the component was not found
+**Returns:** True if the component was removed successfully
 
 **Thread Safety:** not-safe
 
@@ -534,24 +534,22 @@ Signature:
 
 ---
 
-#### **`GameObject::SetEnabled`**
+#### **`GameObject::GetChildren`**
 
 
- Sets the enabled state of the GameObject, which determines whether it is rendered and updated
+ Get the children of the GameObject
 
 Signature:
 
 ```cpp
- void SetEnabled(bool enabled = true);
+ const std::vector<GameObject*>& GetChildren() const;
 ```
 
-**Parameters:**
+**Returns:** Vector of pointers to the child GameObjects
 
-- `enabled`: true to enable the GameObject, false to disable it
+**Thread Safety:** safe
 
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
+**This function has been available since:** v0.0.2
 
 ---
 
@@ -563,7 +561,6 @@ Signature:
 | `std::string` | `type` | Type of the GameObject, used for shaders. |
 | `std::string` | `gizmo` | Gizmo type for rendering in the editor, e.g., |
 | `std::vector<std::string>` | `tags` | Tags for grouping and identifying GameObjects |
-| `bool` | `enabled` | Whether the GameObject is enabled for rendering and updates |
 
 ---
 
