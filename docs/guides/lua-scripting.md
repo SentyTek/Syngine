@@ -31,7 +31,7 @@
 - `GameObject` usertype:
     - `.name` -> string property
     - `.type` -> string property
-    - `.enabled` -> bool property
+    - `.active` -> bool property
     - `:AddComponent(type: string, [constructor args])` -> `Component` usertype depends on type arg
         - type can either be `"Transform"`, `"Mesh"`, `"Rigidbody"`, `"Billboard"`, or `"Zone"` (aliases also exist, not case sensitive)
         - see [API Docs](../index.md) or below for component constructor args

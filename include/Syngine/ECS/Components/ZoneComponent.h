@@ -19,8 +19,8 @@ namespace Syngine {
 /// @brief Enum representing the shape of the zone.
 /// @section ZoneComponent
 enum class ZoneShape {
-    BOX = 0,
-    SPHERE = 1,
+    BOX = 0, //* Axis-aligned box shape
+    SPHERE = 1, //* Sphere shape (size[0] is radius, size[1] and size[2] are ignored)
 };
 
 /// @brief ZoneComponent is used to define an area within the game world that

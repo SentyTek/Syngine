@@ -309,11 +309,18 @@ Signature:
 | `float` | `standHeight` | Height of the player when standing. |
 | `float` | `crouchHeight` | Height of the player when crouching. |
 | `float` | `playerRadius` | Radius of the player collider. |
+| `float` | `slideDecay` | Rate at which sliding speed decays (Meters/second^2). |
+| `float` | `slideSpeedMult` | Multiplier for slide speed based on sprinting speed. |
 | `bool` | `enableMovement` | Whether player movement is enabled (on by default). |
 | `bool` | `enableSliding` | Whether player sliding is enabled (on by default). |
 | `bool` | `enableJumping` | Whether player jumping is enabled (on by default). |
 | `bool` | `enableSprinting` | Whether player sprinting is enabled (on by default). |
 | `bool` | `enableCrouching` | Whether player crouching is enabled (on by default). |
+| `float` | `normalFov` | Normal field of view for the camera. |
+| `float` | `sprintFov` | Field of view when sprinting. |
+| `float` | `crouchFov` | Field of view when crouching. |
+| `float` | `slideFov` | Field of view when sliding. |
+| `float` | `m_eyeHeight` | Current eye height, used for smooth crouching/standing transitions |
 
 ---
 

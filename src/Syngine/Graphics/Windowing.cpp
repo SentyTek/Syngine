@@ -40,12 +40,6 @@ Window::Window(const EngineConfig& config) {
         Core::_GetConfig()->windowWidth = videoSettings->width;
     }
 
-    if (!SDL_Init(SDL_INIT_VIDEO)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::FATAL, false,
-                              "Failed to initialize SDL: %s",
-                              SDL_GetError());
-    }
-
     m_window = SDL_CreateWindow(
         m_title.c_str(),
         w,

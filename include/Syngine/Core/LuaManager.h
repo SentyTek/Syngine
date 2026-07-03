@@ -12,11 +12,6 @@
 #include <Syngine/Core/Logger.h>
 #include <Syngine/ECS/GameObject.h>
 
-namespace sol {
-class state; // forward declaration
-struct variadic_args;
-}
-
 namespace Syngine {
 
 /// @brief Enum for specifying which Lua libraries to open
@@ -53,6 +48,13 @@ class LuaManager {
     static sol::state* _GetState() { return m_luaState; }
     static bool        m_initialized;
     static bool        m_allowTicking; // Whether to allow ticking Lua scripts (set to false during reloads)
+
+#if defined(SYN_TEST_MODE)
+    public:
+        // Test-only access to the underlying Lua state.
+        static sol::state* GetStateForTests() { return m_luaState; }
+    private:
+#endif
 
     static void _RegisterEntityBindings(sol::state& lua);
     static void _RegisterInputBindings(sol::state& lua);
@@ -135,10 +137,12 @@ class LuaManager {
 
     /// @brief Do a safe script execution with error handling
     /// @param script The Lua script to execute
+    /// @since v0.0.1
     static void SafeScript(const std::string& script);
 
     /// @brief Do a safe file execution with error handling
     /// @param filePath The path to the Lua file to execute
+    /// @since v0.0.1
     static void SafeFile(const std::string& filePath);
 
     /// @brief Add a function to the Lua state with the given name and category
@@ -146,6 +150,7 @@ class LuaManager {
     /// @tparam Func The function type (e.g., std::function<void(int)>)
     /// @param namespace_ The namespace to add the function under (e.g., "game",
     /// "input", etc.)
+    /// @since v0.0.1
     template <typename Func>
     static void AddFunction(const std::string& name,
                             Func               func,
@@ -160,6 +165,7 @@ class LuaManager {
     /// @brief Check if the Lua state has an object with the given name
     /// @param name The name of the object to check for
     /// @return True if the object exists in the Lua state, false otherwise
+    /// @since v0.0.1
     static bool HasObject(const std::string& name);
 
     /// @brief Does a function if it exists in the Lua state, with the given
@@ -167,25 +173,52 @@ class LuaManager {
     /// @param funcName The name of the function to call
     /// @param data Pointer to the data to pass as arguments
     /// @param dataSize Size of the data in bytes
+    /// @since v0.0.1
     static void
     DoFunction(const std::string& funcName, const void* data, size_t dataSize);
 
     /// @brief Ticks the Lua state by calling the "onTick" function if it
     /// exists, with the given delta time
-    /// @param physDeltaTime The time elapsed since the last physics tick, in seconds
-    /// @param realDeltaTime The real time elapsed since the last tick, in seconds (not affected by time scaling)
+    /// @param physDeltaTime The time elapsed since the last physics tick, in
+    /// seconds
+    /// @param realDeltaTime The real time elapsed since the last tick, in
+    /// seconds (not affected by time scaling)
     /// @param simulating Whether the simulation is currently running
+    /// @since v0.0.1
     static void DoTick(float physDeltaTime, float realDeltaTime, bool simulating);
 
     /// @brief Set whether to allow ticking Lua scripts (used to prevent ticking
     /// during reloads)
     /// @param allow True to allow ticking, false to prevent it
     /// @return The previous allow ticking state
+    /// @since v0.0.1
     static inline bool SetAllowTicking(bool allow) {
         bool previous = m_allowTicking;
         m_allowTicking = allow;
         return previous;
     }
+
+    /// @brief Get the last result from a Lua function call, converted to type T
+    /// @note This will return of a FUNCTION CALL ONLY, make sure DoFunction has
+    /// been called at least once before this on a function with a return value.
+    /// Otherwise, this returns nothing.
+    /// @tparam T The type to convert the result to
+    /// @return The converted result, or default T if conversion failed
+    /// @since v0.0.2
+    template <typename T>
+    static T GetLastResult();
+
+    template <>
+    int GetLastResult<int>();
+
+    template <>
+    bool GetLastResult<bool>();
+
+    template <>
+    float GetLastResult<float>();
+
+    template <> std::string GetLastResult<std::string>();
+
 };
 
 } // namespace Syngine

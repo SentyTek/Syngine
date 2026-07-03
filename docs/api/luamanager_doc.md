@@ -23,6 +23,7 @@
 - [DoFunction](#luamanagerdofunction)
 - [DoTick](#luamanagerdotick)
 - [SetAllowTicking](#luamanagersetallowticking)
+- [GetLastResult](#luamanagergetlastresult)
 
 ---
 
@@ -116,6 +117,8 @@ Signature:
 
 - `script`: The Lua script to execute
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`LuaManager::SafeFile`**
@@ -132,6 +135,8 @@ Signature:
 **Parameters:**
 
 - `filePath`: The path to the Lua file to execute
+
+**This function has been available since:** v0.0.1
 
 ---
 
@@ -155,6 +160,8 @@ Signature:
 - `name`: The name of the function to add
 - `namespace_`: The namespace to add the function under (e.g., "game", "input", etc.)
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`LuaManager::HasObject`**
@@ -173,6 +180,8 @@ Signature:
 - `name`: The name of the object to check for
 
 **Returns:** True if the object exists in the Lua state, false otherwise
+
+**This function has been available since:** v0.0.1
 
 ---
 
@@ -193,6 +202,8 @@ Signature:
 - `data`: Pointer to the data to pass as arguments
 - `dataSize`: Size of the data in bytes
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`LuaManager::DoTick`**
@@ -212,6 +223,8 @@ Signature:
 - `realDeltaTime`: The real time elapsed since the last tick, in seconds (not affected by time scaling)
 - `simulating`: Whether the simulation is currently running
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`LuaManager::SetAllowTicking`**
@@ -230,6 +243,31 @@ Signature:
 - `allow`: True to allow ticking, false to prevent it
 
 **Returns:** The previous allow ticking state
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`LuaManager::GetLastResult`**
+
+
+ Get the last result from a Lua function call, converted to type T
+
+**Note:** This will return of a FUNCTION CALL ONLY, make sure DoFunction has been called at least once before this on a function with a return value. Otherwise, this returns nothing.
+
+Signature:
+
+```cpp
+ template <typename T> static T GetLastResult();
+```
+
+**Template Parameters:**
+
+- `T`: The type to convert the result to
+
+**Returns:** The converted result, or default T if conversion failed
+
+**This function has been available since:** v0.0.2
 
 ---
 

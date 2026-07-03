@@ -143,9 +143,11 @@ class PlayerComponent : public Syngine::Component {
     float crouchSpeed   = 0.5f; //* Speed when crouching.
     float moveSpeed     = 1.5f; //* Default movement speed of the player.
     float mouseSens     = 0.002f; //* Mouse sensitivity for camera movement.
-    float standHeight   = 0.5f;   //* Height of the player when standing.
-    float crouchHeight  = 0.2f;   //* Height of the player when crouching.
+    float standHeight   = 2.0f;   //* Height of the player when standing.
+    float crouchHeight  = 1.0f;   //* Height of the player when crouching.
     float playerRadius  = 0.35f;  //* Radius of the player collider.
+    float slideDecay    = 4.5f;   //* Rate at which sliding speed decays (Meters/second^2).
+    float slideSpeedMult = 1.45f; //* Multiplier for slide speed based on sprinting speed.
 
     bool enableMovement  = true; //* Whether player movement is enabled (on by default).
     bool enableSliding   = true; //* Whether player sliding is enabled (on by default).
@@ -153,16 +155,24 @@ class PlayerComponent : public Syngine::Component {
     bool enableSprinting = true; //* Whether player sprinting is enabled (on by default).
     bool enableCrouching = true; //* Whether player crouching is enabled (on by default).
 
+    float normalFov = 70.0f; //* Normal field of view for the camera.
+    float sprintFov = 90.0f; //* Field of view when sprinting.
+    float crouchFov = 60.0f; //* Field of view when crouching.
+    float slideFov  = 100.0f; //* Field of view when sliding.
+
   private:
     GameObject*               m_owner     = nullptr;
     TransformComponent*       m_transform = nullptr;
     Syngine::CameraComponent* m_camera    = nullptr;
     SDL_Window*               m_window    = nullptr;
 
-    float m_targetEyeHeight = 0.5f;  // offset from transform pos (center of player) (default is 0.5m) (this is init value, "real" value in in impl/Update)
-    float m_targetFov       = 70.0f;
+    float m_targetEyeHeight =
+        standHeight * 0.9f; // offset from feet to eye level. This is the target
+                            // value that the actual eye height lerps towards
+                            // for smooth crouching/standing transitions
+    float m_crouchEyeHeight = crouchHeight * 0.9f; // eye height when crouching, used for smooth transitions
     float m_targetMoveSpeed = 1.0f;
-    float m_eyeHeight       = 0.5f;
+    float m_eyeHeight       = m_targetEyeHeight; //* Current eye height, used for smooth crouching/standing transitions
     float m_realMoveSpeed   = 1.0f;
 
     float m_currentPitch  = 0.0f;

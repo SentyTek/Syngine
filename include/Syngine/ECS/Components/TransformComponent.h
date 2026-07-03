@@ -95,8 +95,7 @@ class TransformComponent : public Syngine::Component {
     /// @since v0.0.1
     Syngine::ComponentTypeID GetComponentType() override;
 
-    /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in
-    /// radians)
+    /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in degrees)
     /// @param x X component of the rotation
     /// @param y Y component of the rotation
     /// @param z Z component of the rotation

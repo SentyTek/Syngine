@@ -1,0 +1,69 @@
+name: Syngine Tests
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main", "dev"]
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        build_type: [Debug]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Init required submodules
+        run: >
+          git submodule update --init --recursive
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v3
+
+      - name: Setup MSVC Developer Command Prompt
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Linux graphics deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang libx11-dev libgl1-mesa-dev libwayland-dev libwayland-egl-backend-dev
+
+      - name: Configure (Windows/MSVC)
+        if: runner.os == 'Windows'
+        run: >
+          cmake -B build -S .
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER=cl
+          -DCMAKE_CXX_COMPILER=cl
+          -DSYNGINE_BUILD_TOOLS=OFF
+          -DSYN_ENABLE_TEST_MODE=ON
+
+      - name: Configure (Linux/macOS)
+        if: runner.os != 'Windows'
+        run: >
+          cmake -B build -S .
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DCMAKE_C_COMPILER=clang
+          -DCMAKE_CXX_COMPILER=clang++
+          -DSYNGINE_BUILD_TOOLS=OFF
+          -DSYN_ENABLE_TEST_MODE=ON
+          ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
+
+      - name: Build
+        run: cmake --build build --target engine_tests
+
+      - name: Run Tests
+        run: ctest --test-dir build --output-on-failure

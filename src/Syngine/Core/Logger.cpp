@@ -402,9 +402,9 @@ void Logger::_Init(const std::string&           appname,
 }
 
 void Logger::_Shutdown() {
-    if (!Logger::_IsLogFileAvailable()) {
-        // The mutex is already locked if called from Log(FATAL),
-        // so we write directly to the file instead of calling Log().
+    // Check m_logFile directly without locking to avoid recursive lock deadlock
+    // (the mutex is already locked if called from Log(FATAL))
+    if (m_logFile && m_logFile->is_open()) {
         (*m_logFile) << "[" << _GetTimestamp() << "] "
                    << "[" << _LogLevelToString(LogLevel::INFO) << "] "
                    << "Logger shutting down" << std::endl;
@@ -419,7 +419,30 @@ void Logger::Log(const std::string_view message,
                  bool                   writeOnlyInDebug,
                  bool                   toConsole) {
     if (!Logger::_IsLogFileAvailable()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Attempted to log while file is not open. Message: %s", message.data());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Attempted to log while file is not open. Message: %s",
+                     message.data());
+
+        // If it's a fatal error, we still want to show the message box even if
+        // the log file isn't available
+        if (level == LogLevel::FATAL) {
+            std::string finalMessage =
+                m_appName +
+                " has encountered a fatal error and needs to close:\n\n" +
+                message.data();
+            if (Core::_GetContext()) {
+                if (Core::_GetContext()->config.headless) {
+                    throw std::runtime_error(finalMessage);
+                } else {
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                            "Fatal Error",
+                                            finalMessage.c_str(),
+                                            m_mainWindow);
+                }
+            } else {
+                throw std::runtime_error(finalMessage); // If no context, just throw an exception
+            }
+        }
         return;
     }
 
@@ -482,24 +505,37 @@ void Logger::Log(const std::string_view message,
         _Shutdown();
         SDL_LogError(
             SDL_LOG_CATEGORY_APPLICATION, "Fatal error: %s", message.data());
-        std::string finalMessage = m_appName + " has encountered a fatal error and needs to close:\n\n" + message.data();
-        SDL_ShowSimpleMessageBox(
-            SDL_MESSAGEBOX_ERROR, "Fatal Error", finalMessage.c_str(), m_mainWindow);
+        std::string finalMessage =
+            m_appName +
+            " has encountered a fatal error and needs to close:\n\n" +
+            message.data();
+        if (Core::_GetContext()) {
+            if (Core::_GetContext()->config.headless) {
+                throw std::runtime_error(finalMessage);
+            } else {
+                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                        "Fatal Error",
+                                        finalMessage.c_str(),
+                                        m_mainWindow);
 
-        // Break if debug is on
-        /*
-            !!!
-            DEVELOPER:
-            LOOK AT STACK TRACE
-            The program is already safed by this point, so you can inspect the state.
-            When done, resume execution. This will terminate the program.
-            !!!
-        */
+                // Break if debug is on
+                /*
+                    !!!
+                    DEVELOPER:
+                    LOOK AT STACK TRACE
+                    The program is already safed by this point, so you can inspect the state.
+                    When done, resume execution. This will terminate the program.
+                    !!!
+                */
+
 #ifdef _DEBUG
-        DEBUG_BREAK();
+                DEBUG_BREAK();
 #endif
-
-        exit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            throw std::runtime_error(finalMessage); // If no context, just throw an exception
+        }
     }
 }
 
@@ -561,6 +597,31 @@ void Logger::LogF(LogLevel level, bool writeOnlyInDebug, const char* fmt, ...) {
     va_end(args);
 
     Log(std::string(buffer.data()), level, writeOnlyInDebug);
+}
+
+void Logger::ToConsole(const char* fmt, ...) {
+    if (!fmt) return;
+
+    va_list args;
+    va_start(args, fmt);
+
+    // Get required buffer data
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+    int len = vsnprintf(nullptr, 0, fmt, argsCopy);
+    va_end(argsCopy);
+
+    if (len < 0) {
+        va_end(args);
+        return;
+    }
+
+    // Allocate buffer and format the string
+    std::vector<char> buffer(len + 1);
+    vsnprintf(buffer.data(), buffer.size(), fmt, args);
+    va_end(args);
+
+    SDL_Log("%s", buffer.data());
 }
 
 void Logger::InfoPopup(const std::string_view message) {

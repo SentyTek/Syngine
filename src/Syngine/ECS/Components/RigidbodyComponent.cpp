@@ -167,7 +167,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                 return;
             }
 
-            JPH::Vec3 scale(0.5f, 0.5f, 0.5f);
+            JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
             if (!shapeParameters.empty()) {
                 scale = JPH::Vec3(shapeParameters[0], shapeParameters[1], shapeParameters[2]);
             }
@@ -284,6 +284,7 @@ void RigidbodyComponent::Update(float deltaTime) {
             lerpedPos.GetX(), lerpedPos.GetY(), lerpedPos.GetZ());
         transform->SetWorldRotationQuat(lerpedRot.GetX(), lerpedRot.GetY(),
                                lerpedRot.GetZ(), lerpedRot.GetW());
+
     } else {
         float* curPos = transform->GetPosition();
         float  curRot[4];

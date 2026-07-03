@@ -14,8 +14,6 @@
 #include "Syngine/Utils/Serializer.h"
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/ECS/ComponentRegistry.h"
-#include <unordered_map>
-
 
 using namespace Syngine;
 
@@ -67,6 +65,7 @@ GameObject::GameObject(const GameObject& other) {
     this->name = other.name;
     this->type = other.type;
     this->gizmo = other.gizmo;
+    this->tags = other.tags;
     this->id   = other.id;
     this->isActive = other.isActive;
 
@@ -90,6 +89,7 @@ GameObject& GameObject::operator=(const GameObject& other) {
     this->name = other.name;
     this->type = other.type;
     this->gizmo = other.gizmo;
+    this->tags = other.tags;
     this->id   = other.id;
     this->isActive = other.isActive;
 
@@ -141,15 +141,15 @@ size_t GameObject::GetComponentCount() const noexcept {
     return this->components.size();
 }
 
-int GameObject::RemoveComponent(Syngine::ComponentTypeID type) {
+bool GameObject::RemoveComponent(Syngine::ComponentTypeID type) {
     auto it = this->components.find(type);
     if (it == this->components.end()) {
-        return -1; // Component not found
+        return false; // Component not found
     }
 
     this->components.erase(it);
     Registry::_NotifyComponentRemoved(this, type);
-    return 0;
+    return true;
 }
 
 bool GameObject::HasComponent(Syngine::ComponentTypeID type) {
@@ -191,9 +191,9 @@ Serializer::DataNode GameObject::Serialize() const {
     TransformComponent* tComp = this->GetComponent<TransformComponent>();
     if (tComp) {
         Serializer::DataNode childrenNodes;
-        for (TransformComponent* child : tComp->GetChildren()) {
-            if (child && child->m_owner) {
-                Serializer::DataNode childNode = child->m_owner->Serialize();
+        for (GameObject* child : this->GetChildren()) {
+            if (child) {
+                Serializer::DataNode childNode = child->Serialize();
                 childrenNodes.Append(childNode);
             }
         }
@@ -218,8 +218,15 @@ void GameObject::SetParent(GameObject* parent) {
         }
         return;
     }
-    this->GetComponent<TransformComponent>()->SetParent(parent->GetComponent<TransformComponent>());
-    parent->AddChild(this);
+    TransformComponent* tComp = this->GetComponent<TransformComponent>();
+    TransformComponent* parentTComp = parent->GetComponent<TransformComponent>();
+    if (tComp && parentTComp) {
+        tComp->SetParent(parentTComp);
+        parent->AddChild(this);
+    } else {
+        Syngine::Logger::Warn(
+            "GameObject has no TransformComponent, cannot set parent");
+    }
 }
 
 GameObject* GameObject::GetParent() const {
@@ -261,4 +268,22 @@ void GameObject::AddChild(GameObject* child) {
     } else {
         Syngine::Logger::Error("Child GameObject must have a TransformComponent to be added as a child");
     }
+}
+
+const std::vector<GameObject*>& GameObject::GetChildren() const {
+    TransformComponent* tComp = this->GetComponent<TransformComponent>();
+    static std::vector<GameObject*> children;
+    // can't just return the transform's children because that would just return
+    // a bunch of transforms, so we have to construct the vector ourselves from
+    // the transforms owners
+    if (tComp) {
+        auto childTComps = tComp->GetChildren();
+        children.clear();
+        for (TransformComponent* childTComp : childTComps) {
+            if (childTComp && childTComp->m_owner) {
+                children.push_back(childTComp->m_owner);
+            }
+        }
+    }
+    return children; // Return empty vector if no TransformComponent
 }

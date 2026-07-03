@@ -23,7 +23,7 @@ namespace Syngine {
 TransformComponent::TransformComponent(GameObject* owner) {
     m_position[0] = m_position[1] = m_position[2] = 0.0f;
     m_rotation[0] = m_rotation[1] = m_rotation[2] = 0.0f; m_rotation[3] = 1.0f; // Quaternion identity
-    m_scale[0] = m_scale[1] = m_scale[2] = 0.5f;
+    m_scale[0] = m_scale[1] = m_scale[2] = 1.0f;
     this->m_owner                        = owner;
 
     // Cache defaults
@@ -435,11 +435,11 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
     },
 
     // Instantiate
-    [](GameObject*                 owner,
+    [](GameObject* owner,
        const Serializer::DataNode& data) -> std::unique_ptr<Component> {
         std::vector<float> pos = data["position"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
         std::vector<float> rot = data["rotation"].As<std::vector<float>>({0.0f, 0.0f, 0.0f, 1.0f});
-        std::vector<float> scale = data["scale"].As<std::vector<float>>({0.5f, 0.5f, 0.5f});
+        std::vector<float> scale = data["scale"].As<std::vector<float>>({1.0f, 1.0f, 1.0f});
         auto comp = std::make_unique<TransformComponent>(owner);
         comp->Init(pos, rot, scale); // This probably isn't Good Practice
         return comp;

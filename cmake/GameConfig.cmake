@@ -11,10 +11,13 @@ include(${SYNGINE_SOURCE_DIR}/cmake/CompileShaders.cmake)
 include(${SYNGINE_SOURCE_DIR}/cmake/CompileMeshes.cmake)
 include(${SYNGINE_SOURCE_DIR}/cmake/FileBundle.cmake)
 
+# Keep all staged runtime assets under the executable output tree.
+set(SYNGINE_STAGED_ROM_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/bin/rom")
+
 # Function to compile all shaders in a directory
 function(compile_collect_shaders SHADER_SRC_DIR ALL_SHADERS_LIST)
     set(LOCAL_SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
-    set(LOCAL_SHADER_BUNDLE_DIR "${CMAKE_BINARY_DIR}/$<CONFIG>/rom/shaders")
+    set(LOCAL_SHADER_BUNDLE_DIR "${SYNGINE_STAGED_ROM_DIR}/shaders")
     file(MAKE_DIRECTORY ${LOCAL_SHADER_OUTPUT_DIR}) # Ensure output directory exists
     set(LOCAL_BGFX_CORE_INCLUDE_DIR "${SYNGINE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src")
 
@@ -67,7 +70,7 @@ function(compile_collect_default_gizmos GIZMO_BUNDLE_OUTPUT_VAR)
 
     create_file_bundle(
         BUNDLE_NAME "default_gizmos"
-        OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/rom/gizmos"
+        OUTPUT_DIRECTORY "${SYNGINE_STAGED_ROM_DIR}/gizmos"
         SOURCE_DIRECTORY "${DEFAULT_GIZMO_SOURCE_DIR}"
         INPUT_FILES ${DEFAULT_GIZMO_ENTRIES}
         BUNDLE_FILE_OUTPUT_VAR GENERATED_GIZMO_BUNDLE
@@ -90,7 +93,7 @@ function(compile_collect_asset_bundle ASSET_SRC_DIR BUNDLE_NAME ASSET_BUNDLE_OUT
 
     create_file_bundle(
         BUNDLE_NAME "${BUNDLE_NAME}"
-        OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/rom/${BUNDLE_NAME}"
+        OUTPUT_DIRECTORY "${SYNGINE_STAGED_ROM_DIR}/${BUNDLE_NAME}"
         SOURCE_DIRECTORY "${ASSET_SRC_DIR}"
         INPUT_FILES ${ASSET_ENTRIES}
         BUNDLE_FILE_OUTPUT_VAR GENERATED_ASSET_BUNDLE
@@ -101,16 +104,11 @@ endfunction()
 
 # Asset handling helpers
 function(_add_assets_win_linux target)
-    set(ROM_DIR "$<TARGET_FILE_DIR:${target}>/rom")
-
     get_target_property(COPY_ROM ${target} SYNGINE_COPY_ROM)
     if(COPY_ROM)
         add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${ROM_DIR}"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${CMAKE_BINARY_DIR}/$<CONFIG>/rom"
-                "${ROM_DIR}"
-            COMMENT "Copying staged rom assets to executable directory"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${target}>/rom"
+            COMMENT "ROM assets are staged directly into executable directory"
         )
     endif()
 endfunction()
@@ -123,7 +121,7 @@ function(_add_assets_mac target)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E make_directory "${ROM_DIR}"
             COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${CMAKE_BINARY_DIR}/$<CONFIG>/rom"
+                "${SYNGINE_STAGED_ROM_DIR}"
                 "${ROM_DIR}"
             COMMENT "Copying staged rom assets into app Resources"
         )
@@ -197,6 +195,7 @@ function(add_assets target)
             DEPENDS "${ICON_BUNDLE_PATH}"
         )
         add_dependencies(${target} CompileMacAssets)
+        set_target_properties(CompileMacAssets PROPERTIES FOLDER "Game")
 
         # set the compiled asset bundle as a target for the app and copy it into Resources
         target_sources(${target} PRIVATE "${ASSET_PACKAGE}")
@@ -219,6 +218,7 @@ function(add_assets target)
             DEPENDS "${FINAL_PLIST_PATH}"
         )
         add_dependencies(${target} InfoPlistMerge)
+        set_target_properties(InfoPlistMerge PROPERTIES FOLDER "Game")
 
         # add the Info.plist to the target and have it depend on the icon
         set_property(
@@ -316,7 +316,7 @@ if(EXISTS "${GAME_ASSET_DIR}")
         elseif(ASSET_SUBDIR STREQUAL "meshes")
             compile_all_meshes(
                 SOURCE_DIRECTORY "${GAME_ASSET_DIR}/${ASSET_SUBDIR}"
-                OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIG>/rom/meshes"
+                OUTPUT_DIRECTORY "${SYNGINE_STAGED_ROM_DIR}/meshes"
                 BUNDLE_FILES_OUTPUT_VAR ALL_BUNDLED_MESH_FILES
             )
         else()
@@ -343,6 +343,7 @@ message(STATUS "SyngineGame: Compiled default gizmo bundles for ${name}: ${ALL_B
 if(ALL_COMPILED_SHADER_BINARIES)
     add_custom_target(GameShaders ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
     add_dependencies(${name} GameShaders)
+    set_target_properties(GameShaders PROPERTIES FOLDER "Game")
     message(STATUS "SyngineGame: Added GameShaders target for ${name}.")
 endif()
 
@@ -350,6 +351,7 @@ endif()
 if(ALL_BUNDLED_MESH_FILES)
     add_custom_target(GameMeshes ALL DEPENDS ${ALL_BUNDLED_MESH_FILES})
     add_dependencies(${name} GameMeshes)
+    set_target_properties(GameMeshes PROPERTIES FOLDER "Game")
     message(STATUS "SyngineGame: Added GameMeshes target for ${name}.")
 endif()
 
@@ -357,6 +359,7 @@ endif()
 if(ALL_BUNDLED_OTHER_ASSET_FILES)
     add_custom_target(GameAssets ALL DEPENDS ${ALL_BUNDLED_OTHER_ASSET_FILES})
     add_dependencies(${name} GameAssets)
+    set_target_properties(GameAssets PROPERTIES FOLDER "Game")
     message(STATUS "SyngineGame: Added GameAssets target for ${name}.")
 endif()
 
@@ -364,6 +367,7 @@ endif()
 if(ALL_BUNDLED_GIZMO_FILES)
     add_custom_target(GameGizmos ALL DEPENDS ${ALL_BUNDLED_GIZMO_FILES})
     add_dependencies(${name} GameGizmos)
+    set_target_properties(GameGizmos PROPERTIES FOLDER "Game")
     message(STATUS "SyngineGame: Added GameGizmos target for ${name}.")
 endif()
 

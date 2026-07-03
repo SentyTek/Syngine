@@ -185,7 +185,7 @@ class Serializer {
         /// @return Reference to the child DataNode at the specified index
         /// @pre IsArray() must be true (DataNode is of Array type)
         /// @since v0.0.1
-        DataNode& At(size_t index);
+        const DataNode& At(size_t index) const;
 
         /// @brief Appends a new empty DataNode to the Array type DataNode
         /// @param node The DataNode to append to the array
