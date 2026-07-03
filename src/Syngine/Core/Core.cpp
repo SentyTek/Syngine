@@ -136,6 +136,20 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
     try {
         Serializer::_LoadCoreSettings(m_context->config.gameName);
 
+        // Initialize SDL
+        // notably only init events when headless
+        uint32_t sdlInitFlags = m_context->config.headless
+                                    ? SDL_INIT_EVENTS
+                                    : SDL_INIT_VIDEO | SDL_INIT_EVENTS;
+        if (!SDL_Init(sdlInitFlags)) {
+            Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+                                  false,
+                                  "Failed to initialize SDL: %s",
+                                  SDL_GetError());
+            return false;
+        }
+
+        // Initialize window and renderer if not headless
         if (!m_context->config.headless) {
             m_context->window = std::make_unique<Window>(m_context->config);
             if (!m_context->window) {
@@ -154,6 +168,7 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
 
         Syngine::Logger::LogHardwareInfo();
 
+        // Init all subsystems
         m_context->synModels = std::make_unique<AssimpLoader>();
         if (!m_context->synModels) {
             Logger::Error("Failed to create AssimpLoader. Check the log for more details.");

@@ -28,6 +28,7 @@ add_executable(engine_tests
     Lua/ScriptLoading.cpp
     Lua/Bindings.cpp
     ECS/Zones.cpp
+    Input/Binding.cpp
 )
 
 if (MSVC)
