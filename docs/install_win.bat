@@ -33,6 +33,7 @@ echo project^("%PROJECT_NAME%"^)
 echo set^(EXECUTABLE_NAME ${PROJECT_NAME}^)
 echo set^(CMAKE_EXPORT_COMPILE_COMMANDS ON^)
 echo set^(CMAKE_CXX_STANDARD 20^)
+echo set_property^(GLOBAL PROPERTY USE_FOLDERS ON "Enable folder grouping in IDEs"^)
 echo.
 echo # Set the current year for copyright notices
 echo set^(CURRENT_YEAR 2025^)
@@ -45,7 +46,7 @@ echo     set^(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE INTERNAL ""^)
 echo endif^(^)
 echo.
 echo if^(APPLE^)
-echo # set the minimum deployment version for the asset compiler
+echo     # set the minimum deployment version for the asset compiler
 echo     set^(MINIMUM_MACOS_VERSION 26.0^)
 echo     # set the bundle identifier for xcode
 echo     set^(BUNDLE_IDENTIFIER "com.example.%PROJECT_NAME%"^)
@@ -69,6 +70,8 @@ echo add_subdirectory^(game^)
 echo.
 echo # And finally the editor
 echo # add_subdirectory^(editor^)
+
+set_target_properties^(${EXECUTABLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>/bin"^)
 ) > CMakeLists.txt
 
 cd game

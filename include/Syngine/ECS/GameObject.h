@@ -85,7 +85,7 @@ class GameObject {
     /// inactive
     /// @threadsafety safe
     /// @since v0.0.1
-    void SetActive(bool active) noexcept;
+    void SetActive(bool active = true) noexcept;
 
     /// @brief Get the tags of the GameObject
     /// @return Vector of tags of the GameObject
@@ -125,10 +125,10 @@ class GameObject {
 
     /// @brief Remove a component from the GameObject
     /// @param type Type of the component to remove
-    /// @return 0 on success, -1 if the component was not found
+    /// @return True if the component was removed successfully
     /// @threadsafety not-safe
     /// @since v0.0.1
-    int RemoveComponent(Syngine::ComponentTypeID type);
+    bool RemoveComponent(Syngine::ComponentTypeID type);
 
     /// @brief Check if the GameObject has a component of the specified type
     /// @param type Type of the component to check
@@ -197,14 +197,11 @@ class GameObject {
     /// @since v0.0.1
     void RemoveChild(GameObject* child);
 
-    /// @brief Sets the enabled state of the GameObject, which determines
-    /// whether it is rendered and updated
-    /// @param enabled true to enable the GameObject, false to disable it
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    void SetEnabled(bool enabled = true);
-
-    bool enabled = true; //* Whether the GameObject is enabled for rendering and updates
+    /// @brief Get the children of the GameObject
+    /// @return Vector of pointers to the child GameObjects
+    /// @threadsafety safe
+    /// @since v0.0.2
+    const std::vector<GameObject*>& GetChildren() const;
 
   private:
     long id; // Unique ID for the GameObject

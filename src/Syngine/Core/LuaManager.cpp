@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <functional>
 #include <unordered_map>
 #include <list>
 #include <vector>
@@ -140,6 +141,48 @@ _ParseRigidbodyParams(sol::optional<sol::table> maybeParams) {
     return params;
 }
 
+struct _RegisteredVoidBinding {
+    std::string           name;
+    std::string           namespace_;
+    std::function<void()> func;
+};
+
+struct _RegisteredBoolBinding {
+    std::string               name;
+    std::string               namespace_;
+    std::function<void(bool)> func;
+};
+
+struct _RegisteredIntBinding {
+    std::string              name;
+    std::string              namespace_;
+    std::function<void(int)> func;
+};
+
+std::vector<_RegisteredVoidBinding> _g_registeredVoidBindings;
+std::vector<_RegisteredBoolBinding> _g_registeredBoolBindings;
+std::vector<_RegisteredIntBinding>  _g_registeredIntBindings;
+bool                                 _g_isReplayingHostBindings = false;
+
+void _ReplayRegisteredHostBindings() {
+    _g_isReplayingHostBindings = true;
+
+    for (const _RegisteredVoidBinding& binding : _g_registeredVoidBindings) {
+        LuaManager::AddFunction<std::function<void()>>(
+            binding.name, binding.func, binding.namespace_);
+    }
+    for (const _RegisteredBoolBinding& binding : _g_registeredBoolBindings) {
+        LuaManager::AddFunction<std::function<void(bool)>>(
+            binding.name, binding.func, binding.namespace_);
+    }
+    for (const _RegisteredIntBinding& binding : _g_registeredIntBindings) {
+        LuaManager::AddFunction<std::function<void(int)>>(
+            binding.name, binding.func, binding.namespace_);
+    }
+
+    _g_isReplayingHostBindings = false;
+}
+
 } // namespace
 
 // Static member definitions
@@ -149,6 +192,15 @@ bool                     LuaManager::m_allowTicking = true;
 std::vector<GameObject*> LuaManager::m_ownedObjects;
 LuaManager*              LuaManager::m_instance = nullptr;
 LuaLibs                  LuaManager::m_libs     = LuaLibs::DEFAULT;
+
+// Static storage for last Lua result
+sol::object _g_lastResult;
+
+// Helper to safely clear the last result before Lua state destruction
+void _ClearLastResult() {
+    // Explicitly destroy and recreate as empty to avoid reference issues
+    _g_lastResult = sol::object();
+}
 
 // Simply links into the logger to print info.
 sol::object _SynginePrint(sol::variadic_args va) {
@@ -205,9 +257,9 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
         [](Syngine::GameObject& self, const std::string& value) {
             self.type = value;
         });
-    gameObjectType["enabled"] = sol::property(
-        [](Syngine::GameObject& self) -> bool { return self.enabled; },
-        [](Syngine::GameObject& self, bool value) { self.enabled = value; });
+    gameObjectType["active"] = sol::property(
+        [](Syngine::GameObject& self) -> bool { return self.IsActive(); },
+        [](Syngine::GameObject& self, bool value) { self.SetActive(value); });
     gameObjectType["AddComponent"] =
         [&lua](sol::this_state,
                Syngine::GameObject* obj,
@@ -471,9 +523,22 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
         return sol::make_object(lua, go);
     };
     scene["deleteGameObject"] = [](GameObject* obj) {
-        if (obj) {
-            delete obj;
+        if (!obj) {
+            return;
         }
+
+        auto newEnd =
+            std::remove(m_ownedObjects.begin(), m_ownedObjects.end(), obj);
+        if (newEnd == m_ownedObjects.end()) {
+            Logger::Warn(
+                "Lua attempted to delete a GameObject that is not Lua-owned. "
+                "Skipping delete to avoid invalid ownership teardown.",
+                true);
+            return;
+        }
+
+        m_ownedObjects.erase(newEnd, m_ownedObjects.end());
+        delete obj;
     };
     scene["getGameObject"] = [](std::string name, sol::this_state ts) {
         GameObject* obj = Registry::GetGameObjectByName(name);
@@ -816,6 +881,7 @@ LuaManager::LuaManager(LuaLibs args) {
 }
 
 LuaManager::~LuaManager() {
+    _ClearLastResult();
     if (m_luaState) {
         delete m_luaState;
         m_luaState = nullptr;
@@ -857,30 +923,13 @@ void LuaManager::SafeFile(const std::string& filePath) {
     }
 }
 
-template <typename Func>
-void LuaManager::AddFunction(const std::string& name,
-                             Func               func,
-                             const std::string& table) {
-    if (!m_luaState) {
-        Logger::Error("Lua state is not initialized. Cannot add function.");
-        return;
-    }
-
-    if (table.empty()) {
-        (*m_luaState)[name] = func;
-    } else {
-        sol::table tbl = (*m_luaState)[table];
-        if (!tbl.valid()) {
-            tbl = (*m_luaState)[table] = m_luaState->create_table();
-        }
-        tbl[name] = func;
-    }
-}
-
 // Yeah I know it literally just deletes and recreates the Lua state inplace but
 // it's simple and effective
 void LuaManager::_ReloadLuaState() {
     Logger::Log("Reloading Lua state...", LogLevel::INFO, true);
+
+    // Clear result before reload to prevent stale references
+    _ClearLastResult();
 
     DoFunction("onModUnload", 0, 0);
 
@@ -893,11 +942,19 @@ void LuaManager::_ReloadLuaState() {
                      removedLuaBinds);
     }
 
-    // Clean up owned GameObjects
-    for (GameObject* obj : m_ownedObjects) {
-        delete obj;
+    // Clean up owned GameObjects.
+    // Swap into a local first so that GameObject::~GameObject() calling
+    // _UnregisterLuaOwnedObject() doesn't mutate m_ownedObjects while we are
+    // iterating it (iterator invalidation crash).
+    std::vector<GameObject*> toDelete;
+    std::swap(toDelete, m_ownedObjects);
+    for (GameObject* obj : toDelete) {
+        if (obj)
+            delete obj;
     }
-    m_ownedObjects.clear();
+
+    // Clear the result before destroying the Lua state
+    _ClearLastResult();
 
     // Recreate the Lua state
     if (m_luaState) {
@@ -942,9 +999,21 @@ void LuaManager::_ReloadLuaState() {
                      !has(LuaLibs::DEBUG),
                      has(LuaLibs::NOSYNGINE));
 
+    _ReplayRegisteredHostBindings();
+
     m_initialized = true;
 
     Logger::Log("Lua state reloaded successfully.", LogLevel::INFO, true);
+}
+
+void LuaManager::_UnregisterLuaOwnedObject(GameObject* obj) {
+    if (!obj) {
+        return;
+    }
+    auto newEnd = std::remove(m_ownedObjects.begin(), m_ownedObjects.end(), obj);
+    if (newEnd != m_ownedObjects.end()) {
+        m_ownedObjects.erase(newEnd, m_ownedObjects.end());
+    }
 }
 
 bool LuaManager::HasObject(const std::string& name) {
@@ -989,6 +1058,7 @@ void LuaManager::DoFunction(const std::string& funcName,
         m_allowTicking = false; // Prevent further calls to Lua functions until
                                 // reload to avoid spamming errors
     }
+    _g_lastResult = result.get<sol::object>();
 }
 
 // This is pretty much a special overload of DoFunction without logging and
@@ -1018,6 +1088,161 @@ void LuaManager::DoTick(float physDeltaTime,
                      err.what());
         m_allowTicking = false; // Prevent further calls to Lua functions until
                                 // reload to avoid spamming errors
+    }
+}
+
+// Specialization for void()
+template <>
+void LuaManager::_AddFunctionImpl<std::function<void()>>(
+    const std::string& name, std::function<void()> func,
+    const std::string& namespace_) {
+    if (!_g_isReplayingHostBindings) {
+        _g_registeredVoidBindings.push_back({
+            .name = name,
+            .namespace_ = namespace_,
+            .func = func,
+        });
+    }
+
+    if (namespace_.empty()) {
+        (*m_luaState)[name] = func;
+    } else {
+        sol::table globals = m_luaState->globals();
+        sol::object ns_obj = globals[namespace_];
+        if (ns_obj.get_type() != sol::type::table) {
+            globals[namespace_] = m_luaState->create_table();
+        }
+        globals[namespace_][name] = func;
+    }
+}
+
+// Specialization for void(bool)
+template <>
+void LuaManager::_AddFunctionImpl<std::function<void(bool)>>(
+    const std::string& name, std::function<void(bool)> func,
+    const std::string& namespace_) {
+    if (!_g_isReplayingHostBindings) {
+        _g_registeredBoolBindings.push_back({
+            .name = name,
+            .namespace_ = namespace_,
+            .func = func,
+        });
+    }
+
+    if (namespace_.empty()) {
+        (*m_luaState)[name] = [func](const sol::variadic_args& args) {
+            if (args.size() > 0) {
+                func(args[0].as<bool>());
+            }
+        };
+    } else {
+        sol::table globals = m_luaState->globals();
+        sol::object ns_obj = globals[namespace_];
+        if (ns_obj.get_type() != sol::type::table) {
+            globals[namespace_] = m_luaState->create_table();
+        }
+        globals[namespace_][name] = [func](const sol::variadic_args& args) {
+            if (args.size() > 0) {
+                func(args[0].as<bool>());
+            }
+        };
+    }
+}
+
+// Specialization for void(int)
+template <>
+void LuaManager::_AddFunctionImpl<std::function<void(int)>>(
+    const std::string& name, std::function<void(int)> func,
+    const std::string& namespace_) {
+    if (!_g_isReplayingHostBindings) {
+        _g_registeredIntBindings.push_back({
+            .name = name,
+            .namespace_ = namespace_,
+            .func = func,
+        });
+    }
+
+    if (namespace_.empty()) {
+        (*m_luaState)[name] = [func](const sol::variadic_args& args) {
+            if (args.size() > 0) {
+                func(args[0].as<int>());
+            }
+        };
+    } else {
+        sol::table globals = m_luaState->globals();
+        sol::object ns_obj = globals[namespace_];
+        if (ns_obj.get_type() != sol::type::table) {
+            globals[namespace_] = m_luaState->create_table();
+        }
+        globals[namespace_][name] = [func](const sol::variadic_args& args) {
+            if (args.size() > 0) {
+                func(args[0].as<int>());
+            }
+        };
+    }
+}
+
+// Template specializations for GetLastResult
+template <>
+int LuaManager::GetLastResult<int>() {
+    try {
+        if (!_g_lastResult.valid() || _g_lastResult.get_type() == sol::type::lua_nil) {
+            Logger::Log("Last Lua result is nil or invalid.",
+                        LogLevel::WARN, true);
+            return 0;
+        }
+        return _g_lastResult.as<int>();
+    } catch (const sol::error& e) {
+        Logger::LogF(LogLevel::ERR, true,
+                     "Failed to convert last Lua result to int: %s",
+                     e.what());
+        return 0;
+    }
+}
+
+template <>
+bool LuaManager::GetLastResult<bool>() {
+    try {
+        if (!_g_lastResult.valid() || _g_lastResult.get_type() == sol::type::lua_nil) {
+            Logger::Log("Last Lua result is nil or invalid.",
+                        LogLevel::WARN, true);
+            return false;
+        }
+        return _g_lastResult.as<bool>();
+    } catch (const sol::error& e) {
+        Logger::LogF(LogLevel::ERR, true,
+                     "Failed to convert last Lua result to bool: %s",
+                     e.what());
+        return false;
+    }
+}
+
+template <>
+float LuaManager::GetLastResult<float>() {
+    try {
+        if (!_g_lastResult.valid() || _g_lastResult.get_type() == sol::type::lua_nil) {
+            Logger::Log("Last Lua result is nil or invalid.",
+                        LogLevel::WARN, true);
+            return 0.0f;
+        }
+        return _g_lastResult.as<float>();
+    } catch (const sol::error& e) {
+        Logger::LogF(LogLevel::ERR, true,
+                     "Failed to convert last Lua result to float: %s",
+                     e.what());
+        return 0.0f;
+    }
+}
+
+template <>
+std::string LuaManager::GetLastResult<std::string>() {
+    try {
+        return _g_lastResult.as<std::string>();
+    } catch (const sol::error& e) {
+        Logger::LogF(LogLevel::ERR, true,
+                     "Failed to convert last Lua result to string: %s",
+                     e.what());
+        return "";
     }
 }
 

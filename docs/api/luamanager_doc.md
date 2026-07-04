@@ -15,6 +15,7 @@
 
 - [Constructor](#class-constructor)
 - [LuaLibs](#synginelualibs)
+- [_UnregisterLuaOwnedObject](#luamanager_unregisterluaownedobject)
 - [SafeScript](#luamanagersafescript)
 - [SafeFile](#luamanagersafefile)
 - [AddFunction](#luamanageraddfunction)
@@ -22,6 +23,7 @@
 - [DoFunction](#luamanagerdofunction)
 - [DoTick](#luamanagerdotick)
 - [SetAllowTicking](#luamanagersetallowticking)
+- [GetLastResult](#luamanagergetlastresult)
 
 ---
 
@@ -83,6 +85,23 @@ enum class LuaLibs : uint32_t
 
 ---
 
+#### **`LuaManager::_UnregisterLuaOwnedObject`**
+
+
+ Unregister a GameObject from Lua ownership tracking (called automatically on GameObject destruction)
+
+Signature:
+
+```cpp
+ static void _UnregisterLuaOwnedObject(GameObject* obj);
+```
+
+**Parameters:**
+
+- `obj`: The GameObject to unregister
+
+---
+
 #### **`LuaManager::SafeScript`**
 
 
@@ -97,6 +116,8 @@ Signature:
 **Parameters:**
 
 - `script`: The Lua script to execute
+
+**This function has been available since:** v0.0.1
 
 ---
 
@@ -115,24 +136,31 @@ Signature:
 
 - `filePath`: The path to the Lua file to execute
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`LuaManager::AddFunction`**
 
 
- Add a function to the Lua state
+ Add a function to the Lua state with the given name and category
 
 Signature:
 
 ```cpp
- template <typename Func> static void AddFunction(const std::string& name, Func func, const std::string& table = "");
+ template <typename Func> static void AddFunction(const std::string& name, Func func, const std::string& namespace_ = "");
 ```
+
+**Template Parameters:**
+
+- `Func`: The function type (e.g., std::function<void(int)>)
 
 **Parameters:**
 
-- `name`: The name of the function in Lua
-- `func`: The C++ function to bind to Lua
-- `table`: Optional table name to add the function to (e.g., "syngine"). If empty, the function will be added to the global namespace.
+- `name`: The name of the function to add
+- `namespace_`: The namespace to add the function under (e.g., "game", "input", etc.)
+
+**This function has been available since:** v0.0.1
 
 ---
 
@@ -153,6 +181,8 @@ Signature:
 
 **Returns:** True if the object exists in the Lua state, false otherwise
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`LuaManager::DoFunction`**
@@ -171,6 +201,8 @@ Signature:
 - `funcName`: The name of the function to call
 - `data`: Pointer to the data to pass as arguments
 - `dataSize`: Size of the data in bytes
+
+**This function has been available since:** v0.0.1
 
 ---
 
@@ -191,6 +223,8 @@ Signature:
 - `realDeltaTime`: The real time elapsed since the last tick, in seconds (not affected by time scaling)
 - `simulating`: Whether the simulation is currently running
 
+**This function has been available since:** v0.0.1
+
 ---
 
 #### **`LuaManager::SetAllowTicking`**
@@ -209,6 +243,31 @@ Signature:
 - `allow`: True to allow ticking, false to prevent it
 
 **Returns:** The previous allow ticking state
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`LuaManager::GetLastResult`**
+
+
+ Get the last result from a Lua function call, converted to type T
+
+**Note:** This will return of a FUNCTION CALL ONLY, make sure DoFunction has been called at least once before this on a function with a return value. Otherwise, this returns nothing.
+
+Signature:
+
+```cpp
+ template <typename T> static T GetLastResult();
+```
+
+**Template Parameters:**
+
+- `T`: The type to convert the result to
+
+**Returns:** The converted result, or default T if conversion failed
+
+**This function has been available since:** v0.0.2
 
 ---
 

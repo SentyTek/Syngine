@@ -158,13 +158,13 @@ void Logger::_CrashHandler(int signal) {
         default:      signalName = "Unknown (Signal)"; break;
     }
 
-    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR);
-    Logger::Log("Signal: " + std::string(signalName), LogLevel::ERR);
-    Logger::Log("Generating stack trace...", LogLevel::ERR);
+    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR, false);
+    Logger::Log("Signal: " + std::string(signalName), LogLevel::ERR, false);
+    Logger::Log("Generating stack trace...", LogLevel::ERR, false);
 
     PrintStackTrace();
 
-    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR);
+    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR, false);
     Logger::Log(m_appName + " has crashed. Press OK to exit. This should be "
                           "reported to the developers.",
                 LogLevel::FATAL);
@@ -173,10 +173,15 @@ void Logger::_CrashHandler(int signal) {
 #ifdef _WIN32
 LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
     const DWORD code = ep->ExceptionRecord->ExceptionCode;
-    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR);
-    Logger::Log("Exception Code: " + std::to_string(code), LogLevel::ERR);
-    Logger::Log("Exception Address: " + std::to_string((uintptr_t)ep->ExceptionRecord->ExceptionAddress), LogLevel::ERR);
-    Logger::Log("Exception Type: " + std::string(SehCodeToString(code)), LogLevel::ERR);
+    std::string addrStr;
+    uintptr_t addr = (uintptr_t)ep->ExceptionRecord->ExceptionAddress;
+    char        buf[32];
+    sprintf_s(buf, sizeof(buf), "0x%016llX", (unsigned long long)addr);
+    addrStr = buf;
+    Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR, false);
+    Logger::Log("Exception Code: " + std::to_string(code), LogLevel::ERR, false);
+    Logger::Log("Exception Address: " + addrStr, LogLevel::ERR, false);
+    Logger::Log("Exception Type: " + std::string(SehCodeToString(code)), LogLevel::ERR, false);
 
     if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2) {
         const auto mode = ep->ExceptionRecord->ExceptionInformation[0]; // 0 read, 1 write, 8 execute
@@ -188,13 +193,13 @@ LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
                      (unsigned long long)addr);
     }
 
-    Logger::Log("Generating stack trace...", LogLevel::ERR);
+    Logger::Log("Generating stack trace...", LogLevel::ERR, false);
 
     PrintStackTrace();
 
-    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR);
+    Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR, false);
     Logger::Log(m_appName + " has crashed. Press OK to exit. This should be "
-                          "reported to the developers.",
+                            "reported to the developers.",
                 LogLevel::FATAL);
 
     return EXCEPTION_EXECUTE_HANDLER;
@@ -202,6 +207,7 @@ LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
 #endif
 
 void Logger::PrintStackTrace() {
+const int MAX_FRAMES = 50;
 #ifdef _WIN32
     // Windows stack trace provided by dbghelp
     HANDLE process = GetCurrentProcess();
@@ -252,11 +258,11 @@ void Logger::PrintStackTrace() {
                        SymFunctionTableAccess64,
                        SymGetModuleBase64,
                        NULL)) {
-        if (frameNum > 50) break; // Prevent infinite loops
+        if (frameNum >= MAX_FRAMES) break; // Prevent infinite loops
 
         DWORD64 address = stackFrame.AddrPC.Offset;
         char    addrStr[32];
-        sprintf(addrStr, "0x%016llX", address);
+        sprintf_s(addrStr, "0x%016llX", address);
         std::string frameInfo = "Frame " + std::to_string(frameNum) + ": " + addrStr;
 
         if (SymFromAddr(process, address, NULL, symbol)) {
@@ -269,13 +275,13 @@ void Logger::PrintStackTrace() {
             }
         }
 
-        Logger::Log(frameInfo, LogLevel::ERR);
+        Logger::Log(frameInfo, LogLevel::ERR, false);
         frameNum++;
     }
 #elif defined(__linux__) || defined(__APPLE__)
     // Linux/Mac stack trace using backtrace()
-    void* array[50];
-    size_t size = backtrace(array, 50);
+    void* array[MAX_FRAMES];
+    size_t size = backtrace(array, MAX_FRAMES);
     char** symbols = backtrace_symbols(array, size);
 
     if (symbols == NULL) {
@@ -283,7 +289,7 @@ void Logger::PrintStackTrace() {
         return;
     }
 
-    for (size_t i = 0; i < size; i++) {
+    for (size_t i = 0; i < MAX_FRAMES && i < size; i++) {
         std::string frameInfo = "Frame " + std::to_string(i) + ": ";
 
         // Try to demangle C++ symbols
@@ -306,7 +312,7 @@ void Logger::PrintStackTrace() {
             frameInfo += symbols[i];
         }
 
-        Logger::Log(frameInfo, LogLevel::ERR);
+        Logger::Log(frameInfo, LogLevel::ERR, false);
     }
 
     free(symbols);
@@ -396,9 +402,9 @@ void Logger::_Init(const std::string&           appname,
 }
 
 void Logger::_Shutdown() {
+    // Check m_logFile directly without locking to avoid recursive lock deadlock
+    // (the mutex is already locked if called from Log(FATAL))
     if (m_logFile && m_logFile->is_open()) {
-        // The mutex is already locked if called from Log(FATAL),
-        // so we write directly to the file instead of calling Log().
         (*m_logFile) << "[" << _GetTimestamp() << "] "
                    << "[" << _LogLevelToString(LogLevel::INFO) << "] "
                    << "Logger shutting down" << std::endl;
@@ -412,8 +418,31 @@ void Logger::Log(const std::string_view message,
                  LogLevel               level,
                  bool                   writeOnlyInDebug,
                  bool                   toConsole) {
-    if (!m_logFile || !m_logFile->is_open()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Attempted to log while file is not open. Message: %s", message.data());
+    if (!Logger::_IsLogFileAvailable()) {
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Attempted to log while file is not open. Message: %s",
+                     message.data());
+
+        // If it's a fatal error, we still want to show the message box even if
+        // the log file isn't available
+        if (level == LogLevel::FATAL) {
+            std::string finalMessage =
+                m_appName +
+                " has encountered a fatal error and needs to close:\n\n" +
+                message.data();
+            if (Core::_GetContext()) {
+                if (Core::_GetContext()->config.headless) {
+                    throw std::runtime_error(finalMessage);
+                } else {
+                    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                            "Fatal Error",
+                                            finalMessage.c_str(),
+                                            m_mainWindow);
+                }
+            } else {
+                throw std::runtime_error(finalMessage); // If no context, just throw an exception
+            }
+        }
         return;
     }
 
@@ -476,29 +505,42 @@ void Logger::Log(const std::string_view message,
         _Shutdown();
         SDL_LogError(
             SDL_LOG_CATEGORY_APPLICATION, "Fatal error: %s", message.data());
-        std::string finalMessage = m_appName + " has encountered a fatal error and needs to close:\n\n" + message.data();
-        SDL_ShowSimpleMessageBox(
-            SDL_MESSAGEBOX_ERROR, "Fatal Error", finalMessage.c_str(), nullptr);
+        std::string finalMessage =
+            m_appName +
+            " has encountered a fatal error and needs to close:\n\n" +
+            message.data();
+        if (Core::_GetContext()) {
+            if (Core::_GetContext()->config.headless) {
+                throw std::runtime_error(finalMessage);
+            } else {
+                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+                                        "Fatal Error",
+                                        finalMessage.c_str(),
+                                        m_mainWindow);
 
-        // Break if debug is on
-        /*
-            !!!
-            DEVELOPER:
-            LOOK AT STACK TRACE
-            The program is already safed by this point, so you can inspect the state.
-            When done, resume execution. This will terminate the program.
-            !!!
-        */
+                // Break if debug is on
+                /*
+                    !!!
+                    DEVELOPER:
+                    LOOK AT STACK TRACE
+                    The program is already safed by this point, so you can inspect the state.
+                    When done, resume execution. This will terminate the program.
+                    !!!
+                */
+
 #ifdef _DEBUG
-        DEBUG_BREAK();
+                DEBUG_BREAK();
 #endif
-
-        exit(EXIT_FAILURE);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            throw std::runtime_error(finalMessage); // If no context, just throw an exception
+        }
     }
 }
 
 void Logger::LogHardwareInfo() {
-    if (!m_logFile || !m_logFile->is_open()) {
+    if (!Logger::_IsLogFileAvailable()) {
         SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log file is not open.");
         return;
     }
@@ -557,9 +599,34 @@ void Logger::LogF(LogLevel level, bool writeOnlyInDebug, const char* fmt, ...) {
     Log(std::string(buffer.data()), level, writeOnlyInDebug);
 }
 
+void Logger::ToConsole(const char* fmt, ...) {
+    if (!fmt) return;
+
+    va_list args;
+    va_start(args, fmt);
+
+    // Get required buffer data
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+    int len = vsnprintf(nullptr, 0, fmt, argsCopy);
+    va_end(argsCopy);
+
+    if (len < 0) {
+        va_end(args);
+        return;
+    }
+
+    // Allocate buffer and format the string
+    std::vector<char> buffer(len + 1);
+    vsnprintf(buffer.data(), buffer.size(), fmt, args);
+    va_end(args);
+
+    SDL_Log("%s", buffer.data());
+}
+
 void Logger::InfoPopup(const std::string_view message) {
     Log(message, LogLevel::INFO, false);
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", message.data(), nullptr);
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", message.data(), m_mainWindow);
 }
 
 void Logger::Error(const std::string_view message, bool writeOnlyInDebug) { Log(message, LogLevel::ERR, writeOnlyInDebug); }
@@ -569,9 +636,14 @@ void Logger::Fatal(const std::string_view message) { Log(message, LogLevel::FATA
 
 void Logger::Flush() {
     std::lock_guard<std::mutex> lock(m_logMutex);
-    if (m_logFile && m_logFile->is_open()) {
+    if (Logger::_IsLogFileAvailable()) {
         m_logFile->flush();
     }
+}
+
+bool Logger::_IsLogFileAvailable() {
+    std::lock_guard<std::mutex> lock(m_logMutex);
+    return m_logFile && m_logFile->is_open();
 }
 
 } // namespace Syngine

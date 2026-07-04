@@ -143,6 +143,9 @@ Signature:
 - `width`: Width of the viewport
 - `height`: Height of the viewport
 - `program`: Shader program to use for rendering
+- `camera`: Camera to get debug information from
+- `finalCam`: Camera to draw debug information to
+- `debug`: Debug modes to determine what to draw
 
 ---
 

@@ -29,6 +29,7 @@
 - [SetSimulationState](#coresetsimulationstate)
 - [GetSimulationState](#coregetsimulationstate)
 - [IsInitialized](#coreisinitialized)
+- [RunLua](#corerunlua)
 - [IsPhysicsEnabled](#coreisphysicsenabled)
 - [SetDebugMode](#coresetdebugmode)
 - [GetDebugMode](#coregetdebugmode)
@@ -96,7 +97,7 @@ struct EngineConfig
 | `int` | `windowHeight` | Height of the game window in pixels |
 | `bool` | `usePhysics` | Whether to initialize the physics system |
 | `bool` | `useLua` | Whether to initialize the Lua scripting system |
-| `LuaLibs` | `luaLibs` | Which Lua libraries to load if useLua is true |
+| `bool` | `headless` | Whether to run in headless mode (no window, for |
 
 **This function has been available since:** v0.0.1
 
@@ -334,6 +335,19 @@ Signature:
 **Returns:** True if initialized, false otherwise
 
 **This function has been available since:** v0.0.1
+
+---
+
+#### **`Core::RunLua`**
+
+
+ Runs the main Lua script
+
+Signature:
+
+```cpp
+ static void RunLua();
+```
 
 ---
 

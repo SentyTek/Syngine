@@ -34,7 +34,9 @@ docs/           -> Documentation on the engine
 include/        -> User-facing header files
 src/            -> Engine source files
 lib/            -> Other library files not in third_party and custom libraries
+tests/          -> Tests
 third_party/    -> Third party components like SDL and Jolt
+tools/          -> Official tools used to make Syngine Games (asset packaging mainly)
 ```
 
 ## Technologies used

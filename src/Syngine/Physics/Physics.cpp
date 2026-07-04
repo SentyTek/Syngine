@@ -69,9 +69,12 @@ void Phys::_Init() {
     JPH_IF_ENABLE_ASSERTS(AssertFailed = AssertFailedImpl;)
     Factory::sInstance = new Factory();
 
-    // Set Jolt's debug renderer to our custom debug renderer if debugging is enabled
-    mDebugRenderer = new Syngine::DebugRender();
-    JPH::DebugRenderer::sInstance = mDebugRenderer;
+    // Set Jolt's debug renderer to our custom debug renderer if debugging is
+    // enabled
+    if (!Core::_GetContext()->config.headless) {
+        mDebugRenderer = new Syngine::DebugRender();
+        JPH::DebugRenderer::sInstance = mDebugRenderer;
+    }
 
     RegisterTypes();
 

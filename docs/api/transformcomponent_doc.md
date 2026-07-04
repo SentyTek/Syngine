@@ -167,7 +167,7 @@ Signature:
 #### **`TransformComponent::GetRotationEuler`**
 
 
- Get the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
+ Get the GLOBAL rotation of the transform as XYZ Euler angles (in degrees)
 
 Signature:
 

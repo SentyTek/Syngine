@@ -57,7 +57,7 @@ int Registry::AddGameObject(GameObject* gameObject) noexcept {
 }
 
 int Registry::RemoveGameObject(GameObject* gameObject) noexcept {
-    if (!gameObject) {
+    if (!gameObject || gameObject->name.empty()) {
         return 1; // GameObject not found
     }
 

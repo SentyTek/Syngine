@@ -11,7 +11,6 @@
 #include "Syngine/ECS/Components/CameraComponent.h"
 
 #include "Jolt/Physics/Collision/Shape/Shape.h"
-#include "SDL3/SDL.h"
 #include "bgfx/defines.h"
 
 namespace Syngine {

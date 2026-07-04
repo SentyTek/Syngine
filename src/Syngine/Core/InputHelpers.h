@@ -866,7 +866,7 @@ struct Keymod {
                 omittedMods += "Scroll Lock";
             }
             Logger::Warn("Modifiers could not be translated: '" + omittedMods +
-                         "'. All other modifiers will be translated.");
+                         "'. All other modifiers will be translated.", true);
         }
 
         // mask out the omitted modifiers

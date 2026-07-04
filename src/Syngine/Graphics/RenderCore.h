@@ -152,7 +152,7 @@ class RenderCore {
     static void _DrawDebug(const Program&   program,
                            CameraComponent* camera,
                            DebugModes       debug);
-    static void _DrawBillboard(const Program& program);
+    static void _DrawBillboard(const Program& program, CameraComponent* camera);
     static void _DrawPostProcess(const Program& program);
     static void _DrawDbgBillboard(const Program& program);
     static void _DrawUIDebug(CameraComponent* camera);

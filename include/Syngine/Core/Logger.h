@@ -26,6 +26,8 @@
 #include <mutex>
 #include <atomic>
 
+struct SDL_Window; // Forward declaration of SDL_Window
+
 namespace Syngine {
 // Forward declaration of Core class
 class Core;
@@ -68,8 +70,17 @@ class Logger {
     static inline LogLevel                       m_minLogLevel;
     static inline std::atomic<bool>              m_autoFlush;
     static inline bool                           m_verbose;
+    static inline SDL_Window*                    m_mainWindow = nullptr;
 
     static void _CrashHandler(int signal);
+
+    /// @brief Set the main window for error dialogs
+    /// @param window SDL window pointer
+    /// @threadsafety safe
+    /// @since v0.0.1
+    static inline void _SetMainWindow(SDL_Window* window) noexcept {
+        m_mainWindow = window;
+    }
 #ifdef _WIN32
     static LONG WINAPI
     _WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
@@ -81,7 +92,10 @@ class Logger {
 
     static void _Shutdown();
 
+    static bool _IsLogFileAvailable();
+
     friend class Core;
+    friend class Window;
   public:
     /// @brief Log a message to disk with an optional log level
     /// @param message Message to log
@@ -150,6 +164,13 @@ class Logger {
     /// @since v0.0.1
     static void Fatal(const std::string_view message);
 
+    /// @brief Log a message directly to the console, bypassing the log file
+    /// @param fmt Format string
+    /// @param ... Format string arguments
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    static void ToConsole(const char* fmt, ...);
+
     /// @brief Log hardware information
     /// @threadsafety not-safe
     /// @since v0.0.1
@@ -167,9 +188,7 @@ class Logger {
     /// @brief Force flush the log file
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void Flush();
-
-    /// @brief Returns true if the log file is open
+    static void Flush();    /// @brief Returns true if the log file is open
     /// @return True if the log file is open, false otherwise
     /// @threadsafety safe
     /// @since v0.0.1

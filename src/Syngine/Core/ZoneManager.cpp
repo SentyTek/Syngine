@@ -24,12 +24,12 @@ void ZoneManager::_UnregisterZone(ZoneComponent* zone) noexcept {
 
 void ZoneManager::_UpdateZones() {
     for (auto* zone : m_zones) {
-        if (!zone->IsActive()) continue;
+        if (!zone->IsActive() || !zone->_GetOwner()->IsActive()) continue;
 
         auto gameObjects = Registry::GetAllGameObjects();
         for (auto obj : gameObjects) {
             GameObject* objPtr = obj.second;
-            if (objPtr == zone->_GetOwner()) continue;
+            if (objPtr == zone->_GetOwner() || !objPtr->IsActive()) continue;
 
             bool inZone = zone->IsInZone(objPtr);
 
