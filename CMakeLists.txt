@@ -195,6 +195,8 @@ else() # Linux and other Unix-like systems
     set_default_option(BGFX_CONFIG_RENDERER_METAL OFF "Disable Metal Renderer")
     set_default_option(SDL_RENDER_DISABLED ON "Disable SDL rendering subsystem on Linux/Unix platforms")
 
+    target_compile_definitions(Syngine PRIVATE JPH_DEBUG_RENDERER)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJPH_DEBUG_RENDERER")
     add_compile_options(-frtti) # Jolt needs RTTI on Unix platforms
 endif()
 
