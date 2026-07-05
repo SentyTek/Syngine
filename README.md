@@ -48,6 +48,7 @@ tools/          -> Official tools used to make Syngine Games (asset packaging ma
 - [miniscl.hpp](https://github.com/MerianBerry/SCL)
 - [sol2](https://github.com/SentyTek/sol2) (Our patched fork of [sol2](https://github.com/ThePhD/sol2))
 - [Lua 5.5](https://lua.org/)
+- [DirectXMath](https://github.com/microsoft/directxmath)
 
 ## License
 Syngine is licensed under the MIT license

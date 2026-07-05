@@ -24,3 +24,7 @@
 #include "Syngine/Utils/Helpers.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Profiler.h"
+
+#include "Syngine/Math/Vector2.hpp"
+#include "Syngine/Math/Vector3.hpp"
+#include "Syngine/Math/Vector4.hpp"
