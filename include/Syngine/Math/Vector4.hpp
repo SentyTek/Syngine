@@ -24,6 +24,8 @@ namespace Syngine::Math {
 class Vector4 {
 	DirectX::XMFLOAT4 m_storage;
 
+    friend class Matrix4x4; // for matrix-vector multiplication
+    friend class Quaternion; // for quaternion-vector multiplication
   public:
 	// MARK: Constructors
 
@@ -68,8 +70,23 @@ class Vector4 {
 	/// @brief Construct a vector from a Jolt Vec4
 	/// @param v Source Jolt Vec4
 	/// @since v0.0.2
-	inline Vector4(const JPH::Vec4& v)
-		: m_storage(v.GetX(), v.GetY(), v.GetZ(), v.GetW()) {}
+    inline Vector4(const JPH::Vec4& v)
+        : m_storage(v.GetX(), v.GetY(), v.GetZ(), v.GetW()) {}
+
+    /// @brief Copy constructor
+    /// @param other Vector to copy from
+    /// @since v0.0.2
+    inline Vector4(const Vector4& other) : m_storage(other.m_storage) {}
+
+    /// @brief Assign from another vector
+    /// @param other Vector to assign from
+    /// @return Reference to this vector after assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Vector4& operator=(const Vector4& other) {
+		m_storage = other.m_storage;
+		return *this;
+	}
 
 	// MARK: Accessors
 

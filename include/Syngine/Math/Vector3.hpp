@@ -23,6 +23,8 @@ namespace Syngine::Math {
 class Vector3 {
     DirectX::XMFLOAT3 m_storage;
 
+    friend class Matrix3x3; // for matrix-vector multiplication
+    friend class Quaternion; // for quaternion-vector multiplication
   public:
     // MARK: Constructors
 
@@ -131,6 +133,21 @@ class Vector3 {
     /// @since v0.0.2
     inline JPH::RVec3 toJoltRVec3() const {
         return JPH::RVec3(m_storage.x, m_storage.y, m_storage.z);
+    }
+
+    /// @brief Copy constructor
+    /// @param other Vector to copy
+    /// @since v0.0.2
+    inline Vector3(const Vector3& other) : m_storage(other.m_storage) {}
+
+    /// @brief Assignment operator
+    /// @param other Vector to assign from
+    /// @return Reference to this vector after assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Vector3& operator=(const Vector3& other) {
+        m_storage = other.m_storage;
+        return *this;
     }
 
     // MARK: Math operations
