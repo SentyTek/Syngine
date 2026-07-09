@@ -9,6 +9,8 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include <stdexcept>
+#include <vector>
 
 namespace Syngine::Math {
 
@@ -21,11 +23,43 @@ class Vector2 {
     /// @since v0.0.2
     inline Vector2() : m_storage(0.0f, 0.0f) {}
 
+    /// @brief Constructor with a single float value, initializes both
+    /// components to the same value
+    /// @param value Value to set both X and Y components
+    /// @since v0.0.2
+    inline Vector2(float value) : m_storage(value, value) {}
+
+    /// @brief Constructor from std::vector of floats, expects exactly 2 elements
+    /// @param values std::vector containing two float values
+    /// @throws std::invalid_argument if the vector does not contain exactly 2 elements
+    /// @since v0.0.2
+    inline Vector2(const ::std::vector<float>& values) {
+        if (values.size() != 2) {
+            throw ::std::invalid_argument("Vector2 constructor requires exactly 2 float values.");
+        }
+        m_storage.x = values[0];
+        m_storage.y = values[1];
+    }
+
     /// @brief Constructor with x and y values
     /// @param x X component of the vector
     /// @param y Y component of the vector
     /// @since v0.0.2
     inline Vector2(float x, float y) : m_storage(x, y) {}
+
+    // MARK: Accessors
+
+    /// @brief Get the raw data as a pointer to float array
+    /// @return Pointer to the first element of the float array
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline float* data() { return reinterpret_cast<float*>(&m_storage); }
+
+    /// @brief Get the raw data as a pointer to float array
+    /// @return Pointer to the first element of the float array
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline const float* data() const { return reinterpret_cast<const float*>(&m_storage); }
 
     /// @brief Get the X component of the vector
     /// @return X component
@@ -43,13 +77,29 @@ class Vector2 {
     /// @param x New X component value
     /// @threadsafety not-safe
     /// @since v0.0.2
-    inline void  setX(float x) { m_storage.x = x; }
+    inline void setX(float x) { m_storage.x = x; }
 
     /// @brief Set the Y component of the vector
     /// @param y New Y component value
     /// @threadsafety not-safe
     /// @since v0.0.2
-    inline void  setY(float y) { m_storage.y = y; }
+    inline void setY(float y) { m_storage.y = y; }
+
+    /// @brief Check if the vector is a zero vector (both components are zero)
+    /// @return true if both X and Y are zero, false otherwise
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline bool isZero() const {
+        return m_storage.x == 0.0f && m_storage.y == 0.0f;
+    }
+
+    /// @brief Convert this vector to a std::vector of floats
+    /// @return std::vector containing the X and Y components
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline operator ::std::vector<float>() const {
+        return ::std::vector<float>{m_storage.x, m_storage.y};
+    }
 
     // MARK: Math operations
 

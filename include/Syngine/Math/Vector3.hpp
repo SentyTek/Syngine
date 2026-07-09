@@ -17,20 +17,34 @@
 #include <Jolt/Math/Math.h>
 #include "Jolt/Math/Real.h"
 
+#include <stdexcept>
+#include <vector>
+
 namespace Syngine::Math {
 
 /// @brief 3D vector class for mathematical operations in 3D space
 class Vector3 {
     DirectX::XMFLOAT3 m_storage;
 
+    DirectX::XMFLOAT3 m_getStorage() const { return m_storage; }
+
+    inline Vector3(const DirectX::XMFLOAT3& storage) : m_storage(storage) {}
+
     friend class Matrix3x3; // for matrix-vector multiplication
     friend class Quaternion; // for quaternion-vector multiplication
+    friend class Ray;        // for ray operations
   public:
     // MARK: Constructors
 
     /// @brief Default constructor, initializes the vector to (0.0, 0.0, 0.0)
     /// @since v0.0.2
     inline Vector3() : m_storage(0.0f, 0.0f, 0.0f) {}
+
+    /// @brief Construct a vector from a single float value, initializes all
+    /// components to the same value
+    /// @param value Value to set all components
+    /// @since v0.0.2
+    inline Vector3(float value) : m_storage(value, value, value) {}
 
     /// @brief Construct a vector from three float components
     /// @param x X component of the vector
@@ -53,9 +67,50 @@ class Vector3 {
     /// @brief Construct a vector from a Jolt vector
     /// @param v Source Jolt vector
     /// @since v0.0.2
-    inline Vector3(const JPH::Vec3& v) : m_storage(v.GetX(), v.GetY(), v.GetZ()) {}
+    inline Vector3(const JPH::Vec3& v)
+        : m_storage(v.GetX(), v.GetY(), v.GetZ()) {}
+
+    /// @brief Constructor from std::vector of floats, expects exactly 3 elements
+    /// @param values std::vector containing three float values
+    /// @throws std::invalid_argument if the vector does not contain exactly 3 elements
+    /// @since v0.0.2
+    inline Vector3(const ::std::vector<float>& values) {
+        if (values.size() != 3) {
+            throw ::std::invalid_argument("Vector3 constructor requires exactly 3 float values.");
+        }
+        m_storage.x = values[0];
+        m_storage.y = values[1];
+        m_storage.z = values[2];
+    }
+
+    /// @brief Copy constructor
+    /// @param other Vector to copy
+    /// @since v0.0.2
+    inline Vector3(const Vector3& other) : m_storage(other.m_storage) {}
+
+    /// @brief Assignment operator
+    /// @param other Vector to assign from
+    /// @return Reference to this vector after assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Vector3& operator=(const Vector3& other) {
+        m_storage = other.m_storage;
+        return *this;
+    }
 
     // MARK: Accessors
+
+    /// @brief Get the raw data as a pointer to float array
+    /// @return Pointer to the first element of the float array
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline float* data() { return reinterpret_cast<float*>(&m_storage); }
+
+    /// @brief Get the raw data as a pointer to float array
+    /// @return Pointer to the first element of the float array
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline const float* data() const { return reinterpret_cast<const float*>(&m_storage); }
 
     /// @brief Get the X component of the vector
     /// @return X component
@@ -135,19 +190,44 @@ class Vector3 {
         return JPH::RVec3(m_storage.x, m_storage.y, m_storage.z);
     }
 
-    /// @brief Copy constructor
-    /// @param other Vector to copy
+    /// @brief Convert this vector to a std::vector of floats
+    /// @return std::vector containing the X, Y, and Z components
+    /// @threadsafety safe
     /// @since v0.0.2
-    inline Vector3(const Vector3& other) : m_storage(other.m_storage) {}
+    inline operator ::std::vector<float>() const {
+        return ::std::vector<float>{m_storage.x, m_storage.y, m_storage.z};
+    }
 
-    /// @brief Assignment operator
-    /// @param other Vector to assign from
-    /// @return Reference to this vector after assignment
+    /// @brief Get a component by index using bracket syntax
+    /// @param index Component index in range [0, 2]
+    /// @return Component value at the given index
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline float operator[] (int index) const {
+        if (index < 0 || index > 2) {
+            throw std::out_of_range("Index must be between 0 and 2 for Vector3.");
+        }
+        return reinterpret_cast<const float*>(&m_storage)[index];
+    }
+
+    /// @brief Set a component by index
+    /// @param index Component index in range [0, 2]
+    /// @param value New component value
     /// @threadsafety not-safe
     /// @since v0.0.2
-    inline Vector3& operator=(const Vector3& other) {
-        m_storage = other.m_storage;
-        return *this;
+    inline void set(int index, float value) {
+        if (index < 0 || index > 2) {
+            throw std::out_of_range("Index must be between 0 and 2 for Vector3.");
+        }
+        reinterpret_cast<float*>(&m_storage)[index] = value;
+    }
+
+    /// @brief Check if the vector is a zero vector (all components are zero)
+    /// @return true if all components are zero, false otherwise
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline bool isZero() const {
+        return m_storage.x == 0.0f && m_storage.y == 0.0f && m_storage.z == 0.0f;
     }
 
     // MARK: Math operations

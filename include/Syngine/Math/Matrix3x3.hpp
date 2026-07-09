@@ -171,9 +171,19 @@ class Matrix3x3 {
     /// @return Row vector
     /// @threadsafety safe
     /// @since v0.0.2
-    inline Vector3 operator[](int row) const {
-        return this->row(row);
-    }
+    inline Vector3 operator[](int row) const { return this->row(row); }
+
+    /// @brief Get the data as a pointer to the underlying float array (row-major order)
+    /// @return Pointer to the float array
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline float* data() { return reinterpret_cast<float*>(&m_storage); }
+
+    /// @brief Get the data as a pointer to the underlying float array (row-major order)
+    /// @return Pointer to the float array
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline const float* data() const { return reinterpret_cast<const float*>(&m_storage); }
 
     // MARK: Arithmetic operations
 
@@ -284,6 +294,19 @@ class Matrix3x3 {
         DirectX::XMVECTOR det;
         DirectX::XMMATRIX result = DirectX::XMMatrixInverse(&det, m);
         DirectX::XMStoreFloat3x3(&m_storage, result);
+    }
+
+    /// @brief Get a new inverted matrix without modifying this one
+    /// @return New inverted matrix
+    /// @threadsafety safe
+    /// @since v0.0.2
+    [[nodiscard("Use the invert() method to invert in-place")]] inline Matrix3x3 inverse() const {
+        DirectX::XMMATRIX m = DirectX::XMLoadFloat3x3(&m_storage);
+        DirectX::XMVECTOR det;
+        DirectX::XMMATRIX result = DirectX::XMMatrixInverse(&det, m);
+        Matrix3x3 res;
+        DirectX::XMStoreFloat3x3(&res.m_storage, result);
+        return res;
     }
 
     /// @brief Compute the determinant of this matrix

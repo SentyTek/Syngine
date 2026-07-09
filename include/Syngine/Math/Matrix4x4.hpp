@@ -14,6 +14,7 @@
 
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Math/Vector4.hpp"
+#include "Syngine/Math/Quaternion.hpp"
 
 #include <bx/math.h>
 
@@ -121,6 +122,24 @@ class Matrix4x4 {
 		m_storage.m[3][1] = elements[13];
 		m_storage.m[3][2] = elements[14];
 		m_storage.m[3][3] = elements[15];
+    }
+
+    /// @brief Construct a matrix from standard Rotation, Scale, and Translation
+    /// (RST) components
+    /// @param rot Rotation quaternion
+    /// @param scale Scale vector
+    /// @param translation Translation vector
+    /// @since v0.0.2
+    inline Matrix4x4(const Quaternion& rot,
+                     const Vector3&    scale,
+                     const Vector3&    translation) {
+		DirectX::XMVECTOR quat = DirectX::XMLoadFloat4(&rot.m_storage);
+		DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationQuaternion(quat);
+        DirectX::XMMATRIX scaling = DirectX::XMMatrixScaling(scale.x(), scale.y(), scale.z());
+        DirectX::XMMATRIX translationMtx = DirectX::XMMatrixTranslation(translation.x(), translation.y(), translation.z());
+
+		DirectX::XMMATRIX result = scaling * rotation * translationMtx;
+		DirectX::XMStoreFloat4x4(&m_storage, result);
 	}
 
 	/// @brief Copy constructor
@@ -225,8 +244,27 @@ class Matrix4x4 {
 	/// @return Row vector
 	/// @threadsafety safe
 	/// @since v0.0.2
-	inline Vector4 operator[](int row) const {
-		return this->row(row);
+    inline Vector4 operator[](int row) const { return this->row(row); }
+
+    /// @brief Get the data as a pointer to the underlying float array
+    /// (row-major order)
+    /// @return Pointer to the float array
+    /// @threadsafety safe
+	/// @since v0.0.2
+    inline float* data() { return reinterpret_cast<float*>(&m_storage); }
+
+	/// @brief Get the data as a pointer to the underlying float array (row-major order)
+	/// @return Pointer to the float array
+	/// @threadsafety safe
+	/// @since v0.0.2
+    inline const float* data() const { return reinterpret_cast<const float*>(&m_storage); }
+
+    /// @brief Get the translation component of the matrix as a Vector3
+    /// @return Translation vector (last column of the matrix)
+    /// @threadsafety safe
+	/// @since v0.0.2
+    inline Vector3 getTranslation() const {
+		return Vector3(m_storage.m[3][0], m_storage.m[3][1], m_storage.m[3][2]);
 	}
 
 	// MARK: Arithmetic operations
@@ -317,7 +355,7 @@ class Matrix4x4 {
 		Vector4 res;
         DirectX::XMStoreFloat4(&res.m_storage, result);
         return res;
-	}
+    }
 
 	// MARK: Normal matrix operations
 
@@ -330,7 +368,10 @@ class Matrix4x4 {
 		DirectX::XMStoreFloat4x4(&m_storage, result);
 	}
 
-	/// @brief Invert this matrix in-place
+    /// @brief Inverse this matrix in-place
+    /// @note This function does NOT return a new matrix, it modifies the
+    /// current matrix. To get a new inverted matrix, use the `inverse()`
+    /// method.
 	/// @threadsafety not-safe
 	/// @since v0.0.2
 	inline void invert() {
@@ -338,6 +379,22 @@ class Matrix4x4 {
 		DirectX::XMVECTOR det;
 		DirectX::XMMATRIX result = DirectX::XMMatrixInverse(&det, m);
 		DirectX::XMStoreFloat4x4(&m_storage, result);
+    }
+
+    /// @brief Inverse this matrix
+    /// @return Inverted matrix
+    /// @note This function does NOT modify the current matrix, it returns a new
+    /// inverted matrix. To invert the current matrix in-place, use the
+    /// `invert()` method.
+    /// @threadsafety safe
+    /// @since v0.0.2
+    [[nodiscard("Use the invert() method to invert in-place")]] inline Matrix4x4 inverse() const {
+		DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(&m_storage);
+		DirectX::XMVECTOR det;
+		DirectX::XMMATRIX result = DirectX::XMMatrixInverse(&det, m);
+		Matrix4x4 res;
+		DirectX::XMStoreFloat4x4(&res.m_storage, result);
+		return res;
 	}
 
 	/// @brief Compute the determinant of this matrix
@@ -403,6 +460,39 @@ class Matrix4x4 {
 		DirectX::XMVECTOR axisVec = DirectX::XMVector3Normalize(
 			DirectX::XMVectorSet(axis.x(), axis.y(), axis.z(), 0.0f));
 		DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationAxis(axisVec, angle);
+		DirectX::XMMATRIX result = DirectX::XMMatrixMultiply(m, rotation);
+		DirectX::XMStoreFloat4x4(&m_storage, result);
+    }
+
+    /// @brief Rotate the matrix along the X axis in-place
+    /// @param angle Rotation angle in radians
+    /// @threadsafety not-safe
+	/// @since v0.0.2
+	inline void rotateX(float angle) {
+		DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(&m_storage);
+		DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationX(angle);
+		DirectX::XMMATRIX result = DirectX::XMMatrixMultiply(m, rotation);
+		DirectX::XMStoreFloat4x4(&m_storage, result);
+	}
+
+    /// @brief Rotate the matrix along the Y axis in-place
+    /// @param angle Rotation angle in radians
+    /// @threadsafety not-safe
+	/// @since v0.0.2
+	inline void rotateY(float angle) {
+		DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(&m_storage);
+		DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationY(angle);
+		DirectX::XMMATRIX result = DirectX::XMMatrixMultiply(m, rotation);
+		DirectX::XMStoreFloat4x4(&m_storage, result);
+	}
+
+    /// @brief Rotate the matrix along the Z axis in-place
+    /// @param angle Rotation angle in radians
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline void rotateZ(float angle) {
+		DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(&m_storage);
+		DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationZ(angle);
 		DirectX::XMMATRIX result = DirectX::XMMatrixMultiply(m, rotation);
 		DirectX::XMStoreFloat4x4(&m_storage, result);
 	}

@@ -18,6 +18,9 @@
 #include <Jolt/Math/Math.h>
 #include "Jolt/Math/Real.h"
 
+#include <stdexcept>
+#include <vector>
+
 namespace Syngine::Math {
 
 /// @brief 4D vector class for mathematical operations in 4D space
@@ -31,7 +34,13 @@ class Vector4 {
 
 	/// @brief Default constructor, initializes the vector to (0.0, 0.0, 0.0, 0.0)
 	/// @since v0.0.2
-	inline Vector4() : m_storage(0.0f, 0.0f, 0.0f, 0.0f) {}
+    inline Vector4() : m_storage(0.0f, 0.0f, 0.0f, 0.0f) {}
+
+    /// @brief Construct a vector from a single float value, initializes all
+    /// components to the same value
+    /// @param value Value to set all components
+	/// @since v0.0.2
+	inline Vector4(float value) : m_storage(value, value, value, value) {}
 
 	/// @brief Construct a vector from four float components
 	/// @param x X component of the vector
@@ -45,7 +54,7 @@ class Vector4 {
 	/// @param v Source 3D vector
 	/// @param w W component of the vector
 	/// @since v0.0.2
-	inline Vector4(const Vector3& v, float w) : m_storage(v.x(), v.y(), v.z(), w) {}
+	inline Vector4(const Vector3& v, float w = 1.0f) : m_storage(v.x(), v.y(), v.z(), w) {}
 
 	/// @brief Construct a vector from a 2D vector and Z/W components
 	/// @param v Source 2D vector
@@ -73,6 +82,20 @@ class Vector4 {
     inline Vector4(const JPH::Vec4& v)
         : m_storage(v.GetX(), v.GetY(), v.GetZ(), v.GetW()) {}
 
+    /// @brief Constructor from std::vector of floats, expects exactly 4 elements
+    /// @param values std::vector containing four float values
+    /// @throws std::invalid_argument if the vector does not contain exactly 4 elements
+    /// @since v0.0.2
+    inline Vector4(const ::std::vector<float>& values) {
+        if (values.size() != 4) {
+            throw ::std::invalid_argument("Vector4 constructor requires exactly 4 float values.");
+        }
+        m_storage.x = values[0];
+        m_storage.y = values[1];
+        m_storage.z = values[2];
+        m_storage.w = values[3];
+    }
+
     /// @brief Copy constructor
     /// @param other Vector to copy from
     /// @since v0.0.2
@@ -88,7 +111,19 @@ class Vector4 {
 		return *this;
 	}
 
-	// MARK: Accessors
+    // MARK: Accessors
+
+    /// @brief Get the raw data as a pointer to float array
+    /// @return Pointer to the first element of the float array
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline float* data() { return reinterpret_cast<float*>(&m_storage); }
+
+    /// @brief Get the raw data as a pointer to float array
+    /// @return Pointer to the first element of the float array
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline const float* data() const { return reinterpret_cast<const float*>(&m_storage); }
 
 	/// @brief Get the X component of the vector
 	/// @return X component
@@ -166,7 +201,20 @@ class Vector4 {
 	/// @param w New W component value
 	/// @threadsafety not-safe
 	/// @since v0.0.2
-	inline void setW(float w) { m_storage.w = w; }
+    inline void setW(float w) { m_storage.w = w; }
+
+    /// @brief Set a component of the vector by index (0=X, 1=Y, 2=Z, 3=W)
+    /// @param index Index of the component to set
+    /// @param value New value for the component
+    /// @throws std::out_of_range if index is not in [0, 3]
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+	inline void set(size_t index, float value) {
+		if (index > 3) {
+			throw ::std::out_of_range("Index must be in the range [0, 3]");
+		}
+		data()[index] = value;
+	}
 
 	/// @brief Convert this vector to a bgfx vector by dropping W
 	/// @return Equivalent bgfx Vec3 from XYZ components
@@ -198,6 +246,23 @@ class Vector4 {
 	/// @since v0.0.2
 	inline JPH::Vec4 toJoltVec4() const {
 		return JPH::Vec4(m_storage.x, m_storage.y, m_storage.z, m_storage.w);
+    }
+
+    /// @brief Check if the vector is a zero vector (all components are zero)
+	/// @return true if all components are zero, false otherwise
+	/// @threadsafety safe
+	/// @since v0.0.2
+	inline bool isZero() const {
+        return m_storage.x == 0.0f && m_storage.y == 0.0f &&
+               m_storage.z == 0.0f && m_storage.w == 0.0f;
+    }
+
+    /// @brief Convert this vector to a std::vector of floats
+    /// @return std::vector containing the X, Y, Z, and W components
+    /// @threadsafety safe
+	/// @since v0.0.2
+	inline operator ::std::vector<float>() const {
+		return ::std::vector<float>{m_storage.x, m_storage.y, m_storage.z, m_storage.w};
 	}
 
 	// MARK: Math operations
@@ -370,7 +435,17 @@ class Vector4 {
 		return res;
 	}
 
-	// MARK: Normal vector operations
+    // MARK: Normal vector operations
+
+    /// @brief Normalize the vector in-place
+	/// @return Reference to this vector after normalization
+	/// @threadsafety not-safe
+	/// @since v0.0.2
+	inline Vector4& normalize() {
+		DirectX::XMVECTOR v = DirectX::XMLoadFloat4(&m_storage);
+		DirectX::XMStoreFloat4(&m_storage, DirectX::XMVector4Normalize(v));
+		return *this;
+	}
 
 	/// @brief Calculate the length (magnitude) of the vector
 	/// @return Length of the vector

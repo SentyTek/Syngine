@@ -10,11 +10,17 @@
 
 #include <DirectXMath.h>
 
+#include <cmath>
+#include <stdexcept>
+#include <vector>
+
 #include "Syngine/Math/Matrix3x3.hpp"
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Math/Vector4.hpp"
 
 #include <bx/math.h>
+#include <Jolt/Jolt.h>
+#include "Jolt/Math/Quat.h"
 
 namespace Syngine::Math {
 
@@ -22,6 +28,7 @@ namespace Syngine::Math {
 class Quaternion {
     DirectX::XMFLOAT4 m_storage;
 
+    friend class Matrix4x4; // for matrix-quaternion conversion
   public:
     // MARK: Constructors
 
@@ -39,7 +46,7 @@ class Quaternion {
         : m_storage(x, y, z, w) {}
 
     /// @brief Construct a quaternion from a rotation axis and angle
-    /// @param axis Rotation axis
+    /// @param axis Rotation axis (normalized internally)
     /// @param angle Rotation angle in radians
     /// @since v0.0.2
     inline Quaternion(const Vector3& axis, float angle) {
@@ -56,6 +63,40 @@ class Quaternion {
         DirectX::XMVECTOR q = DirectX::XMQuaternionRotationRollPitchYaw(
             eulerAngles.x(), eulerAngles.y(), eulerAngles.z());
         DirectX::XMStoreFloat4(&m_storage, q);
+    }
+
+    /// @brief Constructor from std::vector of floats, expects exactly 4 elements
+    /// @param values std::vector containing four float values
+    /// @throws std::invalid_argument if the vector does not contain exactly 4 elements
+    /// @since v0.0.2
+    inline Quaternion(const std::vector<float>& values) {
+        if (values.size() != 4) {
+            throw std::invalid_argument("Quaternion constructor requires exactly 4 float values.");
+        }
+        m_storage.x = values[0];
+        m_storage.y = values[1];
+        m_storage.z = values[2];
+        m_storage.w = values[3];
+    }
+
+    /// @brief Construct a quaternion from a Jolt::Quat
+    /// @param quat Jolt::Quat to convert from
+    /// @since v0.0.2
+    inline Quaternion(const JPH::Quat& quat)
+        : m_storage(quat.GetX(), quat.GetY(), quat.GetZ(), quat.GetW()) {}
+
+    // MARK: Conversions
+
+    inline bx::Quaternion toBxQuat() const {
+        return bx::Quaternion(m_storage.x, m_storage.y, m_storage.z, m_storage.w);
+    }
+
+    inline JPH::Quat toJoltQuat() const {
+        return JPH::Quat(m_storage.x, m_storage.y, m_storage.z, m_storage.w);
+    }
+
+    inline operator std::vector<float>() const {
+        return {m_storage.x, m_storage.y, m_storage.z, m_storage.w};
     }
 
     // MARK: Accessors
@@ -221,7 +262,7 @@ class Quaternion {
     }
 
     /// @brief Convert this quaternion to axis-angle form
-    /// @return Vector4 where XYZ is the normalized axis and W is the angle in radians
+    /// @return Vector4 where XYZ is the normalized axis and W is angle in radians
     /// @threadsafety safe
     /// @since v0.0.2
     inline Vector4 toAxisAngle() const {
@@ -233,6 +274,42 @@ class Quaternion {
         DirectX::XMStoreFloat4(&res.m_storage, axis);
         res.m_storage.w = angle;
         return res;
+    }
+
+    /// @brief Convert this quaternion to Euler angles (pitch, yaw, roll)
+    /// @return Euler angles in radians as (pitch X, yaw Y, roll Z)
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline Vector3 toEulerAngles() const {
+        DirectX::XMVECTOR q = DirectX::XMQuaternionNormalize(DirectX::XMLoadFloat4(&m_storage));
+        DirectX::XMFLOAT4 qf;
+        DirectX::XMStoreFloat4(&qf, q);
+
+        const float x = qf.x;
+        const float y = qf.y;
+        const float z = qf.z;
+        const float w = qf.w;
+
+        // X-axis (pitch)
+        const float sinx_cosp = 2.0f * (w * x + y * z);
+        const float cosx_cosp = 1.0f - 2.0f * (x * x + y * y);
+        const float pitch = std::atan2(sinx_cosp, cosx_cosp);
+
+        // Y-axis (yaw)
+        const float siny = 2.0f * (w * y - z * x);
+        float yaw;
+        if (std::fabs(siny) >= 1.0f) {
+            yaw = std::copysign(DirectX::XM_PIDIV2, siny);
+        } else {
+            yaw = std::asin(siny);
+        }
+
+        // Z-axis (roll)
+        const float sinz_cosp = 2.0f * (w * z + x * y);
+        const float cosz_cosp = 1.0f - 2.0f * (y * y + z * z);
+        const float roll = std::atan2(sinz_cosp, cosz_cosp);
+
+        return Vector3(pitch, yaw, roll);
     }
 
     // MARK: Interpolation
@@ -252,7 +329,7 @@ class Quaternion {
         return res;
     }
 
-    /// @brief Linearly interpolate between this quaternion and another, then normalize the result
+    /// @brief Linearly interpolate between this quaternion and another, then normalize
     /// @param other Target quaternion
     /// @param t Interpolation factor in [0, 1]
     /// @return Interpolated unit quaternion
