@@ -6,11 +6,12 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "../defines.h"
+
 #include <vector>
+#include <algorithm>
 
 #include <Syngine/Syngine.h>
 using namespace Syngine;

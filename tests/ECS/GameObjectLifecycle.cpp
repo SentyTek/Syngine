@@ -13,11 +13,10 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "../defines.h"
 
-#include <Syngine/Core/Registry.h>
-#include <Syngine/ECS/GameObject.h>
-#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/Syngine.h>
 
 using namespace Syngine;
+using namespace Syngine::Math;
 using namespace Catch::Matchers;
 
 // Collection of tests for GameObject lifecycle management
@@ -98,7 +97,7 @@ TEST_CASE("ECS copy construction clones components", "[ECS]") {
 
     auto* originalTransform = original->AddComponent<TransformComponent>();
     REQUIRE(originalTransform != nullptr);
-    originalTransform->SetPosition(4.0f, 5.0f, 6.0f);
+    originalTransform->SetPosition(Syngine::Math::Vec3(4.0f, 5.0f, 6.0f));
 
     const auto originalId = original->GetID();
 
@@ -116,18 +115,18 @@ TEST_CASE("ECS copy construction clones components", "[ECS]") {
     REQUIRE(copyTransform != originalTransform);
     REQUIRE(copyTransform->m_owner == &copy);
 
-    float* originalPosition = originalTransform->GetLocalPosition();
-    float* copyPosition     = copyTransform->GetLocalPosition();
-    REQUIRE_THAT(copyPosition[0], WithinAbs(originalPosition[0], FLOAT_MARGIN));
-    REQUIRE_THAT(copyPosition[1], WithinAbs(originalPosition[1], FLOAT_MARGIN));
-    REQUIRE_THAT(copyPosition[2], WithinAbs(originalPosition[2], FLOAT_MARGIN));
+    Math::Vector3 originalPosition = originalTransform->GetPosition();
+    Math::Vector3 copyPosition = copyTransform->GetPosition();
+    REQUIRE_THAT(copyPosition.x(), WithinAbs(originalPosition.x(), FLOAT_MARGIN));
+    REQUIRE_THAT(copyPosition.y(), WithinAbs(originalPosition.y(), FLOAT_MARGIN));
+    REQUIRE_THAT(copyPosition.z(), WithinAbs(originalPosition.z(), FLOAT_MARGIN));
 
-    copyTransform->SetPosition(9.0f, 8.0f, 7.0f);
-    REQUIRE_THAT(originalTransform->GetLocalPosition()[0],
+    copyTransform->SetPosition(Vector3(9.0f, 8.0f, 7.0f));
+    REQUIRE_THAT(originalTransform->GetPosition().x(),
                  WithinAbs(4.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(originalTransform->GetLocalPosition()[1],
+    REQUIRE_THAT(originalTransform->GetPosition().y(),
                  WithinAbs(5.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(originalTransform->GetLocalPosition()[2],
+    REQUIRE_THAT(originalTransform->GetPosition().z(),
                  WithinAbs(6.0f, FLOAT_MARGIN));
 }
 
@@ -141,12 +140,12 @@ TEST_CASE("ECS copy assignment clones components", "[ECS]") {
 
     auto* sourceTransform = source->AddComponent<TransformComponent>();
     REQUIRE(sourceTransform != nullptr);
-    sourceTransform->SetPosition(2.0f, 3.0f, 4.0f);
+    sourceTransform->SetPosition(Vector3(2.0f, 3.0f, 4.0f));
 
     GameObject target("Target", "default", "temporary");
     auto* targetTransformBefore = target.AddComponent<TransformComponent>();
     REQUIRE(targetTransformBefore != nullptr);
-    targetTransformBefore->SetPosition(-1.0f, -2.0f, -3.0f);
+    targetTransformBefore->SetPosition(Vector3(-1.0f, -2.0f, -3.0f));
 
     target = *source;
 
@@ -159,11 +158,11 @@ TEST_CASE("ECS copy assignment clones components", "[ECS]") {
     REQUIRE(targetTransform != nullptr);
     REQUIRE(targetTransform != sourceTransform);
     REQUIRE(targetTransform->m_owner == &target);
-    REQUIRE_THAT(targetTransform->GetLocalPosition()[0],
+    REQUIRE_THAT(targetTransform->GetPosition().x(),
                  WithinAbs(2.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(targetTransform->GetLocalPosition()[1],
+    REQUIRE_THAT(targetTransform->GetPosition().y(),
                  WithinAbs(3.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(targetTransform->GetLocalPosition()[2],
+    REQUIRE_THAT(targetTransform->GetPosition().z(),
                  WithinAbs(4.0f, FLOAT_MARGIN));
 }
 
@@ -208,8 +207,8 @@ TEST_CASE("ECS parenting is reflected in serialization", "[ECS]") {
     REQUIRE(parentTransform != nullptr);
     REQUIRE(childTransform != nullptr);
 
-    parentTransform->SetPosition(1.0f, 2.0f, 3.0f);
-    childTransform->SetPosition(4.0f, 5.0f, 6.0f);
+    parentTransform->SetPosition(Math::Vector3(1.0f, 2.0f, 3.0f));
+    childTransform->SetPosition(Math::Vector3(4.0f, 5.0f, 6.0f));
 
     child->SetParent(parent.get());
 
@@ -252,8 +251,8 @@ TEST_CASE("ECS inactive GameObjects do not update components", "[ECS]") {
 
     auto* zoneGO = new GameObject("ZoneGO", "default");
     zoneGO->SetActive(false);
-    float pos[3] = { 0.0f, -5.0f, 0.0f };
-    float size[3] = { 3.0f, 3.0f, 3.0f };
+    const Math::Vector3 pos(0.0f, -5.0f, 0.0f);
+    const Math::Vector3 size(3.0f, 3.0f, 3.0f);
     auto* zone = zoneGO->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
     zone->OnEnter = [&](GameObject* obj) {
         FAIL("Zone should not be entered when inactive");
@@ -269,16 +268,16 @@ TEST_CASE("ECS inactive GameObjects do not update components", "[ECS]") {
     // that the zone is not entered and the RB GO does not move
     engine.SetSimulationState(true);
     for (int i = 0; i < 60; ++i) {
-        transform->SetPosition(0.0f, -5.0f + i * 1.0f, 0.0f);
+        transform->SetPosition(Vector3(0.0f, -5.0f + i * 1.0f, 0.0f));
         engine.HandleEvents();
         engine.Update();
     }
 
     // Check that the RB GO has not moved from its initial position
     auto* rbTransform = rbGO->GetComponent<TransformComponent>();
-    REQUIRE_THAT(rbTransform->GetLocalPosition()[1],
+    REQUIRE_THAT(rbTransform->GetPosition().y(),
                  WithinAbs(0.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(transform->GetPosition()[1], WithinAbs(54.0f, FLOAT_MARGIN));
+    REQUIRE_THAT(transform->GetPosition().y(), WithinAbs(54.0f, FLOAT_MARGIN));
 
     // Clean up
     delete zoneGO;

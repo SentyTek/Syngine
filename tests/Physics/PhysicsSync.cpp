@@ -44,12 +44,12 @@ TEST_CASE("Rigidbody and Transform sync", "[Physics]") {
     JPH::RVec3 rbPos =
         bodyInterface.GetCenterOfMassPosition(rigidbody->_GetBodyID());
 
-    float* tpos = transform->GetPosition();
+    Math::Vector3 tpos = transform->GetPosition();
 
     // Check that the transform's position is approximately equal to the rigidbody's position
-    REQUIRE_THAT(tpos[0], WithinAbs(rbPos.GetX(), FLOAT_MARGIN));
-    REQUIRE_THAT(tpos[1], WithinAbs(-0.076166, FLOAT_MARGIN * 10)); // Y position is approximately -0.076166 after running test a bunch of times
-    REQUIRE_THAT(tpos[2], WithinAbs(rbPos.GetZ(), FLOAT_MARGIN));
+    REQUIRE_THAT(tpos.x(), WithinAbs(rbPos.GetX(), FLOAT_MARGIN));
+    REQUIRE_THAT(tpos.y(), WithinAbs(-0.076166, FLOAT_MARGIN * 10)); // Y position is approximately -0.076166 after running test a bunch of times
+    REQUIRE_THAT(tpos.z(), WithinAbs(rbPos.GetZ(), FLOAT_MARGIN));
 
 
     // Cleanup
@@ -61,7 +61,7 @@ TEST_CASE("Rigidbody falls onto static floor and settles", "[Physics]") {
 
     auto* floor = new GameObject("Floor", "default");
     auto* floorTransform = floor->AddComponent<TransformComponent>();
-    floorTransform->SetPosition(0.0f, -1.0f, 0.0f);
+    floorTransform->SetPosition(Math::Vector3(0.0f, -1.0f, 0.0f));
 
     RigidbodyParameters floorParams = {
         .shape           = PhysicsShapes::BOX,
@@ -77,7 +77,7 @@ TEST_CASE("Rigidbody falls onto static floor and settles", "[Physics]") {
 
     auto* cube = new GameObject("FallingCube", "default");
     auto* cubeTransform = cube->AddComponent<TransformComponent>();
-    cubeTransform->SetPosition(0.0f, 5.0f, 0.0f);
+    cubeTransform->SetPosition(Math::Vector3(0.0f, 5.0f, 0.0f));
 
     RigidbodyParameters cubeParams = {
         .shape           = PhysicsShapes::BOX,
@@ -98,12 +98,12 @@ TEST_CASE("Rigidbody falls onto static floor and settles", "[Physics]") {
         engine.GetPhysicsManager()->_GetBodyInterface();
     JPH::RVec3 rbPos =
         bodyInterface.GetCenterOfMassPosition(cubeBody->_GetBodyID());
-    float* tpos = cubeTransform->GetPosition();
+    Math::Vector3 tpos = cubeTransform->GetPosition();
 
     REQUIRE_THAT(static_cast<float>(rbPos.GetY()), WithinAbs(1.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(tpos[0], WithinAbs(static_cast<float>(rbPos.GetX()), FLOAT_MARGIN));
-    REQUIRE_THAT(tpos[1], WithinAbs(static_cast<float>(rbPos.GetY()), FLOAT_MARGIN));
-    REQUIRE_THAT(tpos[2], WithinAbs(static_cast<float>(rbPos.GetZ()), FLOAT_MARGIN));
+    REQUIRE_THAT(tpos.x(), WithinAbs(static_cast<float>(rbPos.GetX()), FLOAT_MARGIN));
+    REQUIRE_THAT(tpos.y(), WithinAbs(static_cast<float>(rbPos.GetY()), FLOAT_MARGIN));
+    REQUIRE_THAT(tpos.z(), WithinAbs(static_cast<float>(rbPos.GetZ()), FLOAT_MARGIN));
 
     delete cube;
     delete floor;

@@ -346,4 +346,5 @@ class Quaternion {
 };
 
 using Quat = Quaternion; // Alias Quat for Quaternion
+using SQuat = Quaternion; // Alias SQuat for Quaternion
 } // namespace Syngine::Math

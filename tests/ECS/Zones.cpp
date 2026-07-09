@@ -13,6 +13,7 @@
 #include <Syngine/Syngine.h>
 
 using namespace Syngine;
+using namespace Syngine::Math;
 using namespace Catch::Matchers;
 
 // Collection of tests for zone management in the ECS, ensuring that we can
@@ -22,8 +23,8 @@ TEST_CASE("Test creating a zone and triggering callbacks", "[ECS][Zones]") {
     SYN_STARTENGINE
 
     // Create a zone
-    float pos[3] = { 0.0f, 0.0f, 0.0f };
-    float size[3] = { 5.0f, 5.0f, 5.0f };
+    const Math::Vector3 pos;
+    const Math::Vector3 size(5.0f);
     auto* zonego = new GameObject("TestZone");
     auto* testZone = zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size, true);
 
@@ -43,14 +44,14 @@ TEST_CASE("Test creating a zone and triggering callbacks", "[ECS][Zones]") {
     // Create an object that will enter and exit the zone
     auto* objgo = new GameObject("TestObject");
     auto* transform = objgo->AddComponent<TransformComponent>();
-    transform->SetPosition(10.0f, 0.0f, 0.0f);
+    transform->SetPosition(SVec3(10.0f, 0.0f, 0.0f));
 
     int framesToSimulate = 10;
     engine.SetSimulationState(true);
     for (int i = 0; i < framesToSimulate; ++i) {
         // Move the object towards the zone
         float newX = 10.0f - (i + 1) * (20.0f / framesToSimulate); // Move from 10 to -10 over the frames
-        transform->SetPosition(newX, 0.0f, 0.0f);
+        transform->SetPosition(SVec3(newX, 0.0f, 0.0f));
 
         // Update the engine to process the zone triggers
         engine.HandleEvents();
@@ -70,8 +71,8 @@ TEST_CASE("Test querying objects in a zone", "[ECS][Zones]") {
     SYN_STARTENGINE
 
     // Create a zone
-    float pos[3] = { 0.0f, 0.0f, 0.0f };
-    float size[3] = { 5.0f, 5.0f, 5.0f };
+    const SVec3 pos;
+    const SVec3 size(5.0f);
     auto* zonego = new GameObject("TestZone");
     auto* testZone = zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
 
@@ -84,9 +85,9 @@ TEST_CASE("Test querying objects in a zone", "[ECS][Zones]") {
     auto* transform2 = insideObj2->AddComponent<TransformComponent>();
     auto* transform3 = outsideObj->AddComponent<TransformComponent>();
 
-    transform1->SetPosition(1.0f, 0.0f, 0.0f); // Inside
-    transform2->SetPosition(-1.0f, 0.0f, 0.0f); // Inside
-    transform3->SetPosition(10.0f, 0.0f, 0.0f); // Outside
+    transform1->SetPosition(SVec3(1.0f, 0.0f, 0.0f)); // Inside
+    transform2->SetPosition(SVec3(-1.0f, 0.0f, 0.0f)); // Inside
+    transform3->SetPosition(SVec3(10.0f, 0.0f, 0.0f)); // Outside
 
     // Update the engine to process the zone triggers
     engine.HandleEvents();
@@ -110,8 +111,8 @@ TEST_CASE("Test zone tags", "[ECS][Zones]") {
     SYN_STARTENGINE
 
     // Create a zone
-    float pos[3] = { 0.0f, 0.0f, 0.0f };
-    float size[3] = { 5.0f, 5.0f, 5.0f };
+    const Math::Vector3 pos;
+    const Math::Vector3 size(5.0f);
     auto* zonego = new GameObject("TestZone");
     auto* testZone = zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
 
