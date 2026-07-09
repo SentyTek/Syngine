@@ -11,6 +11,8 @@
 #include "Syngine/ECS/GameObject.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Serializer.h"
+#include "Syngine/Math/Vector3.hpp"
+
 #include <string>
 
 namespace Syngine {
@@ -18,10 +20,10 @@ namespace Syngine {
 /// @brief Structure representing an axis-aligned bounding box (AABB)
 /// @since v0.0.1
 struct MeshAABB {
-    float min[3] = {0.0f, 0.0f, 0.0f};        //* Minimum corner of the AABB
-    float max[3] = {0.0f, 0.0f, 0.0f};        //* Maximum corner of the AABB
-    float center[3] = {0.0f, 0.0f, 0.0f};     //* Center of the AABB
-    float halfExtents[3] = {0.0f, 0.0f, 0.0f}; //* Half extents of the AABB
+    Math::Vector3 min = Math::Vector3(); //* Minimum corner of the AABB
+    Math::Vector3 max = Math::Vector3(); //* Maximum corner of the AABB
+    Math::Vector3 center = Math::Vector3(); //* Center of the AABB
+    Math::Vector3 halfExtents = Math::Vector3(); //* Half extents of
 };
 
 /// @brief Component for rendering 3D mesh models. Supports loading 3D asset
@@ -189,7 +191,7 @@ class MeshComponent : public Syngine::Component {
     /// @return UV scale for the specified material and texture type
     /// @threadsafety read-only
     /// @since v0.0.1
-    float* GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
+    Math::Vector2 GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
 
     /// @brief Set UV scale for specific texture type and material
     /// @param materialIndex Index of the material to modify
@@ -200,7 +202,7 @@ class MeshComponent : public Syngine::Component {
     /// @since v0.0.1
     bool SetMaterialUVScale(uint8_t materialIndex,
                             uint8_t textureType,
-                            float   uvScale[2]);
+                            Math::Vector2 uvScale);
 
     /// @brief Gets the UV scale override for the whole object
     /// @return UV scale override for the whole object. 1.0f by default.

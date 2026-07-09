@@ -8,6 +8,8 @@
 
 #pragma once
 #include "Syngine/ECS/Component.h"
+#include "Syngine/Math/Math.hpp"
+#include "Syngine/Math/Matrix4x4.hpp"
 #include "bx/math.h"
 
 namespace Syngine {
@@ -16,14 +18,14 @@ namespace Syngine {
 /// @section CameraComponent
 /// @since v0.0.1
 struct Camera {
-    float eye[3] = {0.0f, 0.0f, -5.0f}; //* Camera position in world space
-    float target[3] = {0.0f, 0.0f, 0.0f}; //* Camera target position
-    float up[3] = {0.0f, 1.0f, 0.0f}; //* Camera up vector
+    Math::Vector3 eye = {0.0f, 0.0f, -5.0f}; //* Camera position in world space
+    Math::Vector3 target = {0.0f, 0.0f, 0.0f}; //* Camera target position
+    Math::Vector3 up = {0.0f, 1.0f, 0.0f}; //* Camera up vector
     float fov = 70.0f; //* Field of view in degrees
     float nearPlane = 0.1f; //* Near clipping plane
     float farPlane = 100.0f; //* Far clipping plane
-    float view[16]; //* View matrix
-    float proj[16]; //* Projection matrix
+    Math::Matrix4x4 view; //* View matrix
+    Math::Matrix4x4 proj; //* Projection matrix
 
     float yaw = 0.0f; //* Yaw angle in radians
     float pitch = 0.0f; //* Pitch angle in radians
@@ -86,18 +88,16 @@ class CameraComponent : public Syngine::Component {
     void Update(int viewId, int width, int height);
 
     /// @brief Set the camera position
-    /// @param x X coordinate of the camera position
-    /// @param y Y coordinate of the camera position
-    /// @param z Z coordinate of the camera position
+    /// @param position Vector 3 representing the new camera position (x, y, z)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetPosition(float x, float y, float z);
+    void SetPosition(Math::Vector3 position);
 
     /// @brief Get the camera position
-    /// @return Array of 3 floats representing the camera position (x, y, z)
+    /// @return Vector 3 representing the camera position (x, y, z)
     /// @threadsafety read-only
     /// @since v0.0.1
-    const float* GetPosition() const;
+    Math::Vector3 GetPosition() const;
 
     /// @brief Set the camera FOV
     /// @param fov Field of view in degrees
@@ -123,19 +123,35 @@ class CameraComponent : public Syngine::Component {
     /// @since v0.0.1
     float GetFarPlane() const;
 
-    /// @brief Set the camera near clipping plane
-    /// @param nearPlane Near clipping plane distance
+    /// @brief Set the camera angles
+    /// @param yaw Yaw angle in radians
+    /// @param pitch Pitch angle in radians
+    /// @note The angles are used to calculate the camera's orientation
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetAngles(float yaw, float pitch);
 
+    /// @brief Set the camera angles
+    /// @param angles Vector2 containing yaw and pitch angles in radians
+    /// @note The angles are used to calculate the camera's orientation
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetAngles(Math::Vector2 angles) {
+        SetAngles(angles.x(), angles.y());
+    }
+
     /// @brief Get the camera angles
-    /// @param yaw Reference to store the yaw angle in radians
-    /// @param pitch Reference to store the pitch angle in radians
+    /// @return Vector2 containing yaw and pitch angles in radians
     /// @threadsafety read-only
     /// @since v0.0.1
-    void GetAngles(float& yaw, float& pitch) const;
+    Math::Vector2 GetAngles() const;
 
+    /// @brief Get the camera
+    /// @return Camera struct containing the camera's position, target, up
+    /// vector, FOV, near and far planes, view and projection matrices, and
+    /// angles
+    /// @threadsafety read-only
+    /// @since v0.0.1
     Syngine::Camera GetCamera() const;
 
   private:
@@ -146,7 +162,7 @@ class CameraComponent : public Syngine::Component {
     /// @since v0.0.1
     /// @internal
     struct Plane {
-        float normal[3] = { 0.f, 1.f, 0.f }; //* Normal vector of the plane
+        Math::Vector3 normal = Math::Vector3(0.f, 1.f, 0.f); //* Normal vector of the plane
         float distance  = 0.f;               //* Distance from origin
     };
 
@@ -167,11 +183,11 @@ class CameraComponent : public Syngine::Component {
     Frustum _extractFrustum();
 
     bool _aabbInsidePlane(const Plane&    plane,
-                          const bx::Vec3& min,
-                          const bx::Vec3& max);
+                          const Math::Vector3& min,
+                          const Math::Vector3& max);
     bool _aabbInsideFrustum(const Frustum&  frustum,
-                            const bx::Vec3& min,
-                            const bx::Vec3& max);
+                            const Math::Vector3& min,
+                            const Math::Vector3& max);
 
     friend class RenderCore;
 }; // class CameraComponent

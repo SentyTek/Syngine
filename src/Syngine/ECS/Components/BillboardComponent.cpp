@@ -151,15 +151,12 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
     [](sol::state& lua) {
         lua.new_usertype<BillboardComponent>("BillboardComponent",
             // Methods
-            "SetRot", &BillboardComponent::SetRot,
+            "SetRot", [](BillboardComponent& self, float x, float y, float z) {
+                self.SetRot(Vector3(x, y, z));
+            },
             "GetRot", [](BillboardComponent& self) -> std::tuple<float, float, float> {
-                float* rot;
-                float x, y, z;
-                rot = self.GetRot();
-                x = rot[0];
-                y = rot[1];
-                z = rot[2];
-                return {x, y, z};
+                Vector3 rot = self.GetRot();
+                return {rot.x(), rot.y(), rot.z()};
             }
         );
     }

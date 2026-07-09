@@ -9,28 +9,32 @@
 #pragma once
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
+#include "Syngine/Math/Quaternion.hpp"
+#include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Utils/Serializer.h"
+#include "Syngine/Math/Math.hpp"
 
 namespace Syngine {
+using namespace Syngine::Math;
 
 /// @brief Component to handle position, rotation, and scale of a GameObject.
 /// @section TransformComponent
 /// @since v0.0.1
 class TransformComponent : public Syngine::Component {
     // local TRS
-    float m_position[3]; //* Position of the transform
-    float m_rotation[4]; //* Rotation of the transform (Quaternion)
-    float m_scale[3];    //* Scale of the transform
+    Vector3 m_position; //* Position of the transform
+    Quaternion m_rotation; //* Rotation of the transform (Quaternion)
+    Vector3 m_scale;       //* Scale of the transform
 
     TransformComponent* m_parent =
         nullptr; //* Parent transform component (if any)
     std::vector<TransformComponent*> m_children; //* Child transform components
 
     // Cached matrices and world TRS
-    mutable float m_localMtx[16];
-    mutable float m_worldMtx[16];
-    mutable float m_worldPosition[3];
-    mutable float m_worldRotation[4];
+    mutable Mat4 m_localMtx;
+    mutable Mat4 m_worldMtx;
+    mutable Vector3 m_worldPosition;
+    mutable Quaternion m_worldRotation;
 
     mutable bool m_dirtyLocal = true;
     mutable bool m_dirtyWorld = true;
@@ -43,10 +47,6 @@ class TransformComponent : public Syngine::Component {
 
     void _UpdateLocalMatrix() const;
     void _UpdateWorldMatrix() const;
-
-    static void _QuatFromEulerDeg(float x, float y, float z, float* outQuat);
-    static void _QuatNormalize(float* quat);
-    static void _QuatMultiply(const float* q1, const float* q2, float* outQuat);
   public:
     static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_TRANSFORM; //* Transform component type
@@ -79,9 +79,9 @@ class TransformComponent : public Syngine::Component {
     /// can and is initialized directly in the constructor.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void Init(std::vector<float> position = { 0.0f, 0.0f, 0.0f },
-              std::vector<float> rotation = { 0.0f, 0.0f, 0.0f, 1.0f },
-              std::vector<float> scale    = { 1.0f, 1.0f, 1.0f });
+    void Init(Vector3    position = Vector3(),
+              Quaternion rotation = Quaternion(),
+              Vector3    scale    = Vector3(1.0f));
 
     /// @brief Update the transform component.
     /// @note There is no specific update logic for the transform component.
@@ -93,132 +93,119 @@ class TransformComponent : public Syngine::Component {
     /// @return The component type as an enum value
     /// @threadsafety read-only
     /// @since v0.0.1
-    Syngine::ComponentTypeID GetComponentType() override;
+    Syngine::ComponentTypeID GetComponentType() override {
+        return TransformComponent::componentType;
+    };
 
     /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in degrees)
-    /// @param x X component of the rotation
-    /// @param y Y component of the rotation
-    /// @param z Z component of the rotation
+    /// @return Vector3 representing the rotation (x, y, z)
     /// @threadsafety read-only
     /// @since v0.0.1
-    void GetRotationEuler(float& x, float& y, float& z) const;
+    Vector3 GetRotationEuler() const;
 
     /// @brief Get the GLOBAL rotation of the transform as a quaternion
-    /// @return Array of 4 floats representing the quaternion (x, y, z, w)
+    /// @return Quaternion representing the rotation (x, y, z, w)
     /// @threadsafety read-only
     /// @since v0.0.1
-    void GetRotationQuaternion(float& x, float& y, float& z, float& w) const;
+    Quaternion GetRotationQuaternion() const;
 
     /// @brief Get a GLOBAL model matrix for the transform
-    /// @param result Array to fill with the model matrix (16 floats)
+    /// @return 4x4 matrix filled with the global model matrix
+    /// @note This matrix is computed from the GLOBAL position, rotation, and scale
     /// @threadsafety read-only
     /// @since v0.0.1
-    void GetModelMatrix(float* result);
+    Mat4 GetModelMatrix() const;
 
     /// @brief Get a LOCAL model matrix for the transform
-    /// @param result Array to fill with the local model matrix (16 floats)
+    /// @return 4x4 matrix filled with the local model matrix
+    /// @note This matrix is computed from the LOCAL position, rotation, and scale
     /// @threadsafety read-only
     /// @since v0.0.1
-    void GetLocalMatrix(float* result);
+    Mat4 GetLocalMatrix() const;
 
     /// @brief Get the GLOBAL position of the transform
-    /// @return Array of 3 floats representing the position (x, y, z)
+    /// @return Vector3 representing the position (x, y, z)
+    /// @note GLOBAL position
     /// @threadsafety read-only
     /// @since v0.0.1
-    float* GetPosition();
+    Vector3 GetPosition() const;
 
     /// @brief Get the GLOBAL scale of the transform
-    /// @return Array of 3 floats representing the scale (x, y, z)
+    /// @return Vector3 representing the scale (x, y, z)
+    /// @note GLOBAL scale
     /// @threadsafety read-only
     /// @since v0.0.1
-    float* GetScale();
+    Vector3 GetScale() const;
 
     /// @brief Get the LOCAL position of the transform
-    /// @return Array of 3 floats representing the local position (x, y, z)
+    /// @return Vector3 representing the position (x, y, z)
+    /// @note LOCAL position
     /// @threadsafety read-only
     /// @since v0.0.1
-    float* GetLocalPosition();
+    Vector3 GetLocalPosition() const;
 
     /// @brief Get the LOCAL rotation of the transform as a quaternion
-    /// @return Array of 4 floats representing the local rotation quaternion (x,
-    /// y, z, w)
+    /// @return Quaternion representing the rotation (x, y, z, w)
+    /// @note LOCAL rotation
     /// @threadsafety read-only
     /// @since v0.0.1
-    float* GetLocalRotation();
+    Quaternion GetLocalRotation() const;
 
     /// @brief Get the LOCAL scale of the transform
-    /// @return Array of 3 floats representing the local scale (x, y, z)
+    /// @return Vector3 representing the local scale (x, y, z)
     /// @threadsafety read-only
     /// @since v0.0.1
-    float* GetLocalScale();
+    Vector3 GetLocalScale() const;
 
     /// @brief Set the LOCAL position of the transform
-    /// @param x X component of the position
-    /// @param y Y component of the position
-    /// @param z Z component of the position
+    /// @param position New local position as a Vector3
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetPosition(float x, float y, float z);
+    void SetLocalPosition(Vector3 position);
 
     /// @brief Set the LOCAL rotation of the transform as XYZ Euler angles (in
     /// degrees)
-    /// @param x X component of the rotation
-    /// @param y Y component of the rotation
-    /// @param z Z component of the rotation
+    /// @param rotation New local rotation as XYZ Euler angles (in degrees)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetRotationEuler(float x, float y, float z);
+    void SetLocalRotationEuler(Vector3 rotation);
 
     /// @brief Set the LOCAL rotation of the transform as a quaternion
-    /// @param x X component of the quaternion
-    /// @param y Y component of the quaternion
-    /// @param z Z component of the quaternion
-    /// @param w W component of the quaternion
+    /// @param rotation New local rotation as a quaternion
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetRotationQuat(float x, float y, float z, float w);
+    void SetLocalRotationQuat(Quaternion rotation);
 
     /// @brief Set the LOCAL scale of the transform
-    /// @param x X component of the scale
-    /// @param y Y component of the scale
-    /// @param z Z component of the scale
+    /// @param scale New local scale as a Vector3
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetScale(float x, float y, float z);
+    void SetLocalScale(Vector3 scale);
 
     /// @brief Set the GLOBAL position of the transform
-    /// @param x X component of the position
-    /// @param y Y component of the position
-    /// @param z Z component of the position
+    /// @param position New global position as a Vector3
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetWorldPosition(float x, float y, float z);
+    void SetWorldPosition(Vector3 position);
 
     /// @brief Set the GLOBAL rotation of the transform as a quaternion
-    /// @param x X component of the quaternion
-    /// @param y Y component of the quaternion
-    /// @param z Z component of the quaternion
-    /// @param w W component of the quaternion
+    /// @param rotation New global rotation as a quaternion
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetWorldRotationQuat(float x, float y, float z, float w);
+    void SetWorldRotationQuat(Quaternion rotation);
 
     /// @brief Set the GLOBAL rotation of the transform as XYZ Euler angles (in
     /// radians)
-    /// @param x X component of the rotation
-    /// @param y Y component of the rotation
-    /// @param z Z component of the rotation
+    /// @param rotation New global rotation as XYZ Euler angles (in radians)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetWorldRotationEuler(float x, float y, float z);
+    void SetWorldRotationEuler(Vector3 rotation);
 
     /// @brief Set the GLOBAL scale of the transform
-    /// @param x X component of the scale
-    /// @param y Y component of the scale
-    /// @param z Z component of the scale
+    /// @param scale New global scale as a Vector3
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetWorldScale(float x, float y, float z);
+    void SetWorldScale(Vector3 scale);
 
     /// @brief Set the parent transform of this transform
     /// @param parent Pointer to the parent TransformComponent

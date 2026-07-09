@@ -2936,6 +2936,20 @@ __PRIMOP(int, _In_function_class_(__In_impl_ char*);)
 #define _Maybe_raises_SEH_exception_   _Pre_ _SA_annotes1(SAL_inTry,__yes)
 #define _Raises_SEH_exception_         _Group_(_Maybe_raises_SEH_exception_ _Analysis_noreturn_)
 
+// GCC/libstdc++ uses identifiers named __valid in internal headers.
+// Avoid leaking SAL legacy macros that collide with those internals.
+#if !defined(_MSC_VER)
+#ifdef __valid
+#undef __valid
+#endif
+#ifdef __notvalid
+#undef __notvalid
+#endif
+#ifdef __maybevalid
+#undef __maybevalid
+#endif
+#endif
+
 #ifdef  __cplusplus // [
 }
 #endif // ]

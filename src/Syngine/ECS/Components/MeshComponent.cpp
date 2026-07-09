@@ -9,6 +9,7 @@
 #include "Syngine/Core/Logger.h"
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
+#include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
@@ -247,23 +248,27 @@ bool MeshComponent::SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materi
     return true; // Success
 }
 
-float* MeshComponent::GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const {
+Math::Vector2 MeshComponent::GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const {
     if (materialIndex >= this->meshData.numMaterials) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Material index %d out of bounds (max %d)",
                               materialIndex, this->meshData.numMaterials - 1);
-        return nullptr; // Error: material index out of bounds
+        return Math::Vector2(1.0f); // Error: material index out of bounds
     }
     if (textureType > 2) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Texture type %d out of bounds (max 2)",
                               textureType);
-        return nullptr; // Error: invalid texture type
+        return Math::Vector2(1.0f); // Error: invalid texture type
     }
-    return const_cast<float*>(this->meshData.materials[materialIndex].uvScale + textureType);
+    return Math::Vector2(
+        this->meshData.materials[materialIndex].uvScale[textureType * 2],
+        this->meshData.materials[materialIndex].uvScale[textureType * 2 + 1]);
 }
 
-bool MeshComponent::SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, float uvScale[2]) {
+bool MeshComponent::SetMaterialUVScale(uint8_t materialIndex,
+                                       uint8_t textureType,
+                                       Vector2 uvScale) {
     if (materialIndex >= this->meshData.numMaterials) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
                               "Material index %d out of bounds (max %d)",
@@ -276,8 +281,10 @@ bool MeshComponent::SetMaterialUVScale(uint8_t materialIndex, uint8_t textureTyp
                               textureType);
         return false; // Error: invalid texture type
     }
-    this->meshData.materials[materialIndex].uvScale[textureType * 2] = uvScale[0];
-    this->meshData.materials[materialIndex].uvScale[textureType * 2 + 1] = uvScale[1];
+    this->meshData.materials[materialIndex].uvScale.set(textureType * 2,
+                                                        uvScale.x());
+    this->meshData.materials[materialIndex].uvScale.set(textureType * 2 + 1,
+                                                        uvScale.y());
     return true; // Success
 }
 
@@ -314,37 +321,25 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
         for (size_t i = 0; i < vertices.size(); i += 8) {
             Vertex vertex;
-            vertex.pos[0]   = vertices[i];
-            vertex.pos[1]   = vertices[i + 1];
-            vertex.pos[2]   = vertices[i + 2];
-            vertex.normal[0]= vertices[i + 3];
-            vertex.normal[1]= vertices[i + 4];
-            vertex.normal[2]= vertices[i + 5];
-            vertex.uv0[0]   = vertices[i + 6];
-            vertex.uv0[1]   = vertices[i + 7];
-            vertex.color[0] = static_cast<float>(baseColor[0]) / 255.0f;
-            vertex.color[1] = static_cast<float>(baseColor[1]) / 255.0f;
-            vertex.color[2] = static_cast<float>(baseColor[2]) / 255.0f;
-            vertex.color[3] = static_cast<float>(baseColor[3]) / 255.0f;
-            *vertexIt++     = vertex;
+            vertex.pos = Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+            vertex.normal =
+                Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+            vertex.uv0    = Vector2(vertices[i + 6], vertices[i + 7]);
+            vertex.color  = Vector4(static_cast<float>(baseColor[0]) / 255.0f,
+                                    static_cast<float>(baseColor[1]) / 255.0f,
+                                    static_cast<float>(baseColor[2]) / 255.0f,
+                                    static_cast<float>(baseColor[3]) / 255.0f);
+            *vertexIt++   = vertex;
         }
     } else {
         std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
         for (size_t i = 0; i < vertices.size(); i += 12) {
             Vertex vertex;
-            vertex.pos[0]   = vertices[i];
-            vertex.pos[1]   = vertices[i + 1];
-            vertex.pos[2]   = vertices[i + 2];
-            vertex.normal[0]= vertices[i + 3];
-            vertex.normal[1]= vertices[i + 4];
-            vertex.normal[2]= vertices[i + 5];
-            vertex.uv0[0]   = vertices[i + 6];
-            vertex.uv0[1]   = vertices[i + 7];
-            vertex.color[0] = vertices[i + 8];
-            vertex.color[1] = vertices[i + 9];
-            vertex.color[2] = vertices[i + 10];
-            vertex.color[3] = vertices[i + 11];
-            *vertexIt++     = vertex;
+            vertex.pos = Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
+            vertex.normal = Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+            vertex.uv0 = Vector2(vertices[i + 6], vertices[i + 7]);
+            vertex.color = Vector4(vertices[i + 8], vertices[i + 9], vertices[i + 10], vertices[i + 11]);
+            *vertexIt++ = vertex;
         }
     }
     meshData.indices = indices;
@@ -373,10 +368,7 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
 
     // Add dummy material
     Material mat;
-    mat.baseColor[0] = 1.0f;
-    mat.baseColor[1] = 1.0f;
-    mat.baseColor[2] = 1.0f;
-    mat.baseColor[3] = 1.0f;
+    mat.baseColor = Math::Vector4(1.0f);
     mat.useVertexColor = true;
     meshData.materials.push_back(mat);
 
@@ -412,14 +404,14 @@ MeshAABB& MeshComponent::GetAABB() {
     }
 
     // Compute local min/max
-    float min[3], max[3];
-    for (int i = 0; i < 3; ++i) {
-        min[i] = max[i] = this->meshData.vertices[0].pos[i];
-    }
+    Math::Vector3 min(FLT_MAX);
+    Math::Vector3 max(-FLT_MAX);
+    min = this->meshData.vertices[0].pos;
+    max = this->meshData.vertices[0].pos;
     for (const auto& vertex : this->meshData.vertices) {
         for (int i = 0; i < 3; ++i) {
-            min[i] = std::min(min[i], vertex.pos[i]);
-            max[i] = std::max(max[i], vertex.pos[i]);
+            min = min.min(vertex.pos);
+            max = max.max(vertex.pos);
         }
     }
 
@@ -427,43 +419,38 @@ MeshAABB& MeshComponent::GetAABB() {
     // If transform exists, transform all 8 corners
     if (this->m_owner && this->m_owner->HasComponent(SYN_COMPONENT_TRANSFORM)) {
         TransformComponent* transform = this->m_owner->GetComponent<TransformComponent>();
-        float modelMatrix[16];
-        transform->GetModelMatrix(modelMatrix);
+        Mat4 modelMatrix = transform->GetModelMatrix();
 
-        float corners[8][3] = {
-            {min[0], min[1], min[2]},
-            {min[0], min[1], max[2]},
-            {min[0], max[1], min[2]},
-            {min[0], max[1], max[2]},
-            {max[0], min[1], min[2]},
-            {max[0], min[1], max[2]},
-            {max[0], max[1], min[2]},
-            {max[0], max[1], max[2]}
+        Vec3 corners[8] = {
+            Vec3(min.x(), min.y(), min.z()),
+            Vec3(max.x(), min.y(), min.z()),
+            Vec3(min.x(), max.y(), min.z()),
+            Vec3(max.x(), max.y(), min.z()),
+            Vec3(min.x(), min.y(), max.z()),
+            Vec3(max.x(), min.y(), max.z()),
+            Vec3(min.x(), max.y(), max.z()),
+            Vec3(max.x(), max.y(), max.z())
         };
 
-        float tmin[3] = {FLT_MAX, FLT_MAX, FLT_MAX};
-        float tmax[3] = {-FLT_MAX, -FLT_MAX, -FLT_MAX};
+        Vector3 tmin(FLT_MAX);
+        Vector3 tmax(-FLT_MAX);
         for (int c = 0; c < 8; ++c) {
-            float x = corners[c][0], y = corners[c][1], z = corners[c][2];
-            float tx = modelMatrix[0]*x + modelMatrix[4]*y + modelMatrix[8]*z + modelMatrix[12];
-            float ty = modelMatrix[1]*x + modelMatrix[5]*y + modelMatrix[9]*z + modelMatrix[13];
-            float tz = modelMatrix[2]*x + modelMatrix[6]*y + modelMatrix[10]*z + modelMatrix[14];
-            tmin[0] = std::min(tmin[0], tx); tmax[0] = std::max(tmax[0], tx);
-            tmin[1] = std::min(tmin[1], ty); tmax[1] = std::max(tmax[1], ty);
-            tmin[2] = std::min(tmin[2], tz); tmax[2] = std::max(tmax[2], tz);
+            Math::Vector4 t = modelMatrix * Math::Vector4(corners[c][0], corners[c][1], corners[c][2], 1.0f);
+            tmin = tmin.min(t.xyz());
+            tmax = tmax.max(t.xyz());
         }
         for (int i = 0; i < 3; ++i) {
-            result.min[i] = tmin[i];
-            result.max[i] = tmax[i];
-            result.center[i] = (tmin[i] + tmax[i]) / 2.0f;
-            result.halfExtents[i] = (tmax[i] - tmin[i]) / 2.0f;
+            result.min.set(i, tmin[i]);
+            result.max.set(i, tmax[i]);
+            result.center.set(i, (tmin[i] + tmax[i]) / 2.0f);
+            result.halfExtents.set(i, (tmax[i] - tmin[i]) / 2.0f);
         }
     } else { // No transform, use local min/max
         for (int i = 0; i < 3; ++i) {
-            result.min[i] = min[i];
-            result.max[i] = max[i];
-            result.center[i] = (min[i] + max[i]) / 2.0f;
-            result.halfExtents[i] = (max[i] - min[i]) / 2.0f;
+            result.min.set(i, min[i]);
+            result.max.set(i, max[i]);
+            result.center.set(i, (min[i] + max[i]) / 2.0f);
+            result.halfExtents.set(i, (max[i] - min[i]) / 2.0f);
         }
     }
 

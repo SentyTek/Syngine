@@ -25,9 +25,4 @@
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Profiler.h"
 
-#include "Syngine/Math/Vector2.hpp"
-#include "Syngine/Math/Vector3.hpp"
-#include "Syngine/Math/Vector4.hpp"
-#include "Syngine/Math/Matrix3x3.hpp"
-#include "Syngine/Math/Matrix4x4.hpp"
-#include "Syngine/Math/Quaternion.hpp"
+#include "Syngine/Math/Math.hpp"

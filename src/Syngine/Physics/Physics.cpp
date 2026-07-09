@@ -7,9 +7,6 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Physics/Physics.h"
-#include "Jolt/Math/MathTypes.h"
-#include "Jolt/Physics/Body/MotionType.h"
-#include "Jolt/Physics/Collision/Shape/StaticCompoundShape.h"
 #include "Syngine/Core/Core.h"
 #include "Syngine/Graphics/DebugRenderer.h"
 #include "Syngine/Core/Logger.h"
@@ -36,6 +33,10 @@
 #include "Jolt/Core/Memory.h"
 #include "Jolt/Core/StreamWrapper.h"
 #include "Jolt/Core/IssueReporting.h"
+#include "Jolt/Math/MathTypes.h"
+#include "Jolt/Physics/Body/MotionType.h"
+#include "Jolt/Physics/Collision/Shape/StaticCompoundShape.h"
+
 #include "SDL3/SDL_log.h"
 
 using namespace JPH;
@@ -156,17 +157,15 @@ void Phys::_DrawDebug(int                 width,
     }
 }
 
-void Phys::_DrawFrustum(const float* view, const float* proj) {
+void Phys::_DrawFrustum(const Math::Mat4 view, const Math::Mat4 proj) {
     if (mDebugRenderer) {
         mDebugRenderer->DrawFrustum(view, proj);
     }
 }
 
-void Phys::_DrawLine(const float* from, const float* to, JPH::ColorArg color) {
+void Phys::_DrawLine(const Math::Vector3 from, const Math::Vector3 to, JPH::ColorArg color) {
     if (mDebugRenderer) {
-        JPH::Vec3Arg fromArg(from[0], from[1], from[2]);
-        JPH::Vec3Arg toArg(to[0], to[1], to[2]);
-        mDebugRenderer->DrawLine(fromArg, toArg, color);
+        mDebugRenderer->DrawLine(from.toJoltVec3(), to.toJoltVec3(), color);
     }
 }
 
@@ -180,7 +179,7 @@ BodyID Phys::_CreateSphere(RVec3Arg position, float radius, EMotionType motionTy
     }
     ShapeRefC sphereShape = sphereShapeResult.Get();
 
-    BodyCreationSettings sphereSettings(sphereShape, position, Quat::sIdentity(), motionType, layer);
+    BodyCreationSettings sphereSettings(sphereShape, position, JPH::Quat::sIdentity(), motionType, layer);
 
     if (motionType == EMotionType::Dynamic && mass > 0.0f) {
         sphereSettings.mMassPropertiesOverride = sphereShape->GetMassProperties();
@@ -311,7 +310,7 @@ BodyID Phys::_CreateCapsule(RVec3Arg position, float radius, float halfHeight, E
     ShapeRefC capsuleShape = capsuleShapeResult.Get();
 
     BodyCreationSettings capsuleSettings(
-        capsuleShape, position, Quat::sIdentity(), motionType, layer);
+        capsuleShape, position, JPH::Quat::sIdentity(), motionType, layer);
 
     capsuleSettings.mAllowSleeping = false;
 
@@ -373,10 +372,8 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
         ShapeRefC partShape = nullptr;
         switch (part.shape) {
         case PhysicsShapes::BOX: {
-            if (part.shapeParameters.size() < 3) continue;
-            Vec3 halfExtents(part.shapeParameters[0],
-                             part.shapeParameters[1],
-                             part.shapeParameters[2]);
+            if (part.shapeParameters.isZero()) continue;
+            JPH::Vec3 halfExtents = part.shapeParameters.toJoltVec3();
             BoxShapeSettings boxSettings(halfExtents);
             auto             result = boxSettings.Create();
             if (result.HasError()) {
@@ -387,8 +384,8 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
             break;
         }
         case PhysicsShapes::SPHERE: {
-            if (part.shapeParameters.empty()) continue;
-            float radius = part.shapeParameters[0];
+            if (part.shapeParameters.isZero()) continue;
+            float radius = part.shapeParameters.x();
             SphereShapeSettings sphereSettings(radius);
             auto                result = sphereSettings.Create();
             if (result.HasError()) {
@@ -399,9 +396,9 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
             break;
         }
         case PhysicsShapes::CAPSULE: {
-            if (part.shapeParameters.size() < 2) continue;
-            float radius = part.shapeParameters[0];
-            float halfHeight = part.shapeParameters[1];
+            if (part.shapeParameters.isZero()) continue;
+            float radius = part.shapeParameters.x();
+            float halfHeight = part.shapeParameters.y();
             CapsuleShapeSettings capsuleSettings(halfHeight, radius);
             auto                 result = capsuleSettings.Create();
             if (result.HasError()) {
@@ -412,9 +409,9 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
             break;
         }
         case PhysicsShapes::CYLINDER: {
-            if (part.shapeParameters.size() < 2) continue;
-            float radius = part.shapeParameters[0];
-            float halfHeight = part.shapeParameters[1];
+            if (part.shapeParameters.isZero()) continue;
+            float radius = part.shapeParameters.x();
+            float halfHeight = part.shapeParameters.y();
             CylinderShapeSettings cylinderSettings(halfHeight, radius);
             auto                  result = cylinderSettings.Create();
             if (result.HasError()) {
@@ -429,8 +426,8 @@ BodyID Phys::_CreateCompound(RVec3Arg position, QuatArg rotation, const std::vec
         }
 
         if (partShape) {
-            Vec3 childPos(part.position[0], part.position[1], part.position[2]);
-            Quat childRot(part.rotation[0], part.rotation[1], part.rotation[2], part.rotation[3]);
+            JPH::Vec3 childPos = part.position.toJoltVec3();
+            JPH::Quat childRot = part.rotation.toJoltQuat();
             compoundShapeSettings.AddShape(childPos, childRot, partShape);
         }
     }

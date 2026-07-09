@@ -18,6 +18,7 @@
 #include <cstddef>
 
 #include "../../lib/miniscl.hpp"
+#include "Syngine/Math/Math.hpp"
 
 #define SYNINT_PREFAB_VERSION "1.0"
 #define SYNINT_SCENE_VERSION "1.0"
@@ -624,6 +625,27 @@ inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Mat4>(c
     for (int i = 0; i < 16; i++) {
         arr.emplace_back().Set(value.data[i]);
     }
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<Syngine::Math::Vector3>(const Syngine::Math::Vector3& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    arr.emplace_back().Set(value.x());
+    arr.emplace_back().Set(value.y());
+    arr.emplace_back().Set(value.z());
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=<Syngine::Math::Vector4>(const Syngine::Math::Vector4& value) {
+    m_data = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    arr.emplace_back().Set(value.x());
+    arr.emplace_back().Set(value.y());
+    arr.emplace_back().Set(value.z());
+    arr.emplace_back().Set(value.w());
     return *this;
 }
 

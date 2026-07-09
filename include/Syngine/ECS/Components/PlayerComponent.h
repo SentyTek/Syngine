@@ -124,11 +124,10 @@ class PlayerComponent : public Syngine::Component {
     PlayerState GetPlayerState() const;
 
     /// @brief Gets the player's world space rotation.
-    /// @return pointer to an array of two floats, representing yaw and pitch
-    /// respectively.
+    /// @return Vector2, where x is the yaw and y is the pitch, in radians
     /// @threadsafety read-only
     /// @since v0.0.1
-    float* GetRotation() const;
+    Math::Vector2 GetRotation() const;
 
     /// @brief Sets the player's world space rotation.
     /// @param yaw The yaw rotation in radians.
@@ -136,6 +135,15 @@ class PlayerComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetRotation(float yaw, float pitch);
+
+    /// @brief Sets the player's world space rotation.
+    /// @param rotation Vector2, where x is the yaw and y is the pitch, in radians
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetRotation(Math::Vector2 rotation) {
+      // Internal logic uses yaw and pitch separately, so it makes more sense to call the other SetRotation function.
+      SetRotation(rotation.x(), rotation.y());
+    };
 
     float maxPitchAngle = 89.0f; //* Max vertical angle for the camera pitch (in degrees).
 
@@ -183,9 +191,10 @@ class PlayerComponent : public Syngine::Component {
     bool        m_simulate        = true;
     float       m_deltaTime       = 0.0f;
 
-    bx::Vec3 m_moveDirection = { 0.0f,
-                                 0.0f,
-                                 0.0f }; // Direction of movement in world space
+    // m_newVelocity stays as a JPH vec because it interacts directly with Jolt.
+    // I feel it more natural to keep it as a Jolt type rather than converting
+    // back and forth to a Syngine type.
+    Vector3 m_moveDirection;
     JPH::Vec3 m_newVelocity   = { 0.0f,
                                  0.0f,
                                  0.0f }; // New velocity to be applied to the character

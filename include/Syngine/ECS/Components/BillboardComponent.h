@@ -42,7 +42,7 @@ class BillboardComponent : public Syngine::Component {
 
     GameObject* m_owner; // Reference to the owner game object
 
-    float m_rot[3] = { 0.0f, 0.0f, 0.0f }; //* Rotation of the billboard
+    Vector3 m_rot = Vector3(); //* Rotation around X, Y, Z axes in radians
   public:
 
     float size = 1.0f; //* Size of the billboard
@@ -123,29 +123,23 @@ class BillboardComponent : public Syngine::Component {
 
     /// @brief Set rotation around X, Y, Z axes
     /// @param rot Rotation around X axis in radians
-    void SetRotX(float rotX) { this->m_rot[0] = rotX; }
+    void SetRotX(float rotX) { this->m_rot.setX(rotX); }
 
     /// @brief Set rotation around X, Y, Z axes
     /// @param rot Rotation around X axis in radians
-    void SetRotY(float rotY) { this->m_rot[1] = rotY; }
+    void SetRotY(float rotY) { this->m_rot.setY(rotY); }
 
     /// @brief Set rotation around X, Y, Z axes
     /// @param rot Rotation around X axis in radians
-    void SetRotZ(float rotZ) { this->m_rot[2] = rotZ; }
+    void SetRotZ(float rotZ) { this->m_rot.setZ(rotZ); }
 
     /// @brief Set rotation around X, Y, Z axes
-    /// @param rotX Rotation around X axis in radians
-    /// @param rotY Rotation around Y axis in radians
-    /// @param rotZ Rotation around Z axis in radians
-    void SetRot(float rotX, float rotY, float rotZ) {
-        this->m_rot[0] = rotX;
-        this->m_rot[1] = rotY;
-        this->m_rot[2] = rotZ;
-    }
+    /// @param rot The rotation vector containing rotation around X, Y, Z axes in radians
+    void SetRot(const Vector3& rot) { this->m_rot = rot; }
 
     /// @brief Get rotation around X, Y, Z axes
-    /// @return float* Pointer to array of 3 floats representing rotation
-    float* GetRot() { return this->m_rot; }
+    /// @return Vector3 The rotation vector containing rotation around X, Y, Z axes in radians
+    Vector3 GetRot() const { return this->m_rot; }
 
     /// @brief Get the billboard mode
     /// @return BillboardMode The billboard rendering mode

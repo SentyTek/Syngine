@@ -10,6 +10,9 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 
+#include "Syngine/Math/Vector3.hpp"
+#include "Syngine/Math/Quaternion.hpp"
+
 #include <string>
 #include <vector>
 #include <functional>
@@ -18,27 +21,26 @@ namespace Syngine {
 
 /// @brief Enum representing the shape of the zone.
 /// @section ZoneComponent
-enum class ZoneShape {
-    BOX = 0, //* Axis-aligned box shape
-    SPHERE = 1, //* Sphere shape (size[0] is radius, size[1] and size[2] are ignored)
+enum class ZoneShape : uint8_t {
+    BOX = 0, //* Axis-aligned box shape (size.x, size.y, size.z are width,
+             // height, depth)
+    SPHERE =
+        1, //* Sphere shape (size.x is radius, size.y and size.z are ignored)
 };
 
 /// @brief ZoneComponent is used to define an area within the game world that
 /// can be used to trigger events
 /// @section ZoneComponent
 class ZoneComponent : public Syngine::Component {
-    float m_size[3] = { 1.0f,
-                        1.0f,
-                        1.0f }; //* Size of the zone (whd for box, r for sphere)
+    Math::Vector3 m_size =
+        Math::Vector3(1.0f); //* Size of the zone (whd for box, r for sphere)
+    Math::Vector3 m_pos =
+        Math::Vector3(); //* Position of the zone center (world space)
+    Math::Quaternion m_rot =
+        Math::Quaternion(); //* Rotation of the zone (for box shape). This is a
+                            //quaternion. Not used for sphere shape
 
     ZoneShape m_shape = ZoneShape::BOX; //* Shape of the zone (box or sphere)
-
-    float m_pos[3] = { 0.0f, 0.0f, 0.0f }; //* Position of the zone center
-
-    float m_rot[3] = {
-        0.0f, 0.0f, 0.0f
-    }; //* Rotation of the zone (for box shape). This is a
-       // Euler angle in degrees. Not used for sphere shape
 
     bool m_active = true; //* Whether the zone is active or not
 
@@ -62,11 +64,11 @@ class ZoneComponent : public Syngine::Component {
     /// @param size The size of the zone (whd for box, r for sphere).
     /// @param oneShot Whether the zone is a one-shot zone (triggers only once per object).
     /// @note This should only be called by GameObject::AddComponent<T>()
-    ZoneComponent(GameObject* owner,
-                  ZoneShape   shape,
-                  const float pos[3],
-                  const float size[3],
-                  bool        oneShot = false);
+    ZoneComponent(GameObject*          owner,
+                  ZoneShape            shape,
+                  const Math::Vector3& pos,
+                  const Math::Vector3& size,
+                  bool                 oneShot = false);
 
     ZoneComponent(const ZoneComponent& other);
     ZoneComponent& operator=(const ZoneComponent& other);
@@ -99,10 +101,10 @@ class ZoneComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    void Init(ZoneShape   shape,
-              const float pos[3],
-              const float size[3],
-              bool        oneShot);
+    void Init(ZoneShape            shape,
+              const Math::Vector3& pos,
+              const Math::Vector3& size,
+              bool                 oneShot);
 
     /// @brief Update the zone component.
     /// @note There is no specific update logic for the zone component
@@ -118,40 +120,43 @@ class ZoneComponent : public Syngine::Component {
     ZoneShape GetShape() const;
 
     /// @brief Get the position of the zone center.
-    /// @param outPos Output array to store the position (size 3).
+    /// @return The position of the zone center as a Math::Vector3.
+    /// @note For box shape, this is the center of the box. For sphere shape, this is the center of the sphere.
     /// @threadsafety read-only
     /// @since v0.0.1
-    void GetPosition(float outPos[3]) const;
+    Math::Vector3 GetPosition() const;
 
     /// @brief Set the position of the zone center.
     /// @param pos The new position of the zone center (size 3).
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetPosition(const float pos[3]);
+    void SetPosition(const Math::Vector3& pos);
 
     /// @brief Get the size of the zone.
-    /// @param outSize Output array to store the size (size 3).
+    /// @return The size of the zone as a Math::Vector3 (whd for box, r for sphere).
     /// @threadsafety read-only
     /// @since v0.0.1
-    void GetSize(float outSize[3]) const;
+    Math::Vector3 GetSize() const;
 
     /// @brief Set the size of the zone.
     /// @param size The new size of the zone (size 3).
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetSize(const float size[3]);
+    void SetSize(const Math::Vector3& size);
 
     /// @brief Get the rotation of the zone (for box shape).
-    /// @param outRot Output array to store the rotation (size 3).
+    /// @return The rotation of the zone as a Math::Quaternion.
+    /// @note For sphere shape, this will return the identity quaternion. For
+    /// box shape, this represents the rotation of the box in world space.
     /// @threadsafety read-only
     /// @since v0.0.1
-    void GetRotation(float outRot[3]) const;
+    Math::Quaternion GetRotation() const;
 
     /// @brief Set the rotation of the zone (for box shape).
-    /// @param rot The new rotation of the zone (size 3).
+    /// @param rot The new rotation of the zone as a Math::Quaternion.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetRotation(const float rot[3]);
+    void SetRotation(const Math::Quaternion& rot);
 
     /// @brief Check if the zone is active.
     /// @return True if the zone is active, false otherwise.
@@ -240,7 +245,7 @@ class ZoneComponent : public Syngine::Component {
     /// @return True if the point is inside the zone, false otherwise.
     /// @threadsafety read-only
     /// @since v0.0.1
-    bool IsInZone(const float point[3]) const;
+    bool IsInZone(const Math::Vector3& point) const;
 
     /// @brief Check if a GameObject is inside the zone.
     /// @param object The GameObject to check.

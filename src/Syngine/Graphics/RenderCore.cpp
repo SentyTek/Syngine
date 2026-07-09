@@ -17,6 +17,9 @@
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/Graphics/Windowing.h"
 #include "Syngine/Graphics/TextureHelpers.h"
+#include "Syngine/Math/Matrix4x4.hpp"
+#include "Syngine/Math/Vector3.hpp"
+#include "Syngine/Math/Vector4.hpp"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Serializer.h"
 #include "Syngine/Utils/Version.h"
@@ -671,9 +674,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     static bgfx::VertexBufferHandle fullscreenDummyVBH = BGFX_INVALID_HANDLE;
 
     if (!bgfx::isValid(fullscreenDummyVBH)) {
-        static float dummyData[3] = { 0.0f,
-                                      0.0f,
-                                      0.0f }; // just 1 vertex's worth
+        static Vector3 dummyData = { Vector3(0.0f, 0.0f, 0.0f) };
 
         bgfx::VertexLayout dummyLayout;
         dummyLayout.begin()
@@ -681,7 +682,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
             .end();
 
         fullscreenDummyVBH = bgfx::createVertexBuffer(
-            bgfx::copy(dummyData, sizeof(dummyData)), dummyLayout);
+            bgfx::copy(&dummyData, sizeof(dummyData)), dummyLayout);
 
         dummyVbh = fullscreenDummyVBH;
     }
@@ -692,10 +693,10 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     }
 
     // Set default sky colors
-    float skyColorZenith[4]   = { 0.529f, 0.808f, 0.922f, 1.0f };
-    float skyColorMidnight[4] = { 0.05f, 0.05f, 0.1f, 1.0f };
-    float sunColor[4]         = { 1.0f, 0.956f, 0.839f, 1.0f };
-    float scatterColor[4]     = { 0.8f, 0.5f, 0.3f, 1.0f };
+    Math::Vector3 skyColorZenith   = { 0.529f, 0.808f, 0.922f };
+    Math::Vector3 skyColorMidnight = { 0.05f, 0.05f, 0.1f };
+    Math::Vector3 sunColor         = { 1.0f, 0.956f, 0.839f };
+    Math::Vector3 scatterColor     = { 0.8f, 0.5f, 0.3f };
 
     Renderer::SetUniform(m_defaultUniformIds["u_skyColorZenith"],
                          skyColorZenith);
@@ -898,70 +899,60 @@ Uniform* RenderCore::_GetDefaultUniform(const std::string& name) {
 --- Drawing helpers ---
 */
 
-void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
-                                           float*           outLightView,
-                                           float*           outLightProj,
-                                           float*           outCascadeSplits) {
-    float lightDir[3];
-    Renderer::GetSunDirection(lightDir);
-    const bx::Vec3 lightDirVec =
-        bx::normalize(bx::Vec3(lightDir[0], lightDir[1], lightDir[2]));
+void RenderCore::_CalculateCascadeMatrices(
+    CameraComponent*                camera,
+    std::array<Math::Matrix4x4, 4>& outLightView,
+    std::array<Math::Matrix4x4, 4>& outLightProj,
+    Math::Vector4&                  outCascadeSplits) {
+    const Math::Vector3 lightDirVec = Renderer::GetSunDirection().normalized();
 
-    const float* camPos = camera->GetPosition();
+    const Math::Vector3 target = camera->GetPosition();
+    const Math::Vector3 up(0.0f, 1.0f, 0.0f); // Up vector for light view matrix
 
-    float cascadeDistances[NUM_CASCADES];
-    float lightViewProj[NUM_CASCADES * 16];
+    Math::Vector4 cascadeDistances;
+    std::array<Math::Matrix4x4, NUM_CASCADES> lightViewProj;
 
     // How far light is from camera
     // Light is always targeting camera, will be some distance away
     float lightDistance = 50.0f;
 
-    bx::Vec3 target = { camPos[0], camPos[1], camPos[2] };
-    bx::Vec3 up     = { 0.0f, 1.0f, 0.0f };
-
-    bx::Vec3 zero = { 0.0f, 0.0f, 0.0f };
-    float    lightViewRaw[16];
-    bx::mtxLookAt(lightViewRaw, zero, lightDirVec);
+    Math::Vector3 zero;
+    Math::Mat4 lightViewRaw;
+    bx::mtxLookAt(lightViewRaw.data(), zero.toBxVec3(), lightDirVec.toBxVec3());
 
     for (uint32_t i = 0; i < NUM_CASCADES; i++) {
         float size = m_cascadeSizes[i];
 
-        float camPos4[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
-        float camPosLightSpace[4];
-        bx::vec4MulMtx(camPosLightSpace, camPos4, lightViewRaw);
+        Math::Vector4 camPos4(target);
+        Math::Vector4 camPosLightSpace = lightViewRaw * camPos4;
 
         float worldPerTexel    = (size * 2.0f) / float(SHADOW_MAP_SIZE);
         m_cascadeTexelSizes[i] = worldPerTexel;
         float xSnapped =
-            floor(camPosLightSpace[0] / worldPerTexel) * worldPerTexel;
+            floor(camPosLightSpace.x() / worldPerTexel) * worldPerTexel;
         float ySnapped =
-            floor(camPosLightSpace[1] / worldPerTexel) * worldPerTexel;
+            floor(camPosLightSpace.y() / worldPerTexel) * worldPerTexel;
 
-        float yOffset = ySnapped - camPosLightSpace[1];
-        float xOffset = xSnapped - camPosLightSpace[0];
+        float xOffset = xSnapped - camPosLightSpace.x();
+        float yOffset = ySnapped - camPosLightSpace.y();
 
-        bx::Vec3 lightPosSnapped = { camPos[0] + lightDirVec.x * lightDistance,
-                                     camPos[1] + lightDirVec.y * lightDistance,
-                                     camPos[2] +
-                                         lightDirVec.z * lightDistance };
+        Math::Vector3 lightPosSnapped = target + lightDirVec * lightDistance;
 
         if (Core::_GetContext()->debug.CSMBounds) {
             // Draw line from light to target
-            float from[3] = { lightPosSnapped.x,
-                              lightPosSnapped.y,
-                              lightPosSnapped.z };
-            float to[3]   = { target.x, target.y, target.z };
+            Math::Vector3 from = lightPosSnapped;
+            Math::Vector3 to   = target;
             Core::_GetContext()->physicsManager->_DrawLine(
                 from, to, JPH::Color::sYellow);
         }
 
-        bx::mtxLookAt(&outLightView[i * 16], lightPosSnapped, target);
+        bx::mtxLookAt(outLightView[i].data(), lightPosSnapped.toBxVec3(), target.toBxVec3());
 
         // Try and keep tight near/far planes for good precision
         float lightNear = 20.0f;
         float lightFar  = m_config.shadowDist + 50.0f; // Some margin
 
-        bx::mtxOrtho(&outLightProj[i * 16],
+        bx::mtxOrtho(outLightProj[i].data(),
                      -size + xOffset,
                      size + xOffset,
                      -size + yOffset,
@@ -971,86 +962,67 @@ void RenderCore::_CalculateCascadeMatrices(CameraComponent* camera,
                      0.0f,
                      bgfx::getCaps()->homogeneousDepth);
 
-        cascadeDistances[i] = m_cascadeSizes[i] / 2.0f;
-        outCascadeSplits[i] = cascadeDistances[i];
-        bx::mtxMul(&lightViewProj[i * 16],
-                   &outLightView[i * 16],
-                   &outLightProj[i * 16]);
+        cascadeDistances.set(i, m_cascadeSizes[i] / 2.0f);
+        bx::mtxMul(lightViewProj[i].data(),
+               outLightView[i].data(),
+               outLightProj[i].data());
     }
 
+    outCascadeSplits = cascadeDistances;
+
     Renderer::SetUniform(m_defaultUniformIds["u_default_csmLightViewProj"],
-                         lightViewProj,
+                 lightViewProj[0].data(),
                          NUM_CASCADES);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_csmLightViewProj"],
-                         lightViewProj,
+                 lightViewProj[0].data(),
                          NUM_CASCADES);
 }
 
 CameraComponent::Frustum
 RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
     CameraComponent::Frustum cascadeFrustum;
-    float lightView[16 * NUM_CASCADES], lightProj[16 * NUM_CASCADES],
-        outCascadeSplits[NUM_CASCADES];
+    std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
+    std::array<Math::Matrix4x4, NUM_CASCADES> lightProj;
+    Math::Vector4 outCascadeSplits;
     _CalculateCascadeMatrices(camera, lightView, lightProj, outCascadeSplits);
 
-    // Get the view-projection matrix for this cascade
-    float* cascadeView = &lightView[cascade * 16];
-    float* cascadeProj = &lightProj[cascade * 16];
-    float  cascadeViewProj[16];
-    bx::mtxMul(cascadeViewProj, cascadeView, cascadeProj);
+    Math::Matrix4x4 cascadeViewProj = lightView[cascade] * lightProj[cascade];
 
-    // Extract frustum planes from view-projection matrix
-    // For orthographic projection, we extract planes differently than
-    // perspective
+    const auto extractPlane = [&cascadeViewProj](int axis, float sign) {
+        CameraComponent::Plane plane;
+        plane.normal = Math::Vector3(
+            cascadeViewProj.m(0, 3) + sign * cascadeViewProj.m(0, axis),
+            cascadeViewProj.m(1, 3) + sign * cascadeViewProj.m(1, axis),
+            cascadeViewProj.m(2, 3) + sign * cascadeViewProj.m(2, axis));
+        plane.distance =
+            cascadeViewProj.m(3, 3) + sign * cascadeViewProj.m(3, axis);
+        return plane;
+    };
 
-    // Left plane: row4 + row1
-    cascadeFrustum.left.normal[0] = cascadeViewProj[3] + cascadeViewProj[0];
-    cascadeFrustum.left.normal[1] = cascadeViewProj[7] + cascadeViewProj[4];
-    cascadeFrustum.left.normal[2] = cascadeViewProj[11] + cascadeViewProj[8];
-    cascadeFrustum.left.distance  = cascadeViewProj[15] + cascadeViewProj[12];
+    cascadeFrustum.left = extractPlane(0, 1.0f);
     CameraComponent::_normalizePlane(cascadeFrustum.left);
 
-    // Right plane: row4 - row1
-    cascadeFrustum.right.normal[0] = cascadeViewProj[3] - cascadeViewProj[0];
-    cascadeFrustum.right.normal[1] = cascadeViewProj[7] - cascadeViewProj[4];
-    cascadeFrustum.right.normal[2] = cascadeViewProj[11] - cascadeViewProj[8];
-    cascadeFrustum.right.distance  = cascadeViewProj[15] - cascadeViewProj[12];
+    cascadeFrustum.right = extractPlane(0, -1.0f);
     CameraComponent::_normalizePlane(cascadeFrustum.right);
 
-    // Bottom plane: row4 + row2
-    cascadeFrustum.bottom.normal[0] = cascadeViewProj[3] + cascadeViewProj[1];
-    cascadeFrustum.bottom.normal[1] = cascadeViewProj[7] + cascadeViewProj[5];
-    cascadeFrustum.bottom.normal[2] = cascadeViewProj[11] + cascadeViewProj[9];
-    cascadeFrustum.bottom.distance  = cascadeViewProj[15] + cascadeViewProj[13];
+    cascadeFrustum.bottom = extractPlane(1, 1.0f);
     CameraComponent::_normalizePlane(cascadeFrustum.bottom);
 
-    // Top plane: row4 - row2
-    cascadeFrustum.top.normal[0] = cascadeViewProj[3] - cascadeViewProj[1];
-    cascadeFrustum.top.normal[1] = cascadeViewProj[7] - cascadeViewProj[5];
-    cascadeFrustum.top.normal[2] = cascadeViewProj[11] - cascadeViewProj[9];
-    cascadeFrustum.top.distance  = cascadeViewProj[15] - cascadeViewProj[13];
+    cascadeFrustum.top = extractPlane(1, -1.0f);
     CameraComponent::_normalizePlane(cascadeFrustum.top);
 
-    // Near plane: row4 + row3
-    cascadeFrustum.n.normal[0] = cascadeViewProj[3] + cascadeViewProj[2];
-    cascadeFrustum.n.normal[1] = cascadeViewProj[7] + cascadeViewProj[6];
-    cascadeFrustum.n.normal[2] = cascadeViewProj[11] + cascadeViewProj[10];
-    cascadeFrustum.n.distance  = cascadeViewProj[15] + cascadeViewProj[14];
+    cascadeFrustum.n = extractPlane(2, 1.0f);
     CameraComponent::_normalizePlane(cascadeFrustum.n);
 
-    // Far plane: row4 - row3
-    cascadeFrustum.f.normal[0] = cascadeViewProj[3] - cascadeViewProj[2];
-    cascadeFrustum.f.normal[1] = cascadeViewProj[7] - cascadeViewProj[6];
-    cascadeFrustum.f.normal[2] = cascadeViewProj[11] - cascadeViewProj[10];
-    cascadeFrustum.f.distance  = cascadeViewProj[15] - cascadeViewProj[14];
+    cascadeFrustum.f = extractPlane(2, -1.0f);
     CameraComponent::_normalizePlane(cascadeFrustum.f);
     return cascadeFrustum;
 }
 
-float RenderCore::_CalculateScreenSize(const MeshAABB& aabb,
-                                       const float*    cameraPos,
-                                       const Camera&   camera,
-                                       float           distance) {
+float RenderCore::_CalculateScreenSize(const MeshAABB&      aabb,
+                                       const Math::Vector3& cameraPos,
+                                       const Camera&        camera,
+                                       float                distance) {
     // Very close == huge on screen
     if (distance <= 0.01f) return 1000.0f;
 
@@ -1072,13 +1044,13 @@ bool RenderCore::_ShouldCullBySize(GameObject* go, CameraComponent* camera) {
     if (!meshComp || !meshComp->isEnabled) return false;
 
     MeshAABB     aabb   = meshComp->GetAABB();
-    const float* camPos = camera->GetPosition();
+    const Math::Vector3 camPos = camera->GetPosition();
     Camera       cam    = camera->GetCamera();
 
     // Calculate distance to object
-    float dx       = aabb.center[0] - camPos[0];
-    float dy       = aabb.center[1] - camPos[1];
-    float dz       = aabb.center[2] - camPos[2];
+    float dx       = aabb.center[0] - camPos.x();
+    float dy       = aabb.center[1] - camPos.y();
+    float dz       = aabb.center[2] - camPos.z();
     float distance = sqrtf(dx * dx + dy * dy + dz * dz);
 
     // Don't cull close objects
@@ -1099,31 +1071,20 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
     MeshAABB aabb = meshComp->GetAABB();
 
     // Get light position for this cascade
-    float lightDir[3];
-    Renderer::GetSunDirection(lightDir);
-    const float* camPos        = camera->GetPosition();
+    Math::Vector3 lightDir = Renderer::GetSunDirection();
+    const Math::Vector3 camPos = camera->GetPosition();
     float        lightDistance = 100.0f; // Same as in _CalculateCascadeMatrices
+    const Math::Vector3 lightPos = camPos + lightDir * lightDistance;
 
-    float lightPos[3] = { camPos[0] + lightDir[0] * lightDistance,
-                          camPos[1] + lightDir[1] * lightDistance,
-                          camPos[2] + lightDir[2] * lightDistance };
-
-    // Calculate distance from light to object
-    float dx       = aabb.center[0] - lightPos[0];
-    float dy       = aabb.center[1] - lightPos[1];
-    float dz       = aabb.center[2] - lightPos[2];
-    float distance = sqrtf(dx * dx + dy * dy + dz * dz);
-
-    float cdx         = aabb.center[0] - camPos[0];
-    float cdy         = aabb.center[1] - camPos[1];
-    float cdz         = aabb.center[2] - camPos[2];
-    float camDistance = sqrtf(cdx * cdx + cdy * cdy + cdz * cdz);
+    float distance = lightPos.distance(aabb.center);
+    float camDistance = camPos.distance(aabb.center);
 
     // Don't cull very close objects to light, nor close to the camera
     if (distance < 10.0f || camDistance < 20.0f) return false;
 
     // For orthographic projection, objects far from light contribute less to
-    // shadows Get object size
+    // shadows
+    // Get object size
     float maxExtent =
         std::max(
             { aabb.halfExtents[0], aabb.halfExtents[1], aabb.halfExtents[2] }) *
@@ -1158,12 +1119,8 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
         }
 
         MeshAABB aabb = meshComp->GetAABB();
-        bx::Vec3 min  = { aabb.center[0] - aabb.halfExtents[0],
-                          aabb.center[1] - aabb.halfExtents[1],
-                          aabb.center[2] - aabb.halfExtents[2] };
-        bx::Vec3 max  = { aabb.center[0] + aabb.halfExtents[0],
-                          aabb.center[1] + aabb.halfExtents[1],
-                          aabb.center[2] + aabb.halfExtents[2] };
+        Math::Vector3 min = aabb.min;
+        Math::Vector3 max = aabb.max;
         if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
             m_drawnCounts.culledFrustum++;
             continue;
@@ -1172,23 +1129,11 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
         bgfx::ProgramHandle program = Renderer::GetProgram(go->type).program;
         if (!bgfx::isValid(program)) continue;
 
-        float modelMtx[16];
-        go->GetComponent<TransformComponent>()->GetModelMatrix(modelMtx);
-
-        float det =
-            modelMtx[0] *
-                (modelMtx[5] * modelMtx[10] - modelMtx[6] * modelMtx[9]) -
-            modelMtx[1] *
-                (modelMtx[4] * modelMtx[10] - modelMtx[6] * modelMtx[8]) +
-            modelMtx[2] *
-                (modelMtx[4] * modelMtx[9] - modelMtx[5] * modelMtx[8]);
-
+        Mat4 modelMtx = go->GetComponent<TransformComponent>()->GetModelMatrix();
+        float det = modelMtx.determinant();
         bool mirrored = det < 0.0f;
-
-        float invModelMtx[16];
-        bx::mtxInverse(invModelMtx, modelMtx);
-        float normalMatrix[16];
-        bx::mtxTranspose(normalMatrix, invModelMtx);
+        modelMtx.invert();
+        modelMtx.transpose();
 
         // Emit one packet per submesh
         for (size_t submeshIdx = 0; submeshIdx < meshData.subMeshes.size();
@@ -1209,7 +1154,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             packet.indexStart = submesh.indexStart;
             packet.indexCount = submesh.indexCount;
 
-            memcpy(packet.modelMtx, modelMtx, sizeof(modelMtx));
+            packet.modelMtx = modelMtx;
             packet.program = { program };
 
             uint16_t handle = static_cast<uint16_t>(
@@ -1218,7 +1163,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             if (uModel) {
                 matInst.uniforms.push_back(
                     { uModel->handle,
-                      std::vector<float>(normalMatrix, normalMatrix + 16),
+                        modelMtx,
                       1 });
             }
 
@@ -1230,17 +1175,13 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             // Material and uniforms
             {
                 // UV scale
-                std::vector<float> uvScale = {
-                    1.0f, 1.0f, 1.0f, 0.0f
-                }; // W unused for now. One number for each texture.
+                Math::Vector4 uvScale(1.0f); // W unused for now. One number for each texture.
                 if (meshComp->GetObjectUVScaleOverride() != 1.0f) {
-                    uvScale[0] = meshComp->GetObjectUVScaleOverride();
-                    uvScale[1] = meshComp->GetObjectUVScaleOverride();
-                    uvScale[2] = meshComp->GetObjectUVScaleOverride();
+                    uvScale.setX(meshComp->GetObjectUVScaleOverride());
+                    uvScale.setY(meshComp->GetObjectUVScaleOverride());
+                    uvScale.setZ(meshComp->GetObjectUVScaleOverride());
                 } else {
-                    uvScale[0] = mat.uvScale[0];
-                    uvScale[1] = mat.uvScale[1];
-                    uvScale[2] = mat.uvScale[2];
+                    uvScale = mat.uvScale;
                 }
                 MaterialInstance::UniformData uniformData1 = {
                     Renderer::GetUniform(
@@ -1259,12 +1200,10 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                 // all.
                 const float mixf =
                     (go->type == "texture") ? mat.mixFactor : 0.0f;
-                std::vector<float> params1 = {
-                    mixf,
-                    mat.ambient,
-                    meshComp->GetObjectUVScaleOverride(),
-                    mat.useVertexColor ? 1.0f : 0.0f
-                };
+                Math::Vector4 params1(mixf,
+                                      mat.ambient,
+                                      meshComp->GetObjectUVScaleOverride(),
+                                      mat.useVertexColor ? 1.0f : 0.0f);
                 MaterialInstance::UniformData uniformData2 = {
                     Renderer::GetUniform(
                         m_defaultUniformIds.at("u_" + go->type +
@@ -1311,15 +1250,11 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                           sflags });
                 } else if (go->type == "default") {
                     // just u_baseColor for default shader, no samplers
-                    std::vector<float> baseColor = { mat.baseColor[0],
-                                                     mat.baseColor[1],
-                                                     mat.baseColor[2],
-                                                     mat.baseColor[3] };
                     MaterialInstance::UniformData uniformData = {
                         Renderer::GetUniform(
                             m_defaultUniformIds.at("u_baseColor"))
                             ->handle,
-                        baseColor,
+                        mat.baseColor,
                         1
                     };
                     matInst.uniforms.push_back(uniformData);
@@ -1360,12 +1295,13 @@ void RenderCore::_DrawShadows(const Program&   program,
 
     if (Core::_GetContext()->debug.CSMBounds) {
         if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
-        float view[16 * NUM_CASCADES], proj[16 * NUM_CASCADES],
-            outCascadeSplits[NUM_CASCADES];
+        std::array<Math::Matrix4x4, NUM_CASCADES> view;
+        std::array<Math::Matrix4x4, NUM_CASCADES> proj;
+        Math::Vector4 outCascadeSplits;
         _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
         for (int i = 0; i < NUM_CASCADES; ++i) {
-            Core::_GetContext()->physicsManager->_DrawFrustum(view + i * 16,
-                                                              proj + i * 16);
+            Core::_GetContext()->physicsManager->_DrawFrustum(view[i].data(),
+                                                              proj[i].data());
         }
     }
 
@@ -1388,8 +1324,8 @@ void RenderCore::_DrawShadows(const Program&   program,
         }
 
         MeshAABB aabb = meshComp->GetAABB();
-        bx::Vec3 min  = { aabb.min[0], aabb.min[1], aabb.min[2] };
-        bx::Vec3 max  = { aabb.max[0], aabb.max[1], aabb.max[2] };
+        Math::Vector3 min = aabb.min;
+        Math::Vector3 max = aabb.max;
         if (!camera->_aabbInsideFrustum(
                 _GetCascadeFrustum(cascade, camera), min, max)) {
             m_drawnCounts.culledShadowFrustum++;
@@ -1399,10 +1335,8 @@ void RenderCore::_DrawShadows(const Program&   program,
         bgfx::setState(renderState);
 
         // Get the transform for this object
-        float modelMtx[16];
-        gameObject->GetComponent<TransformComponent>()->GetModelMatrix(
-            modelMtx);
-        bgfx::setTransform(modelMtx);
+        Mat4 modelMtx = gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
+        bgfx::setTransform(modelMtx.data());
 
         bgfx::setVertexBuffer(0, meshData.vbh);
         bgfx::setIndexBuffer(meshData.ibh);
@@ -1422,12 +1356,12 @@ void RenderCore::_DrawSky(const Program&         program,
                    BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_ALWAYS |
                    BGFX_STATE_MSAA | BGFX_STATE_CULL_CW);
 
-    const float* cameraPos = camera->GetPosition();
+    const Math::Vector3 cameraPos = camera->GetPosition();
+    const Math::Vector4 skyCameraPos(cameraPos, 1.0f);
+    const Math::Vector4 timeVec(static_cast<float>(Core::m_frameCounter.frameCount));
 
-    Renderer::SetUniform(m_defaultUniformIds.at("u_sky_cameraPos"), cameraPos);
-    const float timeVec[4] = {
-        static_cast<float>(Core::m_frameCounter.frameCount), 0.f, 0.f, 0.f
-    };
+    Renderer::SetUniform(m_defaultUniformIds.at("u_sky_cameraPos"),
+                         skyCameraPos);
     Renderer::SetUniform(m_defaultUniformIds.at("u_sky_time"), timeVec);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
@@ -1459,7 +1393,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
                 flags);
         }
 
-        bgfx::setTransform(packet.modelMtx);
+        bgfx::setTransform(packet.modelMtx.data());
         bgfx::setVertexBuffer(0, packet.vbh);
         bgfx::setIndexBuffer(packet.ibh, packet.indexStart, packet.indexCount);
         bgfx::submit(program.viewId, program.program);
@@ -1486,25 +1420,22 @@ void RenderCore::_DrawDebug(const Program&   program,
             if (!zone || !zone->isEnabled) continue;
             switch (zone->GetShape()) {
             case ZoneShape::BOX: {
-                float min[3], max[3], pos[3], size[3];
-                zone->GetPosition(pos);
-                zone->GetSize(size);
+                Vector3 pos = zone->GetPosition();
+                Vector3 size = zone->GetSize();
+                Vector3 min, max;
                 for (int i = 0; i < 3; ++i) {
-                    min[i] = pos[i] - size[i] * 0.5f;
-                    max[i] = pos[i] + size[i] * 0.5f;
+                    min.set(i, pos[i] - size[i] * 0.5f);
+                    max.set(i, pos[i] + size[i] * 0.5f);
                 }
 
                 m_drender->DrawBox(min, max, JPH::Color::sRed);
                 break;
             }
             case ZoneShape::SPHERE: {
-                float pos[3];
-                float size[3];
-                zone->GetPosition(pos);
-                zone->GetSize(size); // size.x is radius
-                m_drender->DrawSphere(JPH::Vec3(pos[0], pos[1], pos[2]),
-                                      size[0],
-                                      JPH::Color::sRed);
+                Vector3 pos = zone->GetPosition();
+                Vector3 size = zone->GetSize(); // size.x is radius
+                m_drender->DrawSphere(
+                    pos.toJoltRVec3(), size[0], JPH::Color::sRed);
                 break;
             }
             }
@@ -1562,58 +1493,54 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
         if (!comp || !comp->isEnabled) continue;
 
         // Since we can't use _ShouldCullBySize for billboards (they don't have mesh data), we do a simple distance check here and skip if they're too far away to be visible
-        const float* camPos = camera->GetPosition();
-        const float* goPos  = go->GetComponent<TransformComponent>()->GetPosition();
-        const float  dx     = goPos[0] - camPos[0];
-        const float  dy     = goPos[1] - camPos[1];
-        const float  dz     = goPos[2] - camPos[2];
+        const Vector3 camPos = camera->GetPosition();
+        const Vector3 goPos =
+            go->GetComponent<TransformComponent>()->GetPosition();
+        const float  dx     = goPos.x() - camPos.x();
+        const float  dy     = goPos.y() - camPos.y();
+        const float  dz     = goPos.z() - camPos.z();
         const float  distance = sqrtf(dx * dx + dy * dy + dz * dz);
         if (distance > m_maxSmallObjDistance) {
             m_drawnCounts.culledSize++;
             continue;
         }
 
-        bx::Vec3 min = { goPos[0] - comp->size * 0.5f,
-                         goPos[1],
-                         goPos[2] - comp->size * 0.5f };
-        bx::Vec3 max = { goPos[0] + comp->size * 0.5f,
-                         goPos[1] + comp->size,
-                         goPos[2] + comp->size * 0.5f };
+        bx::Vec3 min = { goPos.x() - comp->size * 0.5f,
+                         goPos.y(),
+                         goPos.z() - comp->size * 0.5f };
+        bx::Vec3 max = { goPos.x() + comp->size * 0.5f,
+                         goPos.y() + comp->size,
+                         goPos.z() + comp->size * 0.5f };
         if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
             m_drawnCounts.culledFrustum++;
             continue;
         }
 
-        const float* pos =
+        const Vector3 pos =
             go->GetComponent<TransformComponent>()->GetPosition();
 
         // Pack center position and size into a vec4 and send it off
-        float billboardData[4] = { pos[0], pos[1], pos[2], comp->size };
+        Math::Vector4 billboardData(pos, comp->size);
         Renderer::SetUniform(m_defaultUniformIds["u_billboard"], billboardData);
 
         // In addition, send the mode and rot as a vec4
-        float* rot               = comp->GetRot();
-        float  billboardExtra[4] = {
-            rot[0], rot[1], rot[2], static_cast<float>(comp->GetMode())
-        };
+        Math::Vector4 billboardExtra(comp->GetRot(),
+                                     static_cast<float>(comp->GetMode()));
         Renderer::SetUniform(m_defaultUniformIds["u_billboard_mode"],
                              billboardExtra);
 
-        float lightingFlags[4] = { comp->receiveSunLight ? 1.0f : 0.0f,
-                                   (comp->receiveShadows && m_config.useShadows)
-                                       ? 1.0f
-                                       : 0.0f,
-                                   0.0f,
-                                   0.0f };
+        Math::Vector4 lightingFlags(
+            comp->receiveSunLight ? 1.0f : 0.0f,
+            (comp->receiveShadows && m_config.useShadows) ? 1.0f : 0.0f,
+            0.0f,
+            0.0f);
         Renderer::SetUniform(m_defaultUniformIds["u_billboard_lighting"],
                              lightingFlags);
 
         // Dummy model matrix for the billboard
-        float modelMtx[16];
-        bx::mtxIdentity(modelMtx);
-
+        Math::Matrix4x4 modelMtx;
         bgfx::setState(renderState);
-        bgfx::setTransform(modelMtx);
+        bgfx::setTransform(modelMtx.data());
         bgfx::setVertexBuffer(0, m_billboardVbh);
         bgfx::setIndexBuffer(m_billboardIbh);
 
@@ -1658,15 +1585,13 @@ void RenderCore::_DrawPostProcess(const Program& program) {
                 ->handle,
             m_buffers.sceneNormal);
 
-        const float ssaoParams[4] = {
-            0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width / 2.0f)
-        };
-        const float ssaoResolution[4] = {
+        const Math::Vector4 ssaoParams(
+            0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width / 2.0f));
+        const Math::Vector4 ssaoResolution(
             static_cast<float>(Renderer::width),
             static_cast<float>(Renderer::height),
             1.0f / static_cast<float>(Renderer::width),
-            1.0f / static_cast<float>(Renderer::height)
-        };
+            1.0f / static_cast<float>(Renderer::height));
         Renderer::SetUniform(m_defaultUniformIds.at("u_ssao_params"),
                              ssaoParams);
         Renderer::SetUniform(m_defaultUniformIds.at("u_ssao_resolution"),
@@ -1719,12 +1644,11 @@ void RenderCore::_DrawPostProcess(const Program& program) {
                                  ->handle,
                              m_buffers.sceneNormal);
 
-            const float ssaoBlurParams[4] = { 1.5f,
-                                              static_cast<float>(i),
-                                              static_cast<float>(
-                                                  Renderer::width),
-                                              static_cast<float>(
-                                                  Renderer::height) };
+            const Math::Vector4 ssaoBlurParams(
+                1.5f,
+                static_cast<float>(i),
+                static_cast<float>(Renderer::width),
+                static_cast<float>(Renderer::height));
             Renderer::SetUniform(m_defaultUniformIds.at("u_ssaob_params"),
                                  ssaoBlurParams);
             _ScreenSpaceQuad(ViewID(VIEW_AO + i + 1), program);
@@ -1750,31 +1674,23 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
             if (!comp) continue;
 
             const BillboardComponent* gizmo = it->second;
-            const float*              pos   = comp->GetPosition();
+            const Vector3             pos   = comp->GetPosition();
 
             // Pack center position and size into a vec4 and send it off
-            float billboardData[4] = { pos[0], pos[1], pos[2], gizmo->size };
+            const Math::Vector4 billboardData(pos, gizmo->size);
             Renderer::SetUniform(m_defaultUniformIds["u_billboard"],
                                  billboardData);
 
-            // In addition, send the mode and rot as a vec4
-            float billboardExtra[4] = {
-                0.0f, 0.0f, 0.0f, 0.0f
-            }; // No rotation or special mode for gizmos
-            Renderer::SetUniform(m_defaultUniformIds["u_billboard_mode"],
-                                 billboardExtra);
-            float lightingFlags[4] = {
-                0.0f, 0.0f, 0.0f, 0.0f
-            }; // No lighting for gizmos
+            Renderer::SetUniform(
+                m_defaultUniformIds["u_billboard_mode"],
+                Math::Vector4()); // No rotation or mode for gizmos
             Renderer::SetUniform(m_defaultUniformIds["u_billboard_lighting"],
-                                 lightingFlags);
+                                 Math::Vector4()); // No lighting for gizmos
 
             // Dummy model matrix for the billboard
-            float modelMtx[16];
-            bx::mtxIdentity(modelMtx);
-
+            Math::Mat4 modelMtx;
             bgfx::setState(state);
-            bgfx::setTransform(modelMtx);
+            bgfx::setTransform(modelMtx.data());
             bgfx::setVertexBuffer(0, m_billboardVbh);
             bgfx::setIndexBuffer(m_billboardIbh);
             bgfx::setTexture(
@@ -1818,45 +1734,33 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
     camera->Update(VIEW_FORWARD, safeWidth, safeHeight);
     Camera cam = camera->GetCamera();
 
-    const float* camPos     = camera->GetPosition();
-    float        viewPos[4] = { camPos[0], camPos[1], camPos[2], 1.0f };
+    Math::Vector4 viewPos(camera->GetPosition(), 1.0f);
     Renderer::SetUniform(m_defaultUniformIds["u_default_viewPos"], viewPos);
     Renderer::SetUniform(m_defaultUniformIds["u_texture_viewPos"], viewPos);
 
-    float sunDir[3];
-    Renderer::GetSunDirection(
-        sunDir); // returns normalized world-space direction TO the light
-                 // (direction-to-light)
-    float lightDirUniform[4] = { sunDir[0], sunDir[1], sunDir[2], 0.0f };
-    Renderer::SetUniform(m_defaultUniformIds["u_default_lightDir"],
-                         lightDirUniform);
-    Renderer::SetUniform(m_defaultUniformIds["u_texture_lightDir"],
-                         lightDirUniform);
+    const Math::Vector4 sunDir(Renderer::GetSunDirection(), 0.0f);
+    Renderer::SetUniform(m_defaultUniformIds["u_default_lightDir"], sunDir);
+    Renderer::SetUniform(m_defaultUniformIds["u_texture_lightDir"], sunDir);
 
-    float lightView[NUM_CASCADES * 16];
-    float lightProj[NUM_CASCADES * 16];
+    std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
+    std::array<Math::Matrix4x4, NUM_CASCADES> lightProj;
     if (m_config.useShadows) {
         // Calculate the cascade matrices for shadow mapping and send to GPU
-        float cascadeSplits[NUM_CASCADES];
+        Math::Vector4 cascadeSplits;
         _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
 
         int   farClip   = m_config.shadowDist;
-        float splits[4] = { cascadeSplits[0],
-                            cascadeSplits[1],
-                            cascadeSplits[2],
-                            cascadeSplits[3] };
         Renderer::SetUniform(m_defaultUniformIds["u_default_csmSplits"],
-                             splits);
+                             cascadeSplits);
         Renderer::SetUniform(m_defaultUniformIds["u_texture_csmSplits"],
-                             splits);
+                             cascadeSplits);
 
-        float shadowParams[4] = {
-            bgfx::getCaps()->homogeneousDepth ? 1.0f
-                                              : 0.0f, // Homogeneous depth
-            1.0f / (float)(SHADOW_MAP_SIZE * 2),      // Inv shadow map size
-            static_cast<float>(m_config.shadowDist),  // Light far plane
-            0.0f                                      // Debug value, not used
-        };
+        Math::Vector4 shadowParams(
+            bgfx::getCaps()->homogeneousDepth ? 1.0f : 0.0f, // Homogeneous depth
+            1.0f / (float)(SHADOW_MAP_SIZE * 2),             // Inv shadow map size
+            static_cast<float>(farClip),                     // Light far plane
+            0.0f                                             // Debug value, not used
+        );
         Renderer::SetUniform(m_defaultUniformIds["u_default_shadowParams"],
                              shadowParams);
         Renderer::SetUniform(m_defaultUniformIds["u_texture_shadowParams"],
@@ -1881,7 +1785,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                 bgfx::setViewClear(
                     cascadeViewId, BGFX_CLEAR_DEPTH, 0x00000000, 1.0f, 0);
                 bgfx::setViewTransform(
-                    cascadeViewId, &lightView[i * 16], &lightProj[i * 16]);
+                    cascadeViewId, lightView[i].data(), lightProj[i].data());
             }
 
             break;
@@ -1897,7 +1801,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
 
             camera->Update(view, Renderer::width, Renderer::height);
             Camera cam = camera->GetCamera();
-            bgfx::setViewTransform(view, cam.view, cam.proj);
+            bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
             break;
         }
         case VIEW_AO:
@@ -1912,12 +1816,10 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                                  : (BGFX_CLEAR_NONE);
             bgfx::setViewClear(view, flags, 0x000000ff, 1.0f, 0);
             if (view == VIEW_AO) {
-                bgfx::setViewTransform(view, cam.view, cam.proj);
+                bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
             } else {
-                float identity[16];
-                float orthoProj[16];
-                bx::mtxIdentity(identity);
-                bx::mtxOrtho(orthoProj,
+                Math::Mat4 identity, orthoProj;
+                bx::mtxOrtho(orthoProj.data(),
                              0.0f,
                              1.0f,
                              1.0f,
@@ -1926,7 +1828,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                              1.0f,
                              0.0f,
                              bgfx::getCaps()->homogeneousDepth);
-                bgfx::setViewTransform(view, identity, orthoProj);
+                bgfx::setViewTransform(view, identity.data(), orthoProj.data());
             }
             break;
         }
@@ -1939,7 +1841,7 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             // bgfx::setViewClear(
             //     view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f,
             //     0);
-            bgfx::setViewTransform(view, cam.view, cam.proj);
+            bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
             break;
         }
         }
@@ -1954,7 +1856,8 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                           uint16_t(Renderer::width / 2),
                           uint16_t(Renderer::height / 2));
         bgfx::setViewClear(ViewID(VIEW_AO + i + 1), flags, 0x000000ff, 1.0f, 0);
-        bgfx::setViewTransform(ViewID(VIEW_AO + i + 1), cam.view, cam.proj);
+        bgfx::setViewTransform(
+            ViewID(VIEW_AO + i + 1), cam.view.data(), cam.proj.data());
     }
 
     m_drawnCounts = DrawnObjectCount(); // Reset counts for this frame

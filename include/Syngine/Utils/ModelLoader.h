@@ -7,11 +7,14 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+
+#include <bgfx/bgfx.h>
+
 #include <vector>
 #include <string>
 #include <filesystem>
 
-#include <bgfx/bgfx.h>
+#include <Syngine/Math/Math.hpp>
 
 // forward declarations
 namespace scl {
@@ -26,12 +29,12 @@ namespace Syngine {
 /// @section ModelLoader
 /// @since v0.0.1
 struct Vertex {
-    float pos[3]     = { 0.0f, 0.0f, 0.0f };
-    float normal[3]  = { 0.0f, 0.0f, 0.0f };
-    float uv0[2]     = { 0.0f, 0.0f };             // Macro UV
-    float uv1[2]     = { 0.0f, 0.0f };             // For detail maps
-    float color[4]   = { 1.0f, 1.0f, 1.0f, 1.0f }; // RGBA
-    float tangent[4] = { 0.0f, 0.0f, 0.0f, 0.0f }; // XYZW
+    Math::Vector3 pos; //* Position of the vertex in 3D space
+    Math::Vector3 normal; //* Normal vector at the vertex
+    Math::Vector2 uv0; //* Primary texture coordinates (macro UV)
+    Math::Vector2 uv1; //* Secondary texture coordinates (for detail maps)
+    Math::Vector4 color = Math::Vector4(1.0f); //* Vertex color (RGBA)
+    Math::Vector4 tangent; //* Tangent vector at the vertex (for normal mapping)
 };
 
 /// @brief Material structure for mesh data
@@ -47,7 +50,9 @@ struct Material {
         BGFX_INVALID_HANDLE; //* Height map texture handle
 
     // Per material
-    float uvScale[3] = { 1.0f, 1.0f, 1.0f }; //* UV scale for each texture type (albedo, normal, height)
+    Math::Vector3 uvScale =
+        Math::Vector3(1.0f); //* UV scale vector for each texture type (albedo,
+                             //normal, height)
 
     // Per material properties
     float heightScale = 0.01f; //* Matches blender displacement
@@ -58,7 +63,7 @@ struct Material {
     // is true. It can also be used to tint the albedo texture if useVertexColor
     // is false.
     bool useVertexColor = false; //* Whether to use vertex color or base color
-    float baseColor[4]   = { 1.0f, 1.0f, 1.0f, 1.0f }; //* RGBA base color
+    Math::Vector4 baseColor = Math::Vector4(1.0f); //* RGBA base color
 };
 
 /// @brief SubMesh structure for storing submesh information
@@ -74,9 +79,9 @@ struct SubMesh {
 
     // Base properties
     std::string
-          name; //* Name of the submesh (for debugging and editor purposes)
-    float boundMin[3]; //* Minimum bounding box coordinates for the submesh
-    float boundMax[3]; //* Maximum bounding box coordinates for the submesh
+        name; //* Name of the submesh (for debugging and editor purposes)
+    Math::Vector3 boundMin; //* Minimum corner of the axis-aligned bounding box
+    Math::Vector3 boundMax; //* Maximum corner of the axis-aligned bounding box
 };
 
 /// @brief MeshData structure for storing mesh information
@@ -110,15 +115,14 @@ class ModelLoader {
     static std::vector<MeshData> loadedMeshes;
 
   public:
-    virtual bool
-    _LoadModel(MeshData& out,
-               scl::stream* meshStream,
-               const std::string& assetPath,
-               bool loadTextures) = 0;
-    virtual bool _ReloadModel(MeshData& out,
-                              scl::stream* stream,
+    virtual bool _LoadModel(MeshData&          out,
+                            scl::stream*       meshStream,
+                            const std::string& assetPath,
+                            bool               loadTextures) = 0;
+    virtual bool _ReloadModel(MeshData&          out,
+                              scl::stream*       stream,
                               const std::string& assetPath,
-                              int id) = 0;
+                              int                id) = 0;
 
     /// @brief Unloads all loaded models
     /// @note This is used to clear all loaded models, for example when the
@@ -176,9 +180,9 @@ class AssimpLoader : public ModelLoader {
     /// hot reloading
     /// @internal
     bool _ReloadModel(MeshData&          out,
-              scl::stream*       stream,
-              const std::string& assetPath,
-              int                id) override;
+                      scl::stream*       stream,
+                      const std::string& assetPath,
+                      int                id) override;
 
   private:
     /// @brief Processes the Assimp scene and fills the MeshData structure
