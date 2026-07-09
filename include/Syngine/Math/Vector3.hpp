@@ -10,6 +10,7 @@
 
 #include <DirectXMath.h>
 
+#include "Syngine/Math/Math.hpp"
 #include "Syngine/Math/Vector2.hpp"
 
 #include <bx/math.h>
@@ -188,6 +189,28 @@ class Vector3 {
     /// @since v0.0.2
     inline JPH::RVec3 toJoltRVec3() const {
         return JPH::RVec3(m_storage.x, m_storage.y, m_storage.z);
+    }
+
+    /// @brief Convert this vector of euler angles to a vector of radians
+    /// @return Vector3 containing the angles in radians
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline Vector3 toRads() const {
+        constexpr float DEGRADFACTOR = 3.14159265358979323846f / 180.0f;
+        return Vector3(m_storage.x * DEGRADFACTOR,
+                       m_storage.y * DEGRADFACTOR,
+                       m_storage.z * DEGRADFACTOR);
+    }
+
+    /// @brief Convert this vector of radians to a vector of euler angles
+    /// @return Vector3 containing the angles in degrees
+    /// @threadsafety safe
+    /// @since v0.0.2
+    inline Vector3 toDegs() const {
+        constexpr float RADDEGFACTOR = 180.0f / 3.14159265358979323846f;
+        return Vector3(m_storage.x * RADDEGFACTOR,
+                       m_storage.y * RADDEGFACTOR,
+                       m_storage.z * RADDEGFACTOR);
     }
 
     /// @brief Convert this vector to a std::vector of floats
@@ -575,5 +598,6 @@ class Vector3 {
 };
 
 using Vec3 = Vector3; // Alias Vec3 for Vector3
+using SVec3 = Vector3; // Alias SVec3 for Vector3
 
 } // namespace Syngine::Math

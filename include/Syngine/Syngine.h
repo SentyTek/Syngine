@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include "Syngine/Math/Math.hpp"
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Core/Registry.h"
@@ -25,4 +26,3 @@
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Profiler.h"
 
-#include "Syngine/Math/Math.hpp"

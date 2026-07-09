@@ -121,26 +121,23 @@ void TransformComponent::_UpdateWorldMatrix() const {
 
 // --- Public API
 
-Vector3 TransformComponent::GetRotationEuler() const {
+Vector3 TransformComponent::GetWorldRotationEuler() const {
     _UpdateWorldMatrix();
     Vector3 eulerVec = m_worldRotation.toEulerAngles();
-    eulerVec.setX(RAD2DEG(eulerVec.x()));
-    eulerVec.setY(RAD2DEG(eulerVec.y()));
-    eulerVec.setZ(RAD2DEG(eulerVec.z()));
     return eulerVec;
 }
 
-Quaternion TransformComponent::GetRotationQuaternion() const {
+Quaternion TransformComponent::GetWorldRotationQuaternion() const {
     _UpdateWorldMatrix();
     return m_worldRotation;
 }
 
-void TransformComponent::SetLocalPosition(Vector3 position) {
+void TransformComponent::SetPosition(Vector3 position) {
     m_position = position;
     _MarkLocalDirty();
 }
 
-void TransformComponent::SetLocalRotationEuler(Vector3 rotation) {
+void TransformComponent::SetRotationEuler(Vector3 rotation) {
     // Convert Euler angles to quaternion
     // LOCAL rotation
     // this will probably break
@@ -150,7 +147,7 @@ void TransformComponent::SetLocalRotationEuler(Vector3 rotation) {
     _MarkLocalDirty();
 }
 
-void TransformComponent::SetLocalRotationQuat(Quaternion rotation) {
+void TransformComponent::SetRotationQuat(Quaternion rotation) {
     // LOCAL rotation
     m_rotation = rotation;
     m_rotation.normalize();
@@ -159,7 +156,7 @@ void TransformComponent::SetLocalRotationQuat(Quaternion rotation) {
 
 // Sets the scale of the transform component.
 // Note that the params are FULL EXTENT, not half extents.
-void TransformComponent::SetLocalScale(Vector3 scale) {
+void TransformComponent::SetScale(Vector3 scale) {
     m_scale = scale;
     _MarkLocalDirty();
 }
@@ -191,6 +188,7 @@ void TransformComponent::SetWorldRotationEuler(Vector3 rotation) {
     Quaternion quat(rotation);
     quat.normalize();
     SetWorldRotationQuat(quat);
+    _MarkWorldDirty();
 }
 
 void TransformComponent::SetWorldRotationQuat(Quaternion rotation) {
@@ -214,19 +212,34 @@ Mat4 TransformComponent::GetModelMatrix() const {
 }
 
 // Global getters
-Vector3 TransformComponent::GetPosition() const {
+Vector3 TransformComponent::GetWorldPosition() const {
     _UpdateWorldMatrix();
     return m_worldPosition;
 }
 
-Vector3 TransformComponent::GetScale() const {
+Vector3 TransformComponent::GetWorldScale() const {
     _UpdateWorldMatrix();
     return m_scale;
 }
 
-Vector3 TransformComponent::GetLocalPosition() const { return m_position; }
-Quaternion TransformComponent::GetLocalRotation() const { return m_rotation; }
-Vector3    TransformComponent::GetLocalScale() const { return m_scale; }
+// Following 4 are local getters
+Vector3 TransformComponent::GetPosition() const {
+    _UpdateWorldMatrix();
+    return m_position;
+}
+
+Quaternion TransformComponent::GetRotationQuaternion() const {
+    _UpdateWorldMatrix();
+    return m_rotation;
+}
+
+Vector3 TransformComponent::GetRotationEuler() const {
+    Quaternion worldRot = GetRotationQuaternion();
+    Vector3    eulerVec = worldRot.toEulerAngles();
+    return eulerVec;
+}
+
+Vector3    TransformComponent::GetScale() const { return m_scale; }
 
 Mat4 TransformComponent::GetLocalMatrix() const {
     _UpdateLocalMatrix();
@@ -305,16 +318,16 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
             "TransformComponent",
             // Methods
             "SetPosition", [](TransformComponent& self, float x, float y, float z) {
-                self.SetLocalPosition(Vector3(x, y, z));
+                self.SetPosition(Vector3(x, y, z));
             },
             "SetRotationEuler", [](TransformComponent& self, float x, float y, float z) {
-                self.SetLocalRotationEuler(Vector3(x, y, z));
+                self.SetRotationEuler(Vector3(x, y, z));
             },
             "SetRotationQuat", [](TransformComponent& self, float x, float y, float z, float w) {
-                self.SetLocalRotationQuat(Quaternion(x, y, z, w));
+                self.SetRotationQuat(Quaternion(x, y, z, w));
             },
             "SetScale", [](TransformComponent& self, float x, float y, float z) {
-                self.SetLocalScale(Vector3(x, y, z));
+                self.SetScale(Vector3(x, y, z));
             },
             "GetPosition", [](TransformComponent& self) -> std::tuple<float, float, float> {
                 float x, y, z;
@@ -334,7 +347,7 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
             },
             "GetRotationEuler", [](TransformComponent& self) -> std::tuple<float, float, float> {
                 float x, y, z;
-                Vector3 rot = self.GetRotationEuler();
+                Vector3 rot = self.GetWorldRotationEuler();
                 x = rot.x();
                 y = rot.y();
                 z = rot.z();
@@ -343,7 +356,7 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
             "GetRotationQuat", [](TransformComponent& self)
                 -> std::tuple<float, float, float, float> {
                 float x, y, z, w;
-                Quaternion quat = self.GetRotationQuaternion();
+                Quaternion quat = self.GetWorldRotationQuaternion();
                 x = quat.x();
                 y = quat.y();
                 z = quat.z();

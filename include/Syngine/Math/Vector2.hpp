@@ -443,5 +443,6 @@ class Vector2 {
 
 // Alias Vec2 for Vector2
 using Vec2 = Vector2;
+using SVec2 = Vector2;
 
 } // namespace Syngine::Math

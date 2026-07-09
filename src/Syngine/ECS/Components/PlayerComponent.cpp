@@ -438,7 +438,7 @@ void PlayerComponent::PostPhysicsUpdate() {
 
     const float positionLerpSpeed = 12.0f;
     bx::Vec3 newPos = bx::lerp(currentPos, targetPos, 1.0f - bx::exp(-positionLerpSpeed * m_deltaTime));
-    m_transform->SetLocalPosition(Vector3(newPos));
+    m_transform->SetWorldPosition(Vector3(newPos));
 
     // Update camera position and orientation
     m_camera->SetPosition(Math::Vector3(newPos.x, newPos.y + m_eyeHeight, newPos.z));

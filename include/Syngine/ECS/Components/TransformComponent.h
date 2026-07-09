@@ -97,17 +97,17 @@ class TransformComponent : public Syngine::Component {
         return TransformComponent::componentType;
     };
 
-    /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in degrees)
+    /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
     /// @return Vector3 representing the rotation (x, y, z)
     /// @threadsafety read-only
     /// @since v0.0.1
-    Vector3 GetRotationEuler() const;
+    Vector3 GetWorldRotationEuler() const;
 
     /// @brief Get the GLOBAL rotation of the transform as a quaternion
     /// @return Quaternion representing the rotation (x, y, z, w)
     /// @threadsafety read-only
     /// @since v0.0.1
-    Quaternion GetRotationQuaternion() const;
+    Quaternion GetWorldRotationQuaternion() const;
 
     /// @brief Get a GLOBAL model matrix for the transform
     /// @return 4x4 matrix filled with the global model matrix
@@ -128,59 +128,66 @@ class TransformComponent : public Syngine::Component {
     /// @note GLOBAL position
     /// @threadsafety read-only
     /// @since v0.0.1
-    Vector3 GetPosition() const;
+    Vector3 GetWorldPosition() const;
 
     /// @brief Get the GLOBAL scale of the transform
     /// @return Vector3 representing the scale (x, y, z)
     /// @note GLOBAL scale
     /// @threadsafety read-only
     /// @since v0.0.1
-    Vector3 GetScale() const;
+    Vector3 GetWorldScale() const;
 
     /// @brief Get the LOCAL position of the transform
     /// @return Vector3 representing the position (x, y, z)
     /// @note LOCAL position
     /// @threadsafety read-only
     /// @since v0.0.1
-    Vector3 GetLocalPosition() const;
+    Vector3 GetPosition() const;
 
     /// @brief Get the LOCAL rotation of the transform as a quaternion
     /// @return Quaternion representing the rotation (x, y, z, w)
     /// @note LOCAL rotation
     /// @threadsafety read-only
     /// @since v0.0.1
-    Quaternion GetLocalRotation() const;
+    Quaternion GetRotationQuaternion() const;
+
+    /// @brief Get the LOCAL rotation of the transform as XYZ Euler angles (in radians)
+    /// @return Vector3 representing the rotation (x, y, z)
+    /// @note LOCAL rotation
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    Vector3 GetRotationEuler() const;
 
     /// @brief Get the LOCAL scale of the transform
     /// @return Vector3 representing the local scale (x, y, z)
     /// @threadsafety read-only
     /// @since v0.0.1
-    Vector3 GetLocalScale() const;
+    Vector3 GetScale() const;
 
     /// @brief Set the LOCAL position of the transform
     /// @param position New local position as a Vector3
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetLocalPosition(Vector3 position);
+    void SetPosition(Vector3 position);
 
     /// @brief Set the LOCAL rotation of the transform as XYZ Euler angles (in
-    /// degrees)
-    /// @param rotation New local rotation as XYZ Euler angles (in degrees)
+    /// radians)
+    /// @param rotation New local rotation as XYZ Euler angles (in radians)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetLocalRotationEuler(Vector3 rotation);
+    void SetRotationEuler(Vector3 rotation);
 
     /// @brief Set the LOCAL rotation of the transform as a quaternion
     /// @param rotation New local rotation as a quaternion
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetLocalRotationQuat(Quaternion rotation);
+    void SetRotationQuat(Quaternion rotation);
 
     /// @brief Set the LOCAL scale of the transform
     /// @param scale New local scale as a Vector3
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetLocalScale(Vector3 scale);
+    void SetScale(Vector3 scale);
 
     /// @brief Set the GLOBAL position of the transform
     /// @param position New global position as a Vector3

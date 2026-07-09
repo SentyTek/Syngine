@@ -622,6 +622,7 @@ class Vector4 {
 };
 
 using Vec4 = Vector4; // Alias Vec4 for Vector4
+using SVec4 = Vector4; // Alias SVec4 for Vector4
 
 } // namespace Syngine::Math
 

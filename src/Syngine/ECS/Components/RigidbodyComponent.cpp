@@ -129,7 +129,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
     }
 
     JPH::RVec3 curPos = transform->GetPosition().toJoltRVec3();
-    JPH::Quat transformRot = transform->GetRotationQuaternion().toJoltQuat();
+    JPH::Quat transformRot = transform->GetWorldRotationQuaternion().toJoltQuat();
 
     JPH::Quat physicsRot = transformRot.Conjugated();
 
@@ -240,7 +240,7 @@ void RigidbodyComponent::SyncBodyToTransform() {
     BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
 
     JPH::Vec3 pos = transform->GetPosition().toJoltVec3();
-    JPH::Quat rot = transform->GetRotationQuaternion().toJoltQuat();
+    JPH::Quat rot = transform->GetWorldRotationQuaternion().toJoltQuat();
     rot = rot.Conjugated();
     bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
 }
@@ -266,7 +266,7 @@ void RigidbodyComponent::Update(float deltaTime) {
         JPH::Quat physicsRot = bodyInterface.GetRotation(bodyID);
 
         JPH::Vec3 currentPos = transform->GetPosition().toJoltVec3();
-        JPH::Quat currentRot = transform->GetRotationQuaternion().toJoltQuat();
+        JPH::Quat currentRot = transform->GetWorldRotationQuaternion().toJoltQuat();
 
         // Lerp pos and slerp rot
         JPH::Vec3 lerpedPos = currentPos + (physicsPos - currentPos) * lerpAlpha;
@@ -279,7 +279,7 @@ void RigidbodyComponent::Update(float deltaTime) {
 
     } else {
         JPH::Vec3 pos = transform->GetPosition().toJoltVec3();
-        JPH::Quat rot = transform->GetRotationQuaternion().toJoltQuat();
+        JPH::Quat rot = transform->GetWorldRotationQuaternion().toJoltQuat();
         rot = rot.Conjugated();
 
         bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
