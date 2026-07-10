@@ -317,9 +317,11 @@ if(MSVC)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
-clangd(Syngine
+clangd(
+    TARGET Syngine
     EXCLUDE_PATHS "third_party/*"
     OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     INLAY_HINTS
     INLAY_DEDUCED_TYPES
-    INLAY_PARAMETER_NAMES)
+    INLAY_PARAMETER_NAMES
+)

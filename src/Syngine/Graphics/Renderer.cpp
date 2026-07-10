@@ -102,8 +102,8 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     // Initial sun direction in degrees (yaw, pitch, roll)
     // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive = up).
     const Math::Vector3 initialSunDir(45.0f, 45.0f, 0.0f);
-    float pitch = Math::DEG2RAD(initialSunDir.x());
-    float yaw   = Math::DEG2RAD(initialSunDir.y());
+    float pitch = static_cast<float>(Math::DEG2RAD(initialSunDir.x()));
+    float yaw   = static_cast<float>(Math::DEG2RAD(initialSunDir.y()));
     float cp    = cosf(pitch);
     float sp    = sinf(pitch);
     float cy    = cosf(yaw);

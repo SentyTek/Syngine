@@ -121,7 +121,7 @@ _ParseRigidbodyParams(sol::optional<sol::table> maybeParams) {
             if (!maybeValue) {
                 break;
             }
-            params.shapeParameters.set(i - 1, *maybeValue);
+            params.shapeParameters.set(static_cast<int>(i) - 1, *maybeValue);
             ++i;
         }
     }
@@ -433,8 +433,9 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                 sol::table posTable  = args[1].as<sol::table>();
                 sol::table sizeTable = args[2].as<sol::table>();
                 for (size_t i = 0; i < 3; ++i) {
-                    pos.set(i, posTable.get_or(i + 1, pos[i]));
-                    size.set(i, sizeTable.get_or(i + 1, size[i]));
+                    int index = static_cast<int>(i);
+                    pos.set(index, posTable.get_or(index + 1, pos[index]));
+                    size.set(index, sizeTable.get_or(index + 1, size[index]));
                 }
                 oneShot = args[3].as<bool>();
             } else if (args.size() == 3 && args[0].is<std::string>() &&
@@ -453,8 +454,9 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                 sol::table posTable  = args[1].as<sol::table>();
                 sol::table sizeTable = args[2].as<sol::table>();
                 for (size_t i = 0; i < 3; ++i) {
-                    pos.set(i, posTable.get_or(i + 1, pos[i]));
-                    size.set(i, sizeTable.get_or(i + 1, size[i]));
+                    int index = static_cast<int>(i);
+                    pos.set(index, posTable.get_or(index + 1, pos[index]));
+                    size.set(index, sizeTable.get_or(index + 1, size[index]));
                 }
             } else {
                 Logger::LogF(LogLevel::ERR, true,

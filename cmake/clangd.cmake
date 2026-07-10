@@ -1,3 +1,10 @@
+# ╒═══════════════════════ Clangd.cmake ═╕
+# │ Syngine                              │
+# │ Created 2025-06-05                   │
+# ├──────────────────────────────────────┤
+# │ Copyright (c) SentyTek 2025-2026     │
+# │ Licensed under the MIT License       │
+# ╰──────────────────────────────────────╯
 
 # Configure for active languages, prioritizing CXX
 get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
@@ -113,7 +120,7 @@ function(clangd)
   set(CLANGD_CONFIG_COMPILE_STUFF
 "CompileFlags:
   Add: [-xc${CLANG_LANG_POSTFIX}, -std=c${CLANG_LANG_POSTFIX}${CLANGD_LANG_STANDARD}${CLANGD_CONFIG_DEFINITIONS}${CLANGD_CONFIG_WARNINGS}${CLANGD_INCLUDE_DIRS}]
-  Remove: [-std:*, -wd*, -we*, -MD*]
+  Remove: [-std:*, -wd*, -we*, -MD*, -external:*]
   Compiler: clang${CLANG_LANG_POSTFIX}")
 
   if (NOT CLANGD_UNUSED_INCLUDES)

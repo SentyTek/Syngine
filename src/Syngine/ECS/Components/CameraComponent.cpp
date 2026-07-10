@@ -71,26 +71,24 @@ Serializer::DataNode CameraComponent::Serialize() const {
 void CameraComponent::Update(int viewId, int width, int height) {
     // update view and projection matrices
     Syngine::Camera& cam = this->camera;
-    bx::Vec3 eyeVec = this->camera.eye.toBxVec3();
+    Math::Vec3 eyeVec = this->camera.eye.toBxVec3();
     const int safeWidth = std::max(width, 1);
     const int safeHeight = std::max(height, 1);
     float aspect = float(safeWidth) / float(safeHeight);
 
-    bx::Vec3 forward = {
-        cosf(cam.pitch) * sinf(cam.yaw),
-        sinf(cam.pitch),
-        cosf(cam.pitch) * cosf(cam.yaw)
-    };
-    bx::Vec3 right = {
-        sinf(cam.yaw - bx::kPiHalf),
-        0.0f,
-        cosf(cam.yaw - bx::kPiHalf)
-    };
+    Math::Vec3 forward(cosf(cam.pitch) * sinf(cam.yaw),
+                       sinf(cam.pitch),
+                       cosf(cam.pitch) * cosf(cam.yaw));
+    forward = forward.normalized();
 
-    bx::Vec3 targetVec = bx::add(eyeVec, forward);
-    bx::Vec3 upVec = bx::cross(right, forward);
+    Math::Vec3 right = Math::Vec3(
+        sinf(cam.yaw - bx::kPiHalf), 0.0f, cosf(cam.yaw - bx::kPiHalf));
+    right = right.normalized();
 
-    bx::mtxLookAt(cam.view.data(), eyeVec, targetVec, upVec);
+    Math::Vec3 targetVec = eyeVec + forward;
+    Math::Vec3 upVec = right.cross(forward);
+
+    bx::mtxLookAt(cam.view.data(), eyeVec.toBxVec3(), targetVec.toBxVec3(), upVec.toBxVec3());
     bx::mtxProj(cam.proj.data(),
                 cam.fov,
                 aspect,
@@ -152,13 +150,15 @@ void CameraComponent::_normalizePlane(CameraComponent::Plane& plane) {
 CameraComponent::Frustum CameraComponent::_extractFrustum() {
     Frustum frustum;
 
-    Math::Matrix4x4 vp = this->camera.proj * this->camera.view;
+    // The math layer uses row-major matrices with row vectors, so the clip
+    // matrix is view * proj and the frustum planes come from rows.
+    Math::Matrix4x4 vp = this->camera.view * this->camera.proj;
 
     const auto extractPlane = [&vp](int axis, float sign) {
         Plane plane;
-        plane.normal = Math::Vector3(vp.m(0, 3) + sign * vp.m(0, axis),
-                                     vp.m(1, 3) + sign * vp.m(1, axis),
-                                     vp.m(2, 3) + sign * vp.m(2, axis));
+        plane.normal = Math::Vec3(vp.m(0, 3) + sign * vp.m(0, axis),
+                                  vp.m(1, 3) + sign * vp.m(1, axis),
+                                  vp.m(2, 3) + sign * vp.m(2, axis));
         plane.distance = vp.m(3, 3) + sign * vp.m(3, axis);
         return plane;
     };

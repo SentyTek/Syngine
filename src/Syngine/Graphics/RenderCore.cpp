@@ -9,6 +9,7 @@
 #include "Syngine/Graphics/RenderCore.h"
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/ZoneManager.h"
+#include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
@@ -1114,18 +1115,18 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
         MeshData& meshData = meshComp->meshData;
         if (!meshData.valid) continue;
-        /*if (_ShouldCullBySize(go, camera)) {
+        if (_ShouldCullBySize(go, camera)) {
             m_drawnCounts.culledSize++;
             continue;
-        }*/
+        }
 
         MeshAABB aabb = meshComp->GetAABB();
         Math::Vector3 min = aabb.min;
         Math::Vector3 max = aabb.max;
-        /*if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
+        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
             m_drawnCounts.culledFrustum++;
             continue;
-        }*/
+        }
         bgfx::ProgramHandle program = Renderer::GetProgram(go->type).program;
         if (!bgfx::isValid(program)) continue;
 
@@ -1447,6 +1448,17 @@ void RenderCore::_DrawDebug(const Program&   program,
             MeshAABB aabb = go->GetComponent<MeshComponent>()->GetAABB();
             m_drender->DrawBox(aabb.min, aabb.max, JPH::Color::sGreen);
         }
+
+        std::vector<GameObject*> billboards =
+            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_BILLBOARD);
+        for (auto go : billboards) {
+            BillboardComponent* comp = go->GetComponent<BillboardComponent>();
+            if (!comp) continue;
+            Vector3 goPos = go->GetComponent<TransformComponent>()->GetWorldPosition();
+            Vector3 min = comp->GetMinBounds();
+            Vector3 max = comp->GetMaxBounds();
+            m_drender->DrawBox(min, max, JPH::Color::sBlue);
+        }
     }
 
     // Flush all queued debug lines (physics wireframes, frustums, CSM lines,
@@ -1492,29 +1504,22 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
         // Since we can't use _ShouldCullBySize for billboards (they don't have mesh data), we do a simple distance check here and skip if they're too far away to be visible
         const Vector3 camPos = camera->GetPosition();
         const Vector3 goPos =
-            go->GetComponent<TransformComponent>()->GetPosition();
-        const float  dx     = goPos.x() - camPos.x();
-        const float  dy     = goPos.y() - camPos.y();
-        const float  dz     = goPos.z() - camPos.z();
-        const float  distance = sqrtf(dx * dx + dy * dy + dz * dz);
+            go->GetComponent<TransformComponent>()->GetWorldPosition();
+        const float distance = (goPos - camPos).length();
         if (distance > m_maxSmallObjDistance) {
             m_drawnCounts.culledSize++;
             continue;
         }
 
-        bx::Vec3 min = { goPos.x() - comp->size * 0.5f,
-                         goPos.y(),
-                         goPos.z() - comp->size * 0.5f };
-        bx::Vec3 max = { goPos.x() + comp->size * 0.5f,
-                         goPos.y() + comp->size,
-                         goPos.z() + comp->size * 0.5f };
+        const Vector3 min = comp->GetMinBounds();
+        const Vector3 max = comp->GetMaxBounds();
         if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
             m_drawnCounts.culledFrustum++;
             continue;
         }
 
         const Vector3 pos =
-            go->GetComponent<TransformComponent>()->GetPosition();
+            go->GetComponent<TransformComponent>()->GetWorldPosition();
 
         // Pack center position and size into a vec4 and send it off
         Math::Vector4 billboardData(pos, comp->size);

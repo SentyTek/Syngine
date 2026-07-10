@@ -144,6 +144,28 @@ class BillboardComponent : public Syngine::Component {
     /// @brief Get the billboard mode
     /// @return BillboardMode The billboard rendering mode
     BillboardMode GetMode() const { return this->m_mode; }
+
+    /// @brief Get the min bounds of the billboard's bounding box
+    /// @return Vector3 The minimum corner of the bounding box
+    inline Vector3 GetMinBounds() const {
+        auto* t = this->m_owner->GetComponent<TransformComponent>();
+        if (!t) return Vector3();
+        Vector3 pos = t->GetWorldPosition();
+        return Vector3(pos.x() - this->size * 0.5f,
+                       pos.y() - this->size * 0.5f,
+                       pos.z() - this->size * 0.5f);
+    }
+
+    /// @brief Get the max bounds of the billboard's bounding box
+    /// @return Vector3 The maximum corner of the bounding box
+    inline Vector3 GetMaxBounds() const {
+        auto* t = this->m_owner->GetComponent<TransformComponent>();
+        if (!t) return Vector3();
+        Vector3 pos = t->GetWorldPosition();
+        return Vector3(pos.x() + this->size * 0.5f,
+                       pos.y() + this->size * 0.5f,
+                       pos.z() + this->size * 0.5f);
+    }
 };
 
 } // namespace Syngine
