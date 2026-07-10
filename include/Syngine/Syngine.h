@@ -25,4 +25,3 @@
 #include "Syngine/Utils/Helpers.h"
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Utils/Profiler.h"
-

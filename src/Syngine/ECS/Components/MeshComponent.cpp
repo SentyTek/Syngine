@@ -435,7 +435,7 @@ MeshAABB& MeshComponent::GetAABB() {
         Vector3 tmin(FLT_MAX);
         Vector3 tmax(-FLT_MAX);
         for (int c = 0; c < 8; ++c) {
-            Math::Vector4 t = modelMatrix * Math::Vector4(corners[c][0], corners[c][1], corners[c][2], 1.0f);
+            Math::Vector4 t = Math::Vector4(corners[c][0], corners[c][1], corners[c][2], 1.0f) * modelMatrix;
             tmin = tmin.min(t.xyz());
             tmax = tmax.max(t.xyz());
         }

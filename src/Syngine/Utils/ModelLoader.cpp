@@ -319,7 +319,7 @@ bool AssimpLoader::processScene(MeshData&      out,
                                               vertex.normal[1],
                                               vertex.normal[2]) ^
                                    tMirrored;
-                
+
                 vertex.tangent = Math::Vector4(tMirrored.x, tMirrored.y, tMirrored.z, (cross * bMirrored) < 0.0f ? -1.0f : 1.0f);
             }
 

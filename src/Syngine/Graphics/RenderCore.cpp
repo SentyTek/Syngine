@@ -160,6 +160,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         SDL_Quit();
         return false;
     }
+    bgInit.type = bgfx::RendererType::Vulkan; // Set renderer type to Vulkan
     if (!strcmp(_sdldriver, "x11")) {
         // Init for x11
         bgInit.platformData.ndt = SDL_GetPointerProperty(
@@ -901,8 +902,8 @@ Uniform* RenderCore::_GetDefaultUniform(const std::string& name) {
 
 void RenderCore::_CalculateCascadeMatrices(
     CameraComponent*                camera,
-    std::array<Math::Matrix4x4, 4>& outLightView,
-    std::array<Math::Matrix4x4, 4>& outLightProj,
+    std::array<Math::Matrix4x4, NUM_CASCADES>& outLightView,
+    std::array<Math::Matrix4x4, NUM_CASCADES>& outLightProj,
     Math::Vector4&                  outCascadeSplits) {
     const Math::Vector3 lightDirVec = Renderer::GetSunDirection().normalized();
 
@@ -924,7 +925,7 @@ void RenderCore::_CalculateCascadeMatrices(
         float size = m_cascadeSizes[i];
 
         Math::Vector4 camPos4(target);
-        Math::Vector4 camPosLightSpace = lightViewRaw * camPos4;
+        Math::Vector4 camPosLightSpace = camPos4 * lightViewRaw;
 
         float worldPerTexel    = (size * 2.0f) / float(SHADOW_MAP_SIZE);
         m_cascadeTexelSizes[i] = worldPerTexel;
@@ -1113,27 +1114,27 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
         MeshData& meshData = meshComp->meshData;
         if (!meshData.valid) continue;
-        if (_ShouldCullBySize(go, camera)) {
+        /*if (_ShouldCullBySize(go, camera)) {
             m_drawnCounts.culledSize++;
             continue;
-        }
+        }*/
 
         MeshAABB aabb = meshComp->GetAABB();
         Math::Vector3 min = aabb.min;
         Math::Vector3 max = aabb.max;
-        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
+        /*if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
             m_drawnCounts.culledFrustum++;
             continue;
-        }
-
+        }*/
         bgfx::ProgramHandle program = Renderer::GetProgram(go->type).program;
         if (!bgfx::isValid(program)) continue;
 
-        Mat4 modelMtx = go->GetComponent<TransformComponent>()->GetModelMatrix();
+        Mat4 modelMtx =
+            go->GetComponent<TransformComponent>()->GetModelMatrix();
         float det = modelMtx.determinant();
         bool mirrored = det < 0.0f;
-        modelMtx.invert();
-        modelMtx.transpose();
+        Mat4 normalMtx = modelMtx.inverse();
+        normalMtx.transpose();
 
         // Emit one packet per submesh
         for (size_t submeshIdx = 0; submeshIdx < meshData.subMeshes.size();
@@ -1161,10 +1162,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                 m_defaultUniformIds.at("u_" + go->type + "_normalMatrix"));
             Uniform* uModel = Renderer::GetUniform(handle);
             if (uModel) {
-                matInst.uniforms.push_back(
-                    { uModel->handle,
-                        modelMtx,
-                      1 });
+                matInst.uniforms.push_back({ uModel->handle, normalMtx, 1 });
             }
 
             // This looks backwards, because it is. But so are the meshes. So it
@@ -1300,8 +1298,7 @@ void RenderCore::_DrawShadows(const Program&   program,
         Math::Vector4 outCascadeSplits;
         _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
         for (int i = 0; i < NUM_CASCADES; ++i) {
-            Core::_GetContext()->physicsManager->_DrawFrustum(view[i].data(),
-                                                              proj[i].data());
+            Core::_GetContext()->physicsManager->_DrawFrustum(view[i], proj[i]);
         }
     }
 

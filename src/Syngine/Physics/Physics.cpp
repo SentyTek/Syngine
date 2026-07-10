@@ -235,11 +235,11 @@ BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData
     // convert SynMeshData to Jolt's mesh format
     JPH::VertexList vertices;
     vertices.reserve(meshData.vertices.size());
-    for (const auto& synVertex : meshData.vertices) {
+    for (const auto& vertex : meshData.vertices) {
         vertices.push_back(JPH::Float3(
-            synVertex.pos[0],
-            synVertex.pos[1],
-            synVertex.pos[2]
+            vertex.pos.x(),
+            vertex.pos.y(),
+            vertex.pos.z()
         ));
     }
 

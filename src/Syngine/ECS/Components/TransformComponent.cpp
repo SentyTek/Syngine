@@ -93,7 +93,7 @@ void TransformComponent::_UpdateLocalMatrix() const {
     if (!m_dirtyLocal) return;
 
     // Build local matrix as: S * R * T
-    m_localMtx = Mat4(m_rotation, m_scale, m_position);
+    m_localMtx = Mat4(m_scale, m_rotation, m_position);
     m_dirtyLocal = false;
 }
 
@@ -176,7 +176,7 @@ void TransformComponent::SetWorldPosition(Vector3 position) {
         }
 
         invParentMtx.invert();
-        Vector4 localPos = invParentMtx * Vector4(position, 1);
+        Vector4 localPos = Math::Vector4(position, 1) * invParentMtx;
         m_position = localPos.xyz();
     } else {
         m_position = position;

@@ -11,6 +11,8 @@
 #include "Syngine/ECS/Components/CameraComponent.h"
 
 #include "Jolt/Physics/Collision/Shape/Shape.h"
+#include "Syngine/Math/Matrix4x4.hpp"
+#include "Syngine/Math/Vector4.hpp"
 #include "bgfx/defines.h"
 
 namespace Syngine {
@@ -142,27 +144,27 @@ JPH::DebugRenderer::Batch DebugRender::CreateTriangleBatch(const Vertex* inVerti
     return batch;
 }
 
-void DebugRender::DrawFrustum(Syngine::Camera camera) {
+void DebugRender::DrawFrustum(const Syngine::Camera& camera) {
     DrawFrustum(camera.view, camera.proj);
 }
 
 void DebugRender::DrawFrustum(const Math::Mat4& view, const Math::Mat4& proj) {
-   Math::Mat4 invViewProj = (proj * view).inverse();
+    Math::Mat4 invVP = (view * proj).inverse();
 
     // Define 8 corners of the normalized device coordinates (NDC) frustum
     // We use Z from 0-1, standard for all but OGL for some fucking reason
-    const bx::Vec3 corners[8] = {
-        bx::Vec3(-1.0f, -1.0f, 0.0f), bx::Vec3(1.0f, -1.0f, 0.0f),
-        bx::Vec3(1.0f, 1.0f, 0.0f),   bx::Vec3(-1.0f, 1.0f, 0.0f),
-        bx::Vec3(-1.0f, -1.0f, 1.0f), bx::Vec3(1.0f, -1.0f, 1.0f),
-        bx::Vec3(1.0f, 1.0f, 1.0f),   bx::Vec3(-1.0f, 1.0f, 1.0f)
+    const Math::Vec3 corners[8] = {
+        Math::Vec3(-1.0f, -1.0f, 0.0f), Math::Vec3(1.0f, -1.0f, 0.0f),
+        Math::Vec3(1.0f, 1.0f, 0.0f),   Math::Vec3(-1.0f, 1.0f, 0.0f),
+        Math::Vec3(-1.0f, -1.0f, 1.0f), Math::Vec3(1.0f, -1.0f, 1.0f),
+        Math::Vec3(1.0f, 1.0f, 1.0f),   Math::Vec3(-1.0f, 1.0f, 1.0f)
     };
 
     // Transform NDC to world space using the inverse view-projection matrix
     Math::Vector4 worldCorners[8];
     for (int i = 0; i < 8; ++i) {
         Math::Vector4 corner(corners[i], 1.0f);
-        worldCorners[i] = invViewProj * corner;
+        worldCorners[i] = corner * invVP;
         float w = worldCorners[i].w();
         if (w != 0.0f) {
             worldCorners[i].setX(worldCorners[i].x() / w); // Normalize by w

@@ -38,7 +38,7 @@ message(STATUS "${CLANGD_LANG} standard: ${CLANGD_LANG_STANDARD}")
 #   [INLAY_PARAMETER_NAMES]
 #   [INLAY_DEDUCED_TYPES]
 #   [INLAY_TYPENAME_LIMIT <length>]
-#  
+#
 # TARGET: optional, selects a target to gather settings from
 # OUTPUT_DIRECTORY: Path to a directory where .clangd will be written to. Defaults to CMAKE_CURRENT_LISTS_DIR
 # INCLUDE_DIRECTORIES: optional, additional include directories to be added
@@ -108,7 +108,7 @@ function(clangd)
     endforeach()
   endif()
 
-  
+
 
   set(CLANGD_CONFIG_COMPILE_STUFF
 "CompileFlags:
@@ -123,20 +123,20 @@ Diagnostics:
   UnusedIncludes: None")
   endif()
 
-  set(CLANGD_CONFIG_INLAY_HINTS 
+  set(CLANGD_CONFIG_INLAY_HINTS
 "InlayHints:
   Enabled: false")
   if (arg_INLAY_HINTS)
-    set(CLANGD_CONFIG_INLAY_HINTS 
+    set(CLANGD_CONFIG_INLAY_HINTS
 "InlayHints:
   Enabled: true
 ")
     if (arg_INLAY_TYPENAME_LIMIT)
-      string(APPEND CLANGD_CONFIG_INLAY_HINTS 
+      string(APPEND CLANGD_CONFIG_INLAY_HINTS
 "  TypeNameLimit: ${arg_INLAY_TYPENAME_LIMIT}
 ")
     else()
-    string(APPEND CLANGD_CONFIG_INLAY_HINTS 
+    string(APPEND CLANGD_CONFIG_INLAY_HINTS
 "  TypeNameLimit: 24
 ")
     endif()
@@ -180,14 +180,14 @@ Diagnostics:
 "  DeducedTypes: false
 ")
     endif()
-    
+
   endif()
 
   if (NOT DEFINED arg_OUTPUT_DIRECTORY)
     set(arg_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
   endif()
 
-  file(WRITE "${arg_OUTPUT_DIRECTORY}/.clangd" 
+  file(WRITE "${arg_OUTPUT_DIRECTORY}/.clangd"
 "${CLANGD_CONFIG_HEADER}
 ${CLANGD_CONFIG_COMPILE_STUFF}
 ${CLANGD_CONFIG_INLAY_HINTS}

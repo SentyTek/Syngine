@@ -131,8 +131,6 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
     JPH::RVec3 curPos = transform->GetPosition().toJoltRVec3();
     JPH::Quat transformRot = transform->GetWorldRotationQuaternion().toJoltQuat();
 
-    JPH::Quat physicsRot = transformRot.Conjugated();
-
     switch (shape) {
         case PhysicsShapes::SPHERE: {
             if (shapeParameters.isZero()) {
@@ -151,7 +149,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
             }
             JPH::Vec3 shapeParametersVec(shapeParameters.x(), shapeParameters.y(), shapeParameters.z());
             bodyID         = physicsManager->_CreateBox(curPos,
-                                               physicsRot,
+                                               transformRot,
                                                shapeParametersVec,
                                                params.motionType,
                                                params.layer,
@@ -174,21 +172,38 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                 scale = JPH::Vec3(shapeParameters.x(), shapeParameters.y(), shapeParameters.z());
             }
 
-            bodyID = physicsManager->_CreateMeshBody(curPos, physicsRot, meshComp->meshData, params.motionType, params.layer, scale, mass);
+            bodyID = physicsManager->_CreateMeshBody(curPos,
+                                                     transformRot,
+                                                     meshComp->meshData,
+                                                     params.motionType,
+                                                     params.layer,
+                                                     scale,
+                                                     mass);
             break;
         }
         case PhysicsShapes::CAPSULE: {
             if (shapeParameters.isZero()) { Syngine::Logger::Error("RigidbodyComponent::Init: No radius and half height provided for capsule shape."); return; }
             float radius = shapeParameters.x();
             float halfHeight = shapeParameters.y();
-            bodyID = physicsManager->_CreateCapsule(curPos, radius, halfHeight, params.motionType, params.layer, mass);
+            bodyID           = physicsManager->_CreateCapsule(curPos,
+                                                              radius,
+                                                              halfHeight,
+                                                              params.motionType,
+                                                              params.layer,
+                                                              mass);
             break;
         }
         case PhysicsShapes::CYLINDER: {
             if (shapeParameters.isZero()) { Syngine::Logger::Error("RigidbodyComponent::Init: Not enough parameters for cylinder shape."); return; }
             float radius = shapeParameters.y();
             float halfHeight = shapeParameters.x();
-            bodyID = physicsManager->_CreateCylinder(curPos, physicsRot, radius, halfHeight, params.motionType, params.layer, mass);
+            bodyID = physicsManager->_CreateCylinder(curPos,
+                                                     transformRot,
+                                                     radius,
+                                                     halfHeight,
+                                                     params.motionType,
+                                                     params.layer,
+                                                     mass);
             break;
         }
         case PhysicsShapes::COMPOUND: {
@@ -196,7 +211,12 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                 Syngine::Logger::Error("RigidbodyComponent::Init: No parts provided for compound shape.");
                 return;
             }
-            bodyID = physicsManager->_CreateCompound(curPos, physicsRot, params.compoundParts, params.motionType, params.layer, mass);
+            bodyID = physicsManager->_CreateCompound(curPos,
+                                                     transformRot,
+                                                     params.compoundParts,
+                                                     params.motionType,
+                                                     params.layer,
+                                                     mass);
             break;
         }
         default:
@@ -241,7 +261,6 @@ void RigidbodyComponent::SyncBodyToTransform() {
 
     JPH::Vec3 pos = transform->GetPosition().toJoltVec3();
     JPH::Quat rot = transform->GetWorldRotationQuaternion().toJoltQuat();
-    rot = rot.Conjugated();
     bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
 }
 
@@ -270,9 +289,7 @@ void RigidbodyComponent::Update(float deltaTime) {
 
         // Lerp pos and slerp rot
         JPH::Vec3 lerpedPos = currentPos + (physicsPos - currentPos) * lerpAlpha;
-
-        JPH::Quat targetRot = physicsRot.Conjugated();
-        JPH::Quat lerpedRot = currentRot.SLERP(targetRot, lerpAlpha);
+        JPH::Quat lerpedRot = currentRot.SLERP(physicsRot, lerpAlpha);
 
         transform->SetWorldPosition(Vector3(lerpedPos));
         transform->SetWorldRotationQuat(Quaternion(lerpedRot));
@@ -280,7 +297,6 @@ void RigidbodyComponent::Update(float deltaTime) {
     } else {
         JPH::Vec3 pos = transform->GetPosition().toJoltVec3();
         JPH::Quat rot = transform->GetWorldRotationQuaternion().toJoltQuat();
-        rot = rot.Conjugated();
 
         bodyInterface.SetPositionAndRotation(bodyID, pos, rot, EActivation::Activate);
     }

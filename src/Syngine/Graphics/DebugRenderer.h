@@ -148,7 +148,7 @@ class DebugRender : public JPH::DebugRenderer {
     /// @pre Camera must be initialized
     /// @since v0.0.1
     /// @internal
-    void DrawFrustum(Syngine::Camera camera);
+    void DrawFrustum(const Syngine::Camera& camera);
 
     /// @brief Draw a frustum from given view and projection matrices
     /// @param view View matrix
