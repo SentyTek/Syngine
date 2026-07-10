@@ -360,8 +360,6 @@ class Vector3 {
         return *this;
     }
 
-    friend Vector3 operator*(const Vector3& vec, const Matrix3x3& mat);
-
     // MARK: Comparison operators
 
     /// @brief Check if two vectors are equal

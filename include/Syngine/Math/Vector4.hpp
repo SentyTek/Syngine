@@ -492,17 +492,6 @@ class Vector4 {
 		return DirectX::XMVectorGetX(DirectX::XMVector4LengthSq(v));
 	}
 
-	/// @brief Get the normalized (unit) vector in the same direction
-	/// @return New normalized vector with length 1
-	/// @threadsafety safe
-	/// @since v0.0.2
-	inline Vector4 normalized() const {
-		DirectX::XMVECTOR v = DirectX::XMLoadFloat4(&m_storage);
-		Vector4 res;
-		DirectX::XMStoreFloat4(&res.m_storage, DirectX::XMVector4Normalize(v));
-		return res;
-	}
-
 	/// @brief Calculate the dot product with another vector
 	/// @param other Vector to dot with
 	/// @return Dot product result
@@ -548,8 +537,7 @@ class Vector4 {
 	inline float distanceSquared(const Vector4& other) const {
 		DirectX::XMVECTOR v1 = DirectX::XMLoadFloat4(&m_storage);
 		DirectX::XMVECTOR v2 = DirectX::XMLoadFloat4(&other.m_storage);
-		return DirectX::XMVectorGetX(
-			DirectX::XMVector4LengthSq(DirectX::XMVectorSubtract(v1, v2)));
+		return DirectX::XMVectorGetX(DirectX::XMVector4LengthSq(DirectX::XMVectorSubtract(v1, v2)));
 	}
 
 	// MARK: Other operations
