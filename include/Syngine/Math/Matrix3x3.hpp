@@ -74,17 +74,26 @@ class Matrix3x3 {
     /// @brief Copy constructor
     /// @param other Matrix to copy
     /// @since v0.0.2
-    inline Matrix3x3(const Matrix3x3& other) : m_storage(other.m_storage) {}
+    inline Matrix3x3(const Matrix3x3& other) = default;
 
     /// @brief Assignment operator
     /// @param other Matrix to assign from
     /// @return Reference to this matrix after assignment
     /// @threadsafety not-safe
     /// @since v0.0.2
-    inline Matrix3x3& operator=(const Matrix3x3& other) {
-        m_storage = other.m_storage;
-        return *this;
-    }
+    inline Matrix3x3& operator=(const Matrix3x3& other) = default;
+
+    /// @brief Move constructor
+    /// @param other Matrix to move from
+    /// @since v0.0.2
+    inline Matrix3x3(Matrix3x3&& other) noexcept = default;
+
+    /// @brief Move assignment operator
+    /// @param other Matrix to move from
+    /// @return Reference to this matrix after move assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Matrix3x3& operator=(Matrix3x3&& other) noexcept = default;
 
     // MARK: Accessors
 

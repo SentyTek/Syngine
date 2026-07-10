@@ -47,6 +47,30 @@ class Vector2 {
     /// @since v0.0.2
     inline Vector2(float x, float y) : m_storage(x, y) {}
 
+    /// @brief Copy constructor
+    /// @param other Vector to copy
+    /// @since v0.0.2
+    inline Vector2(const Vector2& other) = default;
+
+    /// @brief Assignment operator
+    /// @param other Vector to assign from
+    /// @return Reference to this vector after assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Vector2& operator=(const Vector2& other) = default;
+
+    /// @brief Move constructor
+    /// @param other Vector to move from
+    /// @since v0.0.2
+    inline Vector2(Vector2&& other) noexcept = default;
+
+    /// @brief Move assignment operator
+    /// @param other Vector to move from
+    /// @return Reference to this vector after move assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Vector2& operator=(Vector2&& other) noexcept = default;
+
     // MARK: Accessors
 
     /// @brief Get the raw data as a pointer to float array

@@ -20,8 +20,9 @@
 
 #include <stdexcept>
 #include <vector>
-
 namespace Syngine::Math {
+
+class Matrix4x4; // Forward declaration
 
 /// @brief 4D vector class for mathematical operations in 4D space
 class Vector4 {
@@ -99,17 +100,26 @@ class Vector4 {
     /// @brief Copy constructor
     /// @param other Vector to copy from
     /// @since v0.0.2
-    inline Vector4(const Vector4& other) : m_storage(other.m_storage) {}
+    inline Vector4(const Vector4& other) = default;
 
     /// @brief Assign from another vector
     /// @param other Vector to assign from
     /// @return Reference to this vector after assignment
     /// @threadsafety not-safe
     /// @since v0.0.2
-    inline Vector4& operator=(const Vector4& other) {
-		m_storage = other.m_storage;
-		return *this;
-	}
+    inline Vector4& operator=(const Vector4& other) = default;
+
+    /// @brief Move constructor
+    /// @param other Vector to move from
+    /// @since v0.0.2
+    inline Vector4(Vector4&& other) noexcept = default;
+
+    /// @brief Move assignment operator
+    /// @param other Vector to move from
+    /// @return Reference to this vector after move assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Vector4& operator=(Vector4&& other) noexcept = default;
 
     // MARK: Accessors
 
@@ -303,7 +313,7 @@ class Vector4 {
 		Vector4 res;
 		DirectX::XMStoreFloat4(&res.m_storage, DirectX::XMVectorScale(v, scalar));
 		return res;
-	}
+    }
 
 	/// @brief Divide vector by a scalar value
 	/// @param scalar Scalar divisor
@@ -361,7 +371,9 @@ class Vector4 {
 		DirectX::XMVECTOR v = DirectX::XMLoadFloat4(&m_storage);
 		DirectX::XMStoreFloat4(&m_storage, DirectX::XMVectorScale(v, 1.0f / scalar));
 		return *this;
-	}
+    }
+
+    friend Vector4 operator*(const Vector4& vec, const Matrix4x4& mat);
 
 	// MARK: Comparison operators
 
@@ -625,4 +637,3 @@ using Vec4 = Vector4; // Alias Vec4 for Vector4
 using SVec4 = Vector4; // Alias SVec4 for Vector4
 
 } // namespace Syngine::Math
-

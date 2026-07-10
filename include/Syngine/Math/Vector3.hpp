@@ -87,17 +87,26 @@ class Vector3 {
     /// @brief Copy constructor
     /// @param other Vector to copy
     /// @since v0.0.2
-    inline Vector3(const Vector3& other) : m_storage(other.m_storage) {}
+    inline Vector3(const Vector3& other) = default;
 
     /// @brief Assignment operator
     /// @param other Vector to assign from
     /// @return Reference to this vector after assignment
     /// @threadsafety not-safe
     /// @since v0.0.2
-    inline Vector3& operator=(const Vector3& other) {
-        m_storage = other.m_storage;
-        return *this;
-    }
+    inline Vector3& operator=(const Vector3& other) = default;
+
+    /// @brief Move constructor
+    /// @param other Vector to move from
+    /// @since v0.0.2
+    inline Vector3(Vector3&& other) noexcept = default;
+
+    /// @brief Move assignment operator
+    /// @param other Vector to move from
+    /// @return Reference to this vector after move assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Vector3& operator=(Vector3&& other) noexcept = default;
 
     // MARK: Accessors
 

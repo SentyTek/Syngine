@@ -26,7 +26,9 @@ class Matrix4x4 {
 
 	inline bool IsValidPosition(int row, int col) const {
 		return row >= 0 && row < 4 && col >= 0 && col < 4;
-	}
+    }
+
+    friend class Vector4;
 
   public:
 	// MARK: Constructors
@@ -130,13 +132,15 @@ class Matrix4x4 {
     /// @param scale Scale vector
     /// @param translation Translation vector
     /// @since v0.0.2
-    inline Matrix4x4(const Quaternion& rot,
-                     const Vector3&    scale,
+    inline Matrix4x4(const Vector3& scale,
+                     const Quaternion& rot,
                      const Vector3&    translation) {
-		DirectX::XMVECTOR quat = DirectX::XMLoadFloat4(&rot.m_storage);
-		DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationQuaternion(quat);
-        DirectX::XMMATRIX scaling = DirectX::XMMatrixScaling(scale.x(), scale.y(), scale.z());
-        DirectX::XMMATRIX translationMtx = DirectX::XMMatrixTranslation(translation.x(), translation.y(), translation.z());
+        DirectX::XMMATRIX scaling =
+            DirectX::XMMatrixScaling(scale.x(), scale.y(), scale.z());
+        DirectX::XMVECTOR quat = DirectX::XMLoadFloat4(&rot.m_storage);
+        DirectX::XMMATRIX rotation = DirectX::XMMatrixRotationQuaternion(quat);
+        DirectX::XMMATRIX translationMtx = DirectX::XMMatrixTranslation(
+            translation.x(), translation.y(), translation.z());
 
 		DirectX::XMMATRIX result = scaling * rotation * translationMtx;
 		DirectX::XMStoreFloat4x4(&m_storage, result);
@@ -145,17 +149,26 @@ class Matrix4x4 {
 	/// @brief Copy constructor
 	/// @param other Matrix to copy
 	/// @since v0.0.2
-	inline Matrix4x4(const Matrix4x4& other) : m_storage(other.m_storage) {}
+	inline Matrix4x4(const Matrix4x4& other) = default;
 
 	/// @brief Assignment operator
 	/// @param other Matrix to assign from
 	/// @return Reference to this matrix after assignment
 	/// @threadsafety not-safe
 	/// @since v0.0.2
-	inline Matrix4x4& operator=(const Matrix4x4& other) {
-		m_storage = other.m_storage;
-		return *this;
-	}
+    inline Matrix4x4& operator=(const Matrix4x4& other) = default;
+
+    /// @brief Move constructor
+    /// @param other Matrix to move from
+    /// @since v0.0.2
+    inline Matrix4x4(Matrix4x4&& other) noexcept = default;
+
+    /// @brief Move assignment operator
+    /// @param other Matrix to move from
+    /// @return Reference to this matrix after move assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Matrix4x4& operator=(Matrix4x4&& other) noexcept = default;
 
 	// MARK: Accessors
 
@@ -341,21 +354,17 @@ class Matrix4x4 {
 		return *this;
 	}
 
-	// Vector multiplication
+    // Vector multiplication
 
-	/// @brief Transform a 4D vector by this matrix
-	/// @param vec Vector to transform
-	/// @return Transformed vector
-	/// @threadsafety safe
-	/// @since v0.0.2
-	inline Vector4 operator*(const Vector4& vec) const {
-		DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(&m_storage);
-		DirectX::XMVECTOR v = DirectX::XMLoadFloat4(&vec.m_storage);
-		DirectX::XMVECTOR result = DirectX::XMVector4Transform(v, m);
-		Vector4 res;
-        DirectX::XMStoreFloat4(&res.m_storage, result);
-        return res;
-    }
+    // Matr4 * Vec4 is disallowed as we use row-major matrices and row vectors, so the correct order is Vec4 * Matr4
+    Vector4 operator*(const Vector4& vec) = delete;
+
+    /// @brief Transform a vector by this matrix
+    /// @param vec Vector to transform
+    /// @return Transformed vector
+    /// @threadsafety safe
+    /// @since v0.0.2
+    friend Vector4 operator*(const Vector4& vec, const Matrix4x4& mat);
 
 	// MARK: Normal matrix operations
 
@@ -499,5 +508,14 @@ class Matrix4x4 {
 };
 
 using Mat4 = Matrix4x4; // Alias Mat4 for Matrix4x4
+
+inline Vector4 operator*(const Vector4& vec, const Matrix4x4& mat) {
+    DirectX::XMVECTOR v = DirectX::XMLoadFloat4(&vec.m_storage);
+    DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(&mat.m_storage);
+    DirectX::XMVECTOR result = DirectX::XMVector4Transform(v, m);
+    Vector4 outVec;
+    DirectX::XMStoreFloat4(&outVec.m_storage, result);
+    return outVec;
+}
 
 } // namespace Syngine::Math

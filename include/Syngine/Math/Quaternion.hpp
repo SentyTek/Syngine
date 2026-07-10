@@ -87,14 +87,26 @@ class Quaternion {
 
     // MARK: Conversions
 
+    /// @brief Convert this quaternion to a bx::Quaternion
+    /// @return bx::Quaternion representation of this quaternion
+    /// @threadsafety safe
+    /// @since v0.0.2
     inline bx::Quaternion toBxQuat() const {
         return bx::Quaternion(m_storage.x, m_storage.y, m_storage.z, m_storage.w);
     }
 
+    /// @brief Convert this quaternion to a Jolt::Quat
+    /// @return Jolt::Quat representation of this quaternion
+    /// @threadsafety safe
+    /// @since v0.0.2
     inline JPH::Quat toJoltQuat() const {
         return JPH::Quat(m_storage.x, m_storage.y, m_storage.z, m_storage.w);
     }
 
+    /// @brief Convert this quaternion to a std::vector of floats
+    /// @return std::vector containing the four components of the quaternion
+    /// @threadsafety safe
+    /// @since v0.0.2
     inline operator std::vector<float>() const {
         return {m_storage.x, m_storage.y, m_storage.z, m_storage.w};
     }
