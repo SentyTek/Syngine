@@ -226,7 +226,7 @@ class Vector3 {
     /// @return std::vector containing the X, Y, and Z components
     /// @threadsafety safe
     /// @since v0.0.2
-    inline operator ::std::vector<float>() const {
+    inline operator std::vector<float>() const {
         return ::std::vector<float>{m_storage.x, m_storage.y, m_storage.z};
     }
 
@@ -237,7 +237,7 @@ class Vector3 {
     /// @since v0.0.2
     inline float operator[] (int index) const {
         if (index < 0 || index > 2) {
-            throw std::out_of_range("Index must be between 0 and 2 for Vector3.");
+            throw ::std::out_of_range("Index must be between 0 and 2 for Vector3.");
         }
         return reinterpret_cast<const float*>(&m_storage)[index];
     }
@@ -249,7 +249,7 @@ class Vector3 {
     /// @since v0.0.2
     inline void set(int index, float value) {
         if (index < 0 || index > 2) {
-            throw std::out_of_range("Index must be between 0 and 2 for Vector3.");
+            throw ::std::out_of_range("Index must be between 0 and 2 for Vector3.");
         }
         reinterpret_cast<float*>(&m_storage)[index] = value;
     }
@@ -360,6 +360,8 @@ class Vector3 {
         return *this;
     }
 
+    friend Vector3 operator*(const Vector3& vec, const Matrix3x3& mat);
+
     // MARK: Comparison operators
 
     /// @brief Check if two vectors are equal
@@ -452,7 +454,18 @@ class Vector3 {
         return DirectX::XMVectorGetX(DirectX::XMVector3LengthSq(v));
     }
 
+    /// @brief Normalize the vector in-place to have a length of 1
+    /// @note This function modifies the current vector. To get a new normalized vector without modifying the current one, use the `normalized()` method.
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline void normalize() {
+        DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
+        DirectX::XMStoreFloat3(&m_storage, DirectX::XMVector3Normalize(v));
+    }
+
     /// @brief Get the normalized (unit) vector in the same direction
+    /// @note This function RETURNS a new normalized vector without modifying
+    /// the current one. To normalize in-place, use the `normalize()` method.
     /// @return New normalized vector with length 1
     /// @threadsafety safe
     /// @since v0.0.2

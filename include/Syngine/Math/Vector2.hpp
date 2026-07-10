@@ -121,7 +121,7 @@ class Vector2 {
     /// @return std::vector containing the X and Y components
     /// @threadsafety safe
     /// @since v0.0.2
-    inline operator ::std::vector<float>() const {
+    inline operator std::vector<float>() const {
         return ::std::vector<float>{m_storage.x, m_storage.y};
     }
 
@@ -337,10 +337,23 @@ class Vector2 {
     }
 
     /// @brief Get the normalized (unit) vector in the same direction
-    /// @return New normalized vector with length 1
+    /// @return This function does NOT return a new vector, it modifies the
+    /// current one. To get a new normalized vector, use the `normalized()`
+    /// method.
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Vector2& normalize() {
+        DirectX::XMVECTOR v = DirectX::XMLoadFloat2(&m_storage);
+        DirectX::XMStoreFloat2(&m_storage, DirectX::XMVector2Normalize(v));
+        return *this;
+    }
+
+    /// @brief Get the normalized (unit) vector in the same direction
+    /// @return This function RETURNS a new normalized vector without modifying
+    /// the current one. To normalize in-place, use the `normalize()` method.
     /// @threadsafety safe
     /// @since v0.0.2
-    inline Vector2 normalized() const {
+    [[nodiscard("Use the normalize() method to normalize in-place")]] inline Vector2 normalized() const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat2(&m_storage);
         Vector2 res;
         DirectX::XMStoreFloat2(&res.m_storage, DirectX::XMVector2Normalize(v));

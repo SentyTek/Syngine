@@ -69,9 +69,9 @@ class Quaternion {
     /// @param values std::vector containing four float values
     /// @throws std::invalid_argument if the vector does not contain exactly 4 elements
     /// @since v0.0.2
-    inline Quaternion(const std::vector<float>& values) {
+    inline Quaternion(const ::std::vector<float>& values) {
         if (values.size() != 4) {
-            throw std::invalid_argument("Quaternion constructor requires exactly 4 float values.");
+            throw ::std::invalid_argument("Quaternion constructor requires exactly 4 float values.");
         }
         m_storage.x = values[0];
         m_storage.y = values[1];
@@ -110,6 +110,30 @@ class Quaternion {
     inline operator std::vector<float>() const {
         return {m_storage.x, m_storage.y, m_storage.z, m_storage.w};
     }
+
+    /// @brief Copy constructor
+    /// @param other Quaternion to copy
+    /// @since v0.0.2
+    inline Quaternion(const Quaternion& other) = default;
+
+    /// @brief Assignment operator
+    /// @param other Quaternion to assign from
+    /// @return Reference to this quaternion after assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Quaternion& operator=(const Quaternion& other) = default;
+
+    /// @brief Move constructor
+    /// @param other Quaternion to move from
+    /// @since v0.0.2
+    inline Quaternion(Quaternion&& other) noexcept = default;
+
+    /// @brief Move assignment operator
+    /// @param other Quaternion to move from
+    /// @return Reference to this quaternion after move assignment
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    inline Quaternion& operator=(Quaternion&& other) noexcept = default;
 
     // MARK: Accessors
 
@@ -222,6 +246,9 @@ class Quaternion {
     // MARK: Normal quaternion operations
 
     /// @brief Conjugate this quaternion in-place
+    /// @note This function does NOT return a new quaternion, it modifies the
+    /// current one. To get a new conjugated quaternion, use the `conjugated()`
+    /// method.
     /// @threadsafety not-safe
     /// @since v0.0.2
     inline void conjugate() {
@@ -230,7 +257,25 @@ class Quaternion {
         DirectX::XMStoreFloat4(&m_storage, result);
     }
 
+    /// @brief Return a new conjugated quaternion without modifying the current
+    /// one
+    /// @return New conjugated quaternion
+    /// @note This function RETURNS a new quaternion and does not modify the
+    /// current one. To modify the current quaternion in-place, use the
+    /// `conjugate()` method.
+    /// @threadsafety safe
+    /// @since v0.0.2
+    [[nodiscard("Use the conjugate() method to modify the current quaternion in-place")]] inline Quaternion conjugated() const {
+        DirectX::XMVECTOR q = DirectX::XMLoadFloat4(&m_storage);
+        DirectX::XMVECTOR result = DirectX::XMQuaternionConjugate(q);
+        Quaternion res;
+        DirectX::XMStoreFloat4(&res.m_storage, result);
+        return res;
+    }
+
     /// @brief Normalize this quaternion in-place
+    /// @note This function does NOT return a new quaternion, it modifies the
+    /// current one. To get a new normalized quaternion, use the `normalized()`
     /// @threadsafety not-safe
     /// @since v0.0.2
     inline void normalize() {
@@ -239,13 +284,48 @@ class Quaternion {
         DirectX::XMStoreFloat4(&m_storage, result);
     }
 
+    /// @brief Return a new normalized quaternion without modifying the current
+    /// one
+    /// @return New normalized quaternion
+    /// @note This function RETURNS a new quaternion and does not modify the
+    /// current one. To modify the current quaternion in-place, use the
+    /// `normalize()` method.
+    /// @threadsafety safe
+    /// @since v0.0.2
+    [[nodiscard("Use the normalize() method to modify the current quaternion in-place")]] inline Quaternion normalized() const {
+        DirectX::XMVECTOR q = DirectX::XMLoadFloat4(&m_storage);
+        DirectX::XMVECTOR result = DirectX::XMQuaternionNormalize(q);
+        Quaternion res;
+        DirectX::XMStoreFloat4(&res.m_storage, result);
+        return res;
+    }
+
     /// @brief Invert this quaternion in-place
+    /// @note This function does NOT return a new quaternion, it modifies the
+    /// current one. To get a new inverted quaternion, use the `inverse()`
+    /// method.
     /// @threadsafety not-safe
     /// @since v0.0.2
     inline void invert() {
         DirectX::XMVECTOR q = DirectX::XMLoadFloat4(&m_storage);
         DirectX::XMVECTOR result = DirectX::XMQuaternionInverse(q);
         DirectX::XMStoreFloat4(&m_storage, result);
+    }
+
+    /// @brief Return a new inverted quaternion without modifying the current
+    /// one
+    /// @return New inverted quaternion
+    /// @note This function RETURNS a new quaternion and does not modify the
+    /// current one. To modify the current quaternion in-place, use the
+    /// `invert()` method.
+    /// @threadsafety safe
+    /// @since v0.0.2
+    [[nodiscard("Use the invert() method to modify the current quaternion in-place")]] inline Quaternion inverse() const {
+        DirectX::XMVECTOR q = DirectX::XMLoadFloat4(&m_storage);
+        DirectX::XMVECTOR result = DirectX::XMQuaternionInverse(q);
+        Quaternion res;
+        DirectX::XMStoreFloat4(&res.m_storage, result);
+        return res;
     }
 
     /// @brief Calculate the dot product with another quaternion
@@ -305,21 +385,21 @@ class Quaternion {
         // X-axis (pitch)
         const float sinx_cosp = 2.0f * (w * x + y * z);
         const float cosx_cosp = 1.0f - 2.0f * (x * x + y * y);
-        const float pitch = std::atan2(sinx_cosp, cosx_cosp);
+        const float pitch = ::std::atan2(sinx_cosp, cosx_cosp);
 
         // Y-axis (yaw)
         const float siny = 2.0f * (w * y - z * x);
         float yaw;
-        if (std::fabs(siny) >= 1.0f) {
-            yaw = std::copysign(DirectX::XM_PIDIV2, siny);
+        if (::std::fabs(siny) >= 1.0f) {
+            yaw = ::std::copysign(DirectX::XM_PIDIV2, siny);
         } else {
-            yaw = std::asin(siny);
+            yaw = ::std::asin(siny);
         }
 
         // Z-axis (roll)
         const float sinz_cosp = 2.0f * (w * z + x * y);
         const float cosz_cosp = 1.0f - 2.0f * (y * y + z * z);
-        const float roll = std::atan2(sinz_cosp, cosz_cosp);
+        const float roll = ::std::atan2(sinz_cosp, cosz_cosp);
 
         return Vector3(pitch, yaw, roll);
     }

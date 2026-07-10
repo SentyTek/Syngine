@@ -450,13 +450,28 @@ class Vector4 {
     // MARK: Normal vector operations
 
     /// @brief Normalize the vector in-place
+    /// @note This function modifies the current vector to have a length of 1.
+    /// To get a new normalized vector without modifying the current one, use
+    /// the `normalized()` method.
 	/// @return Reference to this vector after normalization
 	/// @threadsafety not-safe
 	/// @since v0.0.2
-	inline Vector4& normalize() {
+	inline void normalize() {
 		DirectX::XMVECTOR v = DirectX::XMLoadFloat4(&m_storage);
 		DirectX::XMStoreFloat4(&m_storage, DirectX::XMVector4Normalize(v));
-		return *this;
+	}
+
+    /// @brief Normalize the vector and return a new normalized vector
+    /// @note This function RETURNS a new normalized vector without modifying
+    /// the current one. To normalize in-place, use the `normalize()` method.
+    /// @return New normalized vector with length 1
+    /// @threadsafety safe
+    /// @since v0.0.2
+	[[nodiscard("Use the normalize() method to normalize in-place")]] inline Vector4 normalized() const {
+		DirectX::XMVECTOR v = DirectX::XMLoadFloat4(&m_storage);
+		Vector4 res;
+		DirectX::XMStoreFloat4(&res.m_storage, DirectX::XMVector4Normalize(v));
+		return res;
 	}
 
 	/// @brief Calculate the length (magnitude) of the vector

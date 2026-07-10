@@ -11,6 +11,7 @@
 // This file includes the rest of the math library headers for convenience.
 // It also defines some common math types and constants.
 
+#include "Syngine/Math/Vector2.hpp"
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Math/Vector4.hpp"
 #include "Syngine/Math/Matrix3x3.hpp"

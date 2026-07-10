@@ -25,6 +25,7 @@ class Matrix3x3 {
     }
 
     friend class Quaternion; // for quaternion-matrix conversion
+    friend class Vector3;     // for matrix-vector multiplication
   public:
     // MARK: Constructors
 
@@ -105,7 +106,7 @@ class Matrix3x3 {
     /// @since v0.0.2
     inline float m(int row, int col) const {
         if (!IsValidPosition(row, col)) {
-            throw std::out_of_range("Row and column indices must be between 0 and 2.");
+            throw ::std::out_of_range("Row and column indices must be between 0 and 2.");
         }
         return m_storage.m[row][col];
     }
@@ -118,7 +119,7 @@ class Matrix3x3 {
     /// @since v0.0.2
     inline void setM(int row, int col, float value) {
         if (!IsValidPosition(row, col)) {
-            throw std::out_of_range("Row and column indices must be between 0 and 2.");
+            throw ::std::out_of_range("Row and column indices must be between 0 and 2.");
         }
         m_storage.m[row][col] = value;
     }
@@ -130,7 +131,7 @@ class Matrix3x3 {
     /// @since v0.0.2
     inline Vector3 row(int row) const {
         if (row < 0 || row > 2) {
-            throw std::out_of_range("Row index must be between 0 and 2.");
+            throw ::std::out_of_range("Row index must be between 0 and 2.");
         }
         return Vector3(m_storage.m[row][0], m_storage.m[row][1], m_storage.m[row][2]);
     }
@@ -142,7 +143,7 @@ class Matrix3x3 {
     /// @since v0.0.2
     inline Vector3 column(int col) const {
         if (col < 0 || col > 2) {
-            throw std::out_of_range("Column index must be between 0 and 2.");
+            throw ::std::out_of_range("Column index must be between 0 and 2.");
         }
         return Vector3(m_storage.m[0][col], m_storage.m[1][col], m_storage.m[2][col]);
     }
@@ -154,7 +155,7 @@ class Matrix3x3 {
     /// @since v0.0.2
     inline void setRow(int row, const Vector3& vec) {
         if (row < 0 || row > 2) {
-            throw std::out_of_range("Row index must be between 0 and 2.");
+            throw ::std::out_of_range("Row index must be between 0 and 2.");
         }
         m_storage.m[row][0] = vec.x();
         m_storage.m[row][1] = vec.y();
@@ -168,7 +169,7 @@ class Matrix3x3 {
     /// @since v0.0.2
     inline void setColumn(int col, const Vector3& vec) {
         if (col < 0 || col > 2) {
-            throw std::out_of_range("Column index must be between 0 and 2.");
+            throw ::std::out_of_range("Column index must be between 0 and 2.");
         }
         m_storage.m[0][col] = vec.x();
         m_storage.m[1][col] = vec.y();
@@ -270,29 +271,43 @@ class Matrix3x3 {
 
     // Vector multiplication
 
+    // Delete the default vector multiplication operator to prevent misuse
+    // Please use vec * mat instead of mat * vec for correct transformation
+    inline Vector3 operator*(const Vector3& vec) = delete;
+
     /// @brief Transform a vector by this matrix
     /// @param vec Vector to transform
     /// @return Transformed vector
     /// @threadsafety safe
     /// @since v0.0.2
-    inline Vector3 operator*(const Vector3& vec) {
-        DirectX::XMMATRIX m = DirectX::XMLoadFloat3x3(&m_storage);
-        DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&vec.m_storage);
-        DirectX::XMVECTOR result = DirectX::XMVector3Transform(v, m);
-        Vector3 res;
-        DirectX::XMStoreFloat3(&res.m_storage, result);
-        return res;
-    }
+    friend Vector3 operator*(const Vector3& vec, const Matrix3x3& mat);
 
     // MARK: Normal matrix operations
 
     /// @brief Transpose this matrix in-place
+    /// @note This does NOT return a new matrix, it modifies the current one. To
+    /// get a new transposed matrix, use the `transposed()` method.
     /// @threadsafety not-safe
     /// @since v0.0.2
     inline void transpose() {
         DirectX::XMMATRIX m = DirectX::XMLoadFloat3x3(&m_storage);
         DirectX::XMMATRIX result = DirectX::XMMatrixTranspose(m);
         DirectX::XMStoreFloat3x3(&m_storage, result);
+    }
+
+    /// @brief Get a new transposed matrix without modifying this one
+    /// @note This function RETURNS a new matrix and does not modify the current
+    /// one. To modify the current matrix in-place, use the `transpose()`
+    /// method.
+    /// @return New transposed matrix
+    /// @threadsafety safe
+    /// @since v0.0.2
+    [[nodiscard("Use the transpose() method to transpose in-place")]] inline Matrix3x3 transposed() const {
+        DirectX::XMMATRIX m = DirectX::XMLoadFloat3x3(&m_storage);
+        DirectX::XMMATRIX result = DirectX::XMMatrixTranspose(m);
+        Matrix3x3 res;
+        DirectX::XMStoreFloat3x3(&res.m_storage, result);
+        return res;
     }
 
     /// @brief Invert this matrix in-place
@@ -401,4 +416,15 @@ class Matrix3x3 {
 };
 
 using Mat3 = Matrix3x3; // Alias mat3 for Matrix3x3
+
+inline Vector3 operator*(const Vector3& vec, const Matrix3x3& mat) {
+    DirectX::XMFLOAT3 vecStorage(vec.x(), vec.y(), vec.z());
+    DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&vecStorage);
+    DirectX::XMMATRIX m = DirectX::XMLoadFloat3x3(&mat.m_storage);
+    DirectX::XMVECTOR result = DirectX::XMVector3Transform(v, m);
+    return Vector3(DirectX::XMVectorGetX(result),
+                   DirectX::XMVectorGetY(result),
+                   DirectX::XMVectorGetZ(result));
+}
+
 } // namespace Syngine::Math

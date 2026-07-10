@@ -180,7 +180,7 @@ class Matrix4x4 {
 	/// @since v0.0.2
 	inline float m(int row, int col) const {
 		if (!IsValidPosition(row, col)) {
-			throw std::out_of_range("Row and column indices must be between 0 and 3.");
+			throw ::std::out_of_range("Row and column indices must be between 0 and 3.");
 		}
 		return m_storage.m[row][col];
 	}
@@ -193,7 +193,7 @@ class Matrix4x4 {
 	/// @since v0.0.2
 	inline void setM(int row, int col, float value) {
 		if (!IsValidPosition(row, col)) {
-			throw std::out_of_range("Row and column indices must be between 0 and 3.");
+			throw ::std::out_of_range("Row and column indices must be between 0 and 3.");
 		}
 		m_storage.m[row][col] = value;
 	}
@@ -205,7 +205,7 @@ class Matrix4x4 {
 	/// @since v0.0.2
 	inline Vector4 row(int row) const {
 		if (row < 0 || row > 3) {
-			throw std::out_of_range("Row index must be between 0 and 3.");
+			throw ::std::out_of_range("Row index must be between 0 and 3.");
 		}
 		return Vector4(m_storage.m[row][0], m_storage.m[row][1], m_storage.m[row][2], m_storage.m[row][3]);
 	}
@@ -217,7 +217,7 @@ class Matrix4x4 {
 	/// @since v0.0.2
 	inline Vector4 column(int col) const {
 		if (col < 0 || col > 3) {
-			throw std::out_of_range("Column index must be between 0 and 3.");
+			throw ::std::out_of_range("Column index must be between 0 and 3.");
 		}
 		return Vector4(m_storage.m[0][col], m_storage.m[1][col], m_storage.m[2][col], m_storage.m[3][col]);
 	}
@@ -229,7 +229,7 @@ class Matrix4x4 {
 	/// @since v0.0.2
 	inline void setRow(int row, const Vector4& vec) {
 		if (row < 0 || row > 3) {
-			throw std::out_of_range("Row index must be between 0 and 3.");
+			throw ::std::out_of_range("Row index must be between 0 and 3.");
 		}
 		m_storage.m[row][0] = vec.x();
 		m_storage.m[row][1] = vec.y();
@@ -244,7 +244,7 @@ class Matrix4x4 {
 	/// @since v0.0.2
 	inline void setColumn(int col, const Vector4& vec) {
 		if (col < 0 || col > 3) {
-			throw std::out_of_range("Column index must be between 0 and 3.");
+			throw ::std::out_of_range("Column index must be between 0 and 3.");
 		}
 		m_storage.m[0][col] = vec.x();
 		m_storage.m[1][col] = vec.y();
@@ -368,7 +368,25 @@ class Matrix4x4 {
 
 	// MARK: Normal matrix operations
 
-	/// @brief Transpose this matrix in-place
+    /// @brief Transpose this matrix in-place
+    /// @note This function RETURNS a new matrix and does not modify the current
+    /// one. To modify the current matrix in-place, use the `transpose()`
+    /// method.
+    /// @return New transposed matrix
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    [[nodiscard("Use the transpose() method to transpose in-place")]] inline Matrix4x4 transposed() const {
+		DirectX::XMMATRIX m = DirectX::XMLoadFloat4x4(&m_storage);
+		DirectX::XMMATRIX result = DirectX::XMMatrixTranspose(m);
+		Matrix4x4 res;
+		DirectX::XMStoreFloat4x4(&res.m_storage, result);
+		return res;
+	}
+
+    /// @brief Transpose this matrix in-place
+    /// @note This function modifies the current matrix to be its transpose. To
+    /// get a new transposed matrix without modifying the current one, use the
+    /// `transposed()` method.
 	/// @threadsafety not-safe
 	/// @since v0.0.2
 	inline void transpose() {
