@@ -20,18 +20,19 @@
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_properties.h>
 
-#include <bgfx/platform.h>
 #include "Syngine/Math/Math.hpp"
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Utils/FsUtils.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #if BX_PLATFORM_OSX
@@ -48,16 +49,19 @@ bool        Renderer::m_isReady = false;
 float Renderer::m_gizmoSize = 1.0f;
 std::unordered_map<std::string, Syngine::BillboardComponent*>
     Renderer::m_gizmoRegistry;
-static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms;
+std::unordered_map<bgfx::ViewId, std::vector<Program>> Renderer::m_viewPrograms;
+std::vector<Renderer::UniformCacheEntry> Renderer::m_uniformCache;
 
-int                          Renderer::width        = 0;
-int                          Renderer::height       = 0;
+int Renderer::width = 0;
+int Renderer::height = 0;
+uint64_t Renderer::currentDrawId = 1;
 
-CameraComponent*             Renderer::m_pseudoCamera = nullptr;
+CameraComponent* Renderer::m_pseudoCamera = nullptr;
 
 Renderer::Renderer(int width, int height, const RendererConfig& config) {
     Renderer::width = width;
     Renderer::height = height;
+    Renderer::m_uniformCache.resize(256);
 
     if (!_CreateRenderer(config)) {
         Syngine::Logger::Fatal("Failed to create renderer");
@@ -80,12 +84,12 @@ Renderer::~Renderer() {
     // Destroy all programs. Uniforms are already destroyed above via m_uniformRegistry
     // (RegisterUniform copies the same handle/data pointer into both stores, so only
     // destroy from one of them).
-    for (auto& view : viewPrograms) {
+    for (auto& view : m_viewPrograms) {
         for (auto& prog : view.second) {
             bgfx::destroy(prog.program);
         }
     }
-    viewPrograms.clear();
+    m_viewPrograms.clear();
 
     // Clear gizmos
     for (auto& [tag, gizmo] : m_gizmoRegistry) {
@@ -175,7 +179,7 @@ size_t Renderer::AddProgram(const std::string& path,
     prog.fsPath  = fsPath;
     prog.id = programHandle.idx;
 
-    viewPrograms[viewId].push_back(prog); // Store program by viewId
+    m_viewPrograms[viewId].push_back(prog); // Store program by viewId
     Syngine::Logger::LogF(Syngine::LogLevel::INFO,
                           true,
                           "Program %s created successfully",
@@ -238,13 +242,13 @@ size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& pa
     prog.bundlePath = bundlePath;
     prog.id      = programHandle.idx;
 
-    viewPrograms[viewId].push_back(prog); // Store program by viewId
+    m_viewPrograms[viewId].push_back(prog); // Store program by viewId
     Syngine::Logger::LogF(Syngine::LogLevel::INFO, true, "Program %s created successfully from bundle", name.c_str());
     return prog.id;
 }
 
 Program Renderer::GetProgram(const std::string_view& name) {
-    for (const auto& programs : viewPrograms) {
+    for (const auto& programs : m_viewPrograms) {
         for (const auto& program : programs.second) {
             if (program.name == name && bgfx::isValid(program.program)) {
                 return program;
@@ -261,7 +265,7 @@ Program Renderer::GetProgram(size_t id) {
     return Program();
 }
 Program* Renderer::_GetProgram(size_t id) {
-    for (auto& pair : viewPrograms) {
+    for (auto& pair : m_viewPrograms) {
         for (auto& prog : pair.second) {
             if (prog.id == id) {
                 return &prog;
@@ -272,48 +276,27 @@ Program* Renderer::_GetProgram(size_t id) {
 }
 
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& name) {
-    for (int i = 0; i < viewPrograms[viewId].size(); ++i) {
-        if (viewPrograms[viewId][i].name == name) {
-            for (auto& uniform : viewPrograms[viewId][i].uniforms) {
-                m_uniformRegistry.erase(uniform.handle.idx);
-                bgfx::destroy(uniform.handle);
-                if (uniform.data) {
-                    free(uniform.data);
-                }
-            }
-            bgfx::destroy(viewPrograms[viewId][i].program);
-            viewPrograms[viewId].erase(viewPrograms[viewId].begin() + i);
+    for (int i = 0; i < m_viewPrograms[viewId].size(); ++i) {
+        if (m_viewPrograms[viewId][i].name == name) {
+            bgfx::destroy(m_viewPrograms[viewId][i].program);
+            m_viewPrograms[viewId].erase(m_viewPrograms[viewId].begin() + i);
             return true;
         }
     }
     return false;
 }
 bool Renderer::RemoveProgram(Syngine::ViewID viewId, size_t id) {
-    if (id < viewPrograms[viewId].size()) {
-        for (auto& uniform : viewPrograms[viewId][id].uniforms) {
-            m_uniformRegistry.erase(uniform.handle.idx);
-            bgfx::destroy(uniform.handle);
-            if (uniform.data) {
-                free(uniform.data);
-            }
-        }
-        bgfx::destroy(viewPrograms[viewId][id].program);
-        viewPrograms[viewId].erase(viewPrograms[viewId].begin() + id);
+    if (id < m_viewPrograms[viewId].size()) {
+        bgfx::destroy(m_viewPrograms[viewId][id].program);
+        m_viewPrograms[viewId].erase(m_viewPrograms[viewId].begin() + id);
         return true;
     }
     return false;
 }
 
 bool Renderer::RemoveAllPrograms() {
-    for (auto& programs : viewPrograms) {
+    for (auto& programs : m_viewPrograms) {
         for (auto& program : programs.second) {
-            for (auto& uniform : program.uniforms) {
-                m_uniformRegistry.erase(uniform.handle.idx);
-                bgfx::destroy(uniform.handle);
-                if (uniform.data) {
-                    free(uniform.data);
-                }
-            }
             bgfx::destroy(program.program);
         }
         programs.second.clear();
@@ -321,8 +304,39 @@ bool Renderer::RemoveAllPrograms() {
     return true;
 }
 
+bool Renderer::RemoveUniform(size_t id) {
+    auto it = m_uniformRegistry.find(id);
+    if (it != m_uniformRegistry.end()) {
+        m_uniformRegistry.erase(it);
+        return true;
+    }
+    return false;
+}
+
+void Renderer::RemoveAllUniforms() {
+    for (auto& [id, uniform] : m_uniformRegistry) {
+        if (bgfx::isValid(uniform.handle)) {
+            bgfx::destroy(uniform.handle);
+        }
+        if (uniform.data) {
+            free(uniform.data);
+            uniform.data = nullptr;
+        }
+    }
+    m_uniformRegistry.clear();
+}
+
+size_t Renderer::GetUniformID(const std::string& name) {
+    for (const auto& [id, uniform] : m_uniformRegistry) {
+        if (uniform.name == name) {
+            return id;
+        }
+    }
+    return 0; // Return 0 if not found
+}
+
 bool Renderer::ReloadProgram(Syngine::ViewID viewId, const std::string_view& name) {
-    for (auto& prog : viewPrograms[viewId]) {
+    for (auto& prog : m_viewPrograms[viewId]) {
         if (prog.name == name) {
             bgfx::ShaderHandle vs = _LoadShader(prog.vsPath.c_str());
             bgfx::ShaderHandle fs = _LoadShader(prog.fsPath.c_str());
@@ -346,7 +360,7 @@ bool Renderer::ReloadProgram(Syngine::ViewID viewId, const std::string_view& nam
 }
 
 bool Renderer::ReloadAllPrograms() {
-    for (auto& programs : viewPrograms) {
+    for (auto& programs : m_viewPrograms) {
         for (auto& prog : programs.second) {
             bgfx::ShaderHandle  vs;
             bgfx::ShaderHandle  fs;
@@ -383,42 +397,47 @@ bool Renderer::IsReady() {
     return m_isReady;
 }
 
-size_t Renderer::RegisterUniform(size_t             program,
-                                 const std::string& name,
+size_t Renderer::RegisterUniform(const std::string& name,
                                  UniformType        type,
                                  uint16_t           num) {
-    Program* prog = _GetProgram(program);
-    if (!prog) {
-        Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR, true,
-            "Cannot register uniform to invalid program id %zu",
-            program);
-        return 0;
-    }
-
     if (name.empty()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
                               "Uniform name cannot be empty");
         return 0;
     }
 
-    for (const auto& u : prog->uniforms) {
-        if (u.name == name) {
-            Syngine::Logger::LogF(
-                Syngine::LogLevel::ERR, true,
-                "Uniform with name \"%s\" already exists in program \"%s\"",
-                name.c_str(),
-                prog->name.c_str());
-            return u.handle.idx;
+    const size_t existingId = GetUniformID(name);
+    if (existingId != 0) {
+        Uniform* existing = GetUniform(existingId);
+        if (existing &&
+            (existing->type != type || existing->num != num)) {
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                                  true,
+                                  "Uniform '%s' already exists with type/num mismatch (existing type=%d num=%u, requested type=%d num=%u)",
+                                  name.c_str(),
+                                  static_cast<int>(existing->type),
+                                  existing->num,
+                                  static_cast<int>(type),
+                                  num);
         }
+        return existingId;
     }
 
     Uniform u = {
         .handle = bgfx::createUniform(
             name.c_str(), static_cast<bgfx::UniformType::Enum>(type), num),
-                    .type = type,
-                    .name = name,
-                    .num  = num };
+        .type = type,
+        .name = name,
+        .num  = num
+    };
+
+    if (!bgfx::isValid(u.handle)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              true,
+                              "Failed to create uniform '%s'",
+                              name.c_str());
+        return 0;
+    }
 
     // Allocate memory based on uniform type
     size_t size = 0;
@@ -445,7 +464,6 @@ size_t Renderer::RegisterUniform(size_t             program,
         memset(u.data, 0, size * num);
     }
 
-    prog->uniforms.push_back(u);
     // Store in uniform registry for fast lookup
     m_uniformRegistry[u.handle.idx] = u;
     return u.handle.idx;
@@ -461,28 +479,65 @@ Uniform* Renderer::GetUniform(size_t id) {
 
 void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
     Uniform* u = GetUniform(id);
+    Logger::ToConsole("Attempting to set uniform idx %d", u->handle);
     if (u && bgfx::isValid(u->handle)) {
+        if (u->type == UNIFORM_SAMPLER) {
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                                  true,
+                                  "Cannot set texture uniform. Use bgfx::setTexture instead.");
+            return;
+        }
+
+        if (num > u->num) {
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                                  true,
+                                  "Uniform '%s' requested count %u exceeds registered count %u, clamping",
+                                  u->name.c_str(),
+                                  num,
+                                  u->num);
+            num = u->num;
+        }
+
+        // Get size
         size_t size = 0;
         switch (u->type) {
-        case UNIFORM_SAMPLER:
-            Syngine::Logger::LogF(Syngine::LogLevel::WARN, true, "Cannot set texture uniform. Use bgfx::setTexture instead.");
-            break;
         case UNIFORM_VEC4:
             size = sizeof(float) * 4;
-            bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
             break;
         case UNIFORM_MAT3:
             size = sizeof(float) * 9;
-            bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
             break;
         case UNIFORM_MAT4:
             size = sizeof(float) * 16;
-            bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
             break;
         default:
             Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "Unknown uniform type");
             break;
         }
+
+        Logger::ToConsole("DEBUG: Struct Addr: %p | Handle Idx: %d | Data Addr: %p",
+    (void*)u, u->handle.idx, data);
+
+        // If the current data is the same as the last data set for this
+        // uniform, skip setting it again Unless the uniform has never been set
+        // before (version == 0), in which case we always set it
+        UniformCacheEntry& cache = m_uniformCache[u->handle.idx];
+
+        if (cache.drawId == currentDrawId &&
+            cache.lastData.size() == size * num &&
+            memcmp(cache.lastData.data(), data, size * num) == 0) {
+            // Data is the same as last frame, skip setting
+            return;
+        }
+
+        // Set
+        Logger::ToConsole("Cleared check, setting %d", u->handle);
+        Logger::ToConsole("\t Data: %f", static_cast<const float*>(data)[0]);
+        bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
+        // Update uniform cache
+        cache.lastData.resize(size * num);
+        memcpy(cache.lastData.data(), data, size * num);
+        cache.drawId = currentDrawId;
 
         if (size > 0) {
             memcpy(u->data, data, size * num);
@@ -504,7 +559,8 @@ void Renderer::_RegisterGizmo(const std::string& tag) {
 }
 
 Math::Vector3 Renderer::GetSunDirection() {
-    Uniform* u = RenderCore::_GetDefaultUniform("u_default_lightDir");
+    Uniform* u = RenderCore::_GetDefaultUniform(
+        RenderCore::DefaultUniform::u_lightDir);
     if (u && u->data) {
         float* dir = static_cast<float*>(u->data);
         return Math::Vector3(dir[0], dir[1], dir[2]);
@@ -514,7 +570,7 @@ Math::Vector3 Renderer::GetSunDirection() {
     }
 }
 
-void Renderer::SetSunDirection(const Math::Vector3 lightDir) {
+void Renderer::SetSunDirection(const Math::Vector3& lightDir) {
     // Loop over every uniform with "u_lightDir" as the name and set its value
     for (auto& pair : m_uniformRegistry) {
         Uniform& uniform = pair.second;
@@ -527,6 +583,10 @@ void Renderer::SetSunDirection(const Math::Vector3 lightDir) {
 
 void Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     RenderCore::_RenderFrame(camera, debug);
+}
+
+void Renderer::_ClearFrameUniformCache() {
+    currentDrawId++;
 }
 
 void Renderer::SetPseudoCamera(CameraComponent* camera) {

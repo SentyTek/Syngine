@@ -13,6 +13,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include <SDL3/SDL.h>
@@ -75,7 +76,6 @@ struct Program {
     std::string         fsPath  = ""; //* Fragment shader path
     std::string         bundlePath = ""; //* Bundle path if loaded from a bundle
     int                 id      = 0;  //* Unique ID of the shader program
-    std::vector<Uniform> uniforms;     //* List of shader uniforms
 };
 
 /// @brief To manage renderer configuration
@@ -104,6 +104,7 @@ class Renderer {
 
     static int width; //* Width of the game window in pixels
     static int height; //* Height of the game window in pixels
+    static uint64_t currentDrawId; //* Current frame number for tracking uniform updates
 
     /// @brief Constructor for the Renderer class
     /// @param width Width of the game window in pixels
@@ -216,7 +217,7 @@ class Renderer {
     /// @threadsafety not-safe
     /// @since v0.0.1
     static size_t
-    RegisterUniform(size_t program, const std::string& name, UniformType type, uint16_t num = 1);
+    RegisterUniform(const std::string& name, UniformType type, uint16_t num = 1);
 
     /// @brief Set a uniform variable
     /// @param id The ID of the uniform variable to set, returned from
@@ -234,9 +235,29 @@ class Renderer {
     /// @param num The number of elements to set (default is 1)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void SetUniform(size_t id, const Math::Vector4 data, uint16_t num = 1) {
+    static void SetUniform(size_t id, const Math::Vector4& data, uint16_t num = 1) {
         SetUniform(id, data.data(), num);
     }
+
+    /// @brief Remove a uniform by its ID
+    /// @param id The ID of the uniform variable to remove, returned from
+    /// RegisterUniform
+    /// @return True if the uniform was removed successfully, false otherwise
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static bool RemoveUniform(size_t id);
+
+    /// @brief Remove all registered uniforms
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void RemoveAllUniforms();
+
+    /// @brief Get a uniform ID by its name
+    /// @param name The name of the uniform variable
+    /// @return The ID of the uniform variable, or 0 if not found
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    static size_t GetUniformID(const std::string& name);
 
     /// @brief Get the global sun light direction
     /// @return A vector3 representing the normalized sun light direction in world space
@@ -248,7 +269,7 @@ class Renderer {
     /// @note The direction should be normalized and in world space coordinates.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void SetSunDirection(const Math::Vector3 lightDir);
+    static void SetSunDirection(const Math::Vector3& lightDir);
 
     /// @brief Set the default gizmo size
     /// @param size Size of the gizmo
@@ -282,15 +303,22 @@ class Renderer {
     /// @threadsafety not-safe
     /// @since v0.0.1
     static void SetPseudoCamera(CameraComponent* camera);
+
   private:
+    struct UniformCacheEntry {
+        uint16_t idx;
+        std::vector<uint8_t> lastData;
+        uint64_t drawId = 0;
+    };
 
     static std::string m_title; //* Title of the game window
     static bool m_isReady; //* Whether the renderer is initialized and ready
     static std::unordered_map<uint16_t, Uniform> m_uniformRegistry; //* Registry of shader uniforms
+    static std::vector<UniformCacheEntry> m_uniformCache; //* Cache of uniform data for the current frame
 
     static std::unordered_map<std::string, Syngine::BillboardComponent*> m_gizmoRegistry; //* Registry of gizmos
     static float m_gizmoSize;      //* Default size for gizmos
-    static std::unordered_map<bgfx::ViewId, std::vector<Program>> viewPrograms; //* Shader programs organized by view ID
+    static std::unordered_map<bgfx::ViewId, std::vector<Program>> m_viewPrograms; //* Shader programs organized by view ID
 
     static CameraComponent* m_pseudoCamera; //* Pseudo camera for rendering when enabled in debug mode
 
@@ -326,6 +354,8 @@ class Renderer {
 
     // Wrapper to call RenderCore's _RenderFrame
     static void _RenderFrame(CameraComponent* camera, DebugModes debug);
+
+    static void _ClearFrameUniformCache();
 
     friend class Core;
     friend class RenderCore;

@@ -201,6 +201,42 @@ else() # Linux and other Unix-like systems
     add_compile_options(-frtti) # Jolt needs RTTI on Unix platforms
 endif()
 
+# --- BGFX Uniform Assert Patch ---
+set(BGFX_PATCH_FILE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/patches/fix_bgfx_uniform_assert.patch")
+set(BGFX_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx")
+message(STATUS "BGFX patch file: ${BGFX_PATCH_FILE}")
+message(STATUS "BGFX source directory: ${BGFX_SOURCE_DIR}")
+
+if(EXISTS "${BGFX_PATCH_FILE}" AND EXISTS "${BGFX_SOURCE_DIR}/.git")
+    message(STATUS "Checking/Applying bgfx uniform assert patch...")
+
+    # 1. Check if the patch is already applied to avoid git errors
+    execute_process(
+        COMMAND git apply --check "${BGFX_PATCH_FILE}"
+        WORKING_DIRECTORY "${BGFX_SOURCE_DIR}"
+        RESULT_VARIABLE PATCH_CHECK_RES
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+
+    # If RESULT_VARIABLE is 0, the patch can be applied cleanly (meaning it isn't applied yet)
+    if(PATCH_CHECK_RES EQUAL 0)
+        execute_process(
+            COMMAND git apply "${BGFX_PATCH_FILE}"
+            WORKING_DIRECTORY "${BGFX_SOURCE_DIR}"
+            RESULT_VARIABLE PATCH_APPLY_RES
+        )
+        if(PATCH_APPLY_RES EQUAL 0)
+            message(STATUS "Successfully patched bgfx uniform validation.")
+        else()
+            message(WARNING "Failed to apply bgfx patch automatically.")
+        endif()
+    else()
+        message(STATUS "bgfx patch already applied or source modified. Skipping.")
+    endif()
+endif()
+# ---------------------------------
+
 # Configure all third party files by calling their cmake scripts
 # EXCLUDE_FROM_ALL is used so that its install targets and configs don't pollute upwards into the parent project
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/SDL ${CMAKE_BINARY_DIR}/third_party/SDL EXCLUDE_FROM_ALL)
