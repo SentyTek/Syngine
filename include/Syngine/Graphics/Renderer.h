@@ -355,7 +355,7 @@ class Renderer {
     // Wrapper to call RenderCore's _RenderFrame
     static void _RenderFrame(CameraComponent* camera, DebugModes debug);
 
-    static void _ClearFrameUniformCache();
+    static void _UpdateDrawID();
 
     friend class Core;
     friend class RenderCore;

@@ -1159,7 +1159,7 @@ void RenderCore::_ScreenSpaceQuad(ViewID view, Program program) {
                    BGFX_STATE_CULL_CW);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
-    Renderer::_ClearFrameUniformCache();
+    Renderer::_UpdateDrawID();
     bgfx::submit(view, program.program);
 }
 
@@ -1223,7 +1223,7 @@ void RenderCore::_DrawShadows(const Program&   program,
         bgfx::setIndexBuffer(meshData.ibh);
 
         // Shadow shaders are simple, just output depth
-        Renderer::_ClearFrameUniformCache();
+        Renderer::_UpdateDrawID();
         bgfx::submit(program.viewId + cascade, program.program);
         m_drawnCounts.shadows++;
     }
@@ -1251,7 +1251,7 @@ void RenderCore::_DrawSky(const Program&         program,
         timeVec);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
-    Renderer::_ClearFrameUniformCache();
+    Renderer::_UpdateDrawID();
     bgfx::submit(program.viewId, program.program);
 }
 
@@ -1284,7 +1284,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         bgfx::setTransform(packet.modelMtx.data());
         bgfx::setVertexBuffer(0, packet.vbh);
         bgfx::setIndexBuffer(packet.ibh, packet.indexStart, packet.indexCount);
-        Renderer::_ClearFrameUniformCache();
+        Renderer::_UpdateDrawID();
         bgfx::submit(program.viewId, program.program);
         m_drawnCounts.forward++;
     }
@@ -1463,7 +1463,7 @@ void RenderCore::_DrawBillboard(const Program&   program,
                                      DefaultUniform::s_bill_albedo)])
                 ->handle,
             comp->_GetTexture());
-        Renderer::_ClearFrameUniformCache();
+        Renderer::_UpdateDrawID();
         bgfx::submit(program.viewId, program.program);
         m_drawnCounts.billboard++;
     }
@@ -1617,7 +1617,7 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
                     ->handle,
                 gizmo
                     ->_GetTexture()); // Use the texture from the gizmo registry
-            Renderer::_ClearFrameUniformCache();
+            Renderer::_UpdateDrawID();
             bgfx::submit(VIEW_BILL_DBG, program.program);
         }
     }
@@ -1642,7 +1642,6 @@ void RenderCore::_DrawUIDebug(CameraComponent* camera) {
 
 bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
-    Logger::ToConsole("Preparing frame");
     // Prepare camera and light information
     if (!camera) {
         Syngine::Logger::Fatal("No camera provided to render frame");
@@ -1797,7 +1796,7 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     }
 
     if (!_PrepareRenderViews(camera)) {
-        Renderer::_ClearFrameUniformCache();
+        Renderer::_UpdateDrawID();
         return false;
     }
     _CollectRenderPackets(camera);
@@ -1844,8 +1843,7 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
 #endif
 
     bgfx::frame();
-    Logger::ToConsole("Finished frame");
-    Renderer::_ClearFrameUniformCache();
+    Renderer::_UpdateDrawID();
     return true;
 }
 

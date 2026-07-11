@@ -479,7 +479,6 @@ Uniform* Renderer::GetUniform(size_t id) {
 
 void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
     Uniform* u = GetUniform(id);
-    Logger::ToConsole("Attempting to set uniform idx %d", u->handle);
     if (u && bgfx::isValid(u->handle)) {
         if (u->type == UNIFORM_SAMPLER) {
             Syngine::Logger::LogF(Syngine::LogLevel::WARN,
@@ -515,9 +514,6 @@ void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
             break;
         }
 
-        Logger::ToConsole("DEBUG: Struct Addr: %p | Handle Idx: %d | Data Addr: %p",
-    (void*)u, u->handle.idx, data);
-
         // If the current data is the same as the last data set for this
         // uniform, skip setting it again Unless the uniform has never been set
         // before (version == 0), in which case we always set it
@@ -531,8 +527,6 @@ void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
         }
 
         // Set
-        Logger::ToConsole("Cleared check, setting %d", u->handle);
-        Logger::ToConsole("\t Data: %f", static_cast<const float*>(data)[0]);
         bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
         // Update uniform cache
         cache.lastData.resize(size * num);
@@ -585,7 +579,7 @@ void Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     RenderCore::_RenderFrame(camera, debug);
 }
 
-void Renderer::_ClearFrameUniformCache() {
+void Renderer::_UpdateDrawID() {
     currentDrawId++;
 }
 

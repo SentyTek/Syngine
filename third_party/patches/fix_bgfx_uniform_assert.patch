@@ -14,5 +14,5 @@ index a2000c168..ca191520c 100644
 -					);
 +					);*/
  				m_uniformSet.insert(_handle.idx);
-
+ 
  				const UniformRef& uniform = getUniformRef(_handle);
