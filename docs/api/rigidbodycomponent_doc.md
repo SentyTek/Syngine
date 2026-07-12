@@ -135,6 +135,19 @@ Signature:
 struct RigidbodyParameters
 ```
 
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `PhysicsShapes` | `shape` | The shape of the rigidbody |
+| `float` | `mass` | Mass of the rigidbody. If 0 (which it is by default), Jolt will calculate it based on the shape. |
+| `float` | `friction` | Friction coefficient |
+| `float` | `restitution` | Restitution coefficient (bounciness) |
+| `Math::Vector3` | `shapeParameters` | Additional parameters for the shape, e.g., radius for sphere, half extents for box |
+| `JPH::EMotionType` | `motionType` | Motion type of the rigidbody |
+| `JPH::ObjectLayer` | `layer` | Layer of the rigidbody |
+| `std::vector<CompoundShapePart>` | `compoundParts` | Parts for compound shape |
+
 **This function has been available since:** v0.0.1
 
 ---
@@ -400,7 +413,7 @@ Signature:
 Signature:
 
 ```cpp
- std::vector<float> GetShapeParameters() const;
+ Math::Vector3 GetShapeParameters() const;
 ```
 
 **Returns:** The shape parameters of the physics body
@@ -419,7 +432,7 @@ Signature:
 Signature:
 
 ```cpp
- void UpdateShapeParameters(const std::vector<float>& newShapeParameters);
+ void UpdateShapeParameters(const Math::Vector3 newShapeParameters);
 ```
 
 **Parameters:**
@@ -484,7 +497,7 @@ Signature:
 Signature:
 
 ```cpp
- void AddForce(const float* force, ForceMode mode = ForceMode::FORCE);
+ void AddForce(const Math::Vector3 force, ForceMode mode = ForceMode::FORCE);
 ```
 
 **Parameters:**
@@ -508,7 +521,7 @@ Signature:
 Signature:
 
 ```cpp
- void AddForceAtPosition(const float* force, const float* position, ForceMode mode = ForceMode::FORCE);
+ void AddForceAtPosition(const Math::Vector3 force, const Math::Vector3 position, ForceMode mode = ForceMode::FORCE);
 ```
 
 **Parameters:**
@@ -533,7 +546,7 @@ Signature:
 Signature:
 
 ```cpp
- void AddTorque(const float* torque, ForceMode mode = ForceMode::FORCE);
+ void AddTorque(const Math::Vector3 torque, ForceMode mode = ForceMode::FORCE);
 ```
 
 **Parameters:**
@@ -552,6 +565,10 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
+| `PhysicsShapes` | `shape` | The shape of the part |
+| `Math::Vector3` | `shapeParameters` | Parameters for the shape, e.g., radius for sphere, half extents for box |
+| `Math::Vector3` | `position` | Local position offset |
+| `Math::Quaternion` | `rotation` | Local rotation quaternion |
 | `constexpr` | `Syngine` | Rigidbody component type |
 
 ---

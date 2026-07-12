@@ -16,7 +16,7 @@
 - [Member Variables](#member-variables)
 - [Constructor](#class-constructor)
 - [ZoneShape](#synginezoneshape)
-- [m_size](#zonecomponentm_size)
+- [Constructor](#class-constructor)
 - [Clone](#zonecomponentclone)
 - [Serialize](#zonecomponentserialize)
 - [GetComponentType](#zonecomponentgetcomponenttype)
@@ -52,26 +52,16 @@
 ## Class Constructor
 
 
-#### **`ZoneComponent::ZoneComponent`**
+#### **`ZoneComponent::Math::Vector3`**
 
 
- Constructor for ZoneComponent
-
-**Note:** This should only be called by GameObject::AddComponent<T>()
+ ZoneComponent is used to define an area within the game world that can be used to trigger events
 
 Signature:
 
 ```cpp
- ZoneComponent(GameObject* owner, ZoneShape shape, const float pos[3], const float size[3], bool oneShot = false);
+ Math::Vector3 m_size = Math::Vector3(1.0f); //* Size of the zone (whd for box, r for sphere)
 ```
-
-**Parameters:**
-
-- `owner`: The GameObject that owns this component.
-- `shape`: The shape of the zone (box or sphere).
-- `pos`: The position of the zone center.
-- `size`: The size of the zone (whd for box, r for sphere).
-- `oneShot`: Whether the zone is a one-shot zone (triggers only once per object).
 
 ---
 
@@ -86,30 +76,46 @@ Signature:
 Signature:
 
 ```cpp
-enum class ZoneShape
+enum class ZoneShape : uint8_t
 ```
 
 **Members:**
 
 | Name | Description |
 | --- | --- | 
-| `BOX` | Axis-aligned box shape |
-| `SPHERE` | Sphere shape (size[0] is radius, size[1] and size[2] are ignored) |
+| `BOX` | Axis-aligned box shape (size.x, size.y, size.z are width, |
+| `1` | Sphere shape (size.x is radius, size.y and size.z are ignored) |
 
 ---
 
-#### **`ZoneComponent::m_size`**
+## Class Constructor
 
 
- ZoneComponent is used to define an area within the game world that can be used to trigger events
+#### **`ZoneComponent::ZoneComponent`**
+
+
+ Constructor for ZoneComponent
+
+**Note:** This should only be called by GameObject::AddComponent<T>()
 
 Signature:
 
 ```cpp
- float m_size[3] = { 1.0f, 1.0f, 1.0f }; //* Size of the zone (whd for box, r for sphere)
+ ZoneComponent(GameObject* owner, ZoneShape shape, const Math::Vector3& pos, const Math::Vector3& size, bool oneShot = false);
 ```
 
+**Parameters:**
+
+- `owner`: The GameObject that owns this component.
+- `shape`: The shape of the zone (box or sphere).
+- `pos`: The position of the zone center.
+- `size`: The size of the zone (whd for box, r for sphere).
+- `oneShot`: Whether the zone is a one-shot zone (triggers only once per object).
+
 ---
+
+## Class & Related Members
+
 
 #### **`ZoneComponent::Clone`**
 
@@ -173,7 +179,7 @@ Signature:
 Signature:
 
 ```cpp
- void Init(ZoneShape shape, const float pos[3], const float size[3], bool oneShot);
+ void Init(ZoneShape shape, const Math::Vector3& pos, const Math::Vector3& size, bool oneShot);
 ```
 
 **Parameters:**
@@ -230,15 +236,15 @@ Signature:
 
  Get the position of the zone center.
 
+**Note:** For box shape, this is the center of the box. For sphere shape, this is the center of the sphere.
+
 Signature:
 
 ```cpp
- void GetPosition(float outPos[3]) const;
+ Math::Vector3 GetPosition() const;
 ```
 
-**Parameters:**
-
-- `outPos`: Output array to store the position (size 3).
+**Returns:** The position of the zone center as a Math::Vector3.
 
 **Thread Safety:** read-only
 
@@ -254,7 +260,7 @@ Signature:
 Signature:
 
 ```cpp
- void SetPosition(const float pos[3]);
+ void SetPosition(const Math::Vector3& pos);
 ```
 
 **Parameters:**
@@ -275,12 +281,10 @@ Signature:
 Signature:
 
 ```cpp
- void GetSize(float outSize[3]) const;
+ Math::Vector3 GetSize() const;
 ```
 
-**Parameters:**
-
-- `outSize`: Output array to store the size (size 3).
+**Returns:** The size of the zone as a Math::Vector3 (whd for box, r for sphere).
 
 **Thread Safety:** read-only
 
@@ -296,7 +300,7 @@ Signature:
 Signature:
 
 ```cpp
- void SetSize(const float size[3]);
+ void SetSize(const Math::Vector3& size);
 ```
 
 **Parameters:**
@@ -314,15 +318,15 @@ Signature:
 
  Get the rotation of the zone (for box shape).
 
+**Note:** For sphere shape, this will return the identity quaternion. For box shape, this represents the rotation of the box in world space.
+
 Signature:
 
 ```cpp
- void GetRotation(float outRot[3]) const;
+ Math::Quaternion GetRotation() const;
 ```
 
-**Parameters:**
-
-- `outRot`: Output array to store the rotation (size 3).
+**Returns:** The rotation of the zone as a Math::Quaternion.
 
 **Thread Safety:** read-only
 
@@ -338,12 +342,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetRotation(const float rot[3]);
+ void SetRotation(const Math::Quaternion& rot);
 ```
 
 **Parameters:**
 
-- `rot`: The new rotation of the zone (size 3).
+- `rot`: The new rotation of the zone as a Math::Quaternion.
 
 **Thread Safety:** not-safe
 
@@ -623,7 +627,7 @@ Signature:
 Signature:
 
 ```cpp
- bool IsInZone(const float point[3]) const;
+ bool IsInZone(const Math::Vector3& point) const;
 ```
 
 **Parameters:**
@@ -737,7 +741,6 @@ Signature:
 | Type | Name | Description |
 | --- | --- | --- | 
 | `ZoneShape` | `m_shape` | Shape of the zone (box or sphere) |
-| `float` | `m_pos` | Position of the zone center |
 | `bool` | `m_active` | Whether the zone is active or not |
 | `bool` | `m_oneShot` | Whether the zone is a one-shot zone |
 | `std::vector<std::string>` | `m_tags` | Tags of the zone |

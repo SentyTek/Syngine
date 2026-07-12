@@ -212,6 +212,12 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
+| `const` | `char` | 8 byte pointer to name string |
+| `uint32_t` | `threadID` | Thread ID |
+| `uint64_t` | `timestamp` | Timestamp in microseconds |
+| `uint8_t` | `type` | 0 = start, 1 = end |
+| `uint8_t` | `depth` | Depth in call stack |
+| `uint8_t` | `padding` | 32 byte alignment |
 | `thread_local` | `std` | Last frame's events |
 | `thread_local` | `std` | Call stack names |
 | `thread_local` | `uint8_t` | Call stack depth |

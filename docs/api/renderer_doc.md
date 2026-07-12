@@ -32,6 +32,7 @@
 - [IsReady](#rendererisready)
 - [RegisterUniform](#rendererregisteruniform)
 - [SetUniform](#renderersetuniform)
+- [SetUniform](#renderersetuniform)
 - [GetSunDirection](#renderergetsundirection)
 - [SetSunDirection](#renderersetsundirection)
 - [SetGizmoSize](#renderersetgizmosize)
@@ -492,6 +493,29 @@ Signature:
 
 ---
 
+#### **`Renderer::SetUniform`**
+
+
+ Set a uniform variable
+
+Signature:
+
+```cpp
+ static void SetUniform(size_t id, const Math::Vector4 data, uint16_t num = 1);
+```
+
+**Parameters:**
+
+- `id`: The ID of the uniform variable to set, returned from RegisterUniform
+- `data`: The Vector4 data to set the uniform to
+- `num`: The number of elements to set (default is 1)
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
 #### **`Renderer::GetSunDirection`**
 
 
@@ -500,12 +524,10 @@ Signature:
 Signature:
 
 ```cpp
- static void GetSunDirection(float* outLightDir);
+ static Math::Vector3 GetSunDirection();
 ```
 
-**Parameters:**
-
-- `outLightDir`: A 3 float array to store the light direction. The direction is a normalized vector in world space. X is east-west, Y is pitch, Z is north-south.
+**Returns:** A vector3 representing the normalized sun light direction in world space
 
 **Thread Safety:** not-safe
 
@@ -516,15 +538,17 @@ Signature:
 
  Set the global sun light direction
 
+**Note:** The direction should be normalized and in world space coordinates.
+
 Signature:
 
 ```cpp
- static void SetSunDirection(const float* lightDir);
+ static void SetSunDirection(const Math::Vector3 lightDir);
 ```
 
 **Parameters:**
 
-- `lightDir`: A 3 float array representing the light direction. Normalized direction vector in world space is expected.
+- `lightDir`: A Vector3 representing the normalized sun light direction in world space
 
 **Thread Safety:** not-safe
 

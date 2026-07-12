@@ -62,6 +62,17 @@ We have several pages of documentation available. Note the API reference is auto
 - [Texturehelpers](api/texturehelpers_doc.md)
 - [Windowing](api/windowing_doc.md)
 
+#### Math
+
+
+- [Math.h](api/math.h_doc.md)
+- [Matrix3x3.h](api/matrix3x3.h_doc.md)
+- [Matrix4x4.h](api/matrix4x4.h_doc.md)
+- [Quaternion.h](api/quaternion.h_doc.md)
+- [Ray.h](api/ray.h_doc.md)
+- [Vector2.h](api/vector2.h_doc.md)
+- [Vector4.h](api/vector4.h_doc.md)
+
 #### Physics
 
 

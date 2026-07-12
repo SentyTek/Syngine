@@ -20,15 +20,16 @@
 - [Init](#transformcomponentinit)
 - [Update](#transformcomponentupdate)
 - [GetComponentType](#transformcomponentgetcomponenttype)
-- [GetRotationEuler](#transformcomponentgetrotationeuler)
-- [GetRotationQuaternion](#transformcomponentgetrotationquaternion)
+- [GetWorldRotationEuler](#transformcomponentgetworldrotationeuler)
+- [GetWorldRotationQuaternion](#transformcomponentgetworldrotationquaternion)
 - [GetModelMatrix](#transformcomponentgetmodelmatrix)
 - [GetLocalMatrix](#transformcomponentgetlocalmatrix)
+- [GetWorldPosition](#transformcomponentgetworldposition)
+- [GetWorldScale](#transformcomponentgetworldscale)
 - [GetPosition](#transformcomponentgetposition)
+- [GetRotationQuaternion](#transformcomponentgetrotationquaternion)
+- [GetRotationEuler](#transformcomponentgetrotationeuler)
 - [GetScale](#transformcomponentgetscale)
-- [GetLocalPosition](#transformcomponentgetlocalposition)
-- [GetLocalRotation](#transformcomponentgetlocalrotation)
-- [GetLocalScale](#transformcomponentgetlocalscale)
 - [SetPosition](#transformcomponentsetposition)
 - [SetRotationEuler](#transformcomponentsetrotationeuler)
 - [SetRotationQuat](#transformcomponentsetrotationquat)
@@ -111,7 +112,7 @@ Signature:
 Signature:
 
 ```cpp
- void Init(std::vector<float> position = { 0.0f, 0.0f, 0.0f }, std::vector<float> rotation = { 0.0f, 0.0f, 0.0f, 1.0f }, std::vector<float> scale = { 1.0f, 1.0f, 1.0f });
+ void Init(Vector3 position = Vector3(), Quaternion rotation = Quaternion(), Vector3 scale = Vector3(1.0f));
 ```
 
 **Parameters:**
@@ -164,22 +165,18 @@ Signature:
 
 ---
 
-#### **`TransformComponent::GetRotationEuler`**
+#### **`TransformComponent::GetWorldRotationEuler`**
 
 
- Get the GLOBAL rotation of the transform as XYZ Euler angles (in degrees)
+ Get the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
 
 Signature:
 
 ```cpp
- void GetRotationEuler(float& x, float& y, float& z) const;
+ Vector3 GetWorldRotationEuler() const;
 ```
 
-**Parameters:**
-
-- `x`: X component of the rotation
-- `y`: Y component of the rotation
-- `z`: Z component of the rotation
+**Returns:** Vector3 representing the rotation (x, y, z)
 
 **Thread Safety:** read-only
 
@@ -187,7 +184,7 @@ Signature:
 
 ---
 
-#### **`TransformComponent::GetRotationQuaternion`**
+#### **`TransformComponent::GetWorldRotationQuaternion`**
 
 
  Get the GLOBAL rotation of the transform as a quaternion
@@ -195,10 +192,10 @@ Signature:
 Signature:
 
 ```cpp
- void GetRotationQuaternion(float& x, float& y, float& z, float& w) const;
+ Quaternion GetWorldRotationQuaternion() const;
 ```
 
-**Returns:** Array of 4 floats representing the quaternion (x, y, z, w)
+**Returns:** Quaternion representing the rotation (x, y, z, w)
 
 **Thread Safety:** read-only
 
@@ -211,15 +208,15 @@ Signature:
 
  Get a GLOBAL model matrix for the transform
 
+**Note:** This matrix is computed from the GLOBAL position, rotation, and scale
+
 Signature:
 
 ```cpp
- void GetModelMatrix(float* result);
+ Mat4 GetModelMatrix() const;
 ```
 
-**Parameters:**
-
-- `result`: Array to fill with the model matrix (16 floats)
+**Returns:** 4x4 matrix filled with the global model matrix
 
 **Thread Safety:** read-only
 
@@ -232,15 +229,57 @@ Signature:
 
  Get a LOCAL model matrix for the transform
 
+**Note:** This matrix is computed from the LOCAL position, rotation, and scale
+
 Signature:
 
 ```cpp
- void GetLocalMatrix(float* result);
+ Mat4 GetLocalMatrix() const;
 ```
 
-**Parameters:**
+**Returns:** 4x4 matrix filled with the local model matrix
 
-- `result`: Array to fill with the local model matrix (16 floats)
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`TransformComponent::GetWorldPosition`**
+
+
+ Get the GLOBAL position of the transform
+
+**Note:** GLOBAL position
+
+Signature:
+
+```cpp
+ Vector3 GetWorldPosition() const;
+```
+
+**Returns:** Vector3 representing the position (x, y, z)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`TransformComponent::GetWorldScale`**
+
+
+ Get the GLOBAL scale of the transform
+
+**Note:** GLOBAL scale
+
+Signature:
+
+```cpp
+ Vector3 GetWorldScale() const;
+```
+
+**Returns:** Vector3 representing the scale (x, y, z)
 
 **Thread Safety:** read-only
 
@@ -251,15 +290,59 @@ Signature:
 #### **`TransformComponent::GetPosition`**
 
 
- Get the GLOBAL position of the transform
+ Get the LOCAL position of the transform
+
+**Note:** LOCAL position
 
 Signature:
 
 ```cpp
- float* GetPosition();
+ Vector3 GetPosition() const;
 ```
 
-**Returns:** Array of 3 floats representing the position (x, y, z)
+**Returns:** Vector3 representing the position (x, y, z)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`TransformComponent::GetRotationQuaternion`**
+
+
+ Get the LOCAL rotation of the transform as a quaternion
+
+**Note:** LOCAL rotation
+
+Signature:
+
+```cpp
+ Quaternion GetRotationQuaternion() const;
+```
+
+**Returns:** Quaternion representing the rotation (x, y, z, w)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`TransformComponent::GetRotationEuler`**
+
+
+ Get the LOCAL rotation of the transform as XYZ Euler angles (in radians)
+
+**Note:** LOCAL rotation
+
+Signature:
+
+```cpp
+ Vector3 GetRotationEuler() const;
+```
+
+**Returns:** Vector3 representing the rotation (x, y, z)
 
 **Thread Safety:** read-only
 
@@ -270,72 +353,15 @@ Signature:
 #### **`TransformComponent::GetScale`**
 
 
- Get the GLOBAL scale of the transform
-
-Signature:
-
-```cpp
- float* GetScale();
-```
-
-**Returns:** Array of 3 floats representing the scale (x, y, z)
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-
-#### **`TransformComponent::GetLocalPosition`**
-
-
- Get the LOCAL position of the transform
-
-Signature:
-
-```cpp
- float* GetLocalPosition();
-```
-
-**Returns:** Array of 3 floats representing the local position (x, y, z)
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-
-#### **`TransformComponent::GetLocalRotation`**
-
-
- Get the LOCAL rotation of the transform as a quaternion
-
-Signature:
-
-```cpp
- float* GetLocalRotation();
-```
-
-**Returns:** Array of 4 floats representing the local rotation quaternion (x, y, z, w)
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-
-#### **`TransformComponent::GetLocalScale`**
-
-
  Get the LOCAL scale of the transform
 
 Signature:
 
 ```cpp
- float* GetLocalScale();
+ Vector3 GetScale() const;
 ```
 
-**Returns:** Array of 3 floats representing the local scale (x, y, z)
+**Returns:** Vector3 representing the local scale (x, y, z)
 
 **Thread Safety:** read-only
 
@@ -351,14 +377,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetPosition(float x, float y, float z);
+ void SetPosition(Vector3 position);
 ```
 
 **Parameters:**
 
-- `x`: X component of the position
-- `y`: Y component of the position
-- `z`: Z component of the position
+- `position`: New local position as a Vector3
 
 **Thread Safety:** not-safe
 
@@ -369,19 +393,17 @@ Signature:
 #### **`TransformComponent::SetRotationEuler`**
 
 
- Set the LOCAL rotation of the transform as XYZ Euler angles (in degrees)
+ Set the LOCAL rotation of the transform as XYZ Euler angles (in radians)
 
 Signature:
 
 ```cpp
- void SetRotationEuler(float x, float y, float z);
+ void SetRotationEuler(Vector3 rotation);
 ```
 
 **Parameters:**
 
-- `x`: X component of the rotation
-- `y`: Y component of the rotation
-- `z`: Z component of the rotation
+- `rotation`: New local rotation as XYZ Euler angles (in radians)
 
 **Thread Safety:** not-safe
 
@@ -397,15 +419,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetRotationQuat(float x, float y, float z, float w);
+ void SetRotationQuat(Quaternion rotation);
 ```
 
 **Parameters:**
 
-- `x`: X component of the quaternion
-- `y`: Y component of the quaternion
-- `z`: Z component of the quaternion
-- `w`: W component of the quaternion
+- `rotation`: New local rotation as a quaternion
 
 **Thread Safety:** not-safe
 
@@ -421,14 +440,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetScale(float x, float y, float z);
+ void SetScale(Vector3 scale);
 ```
 
 **Parameters:**
 
-- `x`: X component of the scale
-- `y`: Y component of the scale
-- `z`: Z component of the scale
+- `scale`: New local scale as a Vector3
 
 **Thread Safety:** not-safe
 
@@ -444,14 +461,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetWorldPosition(float x, float y, float z);
+ void SetWorldPosition(Vector3 position);
 ```
 
 **Parameters:**
 
-- `x`: X component of the position
-- `y`: Y component of the position
-- `z`: Z component of the position
+- `position`: New global position as a Vector3
 
 **Thread Safety:** not-safe
 
@@ -467,15 +482,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetWorldRotationQuat(float x, float y, float z, float w);
+ void SetWorldRotationQuat(Quaternion rotation);
 ```
 
 **Parameters:**
 
-- `x`: X component of the quaternion
-- `y`: Y component of the quaternion
-- `z`: Z component of the quaternion
-- `w`: W component of the quaternion
+- `rotation`: New global rotation as a quaternion
 
 **Thread Safety:** not-safe
 
@@ -491,14 +503,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetWorldRotationEuler(float x, float y, float z);
+ void SetWorldRotationEuler(Vector3 rotation);
 ```
 
 **Parameters:**
 
-- `x`: X component of the rotation
-- `y`: Y component of the rotation
-- `z`: Z component of the rotation
+- `rotation`: New global rotation as XYZ Euler angles (in radians)
 
 **Thread Safety:** not-safe
 
@@ -514,14 +524,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetWorldScale(float x, float y, float z);
+ void SetWorldScale(Vector3 scale);
 ```
 
 **Parameters:**
 
-- `x`: X component of the scale
-- `y`: Y component of the scale
-- `z`: Z component of the scale
+- `scale`: New global scale as a Vector3
 
 **Thread Safety:** not-safe
 
@@ -610,8 +618,8 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float` | `m_rotation` | Rotation of the transform (Quaternion) |
-| `float` | `m_scale` | Scale of the transform |
+| `Quaternion` | `m_rotation` | Rotation of the transform (Quaternion) |
+| `Vector3` | `m_scale` | Scale of the transform |
 | `std::vector<TransformComponent*>` | `m_children` | Child transform components |
 
 ---

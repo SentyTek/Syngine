@@ -28,7 +28,9 @@
 - [SetFarPlane](#cameracomponentsetfarplane)
 - [GetFarPlane](#cameracomponentgetfarplane)
 - [SetAngles](#cameracomponentsetangles)
+- [SetAngles](#cameracomponentsetangles)
 - [GetAngles](#cameracomponentgetangles)
+- [GetCamera](#cameracomponentgetcamera)
 - [Plane](#cameracomponentplane)
 - [Frustum](#cameracomponentfrustum)
 
@@ -79,14 +81,14 @@ struct Camera
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float[3]` | `eye` | Camera position in world space |
-| `float[3]` | `target` | Camera target position |
-| `float[3]` | `up` | Camera up vector |
+| `Math::Vector3` | `eye` | Camera position in world space |
+| `Math::Vector3` | `target` | Camera target position |
+| `Math::Vector3` | `up` | Camera up vector |
 | `float` | `fov` | Field of view in degrees |
 | `float` | `nearPlane` | Near clipping plane |
 | `float` | `farPlane` | Far clipping plane |
-| `float[16]` | `view` | View matrix |
-| `float[16]` | `proj` | Projection matrix |
+| `Math::Matrix4x4` | `view` | View matrix |
+| `Math::Matrix4x4` | `proj` | Projection matrix |
 | `float` | `yaw` | Yaw angle in radians |
 | `float` | `pitch` | Pitch angle in radians |
 | `float` | `roll` | Roll angle in radians |
@@ -214,14 +216,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetPosition(float x, float y, float z);
+ void SetPosition(Math::Vector3 position);
 ```
 
 **Parameters:**
 
-- `x`: X coordinate of the camera position
-- `y`: Y coordinate of the camera position
-- `z`: Z coordinate of the camera position
+- `position`: Vector 3 representing the new camera position (x, y, z)
 
 **Thread Safety:** not-safe
 
@@ -237,10 +237,10 @@ Signature:
 Signature:
 
 ```cpp
- const float* GetPosition() const;
+ Math::Vector3 GetPosition() const;
 ```
 
-**Returns:** Array of 3 floats representing the camera position (x, y, z)
+**Returns:** Vector 3 representing the camera position (x, y, z)
 
 **Thread Safety:** read-only
 
@@ -331,7 +331,9 @@ Signature:
 #### **`CameraComponent::SetAngles`**
 
 
- Set the camera near clipping plane
+ Set the camera angles
+
+**Note:** The angles are used to calculate the camera's orientation
 
 Signature:
 
@@ -341,7 +343,31 @@ Signature:
 
 **Parameters:**
 
-- `nearPlane`: Near clipping plane distance
+- `yaw`: Yaw angle in radians
+- `pitch`: Pitch angle in radians
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`CameraComponent::SetAngles`**
+
+
+ Set the camera angles
+
+**Note:** The angles are used to calculate the camera's orientation
+
+Signature:
+
+```cpp
+ void SetAngles(Math::Vector2 angles);
+```
+
+**Parameters:**
+
+- `angles`: Vector2 containing yaw and pitch angles in radians
 
 **Thread Safety:** not-safe
 
@@ -357,13 +383,29 @@ Signature:
 Signature:
 
 ```cpp
- void GetAngles(float& yaw, float& pitch) const;
+ Math::Vector2 GetAngles() const;
 ```
 
-**Parameters:**
+**Returns:** Vector2 containing yaw and pitch angles in radians
 
-- `yaw`: Reference to store the yaw angle in radians
-- `pitch`: Reference to store the pitch angle in radians
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+
+#### **`CameraComponent::GetCamera`**
+
+
+ Get the camera
+
+Signature:
+
+```cpp
+ Syngine::Camera GetCamera() const;
+```
+
+**Returns:** Camera struct containing the camera's position, target, up vector, FOV, near and far planes, view and projection matrices, and angles
 
 **Thread Safety:** read-only
 
@@ -389,7 +431,7 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float[3]` | `normal` | Normal vector of the plane |
+| `Math::Vector3` | `normal` | Normal vector of the plane |
 | `float` | `distance` | Distance from origin |
 
 **This function has been available since:** v0.0.1

@@ -40,6 +40,17 @@ Signature:
 struct Vertex
 ```
 
+**Members:**
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `Math::Vector3` | `pos` | Position of the vertex in 3D space |
+| `Math::Vector3` | `normal` | Normal vector at the vertex |
+| `Math::Vector2` | `uv0` | Primary texture coordinates (macro UV) |
+| `Math::Vector2` | `uv1` | Secondary texture coordinates (for detail maps) |
+| `Math::Vector4` | `color` | Vertex color (RGBA) |
+| `Math::Vector4` | `tangent` | Tangent vector at the vertex (for normal mapping) |
+
 **This function has been available since:** v0.0.1
 
 ---
@@ -63,12 +74,11 @@ struct Material
 | `bgfx::TextureHandle` | `albedo` | Albedo texture handle |
 | `BGFX_INVALID_HANDLE` | `Normal` | map texture handle |
 | `BGFX_INVALID_HANDLE` | `Height` | map texture handle |
-| `float[3]` | `uvScale` | UV scale for each texture type (albedo, normal, height) |
 | `float` | `heightScale` | Matches blender displacement |
 | `float` | `mixFactor` | Mix between detail and macro maps |
 | `float` | `ambient` | Ambient floor |
 | `bool` | `useVertexColor` | Whether to use vertex color or base color |
-| `float[4]` | `baseColor` | RGBA base color |
+| `Math::Vector4` | `baseColor` | RGBA base color |
 
 **This function has been available since:** v0.0.1
 
@@ -93,8 +103,8 @@ struct SubMesh
 | `uint32_t` | `indexCount` | Number of indices in this submesh |
 | `uint8_t` | `materialIndex` | Index of the material used by this submesh |
 | `name` | `Name` | of the submesh (for debugging and editor purposes) |
-| `float[3]` | `boundMin` | Minimum bounding box coordinates for the submesh |
-| `float[3]` | `boundMax` | Maximum bounding box coordinates for the submesh |
+| `Math::Vector3` | `boundMin` | Minimum corner of the axis-aligned bounding box |
+| `Math::Vector3` | `boundMax` | Maximum corner of the axis-aligned bounding box |
 
 **This function has been available since:** v0.0.1
 

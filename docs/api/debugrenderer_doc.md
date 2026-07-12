@@ -199,7 +199,7 @@ Signature:
 Signature:
 
 ```cpp
- void DrawFrustum(Syngine::Camera camera);
+ void DrawFrustum(const Syngine::Camera& camera);
 ```
 
 **Parameters:**
@@ -223,7 +223,7 @@ Signature:
 Signature:
 
 ```cpp
- void DrawFrustum(const float* view, const float* proj);
+ void DrawFrustum(const Math::Mat4& view, const Math::Mat4& proj);
 ```
 
 **Parameters:**
@@ -246,7 +246,7 @@ Signature:
 Signature:
 
 ```cpp
- void DrawBox(const float* min, const float* max, JPH::ColorArg color);
+ void DrawBox(const Math::Vector3& min, const Math::Vector3& max, JPH::ColorArg color);
 ```
 
 **Parameters:**
@@ -296,7 +296,7 @@ Signature:
 Signature:
 
 ```cpp
- void RenderLines(const float* view, const float* proj, int width, int height, bgfx::ProgramHandle program);
+ void RenderLines(const Math::Mat4& view, const Math::Mat4& proj, int width, int height, bgfx::ProgramHandle program);
 ```
 
 **Parameters:**

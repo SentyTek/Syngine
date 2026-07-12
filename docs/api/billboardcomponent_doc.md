@@ -28,6 +28,8 @@
 - [SetRot](#synginesetrot)
 - [GetRot](#synginegetrot)
 - [GetMode](#synginegetmode)
+- [GetMinBounds](#synginegetminbounds)
+- [GetMaxBounds](#synginegetmaxbounds)
 
 ---
 
@@ -271,14 +273,12 @@ Signature:
 Signature:
 
 ```cpp
- void SetRot(float rotX, float rotY, float rotZ);
+ void SetRot(const Vector3& rot);
 ```
 
 **Parameters:**
 
-- `rotX`: Rotation around X axis in radians
-- `rotY`: Rotation around Y axis in radians
-- `rotZ`: Rotation around Z axis in radians
+- `rot`: The rotation vector containing rotation around X, Y, Z axes in radians
 
 ---
 
@@ -290,10 +290,10 @@ Signature:
 Signature:
 
 ```cpp
- float* GetRot();
+ Vector3 GetRot() const;
 ```
 
-**Returns:** float* Pointer to array of 3 floats representing rotation
+**Returns:** Vector3 The rotation vector containing rotation around X, Y, Z axes in radians
 
 ---
 
@@ -312,6 +312,36 @@ Signature:
 
 ---
 
+#### **`Syngine::GetMinBounds`**
+
+
+ Get the min bounds of the billboard's bounding box
+
+Signature:
+
+```cpp
+ inline Vector3 GetMinBounds() const;
+```
+
+**Returns:** Vector3 The minimum corner of the bounding box
+
+---
+
+#### **`Syngine::GetMaxBounds`**
+
+
+ Get the max bounds of the billboard's bounding box
+
+Signature:
+
+```cpp
+ inline Vector3 GetMaxBounds() const;
+```
+
+**Returns:** Vector3 The maximum corner of the bounding box
+
+---
+
 ## Member Variables
 
 
@@ -319,7 +349,7 @@ Signature:
 | --- | --- | --- | 
 | `std::string` | `m_texturePath` | Path to the billboard texture |
 | `std::string` | `m_bundlePath` | Path to the shader bundle containing the billboard texture |
-| `float` | `m_rot` | Rotation of the billboard |
+| `Vector3` | `m_rot` | Rotation around X, Y, Z axes in radians |
 | `float` | `size` | Size of the billboard |
 | `bool` | `receiveShadows` | Whether the billboard receives shadows |
 | `bool` | `receiveSunLight` | Whether the billboard receives sunlight |

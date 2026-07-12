@@ -83,10 +83,10 @@ struct MeshAABB
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float[3]` | `min` | Minimum corner of the AABB |
-| `float[3]` | `max` | Maximum corner of the AABB |
-| `float[3]` | `center` | Center of the AABB |
-| `float[3]` | `halfExtents` | Half extents of the AABB |
+| `Math::Vector3` | `min` | Minimum corner of the AABB |
+| `Math::Vector3` | `max` | Maximum corner of the AABB |
+| `Math::Vector3` | `center` | Center of the AABB |
+| `Math::Vector3` | `halfExtents` | Half extents of |
 
 **This function has been available since:** v0.0.1
 
@@ -439,7 +439,7 @@ Signature:
 Signature:
 
 ```cpp
- float* GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
+ Math::Vector2 GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
 ```
 
 **Parameters:**
@@ -463,7 +463,7 @@ Signature:
 Signature:
 
 ```cpp
- bool SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, float uvScale[2]);
+ bool SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, Math::Vector2 uvScale);
 ```
 
 **Parameters:**
