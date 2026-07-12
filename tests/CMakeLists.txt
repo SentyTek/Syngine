@@ -17,18 +17,19 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(engine_tests
     Core/StartStop.cpp
-
     ECS/GameObjectLifecycle.cpp
     ECS/TransformHierarchy.cpp
     ECS/EntityDeletion-Queries.cpp
-
+    ECS/Zones.cpp
     Serialization/ObjectRoundTrip.cpp
     Physics/RigidbodyCreation.cpp
     Physics/PhysicsSync.cpp
     Lua/ScriptLoading.cpp
     Lua/Bindings.cpp
-    ECS/Zones.cpp
     Input/Binding.cpp
+    Math/Vectors.cpp
+    Math/Matrices.cpp
+    Math/Quaternion.cpp
 )
 
 if (MSVC)
