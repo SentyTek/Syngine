@@ -8,32 +8,6 @@
 
 Manages all of the windowing operations @section Window @internal
 
-<div style="background:#08082e; padding:15px; border-radius:8px; margin-bottom:20px; font-family:sans-serif;">
-    <label for="mdSearch" style="font-weight:bold; display:block; margin-bottom:5px;">Search Functions:</label>
-    <input type="text" id="mdSearch" placeholder="Type function name..." onkeyup="filterMarkdownDocs()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:16px; background-color: rgb(60, 60, 60); color:antiquewhite">
-</div>
-
-<script>
-function filterMarkdownDocs() {
-    var input = document.getElementById('mdSearch').value.toLowerCase();
-    // Targets common markdown containers or the whole document body
-    var elements = document.querySelectorAll('h1, h2, h3, h4, p, li, pre, hr');
-
-    elements.forEach(function(el) {
-        // Skip the search box itself
-        if (el.closest('#mdSearch') || el.id === 'mdSearch') return;
-
-        var text = el.innerText.toLowerCase();
-        if (text.includes(input)) {
-            el.style.display = ""; // Show matching element
-            //el.style.backgroundColor = input ? "#fff9c4" : ""; // Highlight if searching
-        } else {
-            el.style.display = input ? "none" : ""; // Hide if it doesn't match
-        }
-    });
-}
-</script>
-
 ---
 ## Goto: 
 
