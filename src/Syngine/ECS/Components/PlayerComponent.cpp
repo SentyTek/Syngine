@@ -105,8 +105,8 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
         settings->mFriction = 0.45f;
         settings->mMass     = 80.0f;
 
-        float* pos = m_transform->GetPosition();
-        JPH::RVec3 initialPosition(pos[0], pos[1] + CapsuleCenterOffset(standHeight), pos[2]);
+        Vector3 pos = m_transform->GetPosition();
+        JPH::RVec3 initialPosition(pos.x(), pos.y() + CapsuleCenterOffset(standHeight), pos.z());
         this->m_character =
             new JPH::Character(settings,
                                initialPosition,
@@ -114,7 +114,7 @@ PlayerComponent::PlayerComponent(const PlayerComponent& other) {
                                0,
                                &this->m_physicsManager->_GetPhysicsSystem());
         this->m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
-        this->m_camera->SetPosition(pos[0], pos[1] + m_eyeHeight, pos[2]);
+        this->m_camera->SetPosition(Math::Vector3(pos.x(), pos.y() + m_eyeHeight, pos.z()));
     }
 }
 
@@ -168,8 +168,8 @@ void PlayerComponent::Init(Syngine::CameraComponent* camera) {
     settings->mFriction = 0.45f;
     settings->mMass     = 80.0f;
 
-    float* pos = m_transform->GetPosition();
-    JPH::RVec3 initialPosition(pos[0], pos[1] + CapsuleCenterOffset(standHeight), pos[2]);
+    Vector3 pos = m_transform->GetPosition();
+    JPH::RVec3 initialPosition(pos.x(), pos.y() + CapsuleCenterOffset(standHeight), pos.z());
 
     m_character = new JPH::Character(settings,
                                      initialPosition,
@@ -178,7 +178,7 @@ void PlayerComponent::Init(Syngine::CameraComponent* camera) {
                                      &m_physicsManager->_GetPhysicsSystem());
     m_character->AddToPhysicsSystem(JPH::EActivation::Activate);
 
-    m_camera->SetPosition(pos[0], pos[1] + m_eyeHeight, pos[2]);
+    m_camera->SetPosition(Math::Vector3(pos.x(), pos.y() + m_eyeHeight, pos.z()));
 }
 
 PlayerComponent::~PlayerComponent() {
@@ -305,8 +305,8 @@ void PlayerComponent::Update(float deltaTime) {
                                   // capsule heights)
                 m_character->SetShape(new JPH::CapsuleShape(halfHeight, playerRadius), 0.1f); // Half height and radius
 
-                float* feetPos = m_transform->GetPosition();
-                m_character->SetPosition(JPH::RVec3(feetPos[0], feetPos[1] + CapsuleCenterOffset(crouchHeight), feetPos[2]));
+                Vector3 feetPos = m_transform->GetPosition();
+                m_character->SetPosition(JPH::RVec3(feetPos.x(), feetPos.y() + CapsuleCenterOffset(crouchHeight), feetPos.z()));
             }
             l_targetEyeHeight =
                 m_crouchEyeHeight; // Lower eye height when crouching or sliding
@@ -319,8 +319,8 @@ void PlayerComponent::Update(float deltaTime) {
         } else { // Reset sizes only when state changes
             if (m_prevPlayerState == PlayerState::CROUCHING || m_prevPlayerState == PlayerState::SLIDING) {
 
-                float* feetPos = m_transform->GetPosition();
-                m_character->SetPosition(JPH::RVec3(feetPos[0], feetPos[1] + CapsuleCenterOffset(standHeight), feetPos[2]));
+                Vector3 feetPos = m_transform->GetPosition();
+                m_character->SetPosition(JPH::RVec3(feetPos.x(), feetPos.y() + CapsuleCenterOffset(standHeight), feetPos.z()));
 
                 // Reset to normal size
                 float halfHeight =
@@ -337,55 +337,63 @@ void PlayerComponent::Update(float deltaTime) {
 
         // For ground movement, typically we want to ignore the Y component
         // Y gets applied separately for jumping or falling
-        bx::Vec3 forward = bx::normalize(
+        /*bx::Vec3 forward = bx::normalize(
             bx::Vec3(sinf(m_currentYaw), 0.0f, cosf(m_currentYaw)));
         bx::Vec3 right =
             bx::normalize(bx::Vec3(sinf(m_currentYaw - bx::kPiHalf),
                                    0.0f,
-                                   cosf(m_currentYaw - bx::kPiHalf)));
+                                   cosf(m_currentYaw - bx::kPiHalf)));*/
 
-            if (enableMovement && m_playerState != PlayerState::SLIDING) {
-                if (keystate[SDL_SCANCODE_W]) {
-                    m_moveDirection = bx::add(m_moveDirection, forward);
-                }
-                if (keystate[SDL_SCANCODE_S]) {
-                    m_moveDirection = bx::sub(m_moveDirection, forward);
-                }
-                if (keystate[SDL_SCANCODE_A]) {
-                    m_moveDirection = bx::add(m_moveDirection, right);
-                }
-                if (keystate[SDL_SCANCODE_D]) {
-                    m_moveDirection = bx::sub(m_moveDirection, right);
+        Math::Vector3 forward =
+            Math::Vector3(sinf(m_currentYaw), 0.0f, cosf(m_currentYaw))
+                .normalized();
+        Math::Vector3 right = Math::Vector3(sinf(m_currentYaw - bx::kPiHalf),
+                                            0.0f,
+                                            cosf(m_currentYaw - bx::kPiHalf))
+                                  .normalized();
+
+        if (enableMovement && m_playerState != PlayerState::SLIDING) {
+            if (keystate[SDL_SCANCODE_W]) {
+                m_moveDirection = m_moveDirection + forward;
+            }
+            if (keystate[SDL_SCANCODE_S]) {
+                m_moveDirection = m_moveDirection - forward;
+            }
+            if (keystate[SDL_SCANCODE_A]) {
+                m_moveDirection = m_moveDirection + right;
+            }
+            if (keystate[SDL_SCANCODE_D]) {
+                m_moveDirection = m_moveDirection - right;
+            }
+        }
+
+        if (m_character) {
+            JPH::Vec3 desiredHorizontalVel(0, 0, 0);
+            if (m_moveDirection.length() > 0.001f) {
+                m_moveDirection = m_moveDirection.normalized();
+                desiredHorizontalVel.SetX(m_moveDirection.x() * m_realMoveSpeed);
+                desiredHorizontalVel.SetZ(m_moveDirection.z() * m_realMoveSpeed);
+                if (m_playerState != PlayerState::SLIDING && m_playerState != PlayerState::CROUCHING && m_playerState != PlayerState::SPRINTING) {
+                    // If not sliding or crouching, we are walking
+                    m_playerState = PlayerState::WALKING;
                 }
             }
 
-            if (m_character) {
-                JPH::Vec3 desiredHorizontalVel(0, 0, 0);
-                if (bx::length(m_moveDirection) > 0.001f) {
-                    m_moveDirection = bx::normalize(m_moveDirection);
-                    desiredHorizontalVel.SetX(m_moveDirection.x * m_realMoveSpeed);
-                    desiredHorizontalVel.SetZ(m_moveDirection.z * m_realMoveSpeed);
-                    if (m_playerState != PlayerState::SLIDING && m_playerState != PlayerState::CROUCHING && m_playerState != PlayerState::SPRINTING) {
-                        // If not sliding or crouching, we are walking
-                        m_playerState = PlayerState::WALKING;
-                    }
-                }
+            // Get current velocity and preserve the vertical component (for gravity)
+            JPH::Vec3 currentVel = m_character->GetLinearVelocity();
+            m_newVelocity = JPH::Vec3(desiredHorizontalVel.GetX(),
+            currentVel.GetY(),
+            desiredHorizontalVel.GetZ());
 
-                // Get current velocity and preserve the vertical component (for gravity)
-                JPH::Vec3 currentVel = m_character->GetLinearVelocity();
-                m_newVelocity = JPH::Vec3(desiredHorizontalVel.GetX(),
-                currentVel.GetY(),
-                desiredHorizontalVel.GetZ());
-
-                // JUMP! *van halen guitar solo*
-                if (enableJumping && keystate[SDL_SCANCODE_SPACE] && isGrounded && m_playerState != PlayerState::SLIDING) {
-                    const float jumpForce = 4.0f;
-                    m_newVelocity.SetY(jumpForce);
-                }
-
-            } else {
-                Syngine::Logger::Error("PlayerComponent has no character object!");
+            // JUMP! *van halen guitar solo*
+            if (enableJumping && keystate[SDL_SCANCODE_SPACE] && isGrounded && m_playerState != PlayerState::SLIDING) {
+                const float jumpForce = 4.0f;
+                m_newVelocity.SetY(jumpForce);
             }
+
+        } else {
+            Syngine::Logger::Error("PlayerComponent has no character object!");
+        }
     }
     m_prevPlayerState = m_playerState;
 
@@ -426,15 +434,14 @@ void PlayerComponent::PostPhysicsUpdate() {
         charPos.GetZ()
     };
 
-    float* pos = m_transform->GetPosition();
-    bx::Vec3 currentPos = { pos[0], pos[1], pos[2] };
+    bx::Vec3 currentPos = m_transform->GetPosition().toBxVec3();
 
     const float positionLerpSpeed = 12.0f;
     bx::Vec3 newPos = bx::lerp(currentPos, targetPos, 1.0f - bx::exp(-positionLerpSpeed * m_deltaTime));
-    m_transform->SetPosition(newPos.x, newPos.y, newPos.z);
+    m_transform->SetWorldPosition(Vector3(newPos));
 
     // Update camera position and orientation
-    m_camera->SetPosition(newPos.x, newPos.y + m_eyeHeight, newPos.z);
+    m_camera->SetPosition(Math::Vector3(newPos.x, newPos.y + m_eyeHeight, newPos.z));
     m_camera->SetAngles(m_currentYaw, m_currentPitch);
 }
 
@@ -447,11 +454,8 @@ PlayerState PlayerComponent::GetPlayerState() const {
     return m_playerState;
 }
 
-float* PlayerComponent::GetRotation() const {
-    static float rotation[2];
-    rotation[0] = m_currentYaw;
-    rotation[1] = m_currentPitch;
-    return rotation;
+Math::Vector2 PlayerComponent::GetRotation() const {
+    return Math::Vector2(m_currentYaw, m_currentPitch);
 }
 
 void PlayerComponent::SetRotation(float yaw, float pitch) {

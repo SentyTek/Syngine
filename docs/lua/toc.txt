@@ -1,0 +1,12 @@
+-- This file is injected into the Table of Contents in index.md. Lines prefixed with -- (like this one) are ignored.
+--
+### Guides
+- [Getting Started](./start.md)
+- [Creating your first game](./guides/first-game.md)
+- [Lua Scripting in Syngine](./guides/lua-scripting.md)
+- [Creating and using Prefabs](./guides/prefab.md)
+- [Profiling your Syngine game](./guides/profiler.md)
+- [Creating a Component](./guides/components.md)
+
+### Learn the Concepts
+- [GameObjects & Components](./concepts/gameobjects.md)

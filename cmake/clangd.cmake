@@ -5,6 +5,7 @@
 # │ Copyright (c) SentyTek 2025-2026     │
 # │ Licensed under the MIT License       │
 # ╰──────────────────────────────────────╯
+
 # Configure for active languages, prioritizing CXX
 get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
 if("CXX" IN_LIST languages)
@@ -28,11 +29,14 @@ endif()
 message(STATUS "${CLANGD_LANG} standard: ${CLANGD_LANG_STANDARD}")
 
 
-# - Function for configuring a .clangd file for a target
+# - Function for configuring a .clangd file for global settings, or a certain target
 # Automatically detects C/C++ (preferes C++)
 #
-# clangd(target
+# clangd(
+#   [TARGET <target>]
 #   [OUTPUT_DIRECTORY <dir>]
+#   [DEFINITIONS [def1[=val1], def2[=val2]]
+#   [INCLUDE_DIRECTORISE ...]
 #   [EXCLUDE_PATHS [arg1, ...]
 #   [WARNINGS [arg1, ...]]
 #   [INLAY_HINTS]
@@ -42,8 +46,9 @@ message(STATUS "${CLANGD_LANG} standard: ${CLANGD_LANG_STANDARD}")
 #   [INLAY_DEDUCED_TYPES]
 #   [INLAY_TYPENAME_LIMIT <length>]
 #
-# Requires any target to be passed as <target>
+# TARGET: optional, selects a target to gather settings from
 # OUTPUT_DIRECTORY: Path to a directory where .clangd will be written to. Defaults to CMAKE_CURRENT_LISTS_DIR
+# INCLUDE_DIRECTORIES: optional, additional include directories to be added
 # EXCLUDE_PATHS: optional, adds paths that clangd excludes from processing
 # WARNINGS: optional, clang warning names (Ex: all, no-unused-includes) to use
 # INLAY_HINTS: enables inlay-hints for block end comments
@@ -53,15 +58,25 @@ message(STATUS "${CLANGD_LANG} standard: ${CLANGD_LANG_STANDARD}")
 # INLAY_DEDUCED_TYPES: enables inlay-hints for deduced types
 # INLAY_TYPENAME_LIMIT: Character limit for type hints. 0 means no limit. Default is 24
 
-function(clangd target)
+function(clangd)
   set(options INLAY_HINTS INLAY_BLOCK_END INLAY_DESIGNATORS INLAY_PARAMETER_NAMES INLAY_DEDUCED_TYPES)
-  set(oneValueArgs OUTPUT_DIRECTORY INLAY_TYPENAME_LIMIT)
-  set(multiValueArgs EXCLUDE_PATHS WARNINGS)
+  set(oneValueArgs TARGET OUTPUT_DIRECTORY INLAY_TYPENAME_LIMIT)
+  set(multiValueArgs DEFINITIONS INCLUDE_DIRECTORIES EXCLUDE_PATHS WARNINGS)
   cmake_parse_arguments(PARSE_ARGV 0 arg
     "${options}" "${oneValueArgs}" "${multiValueArgs}"
   )
 
-  get_target_property(inc_dirs ${target} INCLUDE_DIRECTORIES)
+  if (DEFINED arg_TARGET)
+    get_property(inc_dirs TARGET ${arg_TARGET} PROPERTY INCLUDE_DIRECTORIES)
+  else()
+    get_property(inc_dirs DIRECTORY ${CMAKE_CURRENT_LIST_DIR} PROPERTY INCLUDE_DIRECTORIES)
+    # message(STATUS "${inc_dirs}")
+  endif()
+  if (DEFINED arg_INCLUDE_DIRECTORIES)
+    foreach(dir ${arg_INCLUDE_DIRECTORIES})
+      list(APPEND inc_dirs ${dir})
+    endforeach()
+  endif()
   set(CLANGD_INCLUDE_DIRS "")
 
   foreach(dir ${inc_dirs})
@@ -73,26 +88,47 @@ function(clangd target)
   PathMatch: [${CLANGD_PATH_FILTER}]")
   set(CLANGD_CONFIG_EXCLUDE "")
   if (DEFINED arg_EXCLUDE_PATHS)
-    set(CLANGD_CONFIG_EXCLUDE
-"  PathExclude: [")
+    string(APPEND CLANGD_CONFIG_HEADER
+"
+  PathExclude: [")
     foreach(exclude_path ${arg_EXCLUDE_PATHS})
-      string(APPEND CLANGD_CONFIG_EXCLUDE "${exclude_path},")
+      string(APPEND CLANGD_CONFIG_HEADER "${CMAKE_CURRENT_LIST_DIR}/${exclude_path},")
     endforeach()
-    string(APPEND CLANGD_CONFIG_EXCLUDE "]")
+    string(APPEND CLANGD_CONFIG_HEADER "]")
+  endif()
+
+  set(CLANGD_CONFIG_DEFINITIONS "")
+  if (DEFINED arg_DEFINITIONS)
+    foreach(definition ${arg_DEFINITIONS})
+      string(APPEND CLANGD_CONFIG_DEFINITIONS ", -D${definition}")
+    endforeach()
   endif()
 
   set(CLANGD_CONFIG_WARNINGS "")
+  set(CLANGD_UNUSED_INCLUDES ON)
   if(DEFINED arg_WARNINGS)
     foreach(warning ${arg_WARNINGS})
+      if (warning STREQUAL "no-unused-includes")
+        set(CLANGD_UNUSED_INCLUDES OFF)
+      endif()
       string(APPEND CLANGD_CONFIG_WARNINGS ", -W${warning}")
     endforeach()
   endif()
 
+
+
   set(CLANGD_CONFIG_COMPILE_STUFF
 "CompileFlags:
-  Add: [-xc${CLANG_LANG_POSTFIX}, -std=c${CLANG_LANG_POSTFIX}${CLANGD_LANG_STANDARD}${CLANGD_CONFIG_WARNINGS}${CLANGD_INCLUDE_DIRS}]
-  Remove: [-std:*, -external:*]
+  Add: [-xc${CLANG_LANG_POSTFIX}, -std=c${CLANG_LANG_POSTFIX}${CLANGD_LANG_STANDARD}${CLANGD_CONFIG_DEFINITIONS}${CLANGD_CONFIG_WARNINGS}${CLANGD_INCLUDE_DIRS}]
+  Remove: [-std:*, -wd*, -we*, -MD*, -external:*]
   Compiler: clang${CLANG_LANG_POSTFIX}")
+
+  if (NOT CLANGD_UNUSED_INCLUDES)
+    string(APPEND CLANGD_CONFIG_COMPILE_STUFF
+"
+Diagnostics:
+  UnusedIncludes: None")
+  endif()
 
   set(CLANGD_CONFIG_INLAY_HINTS
 "InlayHints:
@@ -160,7 +196,6 @@ function(clangd target)
 
   file(WRITE "${arg_OUTPUT_DIRECTORY}/.clangd"
 "${CLANGD_CONFIG_HEADER}
-${CLANGD_CONFIG_EXCLUDE}
 ${CLANGD_CONFIG_COMPILE_STUFF}
 ${CLANGD_CONFIG_INLAY_HINTS}
 ")

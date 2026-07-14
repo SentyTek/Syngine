@@ -30,7 +30,9 @@ enum class BillboardMode {
 /// @brief Syngine Billboard Component. The BillboardComponent is used to
 /// represent a 2D model in the 3D game world.
 /// @section BillboardComponent
-
+/// @nameoverride BillboardComponent
+/// @classprefix myBillboard.
+/// @since v0.0.1
 class BillboardComponent : public Syngine::Component {
 
     BillboardMode m_mode = BillboardMode::CAMERA_ALIGNED; //* Billboard rendering mode
@@ -42,7 +44,7 @@ class BillboardComponent : public Syngine::Component {
 
     GameObject* m_owner; // Reference to the owner game object
 
-    float m_rot[3] = { 0.0f, 0.0f, 0.0f }; //* Rotation of the billboard
+    Vector3 m_rot = Vector3(); //* Rotation around X, Y, Z axes in radians
   public:
 
     float size = 1.0f; //* Size of the billboard
@@ -123,33 +125,49 @@ class BillboardComponent : public Syngine::Component {
 
     /// @brief Set rotation around X, Y, Z axes
     /// @param rot Rotation around X axis in radians
-    void SetRotX(float rotX) { this->m_rot[0] = rotX; }
+    void SetRotX(float rotX) { this->m_rot.setX(rotX); }
 
     /// @brief Set rotation around X, Y, Z axes
-    /// @param rot Rotation around X axis in radians
-    void SetRotY(float rotY) { this->m_rot[1] = rotY; }
-
-    /// @brief Set rotation around X, Y, Z axes
-    /// @param rot Rotation around X axis in radians
-    void SetRotZ(float rotZ) { this->m_rot[2] = rotZ; }
-
-    /// @brief Set rotation around X, Y, Z axes
-    /// @param rotX Rotation around X axis in radians
     /// @param rotY Rotation around Y axis in radians
+    void SetRotY(float rotY) { this->m_rot.setY(rotY); }
+
+    /// @brief Set rotation around X, Y, Z axes
     /// @param rotZ Rotation around Z axis in radians
-    void SetRot(float rotX, float rotY, float rotZ) {
-        this->m_rot[0] = rotX;
-        this->m_rot[1] = rotY;
-        this->m_rot[2] = rotZ;
-    }
+    void SetRotZ(float rotZ) { this->m_rot.setZ(rotZ); }
+
+    /// @brief Set rotation around X, Y, Z axes
+    /// @param rot The rotation vector containing rotation around X, Y, Z axes in radians
+    void SetRot(const Vector3& rot) { this->m_rot = rot; }
 
     /// @brief Get rotation around X, Y, Z axes
-    /// @return float* Pointer to array of 3 floats representing rotation
-    float* GetRot() { return this->m_rot; }
+    /// @return Vector3 The rotation vector containing rotation around X, Y, Z axes in radians
+    Vector3 GetRot() const { return this->m_rot; }
 
     /// @brief Get the billboard mode
     /// @return BillboardMode The billboard rendering mode
     BillboardMode GetMode() const { return this->m_mode; }
+
+    /// @brief Get the min bounds of the billboard's bounding box
+    /// @return Vector3 The minimum corner of the bounding box
+    inline Vector3 GetMinBounds() const {
+        auto* t = this->m_owner->GetComponent<TransformComponent>();
+        if (!t) return Vector3();
+        Vector3 pos = t->GetWorldPosition();
+        return Vector3(pos.x() - this->size * 0.5f,
+                       pos.y() - this->size * 0.5f,
+                       pos.z() - this->size * 0.5f);
+    }
+
+    /// @brief Get the max bounds of the billboard's bounding box
+    /// @return Vector3 The maximum corner of the bounding box
+    inline Vector3 GetMaxBounds() const {
+        auto* t = this->m_owner->GetComponent<TransformComponent>();
+        if (!t) return Vector3();
+        Vector3 pos = t->GetWorldPosition();
+        return Vector3(pos.x() + this->size * 0.5f,
+                       pos.y() + this->size * 0.5f,
+                       pos.z() + this->size * 0.5f);
+    }
 };
 
 } // namespace Syngine

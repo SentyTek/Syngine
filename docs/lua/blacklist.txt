@@ -4,3 +4,4 @@ InputHelpers.h
 RenderCore.h
 MetalBridge.h
 Helpers.h
+Math.hpp

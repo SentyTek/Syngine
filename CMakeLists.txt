@@ -14,6 +14,7 @@ set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source di
 
 # Enable CTest in the engine project so standalone engine CI can discover tests.
 include(CTest)
+include(FetchContent)
 
 # Generate Version.h for all engine builds (including engine-only CI).
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/versioning.cmake)
@@ -209,6 +210,14 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/sol2 ${CMAKE_BINARY_DIR}/third_party/sol2 EXCLUDE_FROM_ALL)
 
+FetchContent_Declare(
+    directxmath
+    GIT_REPOSITORY https://github.com/microsoft/DirectXMath.git
+    GIT_TAG jun2026
+)
+FetchContent_MakeAvailable(directxmath)
+target_link_libraries(Syngine PUBLIC DirectXMath)
+
 if (MSVC AND TARGET Jolt)
     target_compile_options(Jolt PRIVATE /wd4865 /WX-) # Disable "the underlying type of ... will change when '/Zc:enumTypes' is specified on the command line" warning and don't treat as error
 endif()
@@ -310,9 +319,11 @@ if(MSVC)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
-clangd(Syngine
+clangd(
+    TARGET Syngine
     EXCLUDE_PATHS "third_party/*"
     OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     INLAY_HINTS
     INLAY_DEDUCED_TYPES
-    INLAY_PARAMETER_NAMES)
+    INLAY_PARAMETER_NAMES
+)

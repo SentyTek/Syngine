@@ -13,7 +13,7 @@
 #include "Syngine/ECS/AllComponents.h"
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/Utils/FsUtils.h"
-#include "Syngine/Core/Core.h"
+#include "Syngine/Math/Math.hpp"
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
@@ -22,7 +22,6 @@
 #include <cctype>
 #include <functional>
 #include <unordered_map>
-#include <list>
 #include <vector>
 #include <string>
 
@@ -116,14 +115,14 @@ _ParseRigidbodyParams(sol::optional<sol::table> maybeParams) {
     const sol::object shapeParamsObj = paramTable["shapeParameters"];
     if (shapeParamsObj.valid() &&
         shapeParamsObj.get_type() == sol::type::table) {
-        params.shapeParameters.clear();
         sol::table shapeParamsTable = shapeParamsObj.as<sol::table>();
-        for (size_t i = 1;; ++i) {
+        for (size_t i = 1;;) {
             sol::optional<float> maybeValue = shapeParamsTable[i];
             if (!maybeValue) {
                 break;
             }
-            params.shapeParameters.push_back(*maybeValue);
+            params.shapeParameters.set(static_cast<int>(i) - 1, *maybeValue);
+            ++i;
         }
     }
 
@@ -411,8 +410,8 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
 
             ZoneShape   shape    = ZoneShape::BOX;
             std::string shapeStr = "BOX";
-            float       pos[3]   = { 0.0f, 0.0f, 0.0f };
-            float       size[3]  = { 1.0f, 1.0f, 1.0f };
+            Math::Vector3 pos(0.0f, 0.0f, 0.0f);
+            Math::Vector3 size(1.0f, 1.0f, 1.0f);
             bool        oneShot  = false;
 
             // Parse args in order: (shape, position, size[, oneShot])
@@ -434,8 +433,9 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                 sol::table posTable  = args[1].as<sol::table>();
                 sol::table sizeTable = args[2].as<sol::table>();
                 for (size_t i = 0; i < 3; ++i) {
-                    pos[i]  = posTable.get_or(i + 1, pos[i]);
-                    size[i] = sizeTable.get_or(i + 1, size[i]);
+                    int index = static_cast<int>(i);
+                    pos.set(index, posTable.get_or(index + 1, pos[index]));
+                    size.set(index, sizeTable.get_or(index + 1, size[index]));
                 }
                 oneShot = args[3].as<bool>();
             } else if (args.size() == 3 && args[0].is<std::string>() &&
@@ -454,8 +454,9 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
                 sol::table posTable  = args[1].as<sol::table>();
                 sol::table sizeTable = args[2].as<sol::table>();
                 for (size_t i = 0; i < 3; ++i) {
-                    pos[i]  = posTable.get_or(i + 1, pos[i]);
-                    size[i] = sizeTable.get_or(i + 1, size[i]);
+                    int index = static_cast<int>(i);
+                    pos.set(index, posTable.get_or(index + 1, pos[index]));
+                    size.set(index, sizeTable.get_or(index + 1, size[index]));
                 }
             } else {
                 Logger::LogF(LogLevel::ERR, true,

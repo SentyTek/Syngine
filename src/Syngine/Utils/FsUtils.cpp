@@ -7,7 +7,6 @@
 // ╰──────────────────────────────────────╯
 
 #include "SDL3/SDL_log.h"
-#include "Syngine/Core/Logger.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <ShlObj.h>
@@ -88,7 +87,6 @@ std::filesystem::path _GetAppDataPath(const std::string& appName) {
 
     // Compose the AppData folder path: $XDG_DATA_HOME/SentyTek/<appName> (or ~/.local/share/SentyTek/<appName>)
     appDataFolder = std::filesystem::path(homePath) / "SentyTek" / appName;
-    SDL_Log("%s", appDataFolder.string().c_str());
 
 #endif
     // Log an error if the path could not be determined.

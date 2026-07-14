@@ -12,13 +12,16 @@
 namespace Syngine {
     class DebugRender;
     struct CompoundShapePart; // Forward declaration
+    struct Camera; // Forward declaration
 }
 
-#include "Syngine/Utils/ModelLoader.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
 #include "bgfx/bgfx.h"
 
-//Jolt includes
+// Jolt includes
+
+#include "Syngine/Utils/ModelLoader.h"
+#include <Syngine/Math/Math.hpp>
+
 #include <Jolt/Jolt.h>
 #include <Jolt/RegisterTypes.h>
 #include <Jolt/Core/Factory.h>
@@ -352,9 +355,9 @@ struct CompoundShapePart; // Forward declaration
                                ObjectLayer                           layer,
                                float mass = 0.0f);
 
-        void _DrawFrustum(const float* view, const float* proj);
+        void _DrawFrustum(const Math::Mat4 view, const Math::Mat4 proj);
 
-        void _DrawLine(const float* from, const float* to, JPH::ColorArg color);
+        void _DrawLine(const Math::Vector3 from, const Math::Vector3 to, JPH::ColorArg color);
 
         private:
         //Jolt specific variables

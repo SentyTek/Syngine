@@ -10,14 +10,6 @@
 #include "Syngine/Utils/ModelLoader.h"
 #include "Syngine/Graphics/TextureHelpers.h"
 
-#include "Syngine/Utils/FsUtils.h"
-#include "assimp/color4.h"
-#include "assimp/mesh.h"
-#include "assimp/types.h"
-#include "assimp/vector3.h"
-#include "bgfx/bgfx.h"
-
-#include "bx/math.h"
 #include <cstdint>
 
 #include <assimp/Importer.hpp>
@@ -31,14 +23,22 @@ namespace Syngine {
 
 namespace {
 
-aiVector3D _MirrorX(const aiVector3D& v) {
+static inline aiVector3D _MirrorX(const aiVector3D& v) {
     return aiVector3D(-v.x, v.y, v.z);
 }
 
-aiVector3D _Normalized(const aiVector3D& v) {
+static inline aiVector3D _Normalized(const aiVector3D& v) {
     aiVector3D out = v;
     out.Normalize();
     return out;
+}
+
+static inline Math::Vector3 _ToVector3(const aiVector3D& v) {
+    return Math::Vector3(v.x, v.y, v.z);
+}
+
+static inline Math::Vector4 _ToVector4(const aiColor4D& c) {
+    return Math::Vector4(c.r, c.g, c.b, c.a);
 }
 
 std::string _GetAssimpFormatHint(const std::string& assetPath) {
@@ -252,18 +252,16 @@ bool AssimpLoader::processScene(MeshData&      out,
                 max.y = std::max(max.y, vert.y);
                 max.z = std::max(max.z, vert.z);
             }
-            subMesh.boundMin[0] = min.x;
-            subMesh.boundMin[1] = min.y;
-            subMesh.boundMin[2] = min.z;
-            subMesh.boundMax[0] = max.x;
-            subMesh.boundMax[1] = max.y;
-            subMesh.boundMax[2] = max.z;
+            subMesh.boundMin.setX(min.x);
+            subMesh.boundMin.setY(min.y);
+            subMesh.boundMin.setZ(min.z);
+            subMesh.boundMax.setX(max.x);
+            subMesh.boundMax.setY(max.y);
+            subMesh.boundMax.setZ(max.z);
         } else {
             // No vertices, set empty bounds
-            subMesh.boundMin[0] = subMesh.boundMin[1] =
-                subMesh.boundMin[2] = 0.0f;
-            subMesh.boundMax[0] = subMesh.boundMax[1] =
-                subMesh.boundMax[2] = 0.0f;
+            subMesh.boundMin = Math::Vector3(); // No arg zeroes it out
+            subMesh.boundMax = Math::Vector3();
         }
         out.subMeshes.push_back(subMesh);
 
@@ -274,46 +272,37 @@ bool AssimpLoader::processScene(MeshData&      out,
             const aiVector3D pos = _MirrorX(aiMeshPtr->mVertices[v]);
 
             // Position
-            vertex.pos[0] = pos.x;
-            vertex.pos[1] = pos.y;
-            vertex.pos[2] = pos.z;
+            vertex.pos = _ToVector3(pos);
 
             // Normal
             if (aiMeshPtr->HasNormals()) {
                 const aiVector3D n = _Normalized(aiMeshPtr->mNormals[v]);
                 const aiVector3D nMirrored = _MirrorX(n);
-                vertex.normal[0] = nMirrored.x;
-                vertex.normal[1] = nMirrored.y;
-                vertex.normal[2] = nMirrored.z;
+                vertex.normal = _ToVector3(nMirrored);
             }
 
             // UV0
             if (aiMeshPtr->HasTextureCoords(0)) {
-                vertex.uv0[0] = aiMeshPtr->mTextureCoords[0][v].x;
-                vertex.uv0[1] = aiMeshPtr->mTextureCoords[0][v].y;
+                vertex.uv0.setX(aiMeshPtr->mTextureCoords[0][v].x);
+                vertex.uv0.setY(aiMeshPtr->mTextureCoords[0][v].y);
             }
 
             // UV1
             if (aiMeshPtr->HasTextureCoords(1)) {
-                vertex.uv1[0] = aiMeshPtr->mTextureCoords[1][v].x;
-                vertex.uv1[1] = aiMeshPtr->mTextureCoords[1][v].y;
+                vertex.uv1.setX(aiMeshPtr->mTextureCoords[1][v].x);
+                vertex.uv1.setY(aiMeshPtr->mTextureCoords[1][v].y);
             } else {
                 // Fallback replicate UV0
-                vertex.uv1[0] = vertex.uv0[0];
-                vertex.uv1[1] = vertex.uv0[1];
+                vertex.uv1 = vertex.uv0;
             }
 
             // Color
             if (aiMeshPtr->HasVertexColors(0)) {
                 const aiColor4D& col = aiMeshPtr->mColors[0][v];
-                vertex.color[0] = col.r;
-                vertex.color[1] = col.g;
-                vertex.color[2] = col.b;
-                vertex.color[3] = col.a;
+                vertex.color = _ToVector4(col);
             } else {
                 // Default to white
-                vertex.color[0] = vertex.color[1] = vertex.color[2] = 1.0f;
-                vertex.color[3] = 1.0f;
+                vertex.color = Math::Vector4(1.0f);
             }
 
             // Tangent and bitangent
@@ -324,16 +313,14 @@ bool AssimpLoader::processScene(MeshData&      out,
                 const aiVector3D tMirrored = _MirrorX(t);
                 const aiVector3D bMirrored = _MirrorX(b);
 
-                vertex.tangent[0] = tMirrored.x;
-                vertex.tangent[1] = tMirrored.y;
-                vertex.tangent[2] = tMirrored.z;
                 // Store handedness in w component of tangent
                 // sign(dot(cross(normal, tangent), bitangent))
                 aiVector3D cross = aiVector3D(vertex.normal[0],
                                               vertex.normal[1],
-                                              vertex.normal[2]) ^ tMirrored;
-                vertex.tangent[3] =
-                    (cross * bMirrored) < 0.0f ? -1.0f : 1.0f;
+                                              vertex.normal[2]) ^
+                                   tMirrored;
+
+                vertex.tangent = Math::Vector4(tMirrored.x, tMirrored.y, tMirrored.z, (cross * bMirrored) < 0.0f ? -1.0f : 1.0f);
             }
 
             out.vertices.push_back(vertex);
@@ -484,10 +471,7 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
     // base color
     aiColor4D color(1.0f, 1.0f, 1.0f, 1.0f);
     if (aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
-        mat.baseColor[0] = color.r;
-        mat.baseColor[1] = color.g;
-        mat.baseColor[2] = color.b;
-        mat.baseColor[3] = color.a;
+        mat.baseColor = _ToVector4(color);
     }
 
     // Import or derive UV scales
@@ -496,9 +480,7 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
         scaleProperty = 1.0f; // default if not specified
     }
 
-    mat.uvScale[0] = scaleProperty;
-    mat.uvScale[1] = scaleProperty;
-    mat.uvScale[2] = scaleProperty;
+    mat.uvScale = scaleProperty;
 
     // Load textures if requested
     if (loadTextures) {
@@ -546,8 +528,7 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*        aiMat,
 
 Material AssimpLoader::_CreateDefaultMaterial() {
     Material mat;
-    mat.baseColor[0] = mat.baseColor[1] = mat.baseColor[2] = 1.0f;
-    mat.baseColor[3] = 1.0f;
+    mat.baseColor = Math::Vector4(1.0f);
     mat.albedo       = BGFX_INVALID_HANDLE;
     mat.normalMap    = BGFX_INVALID_HANDLE;
     mat.heightMap    = Syngine::CreateFlatTexture();

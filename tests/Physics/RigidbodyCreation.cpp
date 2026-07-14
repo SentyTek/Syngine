@@ -9,9 +9,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "../defines.h"
+#include "Syngine/Math/Quaternion.hpp"
 
 #include <Syngine/Syngine.h>
+
 using namespace Syngine;
+using namespace Syngine::Math;
 using namespace Catch::Matchers;
 
 // Collection of tests for creating rigidbodies with various parameters and
@@ -37,17 +40,17 @@ TEST_CASE("Compound shape rigidbody", "[Physics]") {
 
     CompoundShapePart boxPart = {
         .shape           = PhysicsShapes::BOX,
-        .shapeParameters = { 1.0f, 1.0f, 1.0f }, // half extents
-        .position        = { 0.f, 0.f, 0.f },
-        .rotation        = { 0.f, 0.f, 0.f, 1.f } // identity
+        .shapeParameters = SVec3(1.0f), // half extents
+        .position        = SVec3(),
+        .rotation        = SQuat() // identity
     };
     parts.push_back(boxPart);
 
     CompoundShapePart spherePart = {
         .shape           = PhysicsShapes::SPHERE,
         .shapeParameters = { 0.5f }, // radius
-        .position        = { 1.5f, 0.f, 0.f }, // offset from box
-        .rotation        = { 0.f, 0.f, 0.f, 1.f } // identity
+        .position        = SVec3(1.5f, 0.f, 0.f), // offset from box
+        .rotation        = SQuat() // identity
     };
     parts.push_back(spherePart);
 
@@ -56,7 +59,7 @@ TEST_CASE("Compound shape rigidbody", "[Physics]") {
         .mass            = 2.0f,
         .friction        = 0.6f,
         .restitution     = 0.05f,
-        .shapeParameters = {}, // Not used for compound
+        .shapeParameters = SVec3(), // Not used for compound
         .motionType      = JPH::EMotionType::Dynamic,
         .layer           = Layers::MOVING,
         .compoundParts   = parts

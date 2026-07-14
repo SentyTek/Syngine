@@ -10,6 +10,7 @@
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/GameObject.h"
 
+#include "Syngine/Math/Math.hpp"
 #include "Syngine/Utils/Profiler.h"
 #include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
@@ -22,15 +23,9 @@ namespace Syngine {
 CameraComponent::CameraComponent(GameObject* owner) {
     this->m_owner = owner;
     this->camera = {};
-    this->camera.eye[0] = 0.0f;
-    this->camera.eye[1] = 0.0f;
-    this->camera.eye[2] = 0.0f;
-    this->camera.target[0] = 0.0f;
-    this->camera.target[1] = 0.0f;
-    this->camera.target[2] = 0.0f;
-    this->camera.up[0]     = 0.0f;
-    this->camera.up[1]     = 1.0f;
-    this->camera.up[2]     = 0.0f;
+    this->camera.eye = Math::Vector3();
+    this->camera.target = Math::Vector3();
+    this->camera.up = Math::Vector3(0.0f, 1.0f, 0.0f);
 
     if (this->m_owner) {
         this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
@@ -65,7 +60,7 @@ CameraComponent::~CameraComponent() {
 Serializer::DataNode CameraComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
-    node / "eye" = std::vector<float>{ camera.eye[0], camera.eye[1], camera.eye[2] };
+    node / "eye" = std::vector<float>(camera.eye);
     node / "fov" = camera.fov;
     node / "farPlane" = camera.farPlane;
     node / "yaw" = camera.yaw;
@@ -76,28 +71,25 @@ Serializer::DataNode CameraComponent::Serialize() const {
 void CameraComponent::Update(int viewId, int width, int height) {
     // update view and projection matrices
     Syngine::Camera& cam = this->camera;
-    float* eye = this->camera.eye;
-    bx::Vec3 eyeVec = { eye[0], eye[1], eye[2] };
+    Math::Vec3 eyeVec = this->camera.eye.toBxVec3();
     const int safeWidth = std::max(width, 1);
     const int safeHeight = std::max(height, 1);
     float aspect = float(safeWidth) / float(safeHeight);
 
-    bx::Vec3 forward = {
-        cosf(cam.pitch) * sinf(cam.yaw),
-        sinf(cam.pitch),
-        cosf(cam.pitch) * cosf(cam.yaw)
-    };
-    bx::Vec3 right = {
-        sinf(cam.yaw - bx::kPiHalf),
-        0.0f,
-        cosf(cam.yaw - bx::kPiHalf)
-    };
+    Math::Vec3 forward(cosf(cam.pitch) * sinf(cam.yaw),
+                       sinf(cam.pitch),
+                       cosf(cam.pitch) * cosf(cam.yaw));
+    forward = forward.normalized();
 
-    bx::Vec3 targetVec = bx::add(eyeVec, forward);
-    bx::Vec3 upVec = bx::cross(right, forward);
+    Math::Vec3 right = Math::Vec3(
+        sinf(cam.yaw - bx::kPiHalf), 0.0f, cosf(cam.yaw - bx::kPiHalf));
+    right = right.normalized();
 
-    bx::mtxLookAt(cam.view, eyeVec, targetVec, upVec);
-    bx::mtxProj(cam.proj,
+    Math::Vec3 targetVec = eyeVec + forward;
+    Math::Vec3 upVec = right.cross(forward);
+
+    bx::mtxLookAt(cam.view.data(), eyeVec.toBxVec3(), targetVec.toBxVec3(), upVec.toBxVec3());
+    bx::mtxProj(cam.proj.data(),
                 cam.fov,
                 aspect,
                 cam.nearPlane,
@@ -109,13 +101,11 @@ Syngine::ComponentTypeID CameraComponent::GetComponentType() {
     return SYN_COMPONENT_CAMERA;
 }
 
-void CameraComponent::SetPosition(float x, float y, float z) {
-    this->camera.eye[0] = x;
-    this->camera.eye[1] = y;
-    this->camera.eye[2] = z;
+void CameraComponent::SetPosition(Math::Vector3 position) {
+    this->camera.eye = position;
 }
 
-const float* CameraComponent::GetPosition() const {
+Math::Vector3 CameraComponent::GetPosition() const {
     return this->camera.eye;
 }
 
@@ -142,59 +132,43 @@ void CameraComponent::SetAngles(float yaw, float pitch) {
     this->camera.pitch = pitch;
 }
 
-void CameraComponent::GetAngles(float& yaw, float& pitch) const {
-    yaw = this->camera.yaw;
-    pitch = this->camera.pitch;
+Math::Vector2 CameraComponent::GetAngles() const {
+    return Math::Vector2(this->camera.yaw, this->camera.pitch);
 }
 
 Camera Syngine::CameraComponent::GetCamera() const { return this->camera; }
 
 void CameraComponent::_normalizePlane(CameraComponent::Plane& plane) {
-    const float len = bx::sqrt(plane.normal[0] * plane.normal[0] +
-                               plane.normal[1] * plane.normal[1] +
-                               plane.normal[2] * plane.normal[2]);
-    const float invLen = 1.0f / len;
-    plane.normal[0] *= invLen;
-    plane.normal[1] *= invLen;
-    plane.normal[2] *= invLen;
-    plane.distance  *= invLen;
+    const float len = plane.normal.length();
+    if (len == 0.0f) {
+        return;
+    }
+    plane.normal = plane.normal / len;
+    plane.distance /= len;
 }
 
 CameraComponent::Frustum CameraComponent::_extractFrustum() {
     Frustum frustum;
 
-    float* vp = new float[16];
-    bx::mtxMul(vp, this->camera.view, this->camera.proj);
+    // The math layer uses row-major matrices with row vectors, so the clip
+    // matrix is view * proj and the frustum planes come from rows.
+    Math::Matrix4x4 vp = this->camera.view * this->camera.proj;
 
-    frustum.left.normal[0] = vp[3] + vp[0];
-    frustum.left.normal[1] = vp[7] + vp[4];
-    frustum.left.normal[2] = vp[11] + vp[8];
-    frustum.left.distance  = vp[15] + vp[12];
+    const auto extractPlane = [&vp](int axis, float sign) {
+        Plane plane;
+        plane.normal = Math::Vec3(vp.m(0, 3) + sign * vp.m(0, axis),
+                                  vp.m(1, 3) + sign * vp.m(1, axis),
+                                  vp.m(2, 3) + sign * vp.m(2, axis));
+        plane.distance = vp.m(3, 3) + sign * vp.m(3, axis);
+        return plane;
+    };
 
-    frustum.right.normal[0] = vp[3] - vp[0];
-    frustum.right.normal[1] = vp[7] - vp[4];
-    frustum.right.normal[2] = vp[11] - vp[8];
-    frustum.right.distance  = vp[15] - vp[12];
-
-    frustum.bottom.normal[0] = vp[3] + vp[1];
-    frustum.bottom.normal[1] = vp[7] + vp[5];
-    frustum.bottom.normal[2] = vp[11] + vp[9];
-    frustum.bottom.distance  = vp[15] + vp[13];
-
-    frustum.top.normal[0] = vp[3] - vp[1];
-    frustum.top.normal[1] = vp[7] - vp[5];
-    frustum.top.normal[2] = vp[11] - vp[9];
-    frustum.top.distance  = vp[15] - vp[13];
-
-    frustum.n.normal[0] = vp[3] + vp[2];
-    frustum.n.normal[1] = vp[7] + vp[6];
-    frustum.n.normal[2] = vp[11] + vp[10];
-    frustum.n.distance  = vp[15] + vp[14];
-
-    frustum.f.normal[0] = vp[3] - vp[2];
-    frustum.f.normal[1] = vp[7] - vp[6];
-    frustum.f.normal[2] = vp[11] - vp[10];
-    frustum.f.distance  = vp[15] - vp[14];
+    frustum.left = extractPlane(0, 1.0f);
+    frustum.right = extractPlane(0, -1.0f);
+    frustum.bottom = extractPlane(1, 1.0f);
+    frustum.top = extractPlane(1, -1.0f);
+    frustum.n = extractPlane(2, 1.0f);
+    frustum.f = extractPlane(2, -1.0f);
 
     _normalizePlane(frustum.left);
     _normalizePlane(frustum.right);
@@ -202,24 +176,24 @@ CameraComponent::Frustum CameraComponent::_extractFrustum() {
     _normalizePlane(frustum.bottom);
     _normalizePlane(frustum.n);
     _normalizePlane(frustum.f);
-    delete[] vp;
 
     return frustum;
 }
 
-bool CameraComponent::_aabbInsidePlane(const Plane& plane, const bx::Vec3& min, const bx::Vec3& max) {
-    bx::Vec3 v = { (plane.normal[0] >= 0.0f) ? max.x : min.x,
-                   (plane.normal[1] >= 0.0f) ? max.y : min.y,
-                   (plane.normal[2] >= 0.0f) ? max.z : min.z };
+bool CameraComponent::_aabbInsidePlane(const Plane& plane, const Math::Vector3& min, const Math::Vector3& max) {
+    const Math::Vector3 positiveVertex(
+        (plane.normal.x() >= 0.0f) ? max.x() : min.x(),
+        (plane.normal.y() >= 0.0f) ? max.y() : min.y(),
+        (plane.normal.z() >= 0.0f) ? max.z() : min.z());
 
-    const float distance = bx::dot(bx::Vec3(plane.normal[0], plane.normal[1], plane.normal[2]), v) + plane.distance;
+    const float distance = plane.normal.dot(positiveVertex) + plane.distance;
 
     return distance >= 0;
 }
 
 bool CameraComponent::_aabbInsideFrustum(const Frustum&  frustum,
-                                         const bx::Vec3& min,
-                                         const bx::Vec3& max) {
+                                         const Math::Vector3& min,
+                                         const Math::Vector3& max) {
     return _aabbInsidePlane(frustum.left, min, max) &&
            _aabbInsidePlane(frustum.right, min, max) &&
            _aabbInsidePlane(frustum.top, min, max) &&
@@ -258,8 +232,8 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
     [](Syngine::GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
         auto comp = std::make_unique<CameraComponent>(owner);
         if (data.Has("eye")) {
-            const auto& eyeArr = data["eye"].As<std::vector<float>>();
-            comp->SetPosition(eyeArr[0], eyeArr[1], eyeArr[2]);
+            const std::vector<float>& eyeArr = data["eye"].As<std::vector<float>>();
+            comp->SetPosition(Math::Vector3{eyeArr});
         }
         if (data.Has("fov")) {
             comp->SetFOV(data["fov"].As<float>());

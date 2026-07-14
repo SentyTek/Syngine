@@ -1,61 +1,69 @@
 # Syngine API Documentation
 
-
 ## Core.h header
-
 
 [<- Back](../index.md)
 
 [See source](./../../include/Syngine/Core/Core.h)
 
----
+Core class to manage the application @section Core
 
+**This class has been available since:** v0.0.1. Some of its functions may have been added later, check the function documentation for details.
+
+---
 ## Goto: 
 
-
 - [Member Variables](#member-variables)
-- [HardwareSpecs](#synginehardwarespecs)
-- [EngineConfig](#syngineengineconfig)
-- [DebugModes](#synginedebugmodes)
-- [SDL_Init](#coresdl_init)
-- [Initialize](#coreinitialize)
-- [Get](#coreget)
-- [IsRunning](#coreisrunning)
-- [HandleEvents](#corehandleevents)
-- [Update](#coreupdate)
-- [Render](#corerender)
-- [GetPhysicsManager](#coregetphysicsmanager)
-- [GetSystemSpecifications](#coregetsystemspecifications)
-- [SetSimulationState](#coresetsimulationstate)
-- [GetSimulationState](#coregetsimulationstate)
-- [IsInitialized](#coreisinitialized)
-- [RunLua](#corerunlua)
-- [IsPhysicsEnabled](#coreisphysicsenabled)
-- [SetDebugMode](#coresetdebugmode)
-- [GetDebugMode](#coregetdebugmode)
-- [Context](#corecontext)
-- [_GetContext](#core_getcontext)
-- [_GetConfig](#core_getconfig)
-- [_FrameCounter](#core_framecounter)
-- [_HandleKeyEvent](#core_handlekeyevent)
+
+## Additional Functions: 
+
+### Constructors: 
+
+- [Core(const EngineConfig config)](#core-coreconst-engineconfig-config)
+
+### Enums and Structs: 
+
+- [HardwareSpecs](#syngine-hardwarespecs)
+- [EngineConfig](#syngine-engineconfig)
+- [DebugModes](#syngine-debugmodes)
+- [Context](#core-context)
+- [_FrameCounter](#core-_framecounter)
+
+### Functions: 
+
+- [Initialize()](#core-initialize)
+- [Get()](#core-get)
+- [IsRunning()](#core-isrunning)
+- [HandleEvents()](#core-handleevents)
+- [Update()](#core-update)
+- [Render()](#core-render)
+- [GetPhysicsManager()](#core-getphysicsmanager)
+- [GetSystemSpecifications()](#core-getsystemspecifications)
+- [SetSimulationState()](#core-setsimulationstate)
+- [GetSimulationState()](#core-getsimulationstate)
+- [IsInitialized()](#core-isinitialized)
+- [RunLua()](#core-runlua)
+- [IsPhysicsEnabled()](#core-isphysicsenabled)
+- [SetDebugMode()](#core-setdebugmode)
+- [GetDebugMode()](#core-getdebugmode)
+- [_GetContext()](#core-_getcontext)
+- [_GetConfig()](#core-_getconfig)
+- [_HandleKeyEvent()](#core-_handlekeyevent)
 
 ---
+<a id="syngine-hardwarespecs"></a>
 
-#### **`Syngine::HardwareSpecs`**
-
+#### **`Syngine::HardwareSpecs()`**
 
  Struct to hold hardware specifications
 
 **Note:** This should only be called after window creation, as it relies on SDL for some information.
 
 Signature:
-
 ```cpp
 struct HardwareSpecs
 ```
-
 **Members:**
-
 | Type | Name | Description |
 | --- | --- | --- | 
 | `std::string` | `osName` | Operating system name |
@@ -72,24 +80,20 @@ struct HardwareSpecs
 | `int` | `maxTextureSize` | Maximum texture size supported by the GPU |
 | `bool` | `supportsCompute` | Whether the GPU supports compute shaders |
 | `bool` | `supports3DTextures` | Whether the GPU supports 3D textures |
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="syngine-engineconfig"></a>
 
-#### **`Syngine::EngineConfig`**
-
+#### **`Syngine::EngineConfig()`**
 
  Struct to hold engine config
 
 Signature:
-
 ```cpp
 struct EngineConfig
 ```
-
 **Members:**
-
 | Type | Name | Description |
 | --- | --- | --- | 
 | `std::string` | `gameName` | Title of the game window |
@@ -98,24 +102,20 @@ struct EngineConfig
 | `bool` | `usePhysics` | Whether to initialize the physics system |
 | `bool` | `useLua` | Whether to initialize the Lua scripting system |
 | `bool` | `headless` | Whether to run in headless mode (no window, for |
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="syngine-debugmodes"></a>
 
-#### **`Syngine::DebugModes`**
-
+#### **`Syngine::DebugModes()`**
 
  the various debug modes possible
 
 Signature:
-
 ```cpp
 struct DebugModes
 ```
-
 **Members:**
-
 | Type | Name | Description |
 | --- | --- | --- | 
 | `bool` | `Enabled` | Global debug toggle |
@@ -123,39 +123,40 @@ struct DebugModes
 | `bool` | `Gizmos` | Gizmos such as cameras, lights, and audio sources |
 | `bool` | `CSMBounds` | Cascading Shadow Map zone bounds. |
 | `bool` | `DrawBoundingBoxes` | Whether to draw mesh bounding boxes |
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-coreconst-engineconfig-config"></a>
 
-#### **`Core::SDL_Init`**
+## Class Constructor
 
+#### **`Core(const EngineConfig config)`**
 
- Core class to manage the application
+ Constructor for the Core class
 
 Signature:
-
 ```cpp
- public: /// @brief Constructor for the Core class /// @param config Engine configuration (Syngine::EngineConfig) /// @throws std::runtime_error if initialization fails (e.g., SDL_Init() /// fails or missing files) /// @since v0.0.1 Core(const EngineConfig config);
+ Core(const EngineConfig config);
 ```
+**Parameters:**
+- `config`: Engine configuration (Syngine::EngineConfig)
 
 **This function has been available since:** v0.0.1
 
+**Throws:** std::runtime_error if initialization fails (e.g., SDL_Init() fails or missing files)
+
 ---
+<a id="core-initialize"></a>
 
-#### **`Core::Initialize`**
-
+#### **`Core::Initialize()`**
 
  Initialize the core system. Creates a window, renderer, and other subsystems.
 
 Signature:
-
 ```cpp
  static bool Initialize(const RendererConfig rendererConfig);
 ```
-
 **Parameters:**
-
 - `rendererConfig`: Renderer configuration options (Syngine::RendererConfig)
 
 **Returns:** True on success, false on failure
@@ -163,224 +164,196 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-get"></a>
 
-#### **`Core::Get`**
-
+#### **`Core::Get()`**
 
  Get the global Core instance
 
 Signature:
-
 ```cpp
  static Core* Get();
 ```
-
 **Returns:** Pointer to the global Core instance
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-isrunning"></a>
 
-#### **`Core::IsRunning`**
-
+#### **`Core::IsRunning()`**
 
  Check if the application is running
 
 **Note:** Used to determine if the main loop should continue
 
 Signature:
-
 ```cpp
  bool IsRunning();
 ```
-
 **Returns:** True if the application is running, false otherwise
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-handleevents"></a>
 
-#### **`Core::HandleEvents`**
-
+#### **`Core::HandleEvents()`**
 
  Handle events for the application
 
 Signature:
-
 ```cpp
  bool HandleEvents();
 ```
-
 **Returns:** True if events were handled, false otherwise
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-update"></a>
 
-#### **`Core::Update`**
-
+#### **`Core::Update()`**
 
  Update the application state
 
 Signature:
-
 ```cpp
  bool Update();
 ```
-
 **Returns:** True if the update was successful, false otherwise
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-render"></a>
 
-#### **`Core::Render`**
-
+#### **`Core::Render()`**
 
  Render the application
 
 Signature:
-
 ```cpp
  bool Render(CameraComponent* camera);
 ```
-
 **Returns:** True if the render was successful, false otherwise
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-getphysicsmanager"></a>
 
-#### **`Core::GetPhysicsManager`**
-
+#### **`Core::GetPhysicsManager()`**
 
  Get the physics manager.
 
 Signature:
-
 ```cpp
  Syngine::Phys* GetPhysicsManager();
 ```
-
 **Returns:** Pointer to the physics manager, or nullptr if not initialized
 
 ---
+<a id="core-getsystemspecifications"></a>
 
-#### **`Core::GetSystemSpecifications`**
-
+#### **`Core::GetSystemSpecifications()`**
 
  Get system specifications
 
 **Preconditions:** Renderer must be initialized (Core::Initialize() called or Renderer::IsReady() == true)
 
 Signature:
-
 ```cpp
  Syngine::HardwareSpecs GetSystemSpecifications();
 ```
-
 **Returns:** Hardware specifications of the system
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-setsimulationstate"></a>
 
-#### **`Core::SetSimulationState`**
-
+#### **`Core::SetSimulationState()`**
 
  Set the simulation state
 
 Signature:
-
 ```cpp
  void SetSimulationState(bool simulate);
 ```
-
 **Parameters:**
-
 - `simulate`: True to enable simulation, false to disable
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-getsimulationstate"></a>
 
-#### **`Core::GetSimulationState`**
-
+#### **`Core::GetSimulationState()`**
 
  Get the simulation state
 
 Signature:
-
 ```cpp
  bool GetSimulationState();
 ```
-
 **Returns:** True if simulation is enabled, false otherwise
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-isinitialized"></a>
 
-#### **`Core::IsInitialized`**
-
+#### **`Core::IsInitialized()`**
 
  Check if the Core is initialized
 
 Signature:
-
 ```cpp
  static bool IsInitialized() noexcept;
 ```
-
 **Returns:** True if initialized, false otherwise
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-runlua"></a>
 
-#### **`Core::RunLua`**
-
+#### **`Core::RunLua()`**
 
  Runs the main Lua script
 
 Signature:
-
 ```cpp
  static void RunLua();
 ```
-
 ---
+<a id="core-isphysicsenabled"></a>
 
-#### **`Core::IsPhysicsEnabled`**
-
+#### **`Core::IsPhysicsEnabled()`**
 
  Check if physics is enabled in the engine config
 
 Signature:
-
 ```cpp
  static bool IsPhysicsEnabled();
 ```
-
 **Returns:** True if physics is enabled, false otherwise
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-setdebugmode"></a>
 
-#### **`Core::SetDebugMode`**
-
+#### **`Core::SetDebugMode()`**
 
  Set the current debug modes
 
 Signature:
-
 ```cpp
  static bool SetDebugMode(DebugModes mode);
 ```
-
 **Parameters:**
-
 - `mode`: DebugModes struct with desired debug settings
 
 **Returns:** True on success, false otherwise
@@ -388,37 +361,32 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-getdebugmode"></a>
 
-#### **`Core::GetDebugMode`**
-
+#### **`Core::GetDebugMode()`**
 
  Get the current debug modes
 
 Signature:
-
 ```cpp
  static DebugModes GetDebugMode();
 ```
-
 **Returns:** Current DebugModes struct
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-context"></a>
 
-#### **`Core::Context`**
-
+#### **`Core::Context()`**
 
  Struct to hold application state
 
 Signature:
-
 ```cpp
  struct Context
 ```
-
 **Members:**
-
 | Type | Name | Description |
 | --- | --- | --- | 
 | `EngineConfig` | `config` | Engine configuration |
@@ -429,90 +397,74 @@ Signature:
 | `std::unique_ptr<ZoneManager>` | `zoneManager` | Pointer to the zone manager |
 | `std::unique_ptr<LuaManager>` | `luaState` | Pointer to the Lua state |
 | `DebugModes` | `debug` | Debug modes flags |
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-_getcontext"></a>
 
-#### **`Core::_GetContext`**
-
+#### **`Core::_GetContext()`**
 
  Get the global App instance
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  static Context* _GetContext();
 ```
-
 **Returns:** Pointer to the global Context instance
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-_getconfig"></a>
 
-#### **`Core::_GetConfig`**
-
+#### **`Core::_GetConfig()`**
 
  Get the global game config
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  static inline EngineConfig* _GetConfig();
 ```
-
 **Returns:** Pointer to the global game config
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-_framecounter"></a>
 
-#### **`Core::_FrameCounter`**
-
+#### **`Core::_FrameCounter()`**
 
  Frame counter for FPS and TPS tracking
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  struct _FrameCounter
 ```
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="core-_handlekeyevent"></a>
 
-#### **`Core::_HandleKeyEvent`**
+#### **`Core::_HandleKeyEvent()`**
 
-
-~~Handle key events for debug actions~~
-
+~~Handle key events for debug actions
+~~
 **DEPRECATED**
-
 Signature:
-
 ```cpp
  void _HandleKeyEvent(const SDL_Event& event);
 ```
-
 **Parameters:**
-
 - `event`: SDL_Event to handle
 
 ---
-
 ## Member Variables
-
 
 | Type | Name | Description |
 | --- | --- | --- | 
@@ -521,6 +473,4 @@ Signature:
 | `bool` | `m_shouldClose` | Whether the application should close |
 | `_internal` | `m_internal` | Internal state struct |
 | `_FrameCounter` | `m_frameCounter` | Frame counter for FPS/TPS tracking |
-
 ---
-

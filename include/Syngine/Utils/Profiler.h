@@ -8,6 +8,10 @@
 
 #pragma once
 
+#include <cstdint>
+#include <vector>
+#include <string>
+
 // If this macro is defined, we're not compiling in the profiler
 // To prevent build issues, the PROFILESCOPE and PROFILEFUNCTION
 // macros are still defined as other code still uses it.
@@ -17,6 +21,14 @@
 
 // Create dummy definitions to avoid build errors when the profiler is disabled
 namespace Syngine {
+struct SpanEvent {
+    const char* name; //* 8 byte pointer to name string
+    uint32_t    threadID; //* Thread ID
+    uint64_t    timestamp; //* Timestamp in microseconds
+    uint8_t     type; //* 0 = start, 1 = end
+    uint8_t     depth; //* Depth in call stack
+    uint8_t     padding[10]; //* 32 byte alignment
+};
 class Profiler {
   public:  class ProfilerScope {
       public: inline ProfilerScope(const char* name) {}
@@ -27,17 +39,13 @@ class Profiler {
   };
   public: static void PushEvent(const char* name, int type) {}
   public: static void Reset() {}
-  public: static const std::vector<int>& GetThreadData() { return std::vector<int>(); }
+  public: static const std::vector<SpanEvent>& GetThreadData() { static std::vector<SpanEvent> dummy; return dummy; }
   public: static int StartTimer(const char* name) { return 0; }
   public: static void EndTimer(int) {}
 };
 }; // namespace Syngine
 
 #else
-
-#include <cstdint>
-#include <vector>
-#include <string>
 
 #define SYN_PROFILE_SCOPE(name)                                                \
     Syngine::Profiler::ProfilerScope timer##__LINE__(name);

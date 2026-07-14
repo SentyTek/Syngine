@@ -21,6 +21,8 @@
 #include <SDL3/SDL_properties.h>
 
 #include <bgfx/platform.h>
+#include "Syngine/Math/Math.hpp"
+#include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Utils/FsUtils.h"
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
@@ -99,21 +101,19 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
 
     // Initial sun direction in degrees (yaw, pitch, roll)
     // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive = up).
-    const float initialSunDir[3] = { 0.0f, 45.0f, 0.0f };
-    float pitch = bx::toRad(initialSunDir[1]);
-    float yaw   = bx::toRad(initialSunDir[0]);
+    const Math::Vector3 initialSunDir(45.0f, 45.0f, 0.0f);
+    float pitch = static_cast<float>(Math::DEG2RAD(initialSunDir.x()));
+    float yaw   = static_cast<float>(Math::DEG2RAD(initialSunDir.y()));
     float cp    = cosf(pitch);
     float sp    = sinf(pitch);
     float cy    = cosf(yaw);
     float sy    = sinf(yaw);
 
     // y = +sin(pitch) when pitch is above horizon. (Ensure convention matches UI)
-    bx::Vec3 dirVec = { cp * sy, sp, cp * cy };
+    Math::Vector3 dirVec(cy * cp, sp, sy * cp);
+    dirVec = dirVec.normalized();
 
-    dirVec = bx::normalize(dirVec);
-
-    float final[3] = { dirVec.x, dirVec.y, dirVec.z };
-    SetSunDirection(final);
+    SetSunDirection(dirVec);
 
     m_isReady = true;
     Syngine::Logger::Info("Renderer created successfully");
@@ -503,29 +503,24 @@ void Renderer::_RegisterGizmo(const std::string& tag) {
     m_gizmoRegistry[tag] = gizmo;
 }
 
-void Renderer::GetSunDirection(float* outDir) {
+Math::Vector3 Renderer::GetSunDirection() {
     Uniform* u = RenderCore::_GetDefaultUniform("u_default_lightDir");
     if (u && u->data) {
         float* dir = static_cast<float*>(u->data);
-        outDir[0] = dir[0];
-        outDir[1] = dir[1];
-        outDir[2] = dir[2];
+        return Math::Vector3(dir[0], dir[1], dir[2]);
     } else {
         // If the uniform is not found, default to a downward light direction
-        outDir[0] = 0.0f;
-        outDir[1] = 1.0f;
-        outDir[2] = 0.0f;
+        return Math::Vector3(0.0f, 1.0f, 0.0f);
     }
 }
 
-void Renderer::SetSunDirection(const float* lightDir) {
-    float dir[4] = { lightDir[0], lightDir[1], lightDir[2], 0.0f };
+void Renderer::SetSunDirection(const Math::Vector3 lightDir) {
     // Loop over every uniform with "u_lightDir" as the name and set its value
     for (auto& pair : m_uniformRegistry) {
         Uniform& uniform = pair.second;
         const std::string& name = uniform.name;
         if (name.find("u_lightDir") != std::string::npos && bgfx::isValid(uniform.handle)) {
-            SetUniform(pair.first, dir);
+            SetUniform(pair.first, lightDir);
         }
     }
 }

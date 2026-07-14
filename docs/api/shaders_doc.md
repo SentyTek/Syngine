@@ -1,38 +1,35 @@
 # Syngine API Documentation
 
-
 ## Shaders.h header
-
 
 [<- Back](../index.md)
 
 [See source](./../../src/Syngine/Graphics/Shaders.h)
 
 ---
-
 ## Goto: 
 
 
-- [_LoadShader](#syngine_loadshader)
+## Additional Functions: 
+
+### Functions: 
+
+- [_LoadShader()](#syngine-_loadshader)
 
 ---
+<a id="syngine-_loadshader"></a>
 
-#### **`Syngine::_LoadShader`**
-
+#### **`Syngine::_LoadShader()`**
 
  Load a shader from a file.
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
 inline bgfx::ShaderHandle _LoadShader(const char* shaderPath);
 ```
-
 **Parameters:**
-
 - `shaderPath`: The path to the shader file.
 
 **Returns:** bgfx::ShaderHandle The handle to the loaded shader, or BGFX_INVALID_HANDLE on failure.
@@ -42,4 +39,3 @@ inline bgfx::ShaderHandle _LoadShader(const char* shaderPath);
 **This function has been available since:** v0.0.1
 
 ---
-

@@ -10,6 +10,7 @@
 #include "Syngine/ECS/Components/CameraComponent.h"
 #include "Syngine/Graphics/Renderer.h"
 #include "Syngine/ECS/AllComponents.h"
+#include "Syngine/Math/Matrix4x4.hpp"
 
 #include <cstdint>
 #include <unordered_map>
@@ -17,6 +18,7 @@
 #include <array>
 
 #include <bgfx/bgfx.h>
+#include <variant>
 #include <vector>
 
 namespace Syngine {
@@ -53,11 +55,15 @@ class RenderCore {
     static Uniform* _GetDefaultUniform(const std::string& name);
 
   private:
+        static constexpr uint16_t SHADOW_MAP_SIZE = 2048;
+        static constexpr uint8_t  NUM_CASCADES    = 4;
+
     // Called by _DrawShadows when CSM debug is enabled
-    static void _CalculateCascadeMatrices(CameraComponent* camera,
-                                          float*           outLightView,
-                                          float*           outLightProj,
-                                          float*           outCascadeSplits);
+    static void _CalculateCascadeMatrices(
+        CameraComponent*                                   camera,
+        std::array<Math::Matrix4x4, 4>&                   outLightView,
+        std::array<Math::Matrix4x4, 4>&                   outLightProj,
+        Math::Vector4&                                    outCascadeSplits);
 
     static constexpr std::array<Syngine::ViewID, 12> _allViews = {
         Syngine::VIEW_SHADOW,  Syngine::VIEW_SKY,
@@ -82,8 +88,8 @@ class RenderCore {
         // Uniform data struct for storing uniform handle, type, and data
         struct UniformData {
             bgfx::UniformHandle handle;
-            std::vector<float>  data;
-            uint16_t            num = 1;
+            std::variant<Math::Vector4, Math::Mat4> data;
+            uint16_t                                num = 1;
         };
         std::vector<Texture> textures;
         std::vector<UniformData> uniforms;
@@ -99,7 +105,14 @@ class RenderCore {
                     tex.samplerFlags);
             }
             for (const auto& uni : uniforms) {
-                Renderer::SetUniform(uni.handle.idx, uni.data.data(), uni.num);
+                size_t i = uni.data.index();
+                if (i == 0) {
+                    const Math::Vector4& vec = std::get<Math::Vector4>(uni.data);
+                    Renderer::SetUniform(uni.handle.idx, vec.data(), uni.num);
+                } else if (i == 1) {
+                    const Math::Mat4& mat = std::get<Math::Mat4>(uni.data);
+                    Renderer::SetUniform(uni.handle.idx, mat.data(), uni.num);
+                }
             }
         }
     };
@@ -109,7 +122,7 @@ class RenderCore {
     struct RenderPacket {
         bgfx::VertexBufferHandle vbh;
         bgfx::IndexBufferHandle  ibh;
-        float                    modelMtx[16];
+        Math::Matrix4x4          modelMtx;
 
         uint32_t indexStart;
         uint32_t indexCount;
@@ -158,10 +171,10 @@ class RenderCore {
     static void _DrawUIDebug(CameraComponent* camera);
 
     static float m_maxSmallObjDistance; //* Small objects get culled beyond this distance
-    static float _CalculateScreenSize(const MeshAABB& aabb,
-                                      const float*    cameraPos,
-                                      const Camera&   camera,
-                                      float           distance);
+    static float _CalculateScreenSize(const MeshAABB&      aabb,
+                                      const Math::Vector3& cameraPos,
+                                      const Camera&        camera,
+                                      float                distance);
     static bool  _ShouldCullBySize(GameObject* go, CameraComponent* camera);
     static bool  _ShouldCullBySizeShadow(GameObject*      go,
                                          CameraComponent* camera,
@@ -207,8 +220,6 @@ class RenderCore {
 
     static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
 
-    static constexpr uint16_t      SHADOW_MAP_SIZE = 2048;
-    static constexpr uint8_t       NUM_CASCADES    = 4;
     static float                   m_cascadeSizes[NUM_CASCADES];
     static float                   m_cascadeTexelSizes[NUM_CASCADES];
 

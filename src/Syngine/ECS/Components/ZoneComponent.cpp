@@ -13,6 +13,7 @@
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/ECS/GameObject.h"
+#include "Syngine/Math/Quaternion.hpp"
 
 #include <sol/sol.hpp>
 #include <sol/types.hpp>
@@ -21,23 +22,21 @@
 namespace Syngine {
 
 // constructor
-ZoneComponent::ZoneComponent(GameObject* owner,
-                             ZoneShape   shape,
-                             const float pos[3],
-                             const float size[3],
-                             bool        oneShot) {
+ZoneComponent::ZoneComponent(GameObject*          owner,
+                             ZoneShape            shape,
+                             const Math::Vector3& pos,
+                             const Math::Vector3& size,
+                             bool                 oneShot) {
     this->m_owner = owner;
     Init(shape, pos, size, oneShot);
 }
 
 ZoneComponent::ZoneComponent(const ZoneComponent& other) {
-    for (int i = 0; i < 3; ++i) {
-        m_size[i] = other.m_size[i];
-        m_pos[i] = other.m_pos[i];
-        m_rot[i] = other.m_rot[i];
-    }
-
-    m_shape            = other.m_shape;
+    this->m_owner = other.m_owner;
+    m_pos         = other.m_pos;
+    m_size        = other.m_size;
+    m_rot         = other.m_rot;
+    m_shape       = other.m_shape;
     m_active           = other.m_active;
     m_oneShot          = other.m_oneShot;
     m_triggeredObjects = other.m_triggeredObjects;
@@ -47,15 +46,12 @@ ZoneComponent::ZoneComponent(const ZoneComponent& other) {
 
 ZoneComponent& ZoneComponent::operator=(const ZoneComponent& other) {
     if (this != &other) {
-        for (int i = 0; i < 3; ++i) {
-            m_size[i] = other.m_size[i];
-            m_pos[i]  = other.m_pos[i];
-            m_rot[i]  = other.m_rot[i];
-        }
-
-        m_shape            = other.m_shape;
-        m_active           = other.m_active;
-        m_oneShot          = other.m_oneShot;
+        m_pos = other.m_pos;
+        m_size = other.m_size;
+        m_rot  = other.m_rot;
+        m_shape = other.m_shape;
+        m_active = other.m_active;
+        m_oneShot = other.m_oneShot;
         m_triggeredObjects = other.m_triggeredObjects;
         m_tags             = other.m_tags;
         m_owner            = other.m_owner;
@@ -70,19 +66,19 @@ Serializer::DataNode ZoneComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
     node / "shape" = static_cast<int>(m_shape);
-    node / "position" = std::vector<float>{m_pos[0], m_pos[1], m_pos[2]};
-    node / "size" = std::vector<float>{m_size[0], m_size[1], m_size[2]};
-    node / "rotation" = std::vector<float>{m_rot[0], m_rot[1], m_rot[2]};
+    node / "position" = std::vector<float>(m_pos);
+    node / "size" = std::vector<float>(m_size);
+    node / "rotation" = std::vector<float>(m_rot);
     node / "active" = m_active;
     node / "oneShot" = m_oneShot;
     node / "tags" = m_tags;
     return node;
 }
 
-void ZoneComponent::Init(ZoneShape   shape,
-                         const float pos[3],
-                         const float size[3],
-                         bool        oneShot) {
+void ZoneComponent::Init(ZoneShape            shape,
+                         const Math::Vector3& pos,
+                         const Math::Vector3& size,
+                         bool                 oneShot) {
     m_shape   = shape;
     m_oneShot = oneShot;
 
@@ -94,40 +90,24 @@ void ZoneComponent::Init(ZoneShape   shape,
 
 ZoneShape ZoneComponent::GetShape() const { return m_shape; }
 
-void ZoneComponent::GetPosition(float outPos[3]) const {
-    outPos[0] = m_pos[0];
-    outPos[1] = m_pos[1];
-    outPos[2] = m_pos[2];
+Math::Vector3 ZoneComponent::GetPosition() const { return m_pos; }
+
+void ZoneComponent::SetPosition(const Math::Vector3& pos) { m_pos = pos; }
+
+Math::Vector3 ZoneComponent::GetSize() const { return m_size; }
+
+void ZoneComponent::SetSize(const Math::Vector3& size) {
+    if (m_shape == ZoneShape::BOX) {
+        m_size = size;
+    } else if (m_shape == ZoneShape::SPHERE) {
+        m_size.setX(size.x()); // Only use x for radius
+    }
 }
 
-void ZoneComponent::SetPosition(const float pos[3]) {
-    m_pos[0] = pos[0];
-    m_pos[1] = pos[1];
-    m_pos[2] = pos[2];
-}
+Math::Quaternion ZoneComponent::GetRotation() const { return m_rot; }
 
-void ZoneComponent::GetSize(float outSize[3]) const {
-    outSize[0] = m_size[0];
-    outSize[1] = m_size[1];
-    outSize[2] = m_size[2];
-}
-
-void ZoneComponent::SetSize(const float size[3]) {
-    m_size[0] = size[0] < 0.0f ? 0.0f : size[0];
-    m_size[1] = size[1] < 0.0f ? 0.0f : size[1];
-    m_size[2] = size[2] < 0.0f ? 0.0f : size[2];
-}
-
-void ZoneComponent::GetRotation(float outRot[3]) const {
-    outRot[0] = m_rot[0];
-    outRot[1] = m_rot[1];
-    outRot[2] = m_rot[2];
-}
-
-void ZoneComponent::SetRotation(const float rot[3]) {
-    m_rot[0] = rot[0];
-    m_rot[1] = rot[1];
-    m_rot[2] = rot[2];
+void ZoneComponent::SetRotation(const Math::Quaternion& rot) {
+    m_rot = rot;
 }
 
 bool ZoneComponent::IsActive() const { return m_active; }
@@ -201,23 +181,18 @@ GameObject* ZoneComponent::_GetOwner() const { return m_owner; }
 
 // TODO: These will ABSOLUTELY need to be changed not only for rotation support
 // but also for scene optimization like quadtrees or actrees.
-bool ZoneComponent::IsInZone(const float point[3]) const {
+bool ZoneComponent::IsInZone(const Math::Vector3& point) const {
     switch (m_shape) {
         case ZoneShape::BOX: {
-            return (point[0] >= m_pos[0] - m_size[0] / 2.0f &&
-                    point[0] <= m_pos[0] + m_size[0] / 2.0f) &&
-                   (point[1] >= m_pos[1] - m_size[1] / 2.0f &&
-                    point[1] <= m_pos[1] + m_size[1] / 2.0f) &&
-                   (point[2] >= m_pos[2] - m_size[2] / 2.0f &&
-                    point[2] <= m_pos[2] + m_size[2] / 2.0f);
+            return (point.x() >= m_pos.x() - m_size.x() / 2.0f &&
+                    point.x() <= m_pos.x() + m_size.x() / 2.0f &&
+                    point.y() >= m_pos.y() - m_size.y() / 2.0f &&
+                    point.y() <= m_pos.y() + m_size.y() / 2.0f &&
+                    point.z() >= m_pos.z() - m_size.z() / 2.0f &&
+                    point.z() <= m_pos.z() + m_size.z() / 2.0f);
         }
         case ZoneShape::SPHERE: {
-            float dx = point[0] - m_pos[0];
-            float dy = point[1] - m_pos[1];
-            float dz = point[2] - m_pos[2];
-            float distanceSquared = dx * dx + dy * dy + dz * dz;
-            float radius = m_size[0]; // Use size[0] as radius for sphere
-            return distanceSquared <= radius * radius;
+            return m_pos.distance(point) <= m_size.x(); // size[0] is radius for sphere
         }
         default:
             return false;
@@ -230,8 +205,7 @@ bool ZoneComponent::IsInZone(const GameObject* object) const {
     TransformComponent* transform = object->GetComponent<TransformComponent>();
     if (!transform) return false;
 
-    const float* objPos = transform->GetPosition();
-    return IsInZone(objPos);
+    return IsInZone(transform->GetPosition());
 }
 
 std::vector<GameObject*> ZoneComponent::GetObjectsInZone() const {
@@ -301,8 +275,8 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
         std::vector<float> size = data["size"].As<std::vector<float>>({1.0f, 1.0f, 1.0f});
         std::vector<float> rot = data["rotation"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
         bool oneShot = data["oneShot"].As<bool>(false);
-        auto comp = std::make_unique<ZoneComponent>(owner, shape, pos.data(), size.data(), oneShot);
-        comp->SetRotation(rot.data());
+        auto comp = std::make_unique<ZoneComponent>(owner, shape, Math::Vector3(pos), Math::Vector3(size), oneShot);
+        comp->SetRotation(Math::Quaternion(rot));
         comp->SetActive(data["active"].As<bool>(true));
         comp->SetTags(data["tags"].As<std::vector<std::string>>({}));
         return comp;
@@ -317,30 +291,27 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
                 return self.GetShape() == ZoneShape::BOX ? "BOX" : "SPHERE";
              },
             "GetPosition", [](ZoneComponent& self) -> std::tuple<float, float, float> {
-                float pos[3];
-                self.GetPosition(pos);
-                return {pos[0], pos[1], pos[2]};
+                Math::Vector3 pos = self.GetPosition();
+                return {pos.x(), pos.y(), pos.z()};
             },
             "SetPosition", [](ZoneComponent& self, float x, float y, float z) {
-                float pos[3] = {x, y, z};
+                Math::Vector3 pos(x, y, z);
                 self.SetPosition(pos);
             },
             "GetSize", [](ZoneComponent& self) -> std::tuple<float, float, float> {
-                float size[3];
-                self.GetSize(size);
-                return {size[0], size[1], size[2]};
+                Math::Vector3 size = self.GetSize();
+                return {size.x(), size.y(), size.z()};
             },
             "SetSize", [](ZoneComponent& self, float x, float y, float z) {
-                float size[3] = {x, y, z};
+                Math::Vector3 size(x, y, z);
                 self.SetSize(size);
             },
             "GetRotation", [](ZoneComponent& self) -> std::tuple<float, float, float> {
-                float rot[3];
-                self.GetRotation(rot);
-                return {rot[0], rot[1], rot[2]};
+                Math::Quaternion rot = self.GetRotation();
+                return {rot.x(), rot.y(), rot.z()};
             },
             "SetRotation", [](ZoneComponent& self, float x, float y, float z) {
-                float rot[3] = {x, y, z};
+                Math::Quaternion rot(Math::Vector3(x, y, z));
                 self.SetRotation(rot);
             },
             "IsActive", &ZoneComponent::IsActive,
@@ -368,7 +339,7 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
                 self.SetTags(tags);
             },
             "IsPointInZone", [](ZoneComponent& self, float x, float y, float z) {
-                float point[3] = {x, y, z};
+                Math::Vector3 point(x, y, z);
                 return self.IsInZone(point);
             },
             "IsObjectInZone", [](ZoneComponent& self, GameObject* obj) {

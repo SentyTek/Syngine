@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <Syngine/Math/Math.hpp>
+
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -225,19 +227,28 @@ class Renderer {
     /// @since v0.0.1
     static void SetUniform(size_t id, const void* data, uint16_t num = 1);
 
-    /// @brief Get the global sun light direction
-    /// @param outLightDir A 3 float array to store the light direction.
-    ///        The direction is a normalized vector in world space. X is
-    ///        east-west, Y is pitch, Z is north-south.
-    /// @threadsafety not-safe
-    static void GetSunDirection(float* outLightDir);
-
-    /// @brief Set the global sun light direction
-    /// @param lightDir A 3 float array representing the light direction.
-    ///        Normalized direction vector in world space is expected.
+    /// @brief Set a uniform variable
+    /// @param id The ID of the uniform variable to set, returned from
+    /// RegisterUniform
+    /// @param data The Vector4 data to set the uniform to
+    /// @param num The number of elements to set (default is 1)
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void SetSunDirection(const float* lightDir);
+    static void SetUniform(size_t id, const Math::Vector4 data, uint16_t num = 1) {
+        SetUniform(id, data.data(), num);
+    }
+
+    /// @brief Get the global sun light direction
+    /// @return A vector3 representing the normalized sun light direction in world space
+    /// @threadsafety not-safe
+    static Math::Vector3 GetSunDirection();
+
+    /// @brief Set the global sun light direction
+    /// @param lightDir A Vector3 representing the normalized sun light direction in world space
+    /// @note The direction should be normalized and in world space coordinates.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void SetSunDirection(const Math::Vector3 lightDir);
 
     /// @brief Set the default gizmo size
     /// @param size Size of the gizmo

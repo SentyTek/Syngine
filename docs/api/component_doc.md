@@ -1,39 +1,42 @@
 # Syngine API Documentation
 
-
 ## Component.h header
-
 
 [<- Back](../index.md)
 
 [See source](./../../include/Syngine/ECS/Component.h)
 
----
+Syngine::Component is the base class for all components that can be attached to GameObject to inherit from. They are used to add functionality to GameObjects, such as mesh, transform, physics, AI, PlayerController, etc. @section Component
 
+---
 ## Goto: 
 
-
 - [Member Variables](#member-variables)
-- [DefaultComponents](#synginedefaultcomponents)
-- [GetComponentType](#componentgetcomponenttype)
-- [Clone](#componentclone)
-- [Serialize](#componentserialize)
+
+## Additional Functions: 
+
+### Enums and Structs: 
+
+- [DefaultComponents](#syngine-defaultcomponents)
+
+### Functions: 
+
+- [GetComponentType()](#component-getcomponenttype)
+- [Clone()](#component-clone)
+- [Serialize()](#component-serialize)
 
 ---
+<a id="syngine-defaultcomponents"></a>
 
-#### **`Syngine::DefaultComponents`**
-
+#### **`Syngine::DefaultComponents()`**
 
  An enum of built-in component types.
 
 Signature:
-
 ```cpp
 enum DefaultComponents : ComponentTypeID
 ```
-
 **Members:**
-
 | Name | Description |
 | --- | --- | 
 | `SYN_COMPONENT_MESH` | 3D mesh or model |
@@ -56,59 +59,50 @@ enum DefaultComponents : ComponentTypeID
 | `SYN_COMPONENT_ZONE` | Trigger zone or area |
 | `SYN_COMPONENT_BILLBOARD` | Billboard component |
 | `SYN_COMPONENT_COUNT` | Total number of component types |
-
 ---
+<a id="component-getcomponenttype"></a>
 
-#### **`Component::GetComponentType`**
+#### **`Component::GetComponentType()`**
 
-
- Syngine::Component is the base class for all components that can be attached to GameObject to inherit from. They are used to add functionality to GameObjects, such as mesh, transform, physics, AI, PlayerController, etc.
+ Get the type of the component, used for identifying the component type
 
 Signature:
-
 ```cpp
- public: /// @brief Get the type of the component, used for identifying the component /// type /// @return The type of the component, as defined in the Components enum virtual ComponentTypeID GetComponentType() = 0;
+ virtual ComponentTypeID GetComponentType() = 0;
 ```
+**Returns:** The type of the component, as defined in the Components enum
 
 ---
+<a id="component-clone"></a>
 
-#### **`Component::Clone`**
-
+#### **`Component::Clone()`**
 
  Clone the component, used for copying components when duplicating GameObjects or when copying components from one GameObject to another
 
 Signature:
-
 ```cpp
  virtual std::unique_ptr<Component> Clone() const = 0;
 ```
-
 **Returns:** A unique pointer to the cloned component
 
 ---
+<a id="component-serialize"></a>
 
-#### **`Component::Serialize`**
-
+#### **`Component::Serialize()`**
 
  Serialize the component to a data node
 
 Signature:
-
 ```cpp
  virtual Serializer::DataNode Serialize() const = 0;
 ```
-
 **Returns:** A pointer to the serialized data node representing the component's state
 
 ---
-
 ## Member Variables
-
 
 | Type | Name | Description |
 | --- | --- | --- | 
 | `bool` | `isEnabled` | Whether the component is enabled or not |
 | `GameObject*` | `m_owner` | The owner of the component, the GameObject it is attached to |
-
 ---
-

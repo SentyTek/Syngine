@@ -1,121 +1,116 @@
 # Syngine API Documentation
 
-
 ## TransformComponent.h header
-
 
 [<- Back](../index.md)
 
 [See source](./../../include/Syngine/ECS/Components/TransformComponent.h)
 
----
+Component to handle position, rotation, and scale of a GameObject. @section TransformComponent
 
+**This class has been available since:** v0.0.1. Some of its functions may have been added later, check the function documentation for details.
+
+---
 ## Goto: 
 
-
 - [Member Variables](#member-variables)
-- [Constructor](#class-constructor)
-- [Clone](#transformcomponentclone)
-- [Serialize](#transformcomponentserialize)
-- [Init](#transformcomponentinit)
-- [Update](#transformcomponentupdate)
-- [GetComponentType](#transformcomponentgetcomponenttype)
-- [GetRotationEuler](#transformcomponentgetrotationeuler)
-- [GetRotationQuaternion](#transformcomponentgetrotationquaternion)
-- [GetModelMatrix](#transformcomponentgetmodelmatrix)
-- [GetLocalMatrix](#transformcomponentgetlocalmatrix)
-- [GetPosition](#transformcomponentgetposition)
-- [GetScale](#transformcomponentgetscale)
-- [GetLocalPosition](#transformcomponentgetlocalposition)
-- [GetLocalRotation](#transformcomponentgetlocalrotation)
-- [GetLocalScale](#transformcomponentgetlocalscale)
-- [SetPosition](#transformcomponentsetposition)
-- [SetRotationEuler](#transformcomponentsetrotationeuler)
-- [SetRotationQuat](#transformcomponentsetrotationquat)
-- [SetScale](#transformcomponentsetscale)
-- [SetWorldPosition](#transformcomponentsetworldposition)
-- [SetWorldRotationQuat](#transformcomponentsetworldrotationquat)
-- [SetWorldRotationEuler](#transformcomponentsetworldrotationeuler)
-- [SetWorldScale](#transformcomponentsetworldscale)
-- [SetParent](#transformcomponentsetparent)
-- [GetParent](#transformcomponentgetparent)
-- [GetChildren](#transformcomponentgetchildren)
-- [GetVersion](#transformcomponentgetversion)
+
+## Additional Functions: 
+
+### Constructors: 
+
+- [TransformComponent(GameObject* owner)](#transformcomponent-transformcomponentgameobject-owner)
+
+### Functions: 
+
+- [Clone()](#transformcomponent-clone)
+- [Serialize()](#transformcomponent-serialize)
+- [Init()](#transformcomponent-init)
+- [Update()](#transformcomponent-update)
+- [GetComponentType()](#transformcomponent-getcomponenttype)
+- [GetWorldRotationEuler()](#transformcomponent-getworldrotationeuler)
+- [GetWorldRotationQuaternion()](#transformcomponent-getworldrotationquaternion)
+- [GetModelMatrix()](#transformcomponent-getmodelmatrix)
+- [GetLocalMatrix()](#transformcomponent-getlocalmatrix)
+- [GetWorldPosition()](#transformcomponent-getworldposition)
+- [GetWorldScale()](#transformcomponent-getworldscale)
+- [GetPosition()](#transformcomponent-getposition)
+- [GetRotationQuaternion()](#transformcomponent-getrotationquaternion)
+- [GetRotationEuler()](#transformcomponent-getrotationeuler)
+- [GetScale()](#transformcomponent-getscale)
+- [SetPosition()](#transformcomponent-setposition)
+- [SetRotationEuler()](#transformcomponent-setrotationeuler)
+- [SetRotationQuat()](#transformcomponent-setrotationquat)
+- [SetScale()](#transformcomponent-setscale)
+- [SetWorldPosition()](#transformcomponent-setworldposition)
+- [SetWorldRotationQuat()](#transformcomponent-setworldrotationquat)
+- [SetWorldRotationEuler()](#transformcomponent-setworldrotationeuler)
+- [SetWorldScale()](#transformcomponent-setworldscale)
+- [SetParent()](#transformcomponent-setparent)
+- [GetParent()](#transformcomponent-getparent)
+- [GetChildren()](#transformcomponent-getchildren)
+- [GetVersion()](#transformcomponent-getversion)
 
 ---
+<a id="transformcomponent-transformcomponentgameobject-owner"></a>
 
 ## Class Constructor
 
-
-#### **`TransformComponent::TransformComponent`**
-
+#### **`TransformComponent(GameObject* owner)`**
 
  Constructor for the TransformComponent class
 
 **Note:** This should only be called by GameObject::AddComponent<T>()
 
 Signature:
-
 ```cpp
  TransformComponent(GameObject* owner);
 ```
-
 **Parameters:**
-
 - `owner`: Pointer to the GameObject that owns this component
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-clone"></a>
 
-## Class & Related Members
-
-
-#### **`TransformComponent::Clone`**
-
+#### **`TransformComponent::Clone()`**
 
  Clone the TransformComponent
 
 Signature:
-
 ```cpp
  std::unique_ptr<Component> Clone() const override;
 ```
-
 **Returns:** A unique pointer to the cloned TransformComponent
 
 ---
+<a id="transformcomponent-serialize"></a>
 
-#### **`TransformComponent::Serialize`**
-
+#### **`TransformComponent::Serialize()`**
 
  Serializes the TransformComponent to a data node
 
 Signature:
-
 ```cpp
  Serializer::DataNode Serialize() const override;
 ```
-
 **Returns:** A pointer to the serialized data node representing the TransformComponent's state
 
 ---
+<a id="transformcomponent-init"></a>
 
-#### **`TransformComponent::Init`**
-
+#### **`TransformComponent::Init()`**
 
  Initializes the transform component with default values.
 
 **Note:** This is an entirely optional step, as the transform component can and is initialized directly in the constructor.
 
 Signature:
-
 ```cpp
- void Init(std::vector<float> position = { 0.0f, 0.0f, 0.0f }, std::vector<float> rotation = { 0.0f, 0.0f, 0.0f, 1.0f }, std::vector<float> scale = { 1.0f, 1.0f, 1.0f });
+ void Init(Vector3 position = Vector3(), Quaternion rotation = Quaternion(), Vector3 scale = Vector3(1.0f));
 ```
-
 **Parameters:**
-
 - `position`: Initial position of the GameObject
 - `rotation`: Initial rotation of the GameObject (as a quaternion)
 - `scale`: Initial scale of the GameObject
@@ -125,37 +120,33 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-update"></a>
 
-#### **`TransformComponent::Update`**
-
+#### **`TransformComponent::Update()`**
 
  Update the transform component.
 
 **Note:** There is no specific update logic for the transform component.
 
 Signature:
-
 ```cpp
  void Update();
 ```
-
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getcomponenttype"></a>
 
-#### **`TransformComponent::GetComponentType`**
-
+#### **`TransformComponent::GetComponentType()`**
 
  Get the type of this component
 
 Signature:
-
 ```cpp
  Syngine::ComponentTypeID GetComponentType() override;
 ```
-
 **Returns:** The component type as an enum value
 
 **Thread Safety:** read-only
@@ -163,387 +154,347 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getworldrotationeuler"></a>
 
-#### **`TransformComponent::GetRotationEuler`**
+#### **`TransformComponent::GetWorldRotationEuler()`**
 
-
- Get the GLOBAL rotation of the transform as XYZ Euler angles (in degrees)
+ Get the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
 
 Signature:
-
 ```cpp
- void GetRotationEuler(float& x, float& y, float& z) const;
+ Vector3 GetWorldRotationEuler() const;
 ```
-
-**Parameters:**
-
-- `x`: X component of the rotation
-- `y`: Y component of the rotation
-- `z`: Z component of the rotation
+**Returns:** Vector3 representing the rotation (x, y, z)
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getworldrotationquaternion"></a>
 
-#### **`TransformComponent::GetRotationQuaternion`**
-
+#### **`TransformComponent::GetWorldRotationQuaternion()`**
 
  Get the GLOBAL rotation of the transform as a quaternion
 
 Signature:
-
 ```cpp
- void GetRotationQuaternion(float& x, float& y, float& z, float& w) const;
+ Quaternion GetWorldRotationQuaternion() const;
 ```
-
-**Returns:** Array of 4 floats representing the quaternion (x, y, z, w)
+**Returns:** Quaternion representing the rotation (x, y, z, w)
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getmodelmatrix"></a>
 
-#### **`TransformComponent::GetModelMatrix`**
-
+#### **`TransformComponent::GetModelMatrix()`**
 
  Get a GLOBAL model matrix for the transform
 
+**Note:** This matrix is computed from the GLOBAL position, rotation, and scale
+
 Signature:
-
 ```cpp
- void GetModelMatrix(float* result);
+ Mat4 GetModelMatrix() const;
 ```
-
-**Parameters:**
-
-- `result`: Array to fill with the model matrix (16 floats)
+**Returns:** 4x4 matrix filled with the global model matrix
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getlocalmatrix"></a>
 
-#### **`TransformComponent::GetLocalMatrix`**
-
+#### **`TransformComponent::GetLocalMatrix()`**
 
  Get a LOCAL model matrix for the transform
 
+**Note:** This matrix is computed from the LOCAL position, rotation, and scale
+
 Signature:
-
 ```cpp
- void GetLocalMatrix(float* result);
+ Mat4 GetLocalMatrix() const;
 ```
-
-**Parameters:**
-
-- `result`: Array to fill with the local model matrix (16 floats)
+**Returns:** 4x4 matrix filled with the local model matrix
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getworldposition"></a>
 
-#### **`TransformComponent::GetPosition`**
-
+#### **`TransformComponent::GetWorldPosition()`**
 
  Get the GLOBAL position of the transform
 
+**Note:** GLOBAL position
+
 Signature:
-
 ```cpp
- float* GetPosition();
+ Vector3 GetWorldPosition() const;
 ```
-
-**Returns:** Array of 3 floats representing the position (x, y, z)
+**Returns:** Vector3 representing the position (x, y, z)
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getworldscale"></a>
 
-#### **`TransformComponent::GetScale`**
-
+#### **`TransformComponent::GetWorldScale()`**
 
  Get the GLOBAL scale of the transform
 
+**Note:** GLOBAL scale
+
 Signature:
-
 ```cpp
- float* GetScale();
+ Vector3 GetWorldScale() const;
 ```
-
-**Returns:** Array of 3 floats representing the scale (x, y, z)
+**Returns:** Vector3 representing the scale (x, y, z)
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getposition"></a>
 
-#### **`TransformComponent::GetLocalPosition`**
-
+#### **`TransformComponent::GetPosition()`**
 
  Get the LOCAL position of the transform
 
+**Note:** LOCAL position
+
 Signature:
-
 ```cpp
- float* GetLocalPosition();
+ Vector3 GetPosition() const;
 ```
-
-**Returns:** Array of 3 floats representing the local position (x, y, z)
+**Returns:** Vector3 representing the position (x, y, z)
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getrotationquaternion"></a>
 
-#### **`TransformComponent::GetLocalRotation`**
-
+#### **`TransformComponent::GetRotationQuaternion()`**
 
  Get the LOCAL rotation of the transform as a quaternion
 
+**Note:** LOCAL rotation
+
 Signature:
-
 ```cpp
- float* GetLocalRotation();
+ Quaternion GetRotationQuaternion() const;
 ```
-
-**Returns:** Array of 4 floats representing the local rotation quaternion (x, y, z, w)
+**Returns:** Quaternion representing the rotation (x, y, z, w)
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getrotationeuler"></a>
 
-#### **`TransformComponent::GetLocalScale`**
+#### **`TransformComponent::GetRotationEuler()`**
 
+ Get the LOCAL rotation of the transform as XYZ Euler angles (in radians)
+
+**Note:** LOCAL rotation
+
+Signature:
+```cpp
+ Vector3 GetRotationEuler() const;
+```
+**Returns:** Vector3 representing the rotation (x, y, z)
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="transformcomponent-getscale"></a>
+
+#### **`TransformComponent::GetScale()`**
 
  Get the LOCAL scale of the transform
 
 Signature:
-
 ```cpp
- float* GetLocalScale();
+ Vector3 GetScale() const;
 ```
-
-**Returns:** Array of 3 floats representing the local scale (x, y, z)
+**Returns:** Vector3 representing the local scale (x, y, z)
 
 **Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setposition"></a>
 
-#### **`TransformComponent::SetPosition`**
-
+#### **`TransformComponent::SetPosition()`**
 
  Set the LOCAL position of the transform
 
 Signature:
-
 ```cpp
- void SetPosition(float x, float y, float z);
+ void SetPosition(Vector3 position);
 ```
-
 **Parameters:**
-
-- `x`: X component of the position
-- `y`: Y component of the position
-- `z`: Z component of the position
+- `position`: New local position as a Vector3
 
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setrotationeuler"></a>
 
-#### **`TransformComponent::SetRotationEuler`**
+#### **`TransformComponent::SetRotationEuler()`**
 
-
- Set the LOCAL rotation of the transform as XYZ Euler angles (in degrees)
+ Set the LOCAL rotation of the transform as XYZ Euler angles (in radians)
 
 Signature:
-
 ```cpp
- void SetRotationEuler(float x, float y, float z);
+ void SetRotationEuler(Vector3 rotation);
 ```
-
 **Parameters:**
-
-- `x`: X component of the rotation
-- `y`: Y component of the rotation
-- `z`: Z component of the rotation
+- `rotation`: New local rotation as XYZ Euler angles (in radians)
 
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setrotationquat"></a>
 
-#### **`TransformComponent::SetRotationQuat`**
-
+#### **`TransformComponent::SetRotationQuat()`**
 
  Set the LOCAL rotation of the transform as a quaternion
 
 Signature:
-
 ```cpp
- void SetRotationQuat(float x, float y, float z, float w);
+ void SetRotationQuat(Quaternion rotation);
 ```
-
 **Parameters:**
-
-- `x`: X component of the quaternion
-- `y`: Y component of the quaternion
-- `z`: Z component of the quaternion
-- `w`: W component of the quaternion
+- `rotation`: New local rotation as a quaternion
 
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setscale"></a>
 
-#### **`TransformComponent::SetScale`**
-
+#### **`TransformComponent::SetScale()`**
 
  Set the LOCAL scale of the transform
 
 Signature:
-
 ```cpp
- void SetScale(float x, float y, float z);
+ void SetScale(Vector3 scale);
 ```
-
 **Parameters:**
-
-- `x`: X component of the scale
-- `y`: Y component of the scale
-- `z`: Z component of the scale
+- `scale`: New local scale as a Vector3
 
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setworldposition"></a>
 
-#### **`TransformComponent::SetWorldPosition`**
-
+#### **`TransformComponent::SetWorldPosition()`**
 
  Set the GLOBAL position of the transform
 
 Signature:
-
 ```cpp
- void SetWorldPosition(float x, float y, float z);
+ void SetWorldPosition(Vector3 position);
 ```
-
 **Parameters:**
-
-- `x`: X component of the position
-- `y`: Y component of the position
-- `z`: Z component of the position
+- `position`: New global position as a Vector3
 
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setworldrotationquat"></a>
 
-#### **`TransformComponent::SetWorldRotationQuat`**
-
+#### **`TransformComponent::SetWorldRotationQuat()`**
 
  Set the GLOBAL rotation of the transform as a quaternion
 
 Signature:
-
 ```cpp
- void SetWorldRotationQuat(float x, float y, float z, float w);
+ void SetWorldRotationQuat(Quaternion rotation);
 ```
-
 **Parameters:**
-
-- `x`: X component of the quaternion
-- `y`: Y component of the quaternion
-- `z`: Z component of the quaternion
-- `w`: W component of the quaternion
+- `rotation`: New global rotation as a quaternion
 
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setworldrotationeuler"></a>
 
-#### **`TransformComponent::SetWorldRotationEuler`**
-
+#### **`TransformComponent::SetWorldRotationEuler()`**
 
  Set the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
 
 Signature:
-
 ```cpp
- void SetWorldRotationEuler(float x, float y, float z);
+ void SetWorldRotationEuler(Vector3 rotation);
 ```
-
 **Parameters:**
-
-- `x`: X component of the rotation
-- `y`: Y component of the rotation
-- `z`: Z component of the rotation
+- `rotation`: New global rotation as XYZ Euler angles (in radians)
 
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setworldscale"></a>
 
-#### **`TransformComponent::SetWorldScale`**
-
+#### **`TransformComponent::SetWorldScale()`**
 
  Set the GLOBAL scale of the transform
 
 Signature:
-
 ```cpp
- void SetWorldScale(float x, float y, float z);
+ void SetWorldScale(Vector3 scale);
 ```
-
 **Parameters:**
-
-- `x`: X component of the scale
-- `y`: Y component of the scale
-- `z`: Z component of the scale
+- `scale`: New global scale as a Vector3
 
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-setparent"></a>
 
-#### **`TransformComponent::SetParent`**
-
+#### **`TransformComponent::SetParent()`**
 
  Set the parent transform of this transform
 
 **Note:** This will automatically update the child list of the parent
 
 Signature:
-
 ```cpp
  void SetParent(TransformComponent* parent);
 ```
-
 **Parameters:**
-
 - `parent`: Pointer to the parent TransformComponent
 
 **Thread Safety:** not-safe
@@ -551,18 +502,16 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getparent"></a>
 
-#### **`TransformComponent::GetParent`**
-
+#### **`TransformComponent::GetParent()`**
 
  Get the parent transform of this transform
 
 Signature:
-
 ```cpp
  TransformComponent* GetParent() const;
 ```
-
 **Returns:** Pointer to the parent TransformComponent (or nullptr if none)
 
 **Thread Safety:** read-only
@@ -570,18 +519,16 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getchildren"></a>
 
-#### **`TransformComponent::GetChildren`**
-
+#### **`TransformComponent::GetChildren()`**
 
  Get the child transforms of this transform
 
 Signature:
-
 ```cpp
  std::vector<TransformComponent*>& GetChildren() const;
 ```
-
 **Returns:** Vector of pointers to the child TransformComponents
 
 **Thread Safety:** read-only
@@ -589,30 +536,25 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="transformcomponent-getversion"></a>
 
-#### **`TransformComponent::GetVersion`**
-
+#### **`TransformComponent::GetVersion()`**
 
  Get the version number of this transform
 
 Signature:
-
 ```cpp
  uint64_t GetVersion() const;
 ```
-
 **Returns:** Version number that increments on each change
 
 ---
-
 ## Member Variables
-
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `float` | `m_rotation` | Rotation of the transform (Quaternion) |
-| `float` | `m_scale` | Scale of the transform |
+| `Vector3` | `m_position` | Position of the transform |
+| `Quaternion` | `m_rotation` | Rotation of the transform (Quaternion) |
+| `Vector3` | `m_scale` | Scale of the transform |
 | `std::vector<TransformComponent*>` | `m_children` | Child transform components |
-
 ---
-

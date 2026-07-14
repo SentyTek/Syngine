@@ -23,18 +23,20 @@
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 
+#include "Syngine/Physics/Physics.h"
+#include "Syngine/Math/Math.hpp"
+
 // Forward declarations
 namespace Syngine {
 class Phys;
 struct Camera;
-}
-
-#include "Syngine/Physics/Physics.h"
+} // namespace Syngine
 
 namespace Syngine {
 
 /// @brief Debug renderer class for Syngine
 /// @section DebugRenderer
+/// @nameoverride DebugRenderer
 class DebugRender : public JPH::DebugRenderer {
   private:
     /// @brief Internal class to manage batches of debug triangles. Not all
@@ -56,8 +58,11 @@ class DebugRender : public JPH::DebugRenderer {
         }
 
       private:
-        std::atomic<uint32_t> mRefCount = { 0 }; // Reference count for memory management
+        std::atomic<uint32_t> mRefCount = {
+            0
+        }; // Reference count for memory management
     };
+
   public:
     DebugRender();
     ~DebugRender();
@@ -83,14 +88,15 @@ class DebugRender : public JPH::DebugRenderer {
     /// @param drawMode Draw mode for the geometry
     /// @since v0.0.1
     /// @internal
-    virtual void DrawGeometry(JPH::RMat44Arg     modelMatrix,
-                              const JPH::AABox&  worldSpaceBounds,
-                              float              LODScaleSq,
-                              JPH::ColorArg      modelColor,
-                              const GeometryRef& geometry,
-                              ECullMode   cullMode = ECullMode::CullBackFace,
-                              ECastShadow castShadow = ECastShadow::Off,
-                              EDrawMode drawMode = EDrawMode::Wireframe) override;
+    virtual void
+    DrawGeometry(JPH::RMat44Arg     modelMatrix,
+                 const JPH::AABox&  worldSpaceBounds,
+                 float              LODScaleSq,
+                 JPH::ColorArg      modelColor,
+                 const GeometryRef& geometry,
+                 ECullMode          cullMode   = ECullMode::CullBackFace,
+                 ECastShadow        castShadow = ECastShadow::Off,
+                 EDrawMode          drawMode   = EDrawMode::Wireframe) override;
 
     /// @brief Draw a text string in 3D space (Not implemented)
     /// @param position Position in 3D space
@@ -123,7 +129,9 @@ class DebugRender : public JPH::DebugRenderer {
     /// @return Batch of triangles
     /// @since v0.0.1
     /// @internal
-    virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const Triangle* inTriangles, int inTriangleCount) override;
+    virtual JPH::DebugRenderer::Batch
+    CreateTriangleBatch(const Triangle* inTriangles,
+                        int             inTriangleCount) override;
 
     /// @brief Create a batch of triangles from vertices and indices
     /// @param inVertices Array of vertices
@@ -141,7 +149,7 @@ class DebugRender : public JPH::DebugRenderer {
     /// @pre Camera must be initialized
     /// @since v0.0.1
     /// @internal
-    void DrawFrustum(Syngine::Camera camera);
+    void DrawFrustum(const Syngine::Camera& camera);
 
     /// @brief Draw a frustum from given view and projection matrices
     /// @param view View matrix
@@ -149,7 +157,7 @@ class DebugRender : public JPH::DebugRenderer {
     /// @pre View and projection matrices must be valid
     /// @since v0.0.1
     /// @internal
-    void DrawFrustum(const float* view, const float* proj);
+    void DrawFrustum(const Math::Mat4& view, const Math::Mat4& proj);
 
     /// @brief Draw a box given min and max points
     /// @param min Minimum point of the box
@@ -157,7 +165,9 @@ class DebugRender : public JPH::DebugRenderer {
     /// @param color Color of the box
     /// @since v0.0.1
     /// @internal
-    void DrawBox(const float* min, const float* max, JPH::ColorArg color);
+    void DrawBox(const Math::Vector3& min,
+                 const Math::Vector3& max,
+                 JPH::ColorArg        color);
 
     /// @brief Draw a sphere given center and radius
     /// @param center Center of the sphere
@@ -176,8 +186,8 @@ class DebugRender : public JPH::DebugRenderer {
     /// @pre Rendering system must be initialized
     /// @since v0.0.1
     /// @internal
-    void RenderLines(const float*        view,
-                     const float*        proj,
+    void RenderLines(const Math::Mat4&   view,
+                     const Math::Mat4&   proj,
                      int                 width,
                      int                 height,
                      bgfx::ProgramHandle program);
@@ -192,10 +202,11 @@ class DebugRender : public JPH::DebugRenderer {
     struct DebugLine {
         bx::Vec3 from;
         bx::Vec3 to;
-        uint32_t color; //TODO: Change this to custom color class once that's implemented
+        uint32_t color; // TODO: Change this to custom color class once that's
+                        // implemented
     };
     struct DebugVertex {
-        float x, y, z;
+        float    x, y, z;
         uint32_t abgr;
     };
 

@@ -10,6 +10,8 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/Physics/Physics.h"
 
+#include "Syngine/Math/Math.hpp"
+
 namespace Syngine {
 // Forward declaration of TransformComponent
 class TransformComponent;
@@ -51,10 +53,10 @@ enum class ForceMode {
 };
 
 struct CompoundShapePart {
-    PhysicsShapes shape;
-    std::vector<float> shapeParameters;
-    float              position[3]; // Local position offset
-    float              rotation[4]; // Local rotation quaternion
+    PhysicsShapes shape; //* The shape of the part
+    Math::Vector3 shapeParameters = Math::Vector3(1.0f); //* Parameters for the shape, e.g., radius for sphere, half extents for box
+    Math::Vector3      position; //* Local position offset
+    Math::Quaternion   rotation; //* Local rotation quaternion
 };
 
 /// @brief Struct to hold parameters for the RigidbodyComponent.
@@ -63,23 +65,23 @@ struct CompoundShapePart {
 /// @section RigidbodyComponent
 /// @since v0.0.1
 struct RigidbodyParameters {
-    PhysicsShapes shape = PhysicsShapes::BOX; // The shape of the rigidbody
-    float         mass = 0.0f;  // Mass of the rigidbody. If 0 (which it is by default), Jolt will calculate it based on the shape.
-    float         friction = 0.5f; // Friction coefficient
-    float         restitution = 0.5f; // Restitution coefficient (bounciness)
-    std::vector<float> shapeParameters = { 1.0f, 1.0f, 1.0f }; // Additional parameters for the shape, e.g., radius for sphere, half extents for box
-    JPH::EMotionType motionType = JPH::EMotionType::Dynamic; // Motion type of the rigidbody
-    JPH::ObjectLayer layer = Syngine::Layers::MOVING; // Layer of the rigidbody
-    std::vector<CompoundShapePart> compoundParts = {}; // Parts for compound shape
+    PhysicsShapes shape = PhysicsShapes::BOX; //* The shape of the rigidbody
+    float         mass = 0.0f;  //* Mass of the rigidbody. If 0 (which it is by default), Jolt will calculate it based on the shape.
+    float         friction = 0.5f; //* Friction coefficient
+    float         restitution = 0.5f; //* Restitution coefficient (bounciness)
+    Math::Vector3 shapeParameters = Math::Vector3(1.0f); //* Additional parameters for the shape, e.g., radius for sphere, half extents for box
+    JPH::EMotionType motionType = JPH::EMotionType::Dynamic; //* Motion type of the rigidbody
+    JPH::ObjectLayer layer = Syngine::Layers::MOVING; //* Layer of the rigidbody
+    std::vector<CompoundShapePart> compoundParts = {}; //* Parts for compound shape
 };
 
-/*
- * @brief Syngine Rigidbody Component The RigidbodyComponent is used to
- * represent a physics body in the game world. It holds the BodyID and the shape of
- * the physics body from Jolt, among other properties.
- * @section RigidbodyComponent
- * @since v0.0.1
- */
+
+/// @brief Syngine Rigidbody Component The RigidbodyComponent is used to
+/// represent a physics body in the game world. It holds the BodyID and the shape of
+/// the physics body from Jolt, among other properties.
+/// @section RigidbodyComponent
+/// @nameoverride RigidbodyComponent
+/// @since v0.0.1
 class RigidbodyComponent : public Syngine::Component {
   public:
     static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type
@@ -187,13 +189,13 @@ class RigidbodyComponent : public Syngine::Component {
     /// parameters, e.g., radius for sphere, half extents for box, etc.
     /// @threadsafety read-only
     /// @since v0.0.1
-    std::vector<float> GetShapeParameters() const;
+    Math::Vector3 GetShapeParameters() const;
 
     /// @brief Set the shape parameters of the physics body
     /// @param newShapeParameters The new shape parameters to set
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void UpdateShapeParameters(const std::vector<float>& newShapeParameters);
+    void UpdateShapeParameters(const Math::Vector3 newShapeParameters);
 
     /// @brief Set the friction of the physics body
     /// @param newFriction The new friction value to set
@@ -214,7 +216,7 @@ class RigidbodyComponent : public Syngine::Component {
     /// @note Force values for visible movement may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void AddForce(const float* force, ForceMode mode = ForceMode::FORCE);
+    void AddForce(const Math::Vector3 force, ForceMode mode = ForceMode::FORCE);
 
     /// @brief Add a force to the rigidbody at a specific position
     /// @param force The force to add (vec3)
@@ -223,8 +225,8 @@ class RigidbodyComponent : public Syngine::Component {
     /// @note Force values for visible movement may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void AddForceAtPosition(const float* force,
-                            const float* position,
+    void AddForceAtPosition(const Math::Vector3 force,
+                            const Math::Vector3 position,
                             ForceMode    mode = ForceMode::FORCE);
 
     /// @brief Add a torque to the rigidbody
@@ -235,22 +237,20 @@ class RigidbodyComponent : public Syngine::Component {
     /// @note Torque values for visible rotation may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void AddTorque(const float* torque, ForceMode mode = ForceMode::FORCE);
+    void AddTorque(const Math::Vector3 torque, ForceMode mode = ForceMode::FORCE);
 
   private:
         TransformComponent*   transform = nullptr; // Reference to the transform component
-        Syngine::Phys* physicsManager = nullptr; // Reference to the physics manager
-    JPH::BodyID           bodyID;         // ID of the physics body
-    PhysicsShapes         shape;          // Shape of the physics body
-    float                 mass = 0.0f;    // Mass of the physics body
-    float                 friction = 0.5f; // Friction of the physics body
-    float restitution = 0.5f; // Restitution of the physics body, default to 0.5
-    std::vector<float> shapeParameters; // Parameters for the shape, e.g., radius for sphere,
-                         // half extents for box
-    RigidbodyParameters pendingParams{};
-    bool initPending = false;
-    bool initComplete = false;
-
-    void _MatrixToQuat(float* outQuat, const float* mtx);
+        Syngine::Phys* physicsManager = nullptr;   // Reference to the physics manager
+        JPH::BodyID bodyID;                        // ID of the physics body
+        PhysicsShapes shape; // Shape of the physics body
+        float         mass = 0.0f; // Mass of the physics body
+        float         friction = 0.5f; // Friction of the physics body
+        float restitution = 0.5f; // Restitution of the physics body, default to 0.5
+        Math::Vector3 shapeParameters; // Parameters for the shape, e.g., radius
+                                       // for sphere, half extents for box
+        RigidbodyParameters pendingParams{}; // Parameters for deferred initialization
+        bool initPending = false; // Flag to indicate if initialization is pending
+        bool initComplete = false; // Flag to indicate if initialization is complete
 };
 } // namespace Syngine
