@@ -91,11 +91,11 @@ for _, filename in ipairs(files) do
     --table.insert(names, { name= "../api/" .. fileBase:lower() .. "_doc.md", dir = filename.dir, private = filename.private, classMeta = classmeta })
 
     -- do not ask me why nil is supplied as first argument, it just works. yes, the function only has 2 args. dont question it
-    local suc, res, classmeta = pcall(DocGen.ReadFile, fullpath, "../api/" .. fileBase:lower() .. "_doc")
+    local suc, res = pcall(DocGen.ReadFile, fullpath, "../api/" .. fileBase:lower() .. "_doc")
 
     if suc then
         print("\tSuccessfully processed " .. fullpath)
-        table.insert(names, { name= "../api/" .. fileBase:lower() .. "_doc.md", dir = filename.dir, private = filename.private, classMeta = classmeta })
+        table.insert(names, { name= "../api/" .. fileBase:lower() .. "_doc.md", dir = filename.dir, private = filename.private, classMeta = res })
     else
         print("\tFAILED to process: " .. res)
         -- record to file
