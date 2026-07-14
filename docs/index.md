@@ -36,24 +36,24 @@ We have several pages of documentation available. Note the API reference is auto
 #### ECS
 
 - [Component](api/component_doc.md)
-- [Componentregistry](api/componentregistry_doc.md)
-- [Gameobject](api/gameobject_doc.md)
+- [ComponentRegistry](api/componentregistry_doc.md)
+- [GameObject](api/gameobject_doc.md)
 
 #### ECS/Components
 
-- [Billboardcomponent](api/billboardcomponent_doc.md)
-- [Cameracomponent](api/cameracomponent_doc.md)
-- [Meshcomponent](api/meshcomponent_doc.md)
-- [Playercomponent](api/playercomponent_doc.md)
-- [Rigidbodycomponent](api/rigidbodycomponent_doc.md)
-- [Transformcomponent](api/transformcomponent_doc.md)
-- [Zonecomponent](api/zonecomponent_doc.md)
+- [BillboardComponent](api/billboardcomponent_doc.md)
+- [CameraComponent](api/cameracomponent_doc.md)
+- [MeshComponent](api/meshcomponent_doc.md)
+- [PlayerComponent](api/playercomponent_doc.md)
+- [RigidbodyComponent](api/rigidbodycomponent_doc.md)
+- [TransformComponent](api/transformcomponent_doc.md)
+- [ZoneComponent](api/zonecomponent_doc.md)
 
 #### Graphics
 
 - [Renderer](api/renderer_doc.md)
 - [Windowing](api/windowing_doc.md)
-- [Internal] [Debugrenderer](api/debugrenderer_doc.md)
+- [Internal] [DebugRenderer](api/debugrenderer_doc.md)
 - [Internal] [Shaders](api/shaders_doc.md)
 - [Internal] [Texturehelpers](api/texturehelpers_doc.md)
 
