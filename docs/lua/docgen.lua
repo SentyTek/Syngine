@@ -851,13 +851,6 @@ function DocGen.ReadFile(path, name)
         m:addParagraph("**THIS CLASS IS DEPRECATED. IT MAY OR MAY NOT WORK, AND SHOULD NOT BE USED IN NEW CODE.**\n")
     end
 
-    local searchF = io.open("./searchbox.txt")
-    if searchF then
-        local searchBox = searchF:read("*a")
-        m = m + searchBox
-        searchF:close()
-    end
-
     m:addLineBreak()
 
     -- Jump table
