@@ -31,6 +31,8 @@ enum class ZoneShape : uint8_t {
 /// @brief ZoneComponent is used to define an area within the game world that
 /// can be used to trigger events
 /// @section ZoneComponent
+/// @nameoverride ZoneComponent
+/// @since v0.0.1
 class ZoneComponent : public Syngine::Component {
     Math::Vector3 m_size =
         Math::Vector3(1.0f); //* Size of the zone (whd for box, r for sphere)

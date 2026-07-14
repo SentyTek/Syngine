@@ -19,6 +19,7 @@ using namespace Syngine::Math;
 
 /// @brief Component to handle position, rotation, and scale of a GameObject.
 /// @section TransformComponent
+/// @nameoverride TransformComponent
 /// @since v0.0.1
 class TransformComponent : public Syngine::Component {
     // local TRS

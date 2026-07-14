@@ -1,3 +1,5 @@
+-- This file is injected at the start of the index.md file. Lines prefixed with -- are ignored, like this one.
+--
 Welcome to the Syngine documentation! This documentation covers the core engine features and APIs. It also contains getting started guides, examples, and tutorials to help you get up and running with Syngine.
 Syngine is a proprietary, cross-platform, modular, and modern C++ game engine built from the ground up for open-world and simulation-heavy physics based games.
 ---

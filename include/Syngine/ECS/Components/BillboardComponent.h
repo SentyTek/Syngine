@@ -30,7 +30,9 @@ enum class BillboardMode {
 /// @brief Syngine Billboard Component. The BillboardComponent is used to
 /// represent a 2D model in the 3D game world.
 /// @section BillboardComponent
-
+/// @nameoverride BillboardComponent
+/// @classprefix myBillboard.
+/// @since v0.0.1
 class BillboardComponent : public Syngine::Component {
 
     BillboardMode m_mode = BillboardMode::CAMERA_ALIGNED; //* Billboard rendering mode
@@ -126,11 +128,11 @@ class BillboardComponent : public Syngine::Component {
     void SetRotX(float rotX) { this->m_rot.setX(rotX); }
 
     /// @brief Set rotation around X, Y, Z axes
-    /// @param rot Rotation around X axis in radians
+    /// @param rotY Rotation around Y axis in radians
     void SetRotY(float rotY) { this->m_rot.setY(rotY); }
 
     /// @brief Set rotation around X, Y, Z axes
-    /// @param rot Rotation around X axis in radians
+    /// @param rotZ Rotation around Z axis in radians
     void SetRotZ(float rotZ) { this->m_rot.setZ(rotZ); }
 
     /// @brief Set rotation around X, Y, Z axes

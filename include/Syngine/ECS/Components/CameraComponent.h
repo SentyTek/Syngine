@@ -35,6 +35,7 @@ struct Camera {
 /// @brief CameraComponent class for managing camera functionality in a game
 /// object
 /// @section CameraComponent
+/// @nameoverride CameraComponent
 /// @since v0.0.1
 class CameraComponent : public Syngine::Component {
   public:

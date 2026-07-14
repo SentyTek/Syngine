@@ -25,6 +25,7 @@ namespace Syngine {
 /// player, enemy, or item. They can have various components attached to them,
 /// such as a mesh, physics, AI, etc.
 /// @section GameObject
+/// @nameoverride GameObject
 /// @since v0.0.1
 class GameObject {
   public:

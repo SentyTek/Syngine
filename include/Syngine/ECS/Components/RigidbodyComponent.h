@@ -75,13 +75,13 @@ struct RigidbodyParameters {
     std::vector<CompoundShapePart> compoundParts = {}; //* Parts for compound shape
 };
 
-/*
- * @brief Syngine Rigidbody Component The RigidbodyComponent is used to
- * represent a physics body in the game world. It holds the BodyID and the shape of
- * the physics body from Jolt, among other properties.
- * @section RigidbodyComponent
- * @since v0.0.1
- */
+
+/// @brief Syngine Rigidbody Component The RigidbodyComponent is used to
+/// represent a physics body in the game world. It holds the BodyID and the shape of
+/// the physics body from Jolt, among other properties.
+/// @section RigidbodyComponent
+/// @nameoverride RigidbodyComponent
+/// @since v0.0.1
 class RigidbodyComponent : public Syngine::Component {
   public:
     static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type

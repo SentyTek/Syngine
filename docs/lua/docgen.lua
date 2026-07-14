@@ -1,4 +1,4 @@
----@diagnostic disable: need-check-nil
+--@diagnostic disable: need-check-nil
 
 local DocGen = {}
 
@@ -26,9 +26,55 @@ local docwords = {
     "@nodiscard",
     "@see",
     "@tparam",
+    "@constructor", -- Specifies that the function is a constructor for a class
+    "@priority", -- This is a priority function, add it to a special list in the docs
+    "@noclassprefix", -- This function removes the class prefix from the function name in the docs, useful for static functions that are not part of the class
+    "@nameoverride", -- This function allows overriding the name of the function or class in the docs
+    "@alias", -- Custom class alias tag
 
     "enum",
     "struct"
+}
+
+local operators = {
+    ["+"] = "Addition operator",
+    ["-"] = "Subtraction operator",
+    ["*"] = "Multiplication operator",
+    ["/"] = "Division operator",
+    ["%"] = "Modulo operator",
+    ["=="] = "Equality operator",
+    ["!="] = "Inequality operator",
+    ["<"] = "Less than operator",
+    [">"] = "Greater than operator",
+    ["<="] = "Less than or equal to operator",
+    [">="] = "Greater than or equal to operator",
+    ["[]"] = "Indexing operator",
+    ["()"] = "Function call operator",
+    ["="] = "Assignment operator",
+    ["+="] = "Addition assignment operator",
+    ["-="] = "Subtraction assignment operator",
+    ["*="] = "Multiplication assignment operator",
+    ["/="] = "Division assignment operator",
+    ["%="] = "Modulo assignment operator",
+    ["<<"] = "Left shift operator",
+    [">>"] = "Right shift operator",
+    ["&"] = "Bitwise AND operator",
+    ["|"] = "Bitwise OR operator",
+    ["^"] = "Bitwise XOR operator",
+    ["~"] = "Bitwise NOT operator",
+    ["&&"] = "Logical AND operator",
+    ["||"] = "Logical OR operator",
+    ["!"] = "Logical NOT operator",
+    ["++"] = "Increment operator",
+    ["--"] = "Decrement operator",
+    ["->"] = "Member access operator",
+    ["->*"] = "Pointer to member access operator",
+    ["std::vector"] = "Conversion to std::vector operator",
+    ["std::string"] = "Conversion to std::string operator",
+    ["bool"] = "Conversion to bool operator",
+    ["int"] = "Conversion to int operator",
+    ["float"] = "Conversion to float operator",
+    ["double"] = "Conversion to double operator"
 }
 
 local function stripLineComment(line)
@@ -220,6 +266,77 @@ local function stripFunctionBody(signature)
     return table.concat(out):gsub("%s+$", "")
 end
 
+local function escapePattern(text)
+    return text:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+end
+
+local function normalizeAnchor(text)
+    local s = (text or ""):lower()
+    s = s:gsub("::", "-")
+    s = s:gsub("[^%w%s%-_]", "")
+    s = s:gsub("%s+", "-")
+    s = s:gsub("%-+", "-")
+    s = s:gsub("^%-", "")
+    s = s:gsub("%-$", "")
+    if s == "" then
+        return "item"
+    end
+    return s
+end
+
+local function buildCallableTitle(signature, callableName)
+    if not callableName or callableName == "" then
+        return "Constructor"
+    end
+
+    local normalized = stripFunctionBody(signature:gsub("%s+", " "))
+    local pattern = escapePattern(callableName) .. "%s*(%b())"
+    local params = normalized:match(pattern)
+
+    if params then
+        return callableName .. params
+    end
+
+    return callableName
+end
+
+local function assignDocAnchors(docs)
+    local seenAnchors = {}
+
+    for _, doc in ipairs(docs) do
+        if doc and doc.signature and doc.signature.type ~= "class" then
+            local listTitle = doc.title or ""
+            local anchorSource = listTitle
+
+            if doc.signature.type == 1 then
+                listTitle = listTitle .. "()"
+            end
+
+            if doc.signature.type == 3 then
+                anchorSource = (doc.className or "") .. "-" .. listTitle
+            elseif doc.signature.type ~= 4 then
+                local owner = "syngine"
+                if doc.className and doc.className ~= "" then
+                    owner = doc.className
+                end
+                anchorSource = owner .. "-" .. anchorSource
+            end
+
+            local baseAnchor = normalizeAnchor(anchorSource)
+            local anchor = baseAnchor
+            local suffix = 2
+            while seenAnchors[anchor] do
+                anchor = string.format("%s-%d", baseAnchor, suffix)
+                suffix = suffix + 1
+            end
+
+            seenAnchors[anchor] = true
+            doc.anchor = anchor
+            doc.listTitle = listTitle
+        end
+    end
+end
+
 local function formatDocTable(doc, signature, insideClass, className)
     local formatted = {
         brief = "",
@@ -366,16 +483,30 @@ local function formatDocTable(doc, signature, insideClass, className)
         --return nil
         formatted.title = parseSignature:match("^%s*([%w_:]+)")
         print("Destructor detected: " .. formatted.title)
+        goto skip
     end
     if parseSignature:match("operator") then
-        formatted.title = "Operator " .. parseSignature:match("operator%s*([%g]+)[(]") .. " overload"
+        if parseSignature:match("operator std::vector<float>()") then
+            print()
+        end
+        local op = parseSignature:match("operator%s*(.-)%s*%(")
+        if op:find("std::vector") then
+            op = "std::vector"
+        end
+
+        local operatorType = operators[op] or "Unknown operator"
+        formatted.title = operatorType.. " overload"
         formatted.signature.type = 4
+        goto skip
     end
     if parseSignature:match("%s*[%w_:][(]") then -- Free function or constructor
         formatted.title = parseSignature:match("%s*([%w_:]+)[(]")
+        formatted.signature.type = 1
+        goto skip
     end
      if parseSignature:match("%s*[%w_:<()>]+%s*[%w_:]+%s*=%s*%S+%s*->%s*%w+%s*{};") then -- Lambda assigned to variables
         formatted.title = parseSignature:match("%s*[%w_:<()>]+%s*([%w_:]+)")
+        goto skip
     end
 
     if formatted.signature.type == "enum" then
@@ -387,6 +518,7 @@ local function formatDocTable(doc, signature, insideClass, className)
             formatted.title = parseSignature:match("^%s*struct%s*([%w_]+)")
         end
     end
+    ::skip::
 
     -- For every docstring in the doc, find the first symbol and add it to the formatted table
     for _, line in ipairs(docstrings) do
@@ -423,7 +555,7 @@ local function formatDocTable(doc, signature, insideClass, className)
             elseif firstWord == "see" then
                 local seeRef = line:sub(#firstWord + 2)
                 table.insert(formatted.see, seeRef)
-                --print("Matched see reference: " .. seeRef)
+                print("Matched see reference: " .. seeRef)
                 goto continue
             elseif firstWord == "internal" then
                 formatted.internal = true
@@ -462,8 +594,17 @@ local function formatDocTable(doc, signature, insideClass, className)
         ::continue::
     end
 
-    if formatted.title == formatted.signature.type or formatted.brief:match("Constructor") then
-        formatted.title = formatted.signature.type
+    if formatted.title == formatted.signature.type
+        or formatted.brief:match("Constructor")
+        or formatted.constructor
+        or (formatted.className ~= "" and formatted.title == formatted.className) then
+        local ctorName = formatted.className
+        if not ctorName or ctorName == "" then
+            ctorName = parseSignature:match("%s*([%w_:]+)%s*%(") or formatted.title
+            ctorName = ctorName:match("([%w_]+)$") or ctorName
+        end
+
+        formatted.title = buildCallableTitle(parseSignature, ctorName)
         formatted.signature.type = 3
         --return formatted
     end
@@ -479,7 +620,21 @@ local function formatDocTable(doc, signature, insideClass, className)
     return formatted
 end
 
-function DocGen:ReadFile(path, name)
+local function createItemList(items, m)
+    for _, doc in ipairs(items) do
+        if not doc or not doc.signature then
+            goto continue
+        end
+        if doc.signature.type == "class" then
+            goto continue
+        end
+
+        m:addListItem(string.format("[%s](#%s)", doc.listTitle or doc.title, doc.anchor or ""))
+        ::continue::
+    end
+end
+
+function DocGen.ReadFile(path, name)
     local f = io.open(path, "r")
 
     local docs = {}
@@ -490,6 +645,17 @@ function DocGen:ReadFile(path, name)
     local className = ""
     local insideStruct = false
     local insideEnum = false
+
+    -- Meta state for class documentation details
+    local classMeta = {
+        brief = "",
+        aliases = {},
+        noclassprefix = false,
+        nameoverride = nil,
+        since = "",
+        deprecated = false,
+        classPrefix = "",
+    }
 
     if f then
         for line in f:lines() do
@@ -543,6 +709,54 @@ function DocGen:ReadFile(path, name)
             elseif line:match("^%s*class%s+[%w_]+[^{]*{") then
                 insideClass = true
                 className = line:match("^%s*class%s+([%w_]+)[^{]*{")
+
+                -- Check if the preceding doc block was describing this class
+                local isClassDoc = false
+                for _, docLine in ipairs(currentDoc) do
+                    if docLine:match("^%s*@brief") or docLine:match("^%s*@alias") or docLine:match("^%s*@noclassprefix") or docLine:match("^%s*@nameoverride") then
+                        isClassDoc = true
+                    end
+                end
+                -- If no explicit tags but it targets a class directly, treat raw text as brief description
+                if #currentDoc > 0 and not isClassDoc and not currentDoc[1]:match("^%s*@") then
+                    isClassDoc = true
+                end
+
+                if isClassDoc then
+                    for _, docLine in ipairs(currentDoc) do
+                        if docLine:match("^%s*@alias") then
+                            -- Capture everything after @alias, then split by commas
+                            local aliasLine = docLine:gsub("^%s*@alias%s*", "")
+                            for aliasName in aliasLine:gmatch("[^,]+") do
+                                -- Clean up trailing/leading whitespace from each split token
+                                local alias = aliasName:gsub("^%s*", ""):gsub("%s*$", "")
+                                if #alias > 0 then
+                                    table.insert(classMeta.aliases, alias)
+                                end
+                            end
+                        elseif docLine:match("^%s*@noclassprefix") then
+                            classMeta.noclassprefix = true
+                        elseif docLine:match("^%s*@nameoverride") then
+                            classMeta.nameoverride = docLine:match("^%s*@nameoverride%s*(%g+)")
+                        elseif docLine:match("^%s*@brief") then
+                            classMeta.brief = docLine:gsub("^%s*@brief%s*", "")
+                        elseif docLine:match("^%s*@since") then
+                            classMeta.since = docLine:gsub("^%s*@since%s*", "")
+                        elseif docLine:match("^%s*@deprecated") then
+                            classMeta.deprecated = true
+                        elseif docLine:match("^%s*@classprefix") then
+                            classMeta.classPrefix = docLine:gsub("^%s*@classprefix%s*", "")
+                        else
+                            if classMeta.brief == "" then
+                                classMeta.brief = docLine
+                            else
+                                classMeta.brief = classMeta.brief .. " " .. docLine
+                            end
+                        end
+                    end
+                    currentDoc = {}
+                    collecting = false
+                end
             elseif collecting then
                 if insideEnum or insideStruct then
                     -- Keep consuming documented enum/struct body until it closes.
@@ -583,28 +797,67 @@ function DocGen:ReadFile(path, name)
         f:close()
     end
 
+    if #docs == 0 and classMeta.brief == "" and #memberVars == 0 then
+        return
+    end
+
+    assignDocAnchors(docs)
+
+    -- sort into different categories for the docs
+    local priorityDocs = {}
+    local ctors = {}
+    local operators = {}
+    local funcs = {}
+    local enumstructs = {}
+    for _, doc in ipairs(docs) do
+        if doc.priority then
+            table.insert(priorityDocs, doc)
+        elseif doc.signature.type == 3 then
+            table.insert(ctors, doc)
+        elseif doc.signature.type == 4 then
+            table.insert(operators, doc)
+        elseif doc.params and (doc.params.type == 1 or doc.params.type == 2) then
+            table.insert(enumstructs, doc)
+        else
+            table.insert(funcs, doc)
+        end
+    end
 
     -- holy markdown batman
     local filename = path:match("([^/]+)$")
     local m = Markdown.CreateFile(name)
 
-    if #docs == 0 then
-        return
-    end
-
-    -- Search for constructor and move to the top
-    for i, doc in ipairs(docs) do
-        if doc and doc.signature and doc.signature.type == 3 then
-            table.remove(docs, i)
-            table.insert(docs, 1, doc)
-            break
-        end
-    end
-
     m:addHeader("Syngine API Documentation")
     m:addHeader(filename .. " header", 2)
     m:addLink("<- Back", "../index.md")
+    m = m + ""
     m:addLink("See source", path)
+    m = m + ""
+
+    if classMeta.brief ~= "" then
+        m:addParagraph(classMeta.brief .. "\n")
+    end
+    if #classMeta.aliases > 0 then
+        local aliasStr = "**Aliases:** "
+        for idx, alias in ipairs(classMeta.aliases) do
+            aliasStr = aliasStr .. m:inlCode(alias) .. (idx < #classMeta.aliases and ", " or "")
+        end
+        m:addParagraph(aliasStr .. "\n")
+    end
+    if classMeta.since and classMeta.since ~= "" then
+        m:addParagraph("**This class has been available since:** " .. classMeta.since .. ". Some of its functions may have been added later, check the function documentation for details.\n")
+    end
+    if classMeta.deprecated then
+        m:addParagraph("**THIS CLASS IS DEPRECATED. IT MAY OR MAY NOT WORK, AND SHOULD NOT BE USED IN NEW CODE.**\n")
+    end
+
+    local searchF = io.open("./searchbox.txt")
+    if searchF then
+        local searchBox = searchF:read("*a")
+        m = m + searchBox
+        searchF:close()
+    end
+
     m:addLineBreak()
 
     -- Jump table
@@ -613,26 +866,44 @@ function DocGen:ReadFile(path, name)
     if #memberVars > 0 then
         m:addListItem("[Member Variables](#member-variables)")
     end
-    for _, doc in ipairs(docs) do
-        if not doc or not doc.signature then
-            goto continue
-        end
-        if doc.signature.type == "class" then
-            goto continue
-        end
-        if doc.signature.type == 3 then
-            m:addListItem(string.format("[Constructor](#class-constructor)"))
-        else
-            local className = "syngine"
-            if doc.className and doc.className ~= "" then
-                className = doc.className
-            end
-            m:addListItem(string.format("[%s](#%s)", doc.title, (className .. doc.title):lower():gsub("%s+", "")))
-        end
-        ::continue::
-    end
     m:endList()
-    m:addLineBreak()
+
+    if #priorityDocs > 0 then
+        m:addHeader("Popular Functions: ", 2)
+        m:startList()
+        createItemList(priorityDocs, m)
+        m:endList()
+    end
+
+    m:addHeader("Additional Functions: ", 2)
+    if #ctors > 0 then
+        m:addHeader("Constructors: ", 3)
+        m:startList()
+        createItemList(ctors, m)
+        m:endList()
+    end
+
+    if #operators > 0 then
+        m:addHeader("Operator Overloads: ", 3)
+        m:startList()
+        createItemList(operators, m)
+        m:endList()
+    end
+
+    if #enumstructs > 0 then
+        m:addHeader("Enums and Structs: ", 3)
+        m:startList()
+        createItemList(enumstructs, m)
+        m:endList()
+    end
+
+    if #funcs > 0 then
+        m:addHeader("Functions: ", 3)
+        m:startList()
+        createItemList(funcs, m)
+        m:endList()
+        m:addLineBreak()
+    end
 
     for _, doc in ipairs(docs) do
         if not doc or not doc.signature then
@@ -641,6 +912,8 @@ function DocGen:ReadFile(path, name)
         if doc.signature.type == "class" then
             goto continue
         end
+
+        m = m + string.format("<a id=\"%s\"></a>\n", doc.anchor or "")
 
         if doc.signature.type == 3 then
             -- Constructor
@@ -650,23 +923,25 @@ function DocGen:ReadFile(path, name)
         if doc.signature.type == 4 then
             -- Operator overload
             m:addHeader("**" .. m:inlCode(doc.title) .. "**", 4)
+        elseif doc.signature.type == 3 then
+            m:addHeader("**" .. m:inlCode(doc.title) .. "**", 4)
         else
             if doc.insideClass then
-                local className = ""
-                if doc.className and doc.className ~= "" then
-                    className = doc.className .. "::"
+                local prefix = ""
+                if not classMeta.noclassprefix and doc.className and doc.className ~= "" then
+                    prefix = #classMeta.classPrefix > 0 and (classMeta.classPrefix) or (doc.className .. "::")
                 end
-                m:addHeader("**" .. m:inlCode(className .. doc.title) .. "**", 4)
+                m:addHeader("**" .. m:inlCode(prefix .. doc.title .. "()") .. "**", 4)
             else
-                m:addHeader("**" .. m:inlCode("Syngine::" .. doc.title) .. "**", 4)
+                m:addHeader("**" .. m:inlCode("Syngine::" .. doc.title .. "()") .. "**", 4)
             end
         end
 
         if doc.deprecated then
-            m = m + m:inlStrikethrough(doc.brief:gsub("^%s*", ""))
+            m = m + m:inlStrikethrough(doc.brief:gsub("^%s*", "") .. "\n")
             m = m + m:inlBold("DEPRECATED")
         else
-            m:addParagraph(doc.brief)
+            m:addParagraph(doc.brief .. "\n")
         end
 
         if doc.internal then
@@ -674,19 +949,19 @@ function DocGen:ReadFile(path, name)
         end
 
         if doc.note and #doc.note > 0 then
-            m = m + (m:inlBold("Note:") .. doc.note)
+            m = m + (m:inlBold("Note:") .. doc.note .. "\n")
         end
 
         if doc.pre and #doc.pre > 0 then
-            m = m + (m:inlBold("Preconditions:") .. doc.pre)
+            m = m + (m:inlBold("Preconditions:") .. doc.pre .. "\n")
         end
 
         if doc.post and #doc.post > 0 then
-            m = m + (m:inlBold("Postconditions:") .. doc.post)
+            m = m + (m:inlBold("Postconditions:") .. doc.post .. "\n")
         end
 
         if doc.example and #doc.example > 0 then
-            m = m + (m:inlBold("Example:") .. doc.example)
+            m = m + (m:inlBold("Example:") .. doc.example .. "\n")
         end
 
         --if doc.params.type == 0 then
@@ -744,44 +1019,79 @@ function DocGen:ReadFile(path, name)
         end
 
         if doc["return"] and #doc["return"] > 0 then
-            m = m + (m:inlBold("Returns:") .. doc["return"])
+            m = m + (m:inlBold("Returns:") .. doc["return"] .. "\n")
         end
 
         if doc.threadsafety and #doc.threadsafety > 0 then
-            m = m + (m:inlBold("Thread Safety:") .. doc.threadsafety)
+            m = m + (m:inlBold("Thread Safety:") .. doc.threadsafety .. "\n")
         end
 
         if doc.since and #doc.since > 0 then
-            m = m + (m:inlBold("This function has been available since:") .. doc.since)
+            m = m + (m:inlBold("This function has been available since:") .. doc.since .. "\n")
         end
 
         if doc.throws and #doc.throws > 0 then
-            m = m + (m:inlBold("Throws:") .. doc.throws)
+            m = m + (m:inlBold("Throws:") .. doc.throws .. "\n")
         end
 
         if doc.block and #doc.block > 0 then
-            m = m + m:inlBold("This is a blocking function.")
+            m = m + (m:inlBold("This is a blocking function.") .. "\n")
         end
 
         if doc.noexcept then
-            m = m + m:inlBold("This function will not throw exceptions.")
+            m = m + (m:inlBold("This function will not throw exceptions.") .. "\n")
         end
 
         if doc.nodiscard then
-            m = m + m:inlBold("The return value of this function must not be discarded.")
+            m = m + (m:inlBold("The return value of this function must not be discarded.") .. "\n")
         end
 
         if doc.see and next(doc.see) then
-            m = m + m:inlBold("See also:")
+            -- Create local lookup map for functions in the same file
+            local anchorMap = {}
+            for _, d in ipairs(docs) do
+                if d and d.title and d.anchor then
+                    anchorMap[d.title] = d.anchor
+                end
+            end
+
             for _, see in ipairs(doc.see) do
-                m = m + ("- " .. see)
+                -- Clean up
+                local ref = see:gsub("^%s*", ""):gsub("%s*$", "")
+                local displayText = ref
+                local url = nil
+
+                -- Check if it's a local function reference
+                if anchorMap[ref] then
+                    url = "#" .. anchorMap[ref]
+
+                    -- Check if its pointing to a general C++ file or markdown reference
+                elseif ref:match("%.h$") or ref:match("%.hpp") or ref:match("%.md$") then
+                    local base = ref:match("([^/]+)$") or ref
+                    -- remove .h or .hpp
+                    local display_name = base:gsub("%.h$", ""):gsub("%.hpp$", ""):gsub("%.md$", "")
+                    url = "../api/" .. display_name:lower() .. "_doc.md"
+                    displayText = base:gsub("^%l", string.upper)
+
+                    -- Check for structural paths like "namespace::class" or other file structures
+                elseif ref:match("::") then
+                    local parts = {}
+                    for part in ref:gmatch("[^:]+") do
+                        table.insert(parts, part)
+                    end
+                    if #parts > 1 and anchorMap[parts[#parts]] then
+                        url = "#" .. anchorMap[parts[#parts]]
+                    end
+                end
+                if url then
+                    m = m + (m:inlBold("See also:") .. " [" .. displayText .. "](" .. url .. ")\n")
+                else
+                    m = m + (m:inlBold("See also:") .. " " .. displayText .. "\n")
+                end
             end
         end
 
         m:addLineBreak()
-        if doc.signature.type == 3 then
-            m:addHeader("Class & Related Members", 2)
-        end
 
         ::continue::
     end
@@ -801,6 +1111,10 @@ function DocGen:ReadFile(path, name)
 
     local finish = os.clock() * 1000
     print("Time taken: " .. (finish - start) .. " ms")
+
+    if classMeta then
+        return classMeta
+    end
 end
 
 return DocGen

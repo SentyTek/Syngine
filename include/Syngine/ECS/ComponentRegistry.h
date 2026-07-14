@@ -26,6 +26,7 @@ namespace Syngine {
 /// to their corresponding XML parsing and instantiation functions. This allows
 /// for dynamic creation of components from serialized data without hardcoding
 /// each type in the deserialization logic.
+/// @nameoverride ComponentRegistry
 /// @section ComponentRegistry
 class ComponentRegistry {
     public:

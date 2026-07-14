@@ -24,6 +24,7 @@
 namespace Syngine::Math {
 
 /// @brief 3D vector class for mathematical operations in 3D space
+/// @alias Vec3, SVec3
 class Vector3 {
     DirectX::XMFLOAT3 m_storage;
 
@@ -38,12 +39,15 @@ class Vector3 {
     // MARK: Constructors
 
     /// @brief Default constructor, initializes the vector to (0.0, 0.0, 0.0)
+    /// @constructor
     /// @since v0.0.2
     inline Vector3() : m_storage(0.0f, 0.0f, 0.0f) {}
 
     /// @brief Construct a vector from a single float value, initializes all
     /// components to the same value
     /// @param value Value to set all components
+    /// @constructor
+    /// @priority
     /// @since v0.0.2
     inline Vector3(float value) : m_storage(value, value, value) {}
 
@@ -51,29 +55,37 @@ class Vector3 {
     /// @param x X component of the vector
     /// @param y Y component of the vector
     /// @param z Z component of the vector
+    /// @constructor
+    /// @priority
     /// @since v0.0.2
     inline Vector3(float x, float y, float z) : m_storage(x, y, z) {}
 
     /// @brief Construct a vector from a 2D vector and a Z component
     /// @param v Source 2D vector
     /// @param z Z component of the vector
+    /// @constructor
     /// @since v0.0.2
     inline Vector3(const Vector2& v, float z) : m_storage(v.x(), v.y(), z) {}
 
     /// @brief Construct a vector from a bgfx vector
     /// @param v Source bgfx vector
+    /// @constructor
     /// @since v0.0.2
     inline Vector3(const bx::Vec3& v) : m_storage(v.x, v.y, v.z) {}
 
     /// @brief Construct a vector from a Jolt vector
     /// @param v Source Jolt vector
+    /// @constructor
     /// @since v0.0.2
     inline Vector3(const JPH::Vec3& v)
         : m_storage(v.GetX(), v.GetY(), v.GetZ()) {}
 
-    /// @brief Constructor from std::vector of floats, expects exactly 3 elements
+    /// @brief Constructor from std::vector of floats, expects exactly 3
+    /// elements
     /// @param values std::vector containing three float values
-    /// @throws std::invalid_argument if the vector does not contain exactly 3 elements
+    /// @throws std::invalid_argument if the vector does not contain exactly 3
+    /// elements
+    /// @constructor
     /// @since v0.0.2
     inline Vector3(const ::std::vector<float>& values) {
         if (values.size() != 3) {
@@ -86,6 +98,7 @@ class Vector3 {
 
     /// @brief Copy constructor
     /// @param other Vector to copy
+    /// @constructor
     /// @since v0.0.2
     inline Vector3(const Vector3& other) = default;
 
@@ -96,16 +109,7 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3& operator=(const Vector3& other) = default;
 
-    /// @brief Move constructor
-    /// @param other Vector to move from
-    /// @since v0.0.2
     inline Vector3(Vector3&& other) noexcept = default;
-
-    /// @brief Move assignment operator
-    /// @param other Vector to move from
-    /// @return Reference to this vector after move assignment
-    /// @threadsafety not-safe
-    /// @since v0.0.2
     inline Vector3& operator=(Vector3&& other) noexcept = default;
 
     // MARK: Accessors
@@ -113,30 +117,35 @@ class Vector3 {
     /// @brief Get the raw data as a pointer to float array
     /// @return Pointer to the first element of the float array
     /// @threadsafety safe
+    /// @priority
     /// @since v0.0.2
     inline float* data() { return reinterpret_cast<float*>(&m_storage); }
 
     /// @brief Get the raw data as a pointer to float array
     /// @return Pointer to the first element of the float array
     /// @threadsafety safe
+    /// @priority
     /// @since v0.0.2
     inline const float* data() const { return reinterpret_cast<const float*>(&m_storage); }
 
     /// @brief Get the X component of the vector
     /// @return X component
     /// @threadsafety safe
+    /// @priority
     /// @since v0.0.2
     inline float x() const { return m_storage.x; }
 
     /// @brief Get the Y component of the vector
     /// @return Y component
     /// @threadsafety safe
+    /// @priority
     /// @since v0.0.2
     inline float y() const { return m_storage.y; }
 
     /// @brief Get the Z component of the vector
     /// @return Z component
     /// @threadsafety safe
+    /// @priority
     /// @since v0.0.2
     inline float z() const { return m_storage.z; }
 
@@ -203,6 +212,7 @@ class Vector3 {
     /// @brief Convert this vector of euler angles to a vector of radians
     /// @return Vector3 containing the angles in radians
     /// @threadsafety safe
+    /// @priority
     /// @since v0.0.2
     inline Vector3 toRads() const {
         constexpr float DEGRADFACTOR = 3.14159265358979323846f / 180.0f;
@@ -437,6 +447,7 @@ class Vector3 {
     /// @brief Calculate the length (magnitude) of the vector
     /// @return Length of the vector
     /// @threadsafety safe
+    /// @priority
     /// @since v0.0.2
     inline float length() const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
@@ -453,8 +464,10 @@ class Vector3 {
     }
 
     /// @brief Normalize the vector in-place to have a length of 1
-    /// @note This function modifies the current vector. To get a new normalized vector without modifying the current one, use the `normalized()` method.
+    /// @note This function modifies the current vector. To get a new normalized
+    /// vector without modifying the current one, use the `normalized()` method.
     /// @threadsafety not-safe
+    /// @priority
     /// @since v0.0.2
     inline void normalize() {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
@@ -502,6 +515,7 @@ class Vector3 {
     /// @param other Target vector
     /// @return Distance between vectors
     /// @threadsafety safe
+    /// @priority
     /// @since v0.0.2
     inline float distance(const Vector3& other) const {
         DirectX::XMVECTOR v1 = DirectX::XMLoadFloat3(&m_storage);

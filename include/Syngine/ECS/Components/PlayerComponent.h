@@ -46,6 +46,8 @@ enum class PlayerState {
 /// and state. It manages the player's position, rotation, and interactions with
 /// the game world.
 /// @section PlayerComponent
+/// @nameoverride PlayerComponent
+/// @since v0.0.1
 class PlayerComponent : public Syngine::Component {
   public:
     static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_PLAYER; //* Player component type

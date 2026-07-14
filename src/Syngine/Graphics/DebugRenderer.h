@@ -36,6 +36,7 @@ namespace Syngine {
 
 /// @brief Debug renderer class for Syngine
 /// @section DebugRenderer
+/// @nameoverride DebugRenderer
 class DebugRender : public JPH::DebugRenderer {
   private:
     /// @brief Internal class to manage batches of debug triangles. Not all

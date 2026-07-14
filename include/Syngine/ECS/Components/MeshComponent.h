@@ -28,6 +28,8 @@ struct MeshAABB {
 
 /// @brief Component for rendering 3D mesh models. Supports loading 3D asset
 /// files and uploading custom mesh data.
+/// @section MeshComponent
+/// @nameoverride MeshComponent
 /// @since v0.0.1
 class MeshComponent : public Syngine::Component {
   public:
