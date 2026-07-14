@@ -1,10 +1,12 @@
 # Syngine API Documentation
 
-## Shaders.h header
+## Ray.hpp header
 
 [<- Back](../index.md)
 
-[See source](./../../src/Syngine/Graphics/Shaders.h)
+[See source](./../../include/Syngine/Math/Ray.hpp)
+
+Ray class representing a ray in 3D space
 
 <div style="background:#08082e; padding:15px; border-radius:8px; margin-bottom:20px; font-family:sans-serif;">
     <label for="mdSearch" style="font-weight:bold; display:block; margin-bottom:5px;">Search Functions:</label>
@@ -38,30 +40,3 @@ function filterMarkdownDocs() {
 
 ## Additional Functions: 
 
-### Functions: 
-
-- [_LoadShader()](#syngine-_loadshader)
-
----
-<a id="syngine-_loadshader"></a>
-
-#### **`Syngine::_LoadShader()`**
-
- Load a shader from a file.
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
-inline bgfx::ShaderHandle _LoadShader(const char* shaderPath);
-```
-**Parameters:**
-- `shaderPath`: The path to the shader file.
-
-**Returns:** bgfx::ShaderHandle The handle to the loaded shader, or BGFX_INVALID_HANDLE on failure.
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----

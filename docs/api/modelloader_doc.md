@@ -1,47 +1,77 @@
 # Syngine API Documentation
 
-
 ## ModelLoader.h header
-
 
 [<- Back](../index.md)
 
 [See source](./../../include/Syngine/Utils/ModelLoader.h)
 
----
+AssimpLoader class for loading 3D models using Assimp @section ModelLoader
 
+**This class has been available since:** v0.0.1. Some of its functions may have been added later, check the function documentation for details.
+
+<div style="background:#08082e; padding:15px; border-radius:8px; margin-bottom:20px; font-family:sans-serif;">
+    <label for="mdSearch" style="font-weight:bold; display:block; margin-bottom:5px;">Search Functions:</label>
+    <input type="text" id="mdSearch" placeholder="Type function name..." onkeyup="filterMarkdownDocs()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:16px; background-color: rgb(60, 60, 60); color:antiquewhite">
+</div>
+
+<script>
+function filterMarkdownDocs() {
+    var input = document.getElementById('mdSearch').value.toLowerCase();
+    // Targets common markdown containers or the whole document body
+    var elements = document.querySelectorAll('h1, h2, h3, h4, p, li, pre, hr');
+
+    elements.forEach(function(el) {
+        // Skip the search box itself
+        if (el.closest('#mdSearch') || el.id === 'mdSearch') return;
+
+        var text = el.innerText.toLowerCase();
+        if (text.includes(input)) {
+            el.style.display = ""; // Show matching element
+            //el.style.backgroundColor = input ? "#fff9c4" : ""; // Highlight if searching
+        } else {
+            el.style.display = input ? "none" : ""; // Hide if it doesn't match
+        }
+    });
+}
+</script>
+
+---
 ## Goto: 
 
 
-- [Vertex](#synginevertex)
-- [Material](#synginematerial)
-- [SubMesh](#synginesubmesh)
-- [MeshData](#synginemeshdata)
-- [static](#modelloaderstatic)
-- [_UnloadAllMeshes](#modelloader_unloadallmeshes)
-- [_GetMeshes](#modelloader_getmeshes)
-- [_GetMeshById](#modelloader_getmeshbyid)
-- [_LoadModel](#assimploader_loadmodel)
-- [_ReloadModel](#assimploader_reloadmodel)
-- [processScene](#assimploaderprocessscene)
-- [_ProcessMaterial](#assimploader_processmaterial)
-- [_CreateDefaultMaterial](#assimploader_createdefaultmaterial)
+## Additional Functions: 
+
+### Enums and Structs: 
+
+- [Vertex](#syngine-vertex)
+- [Material](#syngine-material)
+- [SubMesh](#syngine-submesh)
+- [MeshData](#syngine-meshdata)
+
+### Functions: 
+
+- [_UnloadAllMeshes()](#modelloader-_unloadallmeshes)
+- [_GetMeshes()](#modelloader-_getmeshes)
+- [_GetMeshById()](#modelloader-_getmeshbyid)
+- [_LoadModel()](#assimploader-_loadmodel)
+- [_ReloadModel()](#assimploader-_reloadmodel)
+- [processScene()](#assimploader-processscene)
+- [_ProcessMaterial()](#assimploader-_processmaterial)
+- [_CreateDefaultMaterial()](#assimploader-_createdefaultmaterial)
 
 ---
+<a id="syngine-vertex"></a>
 
-#### **`Syngine::Vertex`**
-
+#### **`Syngine::Vertex()`**
 
  Vertex structure for mesh data
 
 Signature:
-
 ```cpp
 struct Vertex
 ```
-
 **Members:**
-
 | Type | Name | Description |
 | --- | --- | --- | 
 | `Math::Vector3` | `pos` | Position of the vertex in 3D space |
@@ -50,24 +80,20 @@ struct Vertex
 | `Math::Vector2` | `uv1` | Secondary texture coordinates (for detail maps) |
 | `Math::Vector4` | `color` | Vertex color (RGBA) |
 | `Math::Vector4` | `tangent` | Tangent vector at the vertex (for normal mapping) |
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="syngine-material"></a>
 
-#### **`Syngine::Material`**
-
+#### **`Syngine::Material()`**
 
  Material structure for mesh data
 
 Signature:
-
 ```cpp
 struct Material
 ```
-
 **Members:**
-
 | Type | Name | Description |
 | --- | --- | --- | 
 | `std::string` | `name` | Name of the material |
@@ -79,24 +105,20 @@ struct Material
 | `float` | `ambient` | Ambient floor |
 | `bool` | `useVertexColor` | Whether to use vertex color or base color |
 | `Math::Vector4` | `baseColor` | RGBA base color |
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="syngine-submesh"></a>
 
-#### **`Syngine::SubMesh`**
-
+#### **`Syngine::SubMesh()`**
 
  SubMesh structure for storing submesh information
 
 Signature:
-
 ```cpp
 struct SubMesh
 ```
-
 **Members:**
-
 | Type | Name | Description |
 | --- | --- | --- | 
 | `uint32_t` | `indexStart` | Starting index in the index buffer for this submesh |
@@ -105,24 +127,20 @@ struct SubMesh
 | `name` | `Name` | of the submesh (for debugging and editor purposes) |
 | `Math::Vector3` | `boundMin` | Minimum corner of the axis-aligned bounding box |
 | `Math::Vector3` | `boundMax` | Maximum corner of the axis-aligned bounding box |
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="syngine-meshdata"></a>
 
-#### **`Syngine::MeshData`**
-
+#### **`Syngine::MeshData()`**
 
  MeshData structure for storing mesh information
 
 Signature:
-
 ```cpp
 struct MeshData
 ```
-
 **Members:**
-
 | Type | Name | Description |
 | --- | --- | --- | 
 | `std::vector<Vertex>` | `vertices` | List of vertices in the mesh |
@@ -136,64 +154,42 @@ struct MeshData
 | `int` | `id` | Unique ID for the mesh (for hot reloading and editor purposes) |
 | `bool` | `valid` | Whether the mesh data is valid and can be rendered |
 | `lastWriteTime` | `Last` | write time of the mesh file (for hot reloading) |
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="modelloader-_unloadallmeshes"></a>
 
-#### **`ModelLoader::static`**
-
-
- Model class for loading 3D models
-
-Signature:
-
-```cpp
- protected: static std::vector<MeshData> loadedMeshes;
-```
-
-**This function has been available since:** v0.0.1
-
----
-
-#### **`ModelLoader::_UnloadAllMeshes`**
-
+#### **`ModelLoader::_UnloadAllMeshes()`**
 
  Unloads all loaded models
 
 #### This function is internal use only and not intended for public use!
-
 
 **Note:** This is used to clear all loaded models, for example when the game is shutting down
 
 **Postconditions:** All loaded models are unloaded and their resources are freed
 
 Signature:
-
 ```cpp
  static void _UnloadAllMeshes();
 ```
-
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="modelloader-_getmeshes"></a>
 
-#### **`ModelLoader::_GetMeshes`**
-
+#### **`ModelLoader::_GetMeshes()`**
 
  Get all loaded meshes
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  static std::vector<MeshData>& _GetMeshes();
 ```
-
 **Returns:** std::vector<MeshData>& A reference to the vector of all loaded meshes
 
 **Thread Safety:** read-only
@@ -201,23 +197,19 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="modelloader-_getmeshbyid"></a>
 
-#### **`ModelLoader::_GetMeshById`**
-
+#### **`ModelLoader::_GetMeshById()`**
 
  Get a mesh by its ID
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  static MeshData* _GetMeshById(int id);
 ```
-
 **Parameters:**
-
 - `id`: ID of the mesh to get
 
 **Returns:** MeshData* Pointer to the mesh with the given ID, nullptr if not found
@@ -227,63 +219,64 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="assimploader-_loadmodel"></a>
 
-#### **`AssimpLoader::_LoadModel`**
+#### **`AssimpLoader::_LoadModel()`**
 
+ Loads a model from the specified path, returns true if successful
 
- AssimpLoader class for loading 3D models using Assimp
+#### This function is internal use only and not intended for public use!
 
 Signature:
-
 ```cpp
- public: /// @brief Loads a model from the specified path, returns true if /// successful /// @param out MeshData to fill with the loaded model /// @param meshStream Stream containing the model data /// @param loadTextures Whether to load textures for the model /// @return true if the model was loaded successfully, false otherwise /// @threadsafety not-safe /// @since v0.0.1 /// @internal bool _LoadModel(MeshData& out, scl::stream* meshStream, const std::string& assetPath, bool loadTextures) override;
+ bool _LoadModel(MeshData& out, scl::stream* meshStream, const std::string& assetPath, bool loadTextures) override;
 ```
+**Parameters:**
+- `out`: MeshData to fill with the loaded model
+- `meshStream`: Stream containing the model data
+- `loadTextures`: Whether to load textures for the model
+
+**Returns:** true if the model was loaded successfully, false otherwise
+
+**Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="assimploader-_reloadmodel"></a>
 
-#### **`AssimpLoader::_ReloadModel`**
-
+#### **`AssimpLoader::_ReloadModel()`**
 
  Reloads a model by its ID, returns true if successful
 
 #### This function is internal use only and not intended for public use!
 
-
 **Note:** This is used to reload models only when they change on disk for hot reloading
 
 Signature:
-
 ```cpp
  bool _ReloadModel(MeshData& out, scl::stream* stream, const std::string& assetPath, int id) override;
 ```
-
 **Parameters:**
-
 - `out`: MeshData to fill with the reloaded model
 - `id`: ID of the model to reload
 
 **Returns:** true if the model was reloaded successfully, false otherwise
 
 ---
+<a id="assimploader-processscene"></a>
 
-#### **`AssimpLoader::processScene`**
-
+#### **`AssimpLoader::processScene()`**
 
  Processes the Assimp scene and fills the MeshData structure
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  static bool processScene(MeshData& out, const aiScene* scene, scl::stream* meshStream, bool loadTextures);
 ```
-
 **Parameters:**
-
 - `out`: MeshData to fill with the processed data
 - `scene`: Assimp scene to process
 - `meshStream`: Stream containing the model data (for resolving relative texture paths)
@@ -296,23 +289,19 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="assimploader-_processmaterial"></a>
 
-#### **`AssimpLoader::_ProcessMaterial`**
-
+#### **`AssimpLoader::_ProcessMaterial()`**
 
  Processes an Assimp material and fills the Material structure
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  static Material _ProcessMaterial(aiMaterial* aiMat, const aiScene* scene, scl::stream* meshStream, bool loadTextures);
 ```
-
 **Parameters:**
-
 - `aiMat`: Assimp material to process
 - `meshStream`: Stream containing the model data (for resolving relative texture paths)
 - `loadTextures`: Whether to load textures for the material
@@ -324,21 +313,18 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="assimploader-_createdefaultmaterial"></a>
 
-#### **`AssimpLoader::_CreateDefaultMaterial`**
-
+#### **`AssimpLoader::_CreateDefaultMaterial()`**
 
  Creates a default material with no textures
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  static Material _CreateDefaultMaterial();
 ```
-
 **Returns:** Material structure filled with default material data
 
 **Thread Safety:** not-safe
@@ -346,4 +332,3 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-

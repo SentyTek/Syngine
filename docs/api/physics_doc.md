@@ -1,68 +1,79 @@
 # Syngine API Documentation
 
-
 ## Physics.h header
-
 
 [<- Back](../index.md)
 
 [See source](./../../include/Syngine/Physics/Physics.h)
 
----
+Physics manager class for Syngine @section Physics
 
+**This class has been available since:** v0.0.1. Some of its functions may have been added later, check the function documentation for details.
+
+<div style="background:#08082e; padding:15px; border-radius:8px; margin-bottom:20px; font-family:sans-serif;">
+    <label for="mdSearch" style="font-weight:bold; display:block; margin-bottom:5px;">Search Functions:</label>
+    <input type="text" id="mdSearch" placeholder="Type function name..." onkeyup="filterMarkdownDocs()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:16px; background-color: rgb(60, 60, 60); color:antiquewhite">
+</div>
+
+<script>
+function filterMarkdownDocs() {
+    var input = document.getElementById('mdSearch').value.toLowerCase();
+    // Targets common markdown containers or the whole document body
+    var elements = document.querySelectorAll('h1, h2, h3, h4, p, li, pre, hr');
+
+    elements.forEach(function(el) {
+        // Skip the search box itself
+        if (el.closest('#mdSearch') || el.id === 'mdSearch') return;
+
+        var text = el.innerText.toLowerCase();
+        if (text.includes(input)) {
+            el.style.display = ""; // Show matching element
+            //el.style.backgroundColor = input ? "#fff9c4" : ""; // Highlight if searching
+        } else {
+            el.style.display = input ? "none" : ""; // Hide if it doesn't match
+        }
+    });
+}
+</script>
+
+---
 ## Goto: 
 
 
-- [Phys](#physphys)
-- [_Init](#phys_init)
-- [_Shutdown](#phys_shutdown)
-- [_Update](#phys_update)
-- [_GetDebugRenderer](#phys_getdebugrenderer)
-- [_DrawDebug](#phys_drawdebug)
-- [_GetBodyInterface](#phys_getbodyinterface)
-- [_GetPhysicsSystem](#phys_getphysicssystem)
-- [_GetBroadPhaseLayerInterface](#phys_getbroadphaselayerinterface)
-- [_GetObjectLayerPairFilter](#phys_getobjectlayerpairfilter)
-- [_GetObjectVsBroadPhaseLayerFilter](#phys_getobjectvsbroadphaselayerfilter)
-- [_CreateSphere](#phys_createsphere)
-- [_CreateBox](#phys_createbox)
-- [_CreateMeshBody](#phys_createmeshbody)
-- [_CreateCapsule](#phys_createcapsule)
-- [_CreateCylinder](#phys_createcylinder)
+## Additional Functions: 
+
+### Functions: 
+
+- [_Init()](#phys-_init)
+- [_Shutdown()](#phys-_shutdown)
+- [_Update()](#phys-_update)
+- [_GetDebugRenderer()](#phys-_getdebugrenderer)
+- [_DrawDebug()](#phys-_drawdebug)
+- [_GetBodyInterface()](#phys-_getbodyinterface)
+- [_GetPhysicsSystem()](#phys-_getphysicssystem)
+- [_GetBroadPhaseLayerInterface()](#phys-_getbroadphaselayerinterface)
+- [_GetObjectLayerPairFilter()](#phys-_getobjectlayerpairfilter)
+- [_GetObjectVsBroadPhaseLayerFilter()](#phys-_getobjectvsbroadphaselayerfilter)
+- [_CreateSphere()](#phys-_createsphere)
+- [_CreateBox()](#phys-_createbox)
+- [_CreateMeshBody()](#phys-_createmeshbody)
+- [_CreateCapsule()](#phys-_createcapsule)
+- [_CreateCylinder()](#phys-_createcylinder)
 
 ---
+<a id="phys-_init"></a>
 
-#### **`Phys::Phys`**
-
-
- Physics manager class for Syngine
-
-Signature:
-
-```cpp
- public: Phys();
-```
-
-**This function has been available since:** v0.0.1
-
----
-
-#### **`Phys::_Init`**
-
+#### **`Phys::_Init()`**
 
  Initialize the physics system
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  void _Init();
 ```
-
 **Parameters:**
-
 - `debug`: Whether to enable debug rendering
 
 **Returns:** 0 on success, non-zero on failure
@@ -70,76 +81,64 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_shutdown"></a>
 
-#### **`Phys::_Shutdown`**
-
+#### **`Phys::_Shutdown()`**
 
  Shutdown the physics system
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  void _Shutdown();
 ```
-
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_update"></a>
 
-#### **`Phys::_Update`**
-
+#### **`Phys::_Update()`**
 
  Update the physics system
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  void _Update(float deltaTime, int collisionSteps);
 ```
-
 **Parameters:**
-
 - `deltaTime`: The time elapsed since the last update
 - `collisionSteps`: The number of collision detection steps to perform
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_getdebugrenderer"></a>
 
-#### **`Phys::_GetDebugRenderer`**
-
+#### **`Phys::_GetDebugRenderer()`**
 
  Get the debug renderer
 
 Signature:
-
 ```cpp
  DebugRender* _GetDebugRenderer();
 ```
-
 **Returns:** Pointer to the debug renderer
 
 ---
+<a id="phys-_drawdebug"></a>
 
-#### **`Phys::_DrawDebug`**
-
+#### **`Phys::_DrawDebug()`**
 
  Draw debug information
 
 Signature:
-
 ```cpp
  void _DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam, DebugModes debug);
 ```
-
 **Parameters:**
-
 - `width`: Width of the viewport
 - `height`: Height of the viewport
 - `program`: Shader program to use for rendering
@@ -148,123 +147,104 @@ Signature:
 - `debug`: Debug modes to determine what to draw
 
 ---
+<a id="phys-_getbodyinterface"></a>
 
-#### **`Phys::_GetBodyInterface`**
-
+#### **`Phys::_GetBodyInterface()`**
 
  Get the body interface for manipulating bodies
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  BodyInterface& _GetBodyInterface();
 ```
-
 **Returns:** Reference to the body interface
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_getphysicssystem"></a>
 
-#### **`Phys::_GetPhysicsSystem`**
-
+#### **`Phys::_GetPhysicsSystem()`**
 
  Get the physics system
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  PhysicsSystem& _GetPhysicsSystem();
 ```
-
 **Returns:** Reference to the physics system
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_getbroadphaselayerinterface"></a>
 
-#### **`Phys::_GetBroadPhaseLayerInterface`**
-
+#### **`Phys::_GetBroadPhaseLayerInterface()`**
 
  Get the broad phase layer interface
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  const BPLayerInterfaceImpl& _GetBroadPhaseLayerInterface() const;
 ```
-
 **Returns:** Reference to the broad phase layer interface
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_getobjectlayerpairfilter"></a>
 
-#### **`Phys::_GetObjectLayerPairFilter`**
-
+#### **`Phys::_GetObjectLayerPairFilter()`**
 
  Get the object vs broad phase layer filter
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  const ObjectLayerPairFilterImpl& _GetObjectLayerPairFilter() const;
 ```
-
 **Returns:** Reference to the object vs broad phase layer filter
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_getobjectvsbroadphaselayerfilter"></a>
 
-#### **`Phys::_GetObjectVsBroadPhaseLayerFilter`**
-
+#### **`Phys::_GetObjectVsBroadPhaseLayerFilter()`**
 
  Get the object vs broad phase layer filter
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  const ObjectVsBroadPhaseLayerFilterImpl& _GetObjectVsBroadPhaseLayerFilter() const;
 ```
-
 **Returns:** Reference to the object vs broad phase layer filter
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_createsphere"></a>
 
-#### **`Phys::_CreateSphere`**
-
+#### **`Phys::_CreateSphere()`**
 
  Create a sphere body
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  BodyID _CreateSphere(RVec3Arg position, float radius, EMotionType motionType, ObjectLayer layer, float mass = 0.0f);
 ```
-
 **Parameters:**
-
 - `position`: Position of the sphere
 - `radius`: Radius of the sphere
 - `motionType`: Motion type of the sphere
@@ -276,23 +256,19 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_createbox"></a>
 
-#### **`Phys::_CreateBox`**
-
+#### **`Phys::_CreateBox()`**
 
  Create a box body
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  BodyID _CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent, EMotionType motionType, ObjectLayer layer, float mass = 0.0f);
 ```
-
 **Parameters:**
-
 - `position`: Position of the box
 - `rotation`: Rotation of the box
 - `halfExtent`: Half extent of the box
@@ -305,25 +281,21 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_createmeshbody"></a>
 
-#### **`Phys::_CreateMeshBody`**
-
+#### **`Phys::_CreateMeshBody()`**
 
  Create a mesh body
 
 #### This function is internal use only and not intended for public use!
 
-
 **Note:** The mesh data should be in the Syngine::MeshData format
 
 Signature:
-
 ```cpp
  BodyID _CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f), const float mass = 0.f);
 ```
-
 **Parameters:**
-
 - `position`: Position of the mesh
 - `rotation`: Rotation of the mesh
 - `meshData`: Mesh data to create the body from
@@ -336,23 +308,19 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_createcapsule"></a>
 
-#### **`Phys::_CreateCapsule`**
-
+#### **`Phys::_CreateCapsule()`**
 
  Create a capsule body
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  BodyID _CreateCapsule(RVec3Arg position, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer, float mass = 0.0f);
 ```
-
 **Parameters:**
-
 - `position`: Position of the capsule
 - `radius`: Radius of the capsule
 - `halfHeight`: Half height of the capsule
@@ -365,23 +333,19 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="phys-_createcylinder"></a>
 
-#### **`Phys::_CreateCylinder`**
-
+#### **`Phys::_CreateCylinder()`**
 
  Create a cylinder body
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  BodyID _CreateCylinder(RVec3Arg position, QuatArg rotation, float radius, float halfHeight, EMotionType motionType, ObjectLayer layer, float mass = 0.0f);
 ```
-
 **Parameters:**
-
 - `position`: Position of the cylinder
 - `rotation`: Rotation of the cylinder
 - `radius`: Radius of the cylinder
@@ -395,4 +359,3 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-

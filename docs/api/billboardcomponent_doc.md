@@ -1,56 +1,109 @@
 # Syngine API Documentation
 
-
 ## BillboardComponent.h header
-
 
 [<- Back](../index.md)
 
 [See source](./../../include/Syngine/ECS/Components/BillboardComponent.h)
 
----
+Syngine Billboard Component. The BillboardComponent is used to represent a 2D model in the 3D game world. @section BillboardComponent
 
+**This class has been available since:** v0.0.1. Some of its functions may have been added later, check the function documentation for details.
+
+<div style="background:#08082e; padding:15px; border-radius:8px; margin-bottom:20px; font-family:sans-serif;">
+    <label for="mdSearch" style="font-weight:bold; display:block; margin-bottom:5px;">Search Functions:</label>
+    <input type="text" id="mdSearch" placeholder="Type function name..." onkeyup="filterMarkdownDocs()" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; font-size:16px; background-color: rgb(60, 60, 60); color:antiquewhite">
+</div>
+
+<script>
+function filterMarkdownDocs() {
+    var input = document.getElementById('mdSearch').value.toLowerCase();
+    // Targets common markdown containers or the whole document body
+    var elements = document.querySelectorAll('h1, h2, h3, h4, p, li, pre, hr');
+
+    elements.forEach(function(el) {
+        // Skip the search box itself
+        if (el.closest('#mdSearch') || el.id === 'mdSearch') return;
+
+        var text = el.innerText.toLowerCase();
+        if (text.includes(input)) {
+            el.style.display = ""; // Show matching element
+            //el.style.backgroundColor = input ? "#fff9c4" : ""; // Highlight if searching
+        } else {
+            el.style.display = input ? "none" : ""; // Hide if it doesn't match
+        }
+    });
+}
+</script>
+
+---
 ## Goto: 
 
-
 - [Member Variables](#member-variables)
-- [Constructor](#class-constructor)
-- [BillboardMode](#synginebillboardmode)
-- [Constructor](#class-constructor)
-- [GetComponentType](#synginegetcomponenttype)
-- [Serialize](#syngineserialize)
-- [Init](#syngineinit)
-- [Update](#syngineupdate)
-- [_GetTexture](#syngine_gettexture)
-- [SetRotX](#synginesetrotx)
-- [SetRotY](#synginesetroty)
-- [SetRotZ](#synginesetrotz)
-- [SetRot](#synginesetrot)
-- [GetRot](#synginegetrot)
-- [GetMode](#synginegetmode)
-- [GetMinBounds](#synginegetminbounds)
-- [GetMaxBounds](#synginegetmaxbounds)
+
+## Additional Functions: 
+
+### Constructors: 
+
+- [BillboardComponent(GameObject* owner, std::string texturePath, BillboardMode mode = BillboardMode::CAMERA_ALIGNED, float size = 1.0f)](#billboardcomponent-billboardcomponentgameobject-owner-std-string-texturepath-billboardmode-mode-billboardmode-camera_aligned-float-size-10f)
+- [BillboardComponent(GameObject* owner, std::string bundlePath, std::string textureName, BillboardMode mode = BillboardMode::CAMERA_ALIGNED, float size = 1.0f)](#billboardcomponent-billboardcomponentgameobject-owner-std-string-bundlepath-std-string-texturename-billboardmode-mode-billboardmode-camera_aligned-float-size-10f)
+
+### Enums and Structs: 
+
+- [BillboardMode](#syngine-billboardmode)
+
+### Functions: 
+
+- [GetComponentType()](#billboardcomponent-getcomponenttype)
+- [Serialize()](#billboardcomponent-serialize)
+- [Init()](#billboardcomponent-init)
+- [Update()](#billboardcomponent-update)
+- [_GetTexture()](#billboardcomponent-_gettexture)
+- [SetRotX()](#billboardcomponent-setrotx)
+- [SetRotY()](#billboardcomponent-setroty)
+- [SetRotZ()](#billboardcomponent-setrotz)
+- [SetRot()](#billboardcomponent-setrot)
+- [GetRot()](#billboardcomponent-getrot)
+- [GetMode()](#billboardcomponent-getmode)
+- [GetMinBounds()](#billboardcomponent-getminbounds)
+- [GetMaxBounds()](#billboardcomponent-getmaxbounds)
 
 ---
+<a id="syngine-billboardmode"></a>
+
+#### **`Syngine::BillboardMode()`**
+
+ Enum that describes how a billboard should render
+
+Signature:
+```cpp
+enum class BillboardMode
+```
+**Members:**
+| Name | Description |
+| --- | --- | 
+| `CAMERA_ALIGNED` | Always faces the camera |
+| `AXIS_Y_ALIGNED` | Rotates around Y (vertical) axis only |
+| `FIXED` | No rotation, fixed orientation |
+| `COUNT` | Number of billboard modes (for validation) |
+**This function has been available since:** v0.0.1
+
+---
+<a id="billboardcomponent-billboardcomponentgameobject-owner-std-string-texturepath-billboardmode-mode-billboardmode-camera_aligned-float-size-10f"></a>
 
 ## Class Constructor
 
-
-#### **`Syngine::BillboardComponent`**
-
+#### **`BillboardComponent(GameObject* owner, std::string texturePath, BillboardMode mode = BillboardMode::CAMERA_ALIGNED, float size = 1.0f)`**
 
  Construct a new Billboard Component object
 
 **Note:** The texturePath should be a valid path to a texture file, relative to the game's assets directory. owner GO handled by the ECS.
 
 Signature:
-
 ```cpp
  BillboardComponent(GameObject* owner, std::string texturePath, BillboardMode mode = BillboardMode::CAMERA_ALIGNED, float size = 1.0f);
 ```
-
 **Parameters:**
-
 - `owner`: Pointer to the owner GameObject
 - `texturePath`: Path to the billboard texture
 - `mode`: Billboard rendering mode
@@ -59,52 +112,21 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-
-## Class & Related Members
-
-
-#### **`Syngine::BillboardMode`**
-
-
- Enum that describes how a billboard should render
-
-Signature:
-
-```cpp
-enum class BillboardMode
-```
-
-**Members:**
-
-| Name | Description |
-| --- | --- | 
-| `CAMERA_ALIGNED` | Always faces the camera |
-| `AXIS_Y_ALIGNED` | Rotates around Y (vertical) axis only |
-| `FIXED` | No rotation, fixed orientation |
-| `COUNT` | Number of billboard modes (for validation) |
-
-**This function has been available since:** v0.0.1
-
----
+<a id="billboardcomponent-billboardcomponentgameobject-owner-std-string-bundlepath-std-string-texturename-billboardmode-mode-billboardmode-camera_aligned-float-size-10f"></a>
 
 ## Class Constructor
 
-
-#### **`Syngine::BillboardComponent`**
-
+#### **`BillboardComponent(GameObject* owner, std::string bundlePath, std::string textureName, BillboardMode mode = BillboardMode::CAMERA_ALIGNED, float size = 1.0f)`**
 
  Construct a new Billboard Component objects
 
 **Note:** The bundlePath should be a valid path to a shader bundle file, relative to the game's assets directory. The textureName should be the name of a texture contained within that shader bundle. owner GO handled by the ECS.
 
 Signature:
-
 ```cpp
  BillboardComponent(GameObject* owner, std::string bundlePath, std::string textureName, BillboardMode mode = BillboardMode::CAMERA_ALIGNED, float size = 1.0f);
 ```
-
 **Parameters:**
-
 - `owner`: Pointer to the owner GameObject
 - `bundlePath`: Path to the shader bundle containing the billboard texture
 - `textureName`: Name of the texture within the shader bundle
@@ -114,98 +136,81 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="billboardcomponent-getcomponenttype"></a>
 
-## Class & Related Members
-
-
-#### **`Syngine::GetComponentType`**
-
+#### **`myBillboard.GetComponentType()`**
 
  Get the type of this component
 
 Signature:
-
 ```cpp
  ComponentTypeID GetComponentType() override;
 ```
-
 **Returns:** The component type as an enum value
 
 ---
+<a id="billboardcomponent-serialize"></a>
 
-#### **`Syngine::Serialize`**
-
+#### **`myBillboard.Serialize()`**
 
  Serializes the BillboardComponent to a data node
 
 Signature:
-
 ```cpp
  Serializer::DataNode Serialize() const override;
 ```
-
 **Returns:** A pointer to the serialized data node representing the BillboardComponent's state
 
 ---
+<a id="billboardcomponent-init"></a>
 
-#### **`Syngine::Init`**
-
+#### **`myBillboard.Init()`**
 
  Initialize the billboard component
 
 #### This function is internal use only and not intended for public use!
 
-
 **Note:** This should only be called when the component is added to a GameObject
 
 Signature:
-
 ```cpp
  void Init(const std::string& bundlePath, const std::string& texturePath);
 ```
-
 **Parameters:**
-
 - `bundlePath`: Path to the shader bundle containing the billboard texture
 - `texturePath`: Path to the billboard texture
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="billboardcomponent-update"></a>
 
-#### **`Syngine::Update`**
-
+#### **`myBillboard.Update()`**
 
  Update the billboard component. Unused.
 
 Signature:
-
 ```cpp
  void Update(float deltaTime) override;
 ```
-
 **Parameters:**
-
 - `deltaTime`: Time elapsed since the last update, in seconds
 
 **This function has been available since:** v0.0.1
 
 ---
+<a id="billboardcomponent-_gettexture"></a>
 
-#### **`Syngine::_GetTexture`**
-
+#### **`myBillboard._GetTexture()`**
 
  Get the texture handle of the billboard
 
 #### This function is internal use only and not intended for public use!
 
-
 Signature:
-
 ```cpp
  bgfx::TextureHandle _GetTexture() const;
 ```
-
 **Returns:** bgfx::TextureHandle The texture handle
 
 **Thread Safety:** read-only
@@ -213,146 +218,123 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="billboardcomponent-setrotx"></a>
 
-#### **`Syngine::SetRotX`**
-
+#### **`myBillboard.SetRotX()`**
 
  Set rotation around X, Y, Z axes
 
 Signature:
-
 ```cpp
  void SetRotX(float rotX);
 ```
-
 **Parameters:**
-
 - `rot`: Rotation around X axis in radians
 
 ---
+<a id="billboardcomponent-setroty"></a>
 
-#### **`Syngine::SetRotY`**
-
+#### **`myBillboard.SetRotY()`**
 
  Set rotation around X, Y, Z axes
 
 Signature:
-
 ```cpp
  void SetRotY(float rotY);
 ```
-
 **Parameters:**
-
-- `rot`: Rotation around X axis in radians
+- `rotY`: Rotation around Y axis in radians
 
 ---
+<a id="billboardcomponent-setrotz"></a>
 
-#### **`Syngine::SetRotZ`**
-
+#### **`myBillboard.SetRotZ()`**
 
  Set rotation around X, Y, Z axes
 
 Signature:
-
 ```cpp
  void SetRotZ(float rotZ);
 ```
-
 **Parameters:**
-
-- `rot`: Rotation around X axis in radians
+- `rotZ`: Rotation around Z axis in radians
 
 ---
+<a id="billboardcomponent-setrot"></a>
 
-#### **`Syngine::SetRot`**
-
+#### **`myBillboard.SetRot()`**
 
  Set rotation around X, Y, Z axes
 
 Signature:
-
 ```cpp
  void SetRot(const Vector3& rot);
 ```
-
 **Parameters:**
-
 - `rot`: The rotation vector containing rotation around X, Y, Z axes in radians
 
 ---
+<a id="billboardcomponent-getrot"></a>
 
-#### **`Syngine::GetRot`**
-
+#### **`myBillboard.GetRot()`**
 
  Get rotation around X, Y, Z axes
 
 Signature:
-
 ```cpp
  Vector3 GetRot() const;
 ```
-
 **Returns:** Vector3 The rotation vector containing rotation around X, Y, Z axes in radians
 
 ---
+<a id="billboardcomponent-getmode"></a>
 
-#### **`Syngine::GetMode`**
-
+#### **`myBillboard.GetMode()`**
 
  Get the billboard mode
 
 Signature:
-
 ```cpp
  BillboardMode GetMode() const;
 ```
-
 **Returns:** BillboardMode The billboard rendering mode
 
 ---
+<a id="billboardcomponent-getminbounds"></a>
 
-#### **`Syngine::GetMinBounds`**
-
+#### **`myBillboard.GetMinBounds()`**
 
  Get the min bounds of the billboard's bounding box
 
 Signature:
-
 ```cpp
  inline Vector3 GetMinBounds() const;
 ```
-
 **Returns:** Vector3 The minimum corner of the bounding box
 
 ---
+<a id="billboardcomponent-getmaxbounds"></a>
 
-#### **`Syngine::GetMaxBounds`**
-
+#### **`myBillboard.GetMaxBounds()`**
 
  Get the max bounds of the billboard's bounding box
 
 Signature:
-
 ```cpp
  inline Vector3 GetMaxBounds() const;
 ```
-
 **Returns:** Vector3 The maximum corner of the bounding box
 
 ---
-
 ## Member Variables
-
 
 | Type | Name | Description |
 | --- | --- | --- | 
+| `BillboardMode` | `m_mode` | Billboard rendering mode |
 | `std::string` | `m_texturePath` | Path to the billboard texture |
 | `std::string` | `m_bundlePath` | Path to the shader bundle containing the billboard texture |
 | `Vector3` | `m_rot` | Rotation around X, Y, Z axes in radians |
 | `float` | `size` | Size of the billboard |
 | `bool` | `receiveShadows` | Whether the billboard receives shadows |
 | `bool` | `receiveSunLight` | Whether the billboard receives sunlight |
-
 ---
-
