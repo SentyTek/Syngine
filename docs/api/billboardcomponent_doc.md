@@ -243,7 +243,6 @@ Signature:
 Signature:
 ```cpp
  void SetRot(const Vector3& rot);
- void SetRot(const Vector3& rot);
 ```
 **Parameters:**
 - `rot`: The rotation vector containing rotation around X, Y, Z axes in radians
@@ -257,7 +256,6 @@ Signature:
 
 Signature:
 ```cpp
- Vector3 GetRot() const;
  Vector3 GetRot() const;
 ```
 **Returns:** Vector3 The rotation vector containing rotation around X, Y, Z axes in radians
@@ -309,7 +307,6 @@ Signature:
 | `BillboardMode` | `m_mode` | Billboard rendering mode |
 | `std::string` | `m_texturePath` | Path to the billboard texture |
 | `std::string` | `m_bundlePath` | Path to the shader bundle containing the billboard texture |
-| `Vector3` | `m_rot` | Rotation around X, Y, Z axes in radians |
 | `Vector3` | `m_rot` | Rotation around X, Y, Z axes in radians |
 | `float` | `size` | Size of the billboard |
 | `bool` | `receiveShadows` | Whether the billboard receives shadows |

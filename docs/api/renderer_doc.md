@@ -44,6 +44,9 @@ Renderer class to manage rendering and shader programs @section Renderer
 - [RegisterUniform()](#renderer-registeruniform)
 - [SetUniform()](#renderer-setuniform)
 - [SetUniform()](#renderer-setuniform-2)
+- [RemoveUniform()](#renderer-removeuniform)
+- [RemoveAllUniforms()](#renderer-removealluniforms)
+- [GetUniformID()](#renderer-getuniformid)
 - [GetSunDirection()](#renderer-getsundirection)
 - [SetSunDirection()](#renderer-setsundirection)
 - [SetGizmoSize()](#renderer-setgizmosize)
@@ -146,7 +149,6 @@ struct Program
 | `std::string` | `fsPath` | Fragment shader path |
 | `std::string` | `bundlePath` | Bundle path if loaded from a bundle |
 | `int` | `id` | Unique ID of the shader program |
-| `std::vector<Uniform>` | `uniforms` | List of shader uniforms |
 ---
 <a id="syngine-rendererconfig"></a>
 
@@ -443,7 +445,7 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-<a id="renderer-setuniform"></a>
+<a id="renderer-setuniform-2"></a>
 
 #### **`Renderer::SetUniform()`**
 
@@ -463,22 +465,57 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-<a id="renderer-setuniform-2"></a>
+<a id="renderer-removeuniform"></a>
 
-#### **`Renderer::SetUniform()`**
+#### **`Renderer::RemoveUniform()`**
 
- Set a uniform variable
+ Remove a uniform by its ID
 
 Signature:
 ```cpp
- static void SetUniform(size_t id, const Math::Vector4 data, uint16_t num = 1);
+ static bool RemoveUniform(size_t id);
 ```
 **Parameters:**
-- `id`: The ID of the uniform variable to set, returned from RegisterUniform
-- `data`: The Vector4 data to set the uniform to
-- `num`: The number of elements to set (default is 1)
+- `id`: The ID of the uniform variable to remove, returned from RegisterUniform
+
+**Returns:** True if the uniform was removed successfully, false otherwise
 
 **Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="renderer-removealluniforms"></a>
+
+#### **`Renderer::RemoveAllUniforms()`**
+
+ Remove all registered uniforms
+
+Signature:
+```cpp
+ static void RemoveAllUniforms();
+```
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="renderer-getuniformid"></a>
+
+#### **`Renderer::GetUniformID()`**
+
+ Get a uniform ID by its name
+
+Signature:
+```cpp
+ static size_t GetUniformID(const std::string& name);
+```
+**Parameters:**
+- `name`: The name of the uniform variable
+
+**Returns:** The ID of the uniform variable, or 0 if not found
+
+**Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
@@ -491,7 +528,6 @@ Signature:
 
 Signature:
 ```cpp
- static Math::Vector3 GetSunDirection();
  static Math::Vector3 GetSunDirection();
 ```
 **Returns:** A vector3 representing the normalized sun light direction in world space
@@ -507,11 +543,9 @@ Signature:
 
 **Note:** The direction should be normalized and in world space coordinates.
 
-**Note:** The direction should be normalized and in world space coordinates.
-
 Signature:
 ```cpp
- static void SetSunDirection(const Math::Vector3 lightDir);
+ static void SetSunDirection(const Math::Vector3& lightDir);
 ```
 **Parameters:**
 - `lightDir`: A Vector3 representing the normalized sun light direction in world space

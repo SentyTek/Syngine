@@ -140,19 +140,6 @@ Signature:
 - `owner`: Pointer to the GameObject that owns this component
 - `params`: Rigidbody parameters to initialize the component
 
-**Members:**
-
-| Type | Name | Description |
-| --- | --- | --- | 
-| `PhysicsShapes` | `shape` | The shape of the rigidbody |
-| `float` | `mass` | Mass of the rigidbody. If 0 (which it is by default), Jolt will calculate it based on the shape. |
-| `float` | `friction` | Friction coefficient |
-| `float` | `restitution` | Restitution coefficient (bounciness) |
-| `Math::Vector3` | `shapeParameters` | Additional parameters for the shape, e.g., radius for sphere, half extents for box |
-| `JPH::EMotionType` | `motionType` | Motion type of the rigidbody |
-| `JPH::ObjectLayer` | `layer` | Layer of the rigidbody |
-| `std::vector<CompoundShapePart>` | `compoundParts` | Parts for compound shape |
-
 **This function has been available since:** v0.0.1
 
 ---

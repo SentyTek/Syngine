@@ -87,7 +87,6 @@ enum class ZoneShape : uint8_t
 Signature:
 ```cpp
  ZoneComponent(GameObject* owner, ZoneShape shape, const Math::Vector3& pos, const Math::Vector3& size, bool oneShot = false);
- ZoneComponent(GameObject* owner, ZoneShape shape, const Math::Vector3& pos, const Math::Vector3& size, bool oneShot = false);
 ```
 **Parameters:**
 - `owner`: The GameObject that owns this component.
@@ -153,7 +152,6 @@ Signature:
 Signature:
 ```cpp
  void Init(ZoneShape shape, const Math::Vector3& pos, const Math::Vector3& size, bool oneShot);
- void Init(ZoneShape shape, const Math::Vector3& pos, const Math::Vector3& size, bool oneShot);
 ```
 **Parameters:**
 - `shape`: The shape of the zone (box or sphere).
@@ -206,11 +204,8 @@ Signature:
 
 **Note:** For box shape, this is the center of the box. For sphere shape, this is the center of the sphere.
 
-**Note:** For box shape, this is the center of the box. For sphere shape, this is the center of the sphere.
-
 Signature:
 ```cpp
- Math::Vector3 GetPosition() const;
  Math::Vector3 GetPosition() const;
 ```
 **Returns:** The position of the zone center as a Math::Vector3.
@@ -228,7 +223,6 @@ Signature:
 
 Signature:
 ```cpp
- void SetPosition(const Math::Vector3& pos);
  void SetPosition(const Math::Vector3& pos);
 ```
 **Parameters:**
@@ -248,7 +242,6 @@ Signature:
 Signature:
 ```cpp
  Math::Vector3 GetSize() const;
- Math::Vector3 GetSize() const;
 ```
 **Returns:** The size of the zone as a Math::Vector3 (whd for box, r for sphere).
 
@@ -265,7 +258,6 @@ Signature:
 
 Signature:
 ```cpp
- void SetSize(const Math::Vector3& size);
  void SetSize(const Math::Vector3& size);
 ```
 **Parameters:**
@@ -284,11 +276,8 @@ Signature:
 
 **Note:** For sphere shape, this will return the identity quaternion. For box shape, this represents the rotation of the box in world space.
 
-**Note:** For sphere shape, this will return the identity quaternion. For box shape, this represents the rotation of the box in world space.
-
 Signature:
 ```cpp
- Math::Quaternion GetRotation() const;
  Math::Quaternion GetRotation() const;
 ```
 **Returns:** The rotation of the zone as a Math::Quaternion.
@@ -306,7 +295,6 @@ Signature:
 
 Signature:
 ```cpp
- void SetRotation(const Math::Quaternion& rot);
  void SetRotation(const Math::Quaternion& rot);
 ```
 **Parameters:**
@@ -552,7 +540,6 @@ Signature:
 
 Signature:
 ```cpp
- bool IsInZone(const Math::Vector3& point) const;
  bool IsInZone(const Math::Vector3& point) const;
 ```
 **Parameters:**

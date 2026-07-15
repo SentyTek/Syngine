@@ -109,7 +109,6 @@ Signature:
 Signature:
 ```cpp
  void Init(Vector3 position = Vector3(), Quaternion rotation = Quaternion(), Vector3 scale = Vector3(1.0f));
- void Init(Vector3 position = Vector3(), Quaternion rotation = Quaternion(), Vector3 scale = Vector3(1.0f));
 ```
 **Parameters:**
 - `position`: Initial position of the GameObject
@@ -164,7 +163,6 @@ Signature:
 Signature:
 ```cpp
  Vector3 GetWorldRotationEuler() const;
- Vector3 GetWorldRotationEuler() const;
 ```
 **Returns:** Vector3 representing the rotation (x, y, z)
 
@@ -182,7 +180,6 @@ Signature:
 Signature:
 ```cpp
  Quaternion GetWorldRotationQuaternion() const;
- Quaternion GetWorldRotationQuaternion() const;
 ```
 **Returns:** Quaternion representing the rotation (x, y, z, w)
 
@@ -199,11 +196,8 @@ Signature:
 
 **Note:** This matrix is computed from the GLOBAL position, rotation, and scale
 
-**Note:** This matrix is computed from the GLOBAL position, rotation, and scale
-
 Signature:
 ```cpp
- Mat4 GetModelMatrix() const;
  Mat4 GetModelMatrix() const;
 ```
 **Returns:** 4x4 matrix filled with the global model matrix
@@ -221,11 +215,8 @@ Signature:
 
 **Note:** This matrix is computed from the LOCAL position, rotation, and scale
 
-**Note:** This matrix is computed from the LOCAL position, rotation, and scale
-
 Signature:
 ```cpp
- Mat4 GetLocalMatrix() const;
  Mat4 GetLocalMatrix() const;
 ```
 **Returns:** 4x4 matrix filled with the local model matrix
@@ -243,11 +234,8 @@ Signature:
 
 **Note:** GLOBAL position
 
-**Note:** GLOBAL position
-
 Signature:
 ```cpp
- Vector3 GetWorldPosition() const;
  Vector3 GetWorldPosition() const;
 ```
 **Returns:** Vector3 representing the position (x, y, z)
@@ -265,11 +253,8 @@ Signature:
 
 **Note:** GLOBAL scale
 
-**Note:** GLOBAL scale
-
 Signature:
 ```cpp
- Vector3 GetWorldScale() const;
  Vector3 GetWorldScale() const;
 ```
 **Returns:** Vector3 representing the scale (x, y, z)
@@ -287,11 +272,8 @@ Signature:
 
 **Note:** LOCAL position
 
-**Note:** LOCAL position
-
 Signature:
 ```cpp
- Vector3 GetPosition() const;
  Vector3 GetPosition() const;
 ```
 **Returns:** Vector3 representing the position (x, y, z)
@@ -331,7 +313,6 @@ Signature:
 Signature:
 ```cpp
  Vector3 GetRotationEuler() const;
- Vector3 GetRotationEuler() const;
 ```
 **Returns:** Vector3 representing the rotation (x, y, z)
 
@@ -349,7 +330,6 @@ Signature:
 Signature:
 ```cpp
  Vector3 GetScale() const;
- Vector3 GetScale() const;
 ```
 **Returns:** Vector3 representing the local scale (x, y, z)
 
@@ -366,7 +346,6 @@ Signature:
 
 Signature:
 ```cpp
- void SetPosition(Vector3 position);
  void SetPosition(Vector3 position);
 ```
 **Parameters:**
@@ -386,7 +365,6 @@ Signature:
 Signature:
 ```cpp
  void SetRotationEuler(Vector3 rotation);
- void SetRotationEuler(Vector3 rotation);
 ```
 **Parameters:**
 - `rotation`: New local rotation as XYZ Euler angles (in radians)
@@ -404,7 +382,6 @@ Signature:
 
 Signature:
 ```cpp
- void SetRotationQuat(Quaternion rotation);
  void SetRotationQuat(Quaternion rotation);
 ```
 **Parameters:**
@@ -424,7 +401,6 @@ Signature:
 Signature:
 ```cpp
  void SetScale(Vector3 scale);
- void SetScale(Vector3 scale);
 ```
 **Parameters:**
 - `scale`: New local scale as a Vector3
@@ -442,7 +418,6 @@ Signature:
 
 Signature:
 ```cpp
- void SetWorldPosition(Vector3 position);
  void SetWorldPosition(Vector3 position);
 ```
 **Parameters:**
@@ -462,7 +437,6 @@ Signature:
 Signature:
 ```cpp
  void SetWorldRotationQuat(Quaternion rotation);
- void SetWorldRotationQuat(Quaternion rotation);
 ```
 **Parameters:**
 - `rotation`: New global rotation as a quaternion
@@ -481,7 +455,6 @@ Signature:
 Signature:
 ```cpp
  void SetWorldRotationEuler(Vector3 rotation);
- void SetWorldRotationEuler(Vector3 rotation);
 ```
 **Parameters:**
 - `rotation`: New global rotation as XYZ Euler angles (in radians)
@@ -499,7 +472,6 @@ Signature:
 
 Signature:
 ```cpp
- void SetWorldScale(Vector3 scale);
  void SetWorldScale(Vector3 scale);
 ```
 **Parameters:**
