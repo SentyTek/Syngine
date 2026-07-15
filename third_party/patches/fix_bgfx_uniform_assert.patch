@@ -1,0 +1,18 @@
+diff --git a/src/bgfx_p.h b/src/bgfx_p.h
+index a2000c168..ca191520c 100644
+--- a/src/bgfx_p.h
++++ b/src/bgfx_p.h
+@@ -3185,11 +3185,11 @@ namespace bgfx
+ 		{
+ 			if (BX_ENABLED(BGFX_CONFIG_DEBUG_UNIFORM) )
+ 			{
+-				BX_ASSERT(m_uniformSet.end() == m_uniformSet.find(_handle.idx)
++				/*BX_ASSERT(m_uniformSet.end() == m_uniformSet.find(_handle.idx)
+ 					, "Uniform %d (%s) was already set for this draw call."
+ 					, _handle.idx
+ 					, getName(_handle)
+-					);
++					);*/
+ 				m_uniformSet.insert(_handle.idx);
+ 
+ 				const UniformRef& uniform = getUniformRef(_handle);

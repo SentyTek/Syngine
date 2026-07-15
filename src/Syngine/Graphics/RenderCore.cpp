@@ -68,10 +68,15 @@ _CreateSolidRGBA8Texture(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
                                  bgfx::copy(pixel, sizeof(pixel)));
 }
 
+constexpr size_t DefaultUniformIndex(RenderCore::DefaultUniform uniform) {
+    return static_cast<size_t>(uniform);
+}
+
 } // namespace
 
 // I present to you an unholy abomination of static member definitions
-std::unordered_map<std::string, uint16_t> RenderCore::m_defaultUniformIds;
+std::array<uint16_t, static_cast<size_t>(RenderCore::DefaultUniform::Count)>
+    RenderCore::m_defaultUniformIds = {};
 
 RenderCore::RenderCoreBuffers RenderCore::m_buffers = {
     .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
@@ -109,10 +114,9 @@ bgfx::VertexBufferHandle RenderCore::m_billboardVbh = BGFX_INVALID_HANDLE;
 bgfx::IndexBufferHandle  RenderCore::m_billboardIbh = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_fsQuadVbh    = BGFX_INVALID_HANDLE;
 
-std::unordered_map<uint16_t, Uniform>              Renderer::m_uniformRegistry;
-std::unordered_map<uint16_t, std::vector<Program>> Renderer::viewPrograms;
-RenderCore::DrawnObjectCount                       RenderCore::m_drawnCounts;
-float RenderCore::m_maxSmallObjDistance =
+std::unordered_map<uint16_t, Uniform> Renderer::m_uniformRegistry;
+RenderCore::DrawnObjectCount          RenderCore::m_drawnCounts;
+float                                 RenderCore::m_maxSmallObjDistance =
     50.0f; //* Small objects get culled beyond this distance
 
 RenderCore::internalPrograms          RenderCore::m_internalPrograms;
@@ -322,295 +326,146 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     }
     Renderer::m_isReady = false;
 
-    // Create default uniforms
+    // Create default uniforms (global, deduplicated by BGFX uniform name).
     {
-        // Billboard program uniforms
-        m_defaultUniformIds.insert(
-            { "u_billboard",
-              Renderer::RegisterUniform(m_internalPrograms.billboardProgram,
-                                        "u_default_billboard",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "s_bill_albedo",
-              Renderer::RegisterUniform(m_internalPrograms.billboardProgram,
-                                        "s_albedo",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "u_billboard_mode",
-              Renderer::RegisterUniform(m_internalPrograms.billboardProgram,
-                                        "u_default_billboard_mode",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_billboard_lighting",
-              Renderer::RegisterUniform(m_internalPrograms.billboardProgram,
-                                        "u_billboard_lighting",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "s_billboard_shadowMap",
-              Renderer::RegisterUniform(m_internalPrograms.billboardProgram,
-                                        "s_shadowMap",
-                                        UniformType::UNIFORM_SAMPLER) });
+        const auto bindUniform = [](DefaultUniform slot,
+                                    const char*    bgfxName,
+                                    UniformType    type,
+                                    uint16_t       num = 1) {
+            size_t id = Renderer::GetUniformID(bgfxName);
+            if (id == 0) {
+                id = Renderer::RegisterUniform(bgfxName, type, num);
+            }
+            m_defaultUniformIds[DefaultUniformIndex(slot)] =
+                static_cast<uint16_t>(id);
+        };
 
-        // Vertex program uniforms
-        m_defaultUniformIds.insert(
-            { "u_baseColor",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_baseColor",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_lightDir",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_lightDir",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_normalMatrix",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_normalMatrix",
-                                        UniformType::UNIFORM_MAT4) });
-        m_defaultUniformIds.insert(
-            { "u_default_floats",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_floats",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_skyColor",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_skyColor",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_sunColor",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_sunColor",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_horizonColor",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_horizonColor",
-                                        UniformType::UNIFORM_VEC4) });
+        bindUniform(DefaultUniform::u_billboard,
+                    "u_default_billboard",
+                    UniformType::UNIFORM_VEC4);
+        bindUniform(DefaultUniform::s_bill_albedo,
+                    "s_albedo",
+                    UniformType::UNIFORM_SAMPLER);
+        bindUniform(DefaultUniform::u_billboard_mode,
+                    "u_default_billboard_mode",
+                    UniformType::UNIFORM_VEC4);
+        bindUniform(DefaultUniform::u_billboard_lighting,
+                    "u_billboard_lighting",
+                    UniformType::UNIFORM_VEC4);
 
-        m_defaultUniformIds.insert(
-            { "u_default_shadowMap",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "s_shadowMap",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "u_default_normal",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "s_normalMap",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "u_default_useVertex",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_useVertexColor",
-                                        UniformType::UNIFORM_VEC4) });
-        // Sky program uniforms
-        m_defaultUniformIds.insert(
-            { "u_skyColorZenith",
-              Renderer::RegisterUniform(m_internalPrograms.skyProgram,
-                                        "u_skyColorZenith",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_skyColorMidnight",
-              Renderer::RegisterUniform(m_internalPrograms.skyProgram,
-                                        "u_skyColorMidnight",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_sky_sunColor",
-              Renderer::RegisterUniform(m_internalPrograms.skyProgram,
-                                        "u_sunColor",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_sky_cameraPos",
-              Renderer::RegisterUniform(m_internalPrograms.skyProgram,
-                                        "u_cameraPos",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_sky_time",
-              Renderer::RegisterUniform(m_internalPrograms.skyProgram,
-                                        "u_time",
-                                        UniformType::UNIFORM_VEC4) });
+        bindUniform(DefaultUniform::s_shadowMap,
+                    "s_shadowMap",
+                    UniformType::UNIFORM_SAMPLER);
 
-        // Texture program uniforms
-        m_defaultUniformIds.insert(
-            { "u_texture_lightDir",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_lightDir",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_floats",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_floats",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_normalMatrix",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_normalMatrix",
-                                        UniformType::UNIFORM_MAT4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_uvScales",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_uvScale",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_materialParams1",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_materialParams1",
-                                        UniformType::UNIFORM_VEC4) });
+        bindUniform(DefaultUniform::u_baseColor,
+                    "u_baseColor",
+                    UniformType::UNIFORM_VEC4);
 
-        m_defaultUniformIds.insert(
-            { "u_texture_albedo",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "s_albedo",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "u_texture_normal",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "s_normalMap",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "u_texture_height",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "s_heightMap",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "u_texture_shadowMap",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "s_shadowMap",
-                                        UniformType::UNIFORM_SAMPLER) });
+        bindUniform(DefaultUniform::u_normalMatrix,
+                    "u_normalMatrix",
+                    UniformType::UNIFORM_MAT4);
 
-        m_defaultUniformIds.insert(
-            { "u_texture_skyColor",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_skyColor",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_sunColor",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_sunColor",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_horizonColor",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_horizonColor",
-                                        UniformType::UNIFORM_VEC4) });
+        bindUniform(DefaultUniform::u_floats,
+                    "u_floats",
+                    UniformType::UNIFORM_VEC4);
 
-        // Shadow program uniforms
-        m_defaultUniformIds.insert(
-            { "u_default_csmSplits",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_csmSplits",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_csmLightViewProj",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_csmLightViewProj",
-                                        UniformType::UNIFORM_MAT4,
-                                        4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_csmSplits",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_csmSplits",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_csmLightViewProj",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_csmLightViewProj",
-                                        UniformType::UNIFORM_MAT4,
-                                        4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_viewPos",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_viewPos",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_viewPos",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_viewPos",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_shadowParams",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_shadowParams",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_shadowParams",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_shadowParams",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_texture_csmTexelSize",
-              Renderer::RegisterUniform(m_internalPrograms.textureProgram,
-                                        "u_csmTexelSize",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_csmTexelSize",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_csmTexelSize",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_uvScales",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_uvScale",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_default_materialParams1",
-              Renderer::RegisterUniform(m_internalPrograms.defaultProgram,
-                                        "u_materialParams1",
-                                        UniformType::UNIFORM_VEC4) });
+        bindUniform(DefaultUniform::u_skyColor,
+                    "u_skyColor",
+                    UniformType::UNIFORM_VEC4);
 
-        // SSAO program uniforms
-        m_defaultUniformIds.insert(
-            { "u_ssao_params",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoProgram,
-                                        "u_ssaoParams",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "u_ssao_resolution",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoProgram,
-                                        "u_ssaoResolution",
-                                        UniformType::UNIFORM_VEC4) });
-        m_defaultUniformIds.insert(
-            { "s_ssao_normalTex",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoProgram,
-                                        "s_normal",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "s_ssao_depthTex",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoProgram,
-                                        "s_depth",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "s_ssaob_ssaoTex",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
-                                        "s_ssao",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "s_ssaob_depthTex",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
-                                        "s_depth",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "s_ssaob_normalTex",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
-                                        "s_normal",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "u_ssaob_params",
-              Renderer::RegisterUniform(m_internalPrograms.ssaoBlurProgram,
-                                        "u_floats",
-                                        UniformType::UNIFORM_VEC4) });
+        bindUniform(DefaultUniform::u_sunColor,
+                    "u_sunColor",
+                    UniformType::UNIFORM_VEC4);
 
-        // Tonemapping program uniforms
-        m_defaultUniformIds.insert(
-            { "s_tonemap_sceneTex",
-              Renderer::RegisterUniform(m_internalPrograms.tonemapProgram,
-                                        "s_sceneTex",
-                                        UniformType::UNIFORM_SAMPLER) });
-        m_defaultUniformIds.insert(
-            { "s_tonemap_ssaoTex",
-              Renderer::RegisterUniform(m_internalPrograms.tonemapProgram,
-                                        "s_ssaoTex",
-                                        UniformType::UNIFORM_SAMPLER) });
+        bindUniform(DefaultUniform::u_horizonColor,
+                    "u_horizonColor",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::s_normalMap,
+                    "s_normalMap",
+                    UniformType::UNIFORM_SAMPLER);
+
+        bindUniform(DefaultUniform::u_useVertexColor,
+                    "u_useVertexColor",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::u_skyColorZenith,
+                    "u_skyColorZenith",
+                    UniformType::UNIFORM_VEC4);
+        bindUniform(DefaultUniform::u_skyColorMidnight,
+                    "u_skyColorMidnight",
+                    UniformType::UNIFORM_VEC4);
+        bindUniform(DefaultUniform::u_sky_cameraPos,
+                    "u_cameraPos",
+                    UniformType::UNIFORM_VEC4);
+        bindUniform(
+            DefaultUniform::u_sky_time, "u_time", UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::u_lightDir,
+                    "u_lightDir",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::u_uvScale,
+                    "u_uvScale",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::u_materialParams1,
+                    "u_materialParams1",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::s_heightMap,
+                    "s_heightMap",
+                    UniformType::UNIFORM_SAMPLER);
+
+        bindUniform(DefaultUniform::u_csmSplits,
+                    "u_csmSplits",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::u_csmLightViewProj,
+                    "u_csmLightViewProj",
+                    UniformType::UNIFORM_MAT4,
+                    4);
+
+        bindUniform(DefaultUniform::u_viewPos,
+                    "u_viewPos",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::u_shadowParams,
+                    "u_shadowParams",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::u_csmTexelSize,
+                    "u_csmTexelSize",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::u_ssao_params,
+                    "u_ssaoParams",
+                    UniformType::UNIFORM_VEC4);
+        bindUniform(DefaultUniform::u_ssao_resolution,
+                    "u_ssaoResolution",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::s_ssao_normalTex,
+                    "s_normal",
+                    UniformType::UNIFORM_SAMPLER);
+
+        bindUniform(DefaultUniform::s_ssao_depthTex,
+                    "s_depth",
+                    UniformType::UNIFORM_SAMPLER);
+
+        bindUniform(DefaultUniform::s_ssaob_ssaoTex,
+                    "s_ssao",
+                    UniformType::UNIFORM_SAMPLER);
+        bindUniform(DefaultUniform::u_ssaob_params,
+                    "u_floats",
+                    UniformType::UNIFORM_VEC4);
+
+        bindUniform(DefaultUniform::s_tonemap_sceneTex,
+                    "s_sceneTex",
+                    UniformType::UNIFORM_SAMPLER);
+        bindUniform(DefaultUniform::s_tonemap_ssaoTex,
+                    "s_ssaoTex",
+                    UniformType::UNIFORM_SAMPLER);
     }
 
     if (!bgfx::isValid(s_fallbackAlbedo)) {
@@ -631,10 +486,10 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     }
 
     // create billboard buffers
-    static const float billboardVertices[]   = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-                                                 0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
-                                                 0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-                                                 -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
+    static const float billboardVertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
+                                               0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
+                                               0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
+                                               -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
     static const uint16_t billboardIndices[] = { 0, 1, 2, 0, 2, 3 };
 
     bgfx::VertexLayout billboardLayout;
@@ -700,20 +555,20 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     Math::Vector3 sunColor         = { 1.0f, 0.956f, 0.839f };
     Math::Vector3 scatterColor     = { 0.8f, 0.5f, 0.3f };
 
-    Renderer::SetUniform(m_defaultUniformIds["u_skyColorZenith"],
+    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                             DefaultUniform::u_skyColorZenith)],
                          skyColorZenith);
-    Renderer::SetUniform(m_defaultUniformIds["u_texture_skyColor"],
-                         skyColorZenith);
-    Renderer::SetUniform(m_defaultUniformIds["u_default_skyColor"],
-                         skyColorZenith);
-    Renderer::SetUniform(m_defaultUniformIds["u_skyColorMidnight"],
+    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                             DefaultUniform::u_skyColorMidnight)],
                          skyColorMidnight);
-    Renderer::SetUniform(m_defaultUniformIds["u_sky_sunColor"], sunColor);
-    Renderer::SetUniform(m_defaultUniformIds["u_texture_sunColor"], sunColor);
-    Renderer::SetUniform(m_defaultUniformIds["u_default_sunColor"], sunColor);
-    Renderer::SetUniform(m_defaultUniformIds["u_texture_horizonColor"],
-                         scatterColor);
-    Renderer::SetUniform(m_defaultUniformIds["u_default_horizonColor"],
+    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                             DefaultUniform::u_sunColor)],
+                         sunColor);
+    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                             DefaultUniform::u_skyColor)],
+                         skyColorZenith);
+    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                             DefaultUniform::u_horizonColor)],
                          scatterColor);
 
     Window::_SetContextCreated(true);
@@ -749,7 +604,7 @@ void RenderCore::_Shutdown() {
         fb = BGFX_INVALID_HANDLE;
     });
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
-    m_defaultUniformIds.clear();
+    m_defaultUniformIds = {};
 
     bgfx::shutdown();
 }
@@ -790,11 +645,11 @@ bool RenderCore::_CreateSceneBuffers() {
         BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
     m_buffers.sceneColor  = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                 uint16_t(Renderer::height),
-                                                 false,
-                                                 1,
-                                                 bgfx::TextureFormat::RGBA16F,
-                                                 tsFlags);
+                                                  uint16_t(Renderer::height),
+                                                  false,
+                                                  1,
+                                                  bgfx::TextureFormat::RGBA16F,
+                                                  tsFlags);
     m_buffers.sceneNormal = bgfx::createTexture2D(uint16_t(Renderer::width),
                                                   uint16_t(Renderer::height),
                                                   false,
@@ -802,25 +657,27 @@ bool RenderCore::_CreateSceneBuffers() {
                                                   bgfx::TextureFormat::RGBA16F,
                                                   tsFlags);
     m_buffers.sceneDepth  = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                 uint16_t(Renderer::height),
-                                                 false,
-                                                 1,
-                                                 bgfx::TextureFormat::D24S8,
-                                                 BGFX_TEXTURE_RT);
-
-    if (m_config.useSSAO) {
-        m_buffers.ssaoTex   = bgfx::createTexture2D(uint16_t(Renderer::width / 2),
-                                                  uint16_t(Renderer::height / 2),
+                                                  uint16_t(Renderer::height),
                                                   false,
                                                   1,
-                                                  bgfx::TextureFormat::R16,
-                                                  tsFlags);
-        m_buffers.ssaoBlurH = bgfx::createTexture2D(uint16_t(Renderer::width / 2),
-                                                    uint16_t(Renderer::height / 2),
-                                                    false,
-                                                    1,
-                                                    bgfx::TextureFormat::R16,
-                                                    tsFlags);
+                                                  bgfx::TextureFormat::D24S8,
+                                                  BGFX_TEXTURE_RT);
+
+    if (m_config.useSSAO) {
+        m_buffers.ssaoTex =
+            bgfx::createTexture2D(uint16_t(Renderer::width / 2),
+                                  uint16_t(Renderer::height / 2),
+                                  false,
+                                  1,
+                                  bgfx::TextureFormat::R16,
+                                  tsFlags);
+        m_buffers.ssaoBlurH =
+            bgfx::createTexture2D(uint16_t(Renderer::width / 2),
+                                  uint16_t(Renderer::height / 2),
+                                  false,
+                                  1,
+                                  bgfx::TextureFormat::R16,
+                                  tsFlags);
         m_buffers.ssaoBlurFinal =
             bgfx::createTexture2D(uint16_t(Renderer::width / 2),
                                   uint16_t(Renderer::height / 2),
@@ -889,12 +746,12 @@ bool RenderCore::_SetResolution(int width, int height) {
     return true;
 }
 
-Uniform* RenderCore::_GetDefaultUniform(const std::string& name) {
-    auto it = m_defaultUniformIds.find(name);
-    if (it != m_defaultUniformIds.end()) {
-        return &Renderer::m_uniformRegistry[it->second];
+Uniform* RenderCore::_GetDefaultUniform(DefaultUniform name) {
+    const uint16_t id = m_defaultUniformIds[DefaultUniformIndex(name)];
+    if (id == 0) {
+        return nullptr;
     }
-    return nullptr;
+    return Renderer::GetUniform(id);
 }
 
 /*
@@ -902,16 +759,16 @@ Uniform* RenderCore::_GetDefaultUniform(const std::string& name) {
 */
 
 void RenderCore::_CalculateCascadeMatrices(
-    CameraComponent*                camera,
+    CameraComponent*                           camera,
     std::array<Math::Matrix4x4, NUM_CASCADES>& outLightView,
     std::array<Math::Matrix4x4, NUM_CASCADES>& outLightProj,
-    Math::Vector4&                  outCascadeSplits) {
+    Math::Vector4&                             outCascadeSplits) {
     const Math::Vector3 lightDirVec = Renderer::GetSunDirection().normalized();
 
     const Math::Vector3 target = camera->GetPosition();
     const Math::Vector3 up(0.0f, 1.0f, 0.0f); // Up vector for light view matrix
 
-    Math::Vector4 cascadeDistances;
+    Math::Vector4                             cascadeDistances;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightViewProj;
 
     // How far light is from camera
@@ -919,7 +776,7 @@ void RenderCore::_CalculateCascadeMatrices(
     float lightDistance = 50.0f;
 
     Math::Vector3 zero;
-    Math::Mat4 lightViewRaw;
+    Math::Mat4    lightViewRaw;
     bx::mtxLookAt(lightViewRaw.data(), zero.toBxVec3(), lightDirVec.toBxVec3());
 
     for (uint32_t i = 0; i < NUM_CASCADES; i++) {
@@ -948,7 +805,9 @@ void RenderCore::_CalculateCascadeMatrices(
                 from, to, JPH::Color::sYellow);
         }
 
-        bx::mtxLookAt(outLightView[i].data(), lightPosSnapped.toBxVec3(), target.toBxVec3());
+        bx::mtxLookAt(outLightView[i].data(),
+                      lightPosSnapped.toBxVec3(),
+                      target.toBxVec3());
 
         // Try and keep tight near/far planes for good precision
         float lightNear = 20.0f;
@@ -966,26 +825,28 @@ void RenderCore::_CalculateCascadeMatrices(
 
         cascadeDistances.set(i, m_cascadeSizes[i] / 2.0f);
         bx::mtxMul(lightViewProj[i].data(),
-               outLightView[i].data(),
-               outLightProj[i].data());
+                   outLightView[i].data(),
+                   outLightProj[i].data());
     }
 
     outCascadeSplits = cascadeDistances;
 
-    Renderer::SetUniform(m_defaultUniformIds["u_default_csmLightViewProj"],
-                 lightViewProj[0].data(),
+    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                             DefaultUniform::u_csmLightViewProj)],
+                         lightViewProj[0].data(),
                          NUM_CASCADES);
-    Renderer::SetUniform(m_defaultUniformIds["u_texture_csmLightViewProj"],
-                 lightViewProj[0].data(),
+    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                             DefaultUniform::u_csmLightViewProj)],
+                         lightViewProj[0].data(),
                          NUM_CASCADES);
 }
 
 CameraComponent::Frustum
 RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
-    CameraComponent::Frustum cascadeFrustum;
+    CameraComponent::Frustum                  cascadeFrustum;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightProj;
-    Math::Vector4 outCascadeSplits;
+    Math::Vector4                             outCascadeSplits;
     _CalculateCascadeMatrices(camera, lightView, lightProj, outCascadeSplits);
 
     Math::Matrix4x4 cascadeViewProj = lightView[cascade] * lightProj[cascade];
@@ -1045,9 +906,9 @@ bool RenderCore::_ShouldCullBySize(GameObject* go, CameraComponent* camera) {
     auto* meshComp = go->GetComponent<MeshComponent>();
     if (!meshComp || !meshComp->isEnabled) return false;
 
-    MeshAABB     aabb   = meshComp->GetAABB();
+    MeshAABB            aabb   = meshComp->GetAABB();
     const Math::Vector3 camPos = camera->GetPosition();
-    Camera       cam    = camera->GetCamera();
+    Camera              cam    = camera->GetCamera();
 
     // Calculate distance to object
     float dx       = aabb.center[0] - camPos.x();
@@ -1073,12 +934,12 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
     MeshAABB aabb = meshComp->GetAABB();
 
     // Get light position for this cascade
-    Math::Vector3 lightDir = Renderer::GetSunDirection();
-    const Math::Vector3 camPos = camera->GetPosition();
-    float        lightDistance = 100.0f; // Same as in _CalculateCascadeMatrices
+    Math::Vector3       lightDir = Renderer::GetSunDirection();
+    const Math::Vector3 camPos   = camera->GetPosition();
+    float lightDistance = 100.0f; // Same as in _CalculateCascadeMatrices
     const Math::Vector3 lightPos = camPos + lightDir * lightDistance;
 
-    float distance = lightPos.distance(aabb.center);
+    float distance    = lightPos.distance(aabb.center);
     float camDistance = camPos.distance(aabb.center);
 
     // Don't cull very close objects to light, nor close to the camera
@@ -1120,9 +981,9 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             continue;
         }
 
-        MeshAABB aabb = meshComp->GetAABB();
-        Math::Vector3 min = aabb.min;
-        Math::Vector3 max = aabb.max;
+        MeshAABB      aabb = meshComp->GetAABB();
+        Math::Vector3 min  = aabb.min;
+        Math::Vector3 max  = aabb.max;
         if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
             m_drawnCounts.culledFrustum++;
             continue;
@@ -1132,9 +993,9 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
 
         Mat4 modelMtx =
             go->GetComponent<TransformComponent>()->GetModelMatrix();
-        float det = modelMtx.determinant();
-        bool mirrored = det < 0.0f;
-        Mat4 normalMtx = modelMtx.inverse();
+        float det       = modelMtx.determinant();
+        bool  mirrored  = det < 0.0f;
+        Mat4  normalMtx = modelMtx.inverse();
         normalMtx.transpose();
 
         // Emit one packet per submesh
@@ -1157,10 +1018,19 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             packet.indexCount = submesh.indexCount;
 
             packet.modelMtx = modelMtx;
-            packet.program = { program };
+            packet.program  = { program };
 
-            uint16_t handle = static_cast<uint16_t>(
-                m_defaultUniformIds.at("u_" + go->type + "_normalMatrix"));
+            const bool isTextureProgram = go->type == "texture";
+            const bool isDefaultProgram = go->type == "default";
+            if (!isTextureProgram && !isDefaultProgram) {
+                continue;
+            }
+
+            const DefaultUniform normalMatrixSlot =
+                DefaultUniform::u_normalMatrix;
+
+            const uint16_t handle =
+                m_defaultUniformIds[DefaultUniformIndex(normalMatrixSlot)];
             Uniform* uModel = Renderer::GetUniform(handle);
             if (uModel) {
                 matInst.uniforms.push_back({ uModel->handle, normalMtx, 1 });
@@ -1174,7 +1044,8 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             // Material and uniforms
             {
                 // UV scale
-                Math::Vector4 uvScale(1.0f); // W unused for now. One number for each texture.
+                Math::Vector4 uvScale(
+                    1.0f); // W unused for now. One number for each texture.
                 if (meshComp->GetObjectUVScaleOverride() != 1.0f) {
                     uvScale.setX(meshComp->GetObjectUVScaleOverride());
                     uvScale.setY(meshComp->GetObjectUVScaleOverride());
@@ -1182,9 +1053,11 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                 } else {
                     uvScale = mat.uvScale;
                 }
+
+                const DefaultUniform uvScaleSlot = DefaultUniform::u_uvScale;
                 MaterialInstance::UniformData uniformData1 = {
                     Renderer::GetUniform(
-                        m_defaultUniformIds.at("u_" + go->type + "_uvScales"))
+                        m_defaultUniformIds[DefaultUniformIndex(uvScaleSlot)])
                         ->handle,
                     uvScale,
                     1
@@ -1203,10 +1076,12 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                                       mat.ambient,
                                       meshComp->GetObjectUVScaleOverride(),
                                       mat.useVertexColor ? 1.0f : 0.0f);
+                const DefaultUniform materialParamsSlot =
+                    DefaultUniform::u_materialParams1;
                 MaterialInstance::UniformData uniformData2 = {
                     Renderer::GetUniform(
-                        m_defaultUniformIds.at("u_" + go->type +
-                                               "_materialParams1"))
+                        m_defaultUniformIds[DefaultUniformIndex(
+                            materialParamsSlot)])
                         ->handle,
                     params1,
                     1
@@ -1229,21 +1104,24 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                     matInst.textures.push_back(
                         { 0,
                           Renderer::GetUniform(
-                              m_defaultUniformIds.at("u_texture_albedo"))
+                              m_defaultUniformIds[DefaultUniformIndex(
+                                  DefaultUniform::s_bill_albedo)])
                               ->handle,
                           albedoTex,
                           sflags });
                     matInst.textures.push_back(
                         { 1,
                           Renderer::GetUniform(
-                              m_defaultUniformIds.at("u_texture_normal"))
+                              m_defaultUniformIds[DefaultUniformIndex(
+                                  DefaultUniform::s_normalMap)])
                               ->handle,
                           normalTex,
                           sflags });
                     matInst.textures.push_back(
                         { 2,
                           Renderer::GetUniform(
-                              m_defaultUniformIds.at("u_texture_height"))
+                              m_defaultUniformIds[DefaultUniformIndex(
+                                  DefaultUniform::s_heightMap)])
                               ->handle,
                           heightTex,
                           sflags });
@@ -1251,7 +1129,8 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                     // just u_baseColor for default shader, no samplers
                     MaterialInstance::UniformData uniformData = {
                         Renderer::GetUniform(
-                            m_defaultUniformIds.at("u_baseColor"))
+                            m_defaultUniformIds[DefaultUniformIndex(
+                                DefaultUniform::u_baseColor)])
                             ->handle,
                         mat.baseColor,
                         1
@@ -1261,7 +1140,8 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                     matInst.textures.push_back(
                         { 1,
                           Renderer::GetUniform(
-                              m_defaultUniformIds.at("u_default_normal"))
+                              m_defaultUniformIds[DefaultUniformIndex(
+                                  DefaultUniform::s_normalMap)])
                               ->handle,
                           s_fallbackNormal,
                           BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
@@ -1279,6 +1159,7 @@ void RenderCore::_ScreenSpaceQuad(ViewID view, Program program) {
                    BGFX_STATE_CULL_CW);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
+    Renderer::_UpdateDrawID();
     bgfx::submit(view, program.program);
 }
 
@@ -1290,13 +1171,15 @@ void RenderCore::_DrawShadows(const Program&   program,
                               CameraComponent* camera,
                               uint8_t          cascade) {
     SYN_PROFILE_FUNCTION();
-    const uint64_t renderState = BGFX_STATE_DEFAULT & ~BGFX_STATE_WRITE_RGB; // Don't write color, only depth
+    const uint64_t renderState =
+        BGFX_STATE_DEFAULT &
+        ~BGFX_STATE_WRITE_RGB; // Don't write color, only depth
 
     if (Core::_GetContext()->debug.CSMBounds) {
         if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
         std::array<Math::Matrix4x4, NUM_CASCADES> view;
         std::array<Math::Matrix4x4, NUM_CASCADES> proj;
-        Math::Vector4 outCascadeSplits;
+        Math::Vector4                             outCascadeSplits;
         _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
         for (int i = 0; i < NUM_CASCADES; ++i) {
             Core::_GetContext()->physicsManager->_DrawFrustum(view[i], proj[i]);
@@ -1311,8 +1194,7 @@ void RenderCore::_DrawShadows(const Program&   program,
         auto*    meshComp = gameObject->GetComponent<MeshComponent>();
         MeshData meshData = meshComp->meshData;
 
-        if (!meshData.valid || !meshComp->isEnabled ||
-            !meshComp->castShadows)
+        if (!meshData.valid || !meshComp->isEnabled || !meshComp->castShadows)
             continue;
 
         // Size-based shadow culling from light's perspective
@@ -1321,9 +1203,9 @@ void RenderCore::_DrawShadows(const Program&   program,
             continue;
         }
 
-        MeshAABB aabb = meshComp->GetAABB();
-        Math::Vector3 min = aabb.min;
-        Math::Vector3 max = aabb.max;
+        MeshAABB      aabb = meshComp->GetAABB();
+        Math::Vector3 min  = aabb.min;
+        Math::Vector3 max  = aabb.max;
         if (!camera->_aabbInsideFrustum(
                 _GetCascadeFrustum(cascade, camera), min, max)) {
             m_drawnCounts.culledShadowFrustum++;
@@ -1333,13 +1215,15 @@ void RenderCore::_DrawShadows(const Program&   program,
         bgfx::setState(renderState);
 
         // Get the transform for this object
-        Mat4 modelMtx = gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
+        Mat4 modelMtx =
+            gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
         bgfx::setTransform(modelMtx.data());
 
         bgfx::setVertexBuffer(0, meshData.vbh);
         bgfx::setIndexBuffer(meshData.ibh);
 
         // Shadow shaders are simple, just output depth
+        Renderer::_UpdateDrawID();
         bgfx::submit(program.viewId + cascade, program.program);
         m_drawnCounts.shadows++;
     }
@@ -1356,13 +1240,18 @@ void RenderCore::_DrawSky(const Program&         program,
 
     const Math::Vector3 cameraPos = camera->GetPosition();
     const Math::Vector4 skyCameraPos(cameraPos, 1.0f);
-    const Math::Vector4 timeVec(static_cast<float>(Core::m_frameCounter.frameCount));
+    const Math::Vector4 timeVec(
+        static_cast<float>(Core::m_frameCounter.frameCount));
 
-    Renderer::SetUniform(m_defaultUniformIds.at("u_sky_cameraPos"),
+    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                             DefaultUniform::u_sky_cameraPos)],
                          skyCameraPos);
-    Renderer::SetUniform(m_defaultUniformIds.at("u_sky_time"), timeVec);
+    Renderer::SetUniform(
+        m_defaultUniformIds[DefaultUniformIndex(DefaultUniform::u_sky_time)],
+        timeVec);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
+    Renderer::_UpdateDrawID();
     bgfx::submit(program.viewId, program.program);
 }
 
@@ -1377,15 +1266,16 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
             continue; // Skip if not matching program
         bgfx::setState(renderState | packet.material.renderState);
         uint32_t flags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                    BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
+                         BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
         packet.material.Bind(); // Set uniforms and textures
 
         if (m_config.useShadows) {
+            const DefaultUniform shadowMapSlot = DefaultUniform::s_shadowMap;
             bgfx::setTexture(
                 3,
                 Renderer::GetUniform(
-                    m_defaultUniformIds.at("u_" + program.name + "_shadowMap"))
+                    m_defaultUniformIds[DefaultUniformIndex(shadowMapSlot)])
                     ->handle,
                 m_buffers.shadowDepth,
                 flags);
@@ -1394,6 +1284,7 @@ void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
         bgfx::setTransform(packet.modelMtx.data());
         bgfx::setVertexBuffer(0, packet.vbh);
         bgfx::setIndexBuffer(packet.ibh, packet.indexStart, packet.indexCount);
+        Renderer::_UpdateDrawID();
         bgfx::submit(program.viewId, program.program);
         m_drawnCounts.forward++;
     }
@@ -1418,7 +1309,7 @@ void RenderCore::_DrawDebug(const Program&   program,
             if (!zone || !zone->isEnabled) continue;
             switch (zone->GetShape()) {
             case ZoneShape::BOX: {
-                Vector3 pos = zone->GetPosition();
+                Vector3 pos  = zone->GetPosition();
                 Vector3 size = zone->GetSize();
                 Vector3 min, max;
                 for (int i = 0; i < 3; ++i) {
@@ -1430,7 +1321,7 @@ void RenderCore::_DrawDebug(const Program&   program,
                 break;
             }
             case ZoneShape::SPHERE: {
-                Vector3 pos = zone->GetPosition();
+                Vector3 pos  = zone->GetPosition();
                 Vector3 size = zone->GetSize(); // size.x is radius
                 m_drender->DrawSphere(
                     pos.toJoltRVec3(), size[0], JPH::Color::sRed);
@@ -1454,7 +1345,8 @@ void RenderCore::_DrawDebug(const Program&   program,
         for (auto go : billboards) {
             BillboardComponent* comp = go->GetComponent<BillboardComponent>();
             if (!comp) continue;
-            Vector3 goPos = go->GetComponent<TransformComponent>()->GetWorldPosition();
+            Vector3 goPos =
+                go->GetComponent<TransformComponent>()->GetWorldPosition();
             Vector3 min = comp->GetMinBounds();
             Vector3 max = comp->GetMaxBounds();
             m_drender->DrawBox(min, max, JPH::Color::sBlue);
@@ -1486,13 +1378,12 @@ void RenderCore::_DrawDebug(const Program&   program,
     }
 }
 
-void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera) {
+void RenderCore::_DrawBillboard(const Program&   program,
+                                CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program.viewId, "Billboards");
     bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
-    const uint64_t renderState = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                           BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_LEQUAL |
-                           BGFX_STATE_MSAA;
+    const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA;
 
     // Draw regular billboards
     std::vector<GameObject*> billboards =
@@ -1501,7 +1392,9 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
         auto* comp = go->GetComponent<BillboardComponent>();
         if (!comp || !comp->isEnabled) continue;
 
-        // Since we can't use _ShouldCullBySize for billboards (they don't have mesh data), we do a simple distance check here and skip if they're too far away to be visible
+        // Since we can't use _ShouldCullBySize for billboards (they don't have
+        // mesh data), we do a simple distance check here and skip if they're
+        // too far away to be visible
         const Vector3 camPos = camera->GetPosition();
         const Vector3 goPos =
             go->GetComponent<TransformComponent>()->GetWorldPosition();
@@ -1523,12 +1416,15 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
 
         // Pack center position and size into a vec4 and send it off
         Math::Vector4 billboardData(pos, comp->size);
-        Renderer::SetUniform(m_defaultUniformIds["u_billboard"], billboardData);
+        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                 DefaultUniform::u_billboard)],
+                             billboardData);
 
         // In addition, send the mode and rot as a vec4
         Math::Vector4 billboardExtra(comp->GetRot(),
                                      static_cast<float>(comp->GetMode()));
-        Renderer::SetUniform(m_defaultUniformIds["u_billboard_mode"],
+        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                 DefaultUniform::u_billboard_mode)],
                              billboardExtra);
 
         Math::Vector4 lightingFlags(
@@ -1536,7 +1432,8 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
             (comp->receiveShadows && m_config.useShadows) ? 1.0f : 0.0f,
             0.0f,
             0.0f);
-        Renderer::SetUniform(m_defaultUniformIds["u_billboard_lighting"],
+        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                 DefaultUniform::u_billboard_lighting)],
                              lightingFlags);
 
         // Dummy model matrix for the billboard
@@ -1553,7 +1450,8 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
                 BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
             bgfx::setTexture(3,
                              Renderer::GetUniform(
-                                 m_defaultUniformIds["s_billboard_shadowMap"])
+                                 m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::s_shadowMap)])
                                  ->handle,
                              m_buffers.shadowDepth,
                              depthSampler);
@@ -1561,8 +1459,11 @@ void RenderCore::_DrawBillboard(const Program& program, CameraComponent* camera)
 
         bgfx::setTexture(
             0,
-            Renderer::GetUniform(m_defaultUniformIds["s_bill_albedo"])->handle,
+            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::s_bill_albedo)])
+                ->handle,
             comp->_GetTexture());
+        Renderer::_UpdateDrawID();
         bgfx::submit(program.viewId, program.program);
         m_drawnCounts.billboard++;
     }
@@ -1578,12 +1479,14 @@ void RenderCore::_DrawPostProcess(const Program& program) {
         bgfx::setViewFrameBuffer(VIEW_AO, m_buffers.ssaoFB);
         bgfx::setTexture(
             0,
-            Renderer::GetUniform(m_defaultUniformIds.at("s_ssao_depthTex"))
+            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::s_ssao_depthTex)])
                 ->handle,
             m_buffers.sceneDepth);
         bgfx::setTexture(
             1,
-            Renderer::GetUniform(m_defaultUniformIds.at("s_ssao_normalTex"))
+            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::s_ssao_normalTex)])
                 ->handle,
             m_buffers.sceneNormal);
 
@@ -1594,9 +1497,11 @@ void RenderCore::_DrawPostProcess(const Program& program) {
             static_cast<float>(Renderer::height),
             1.0f / static_cast<float>(Renderer::width),
             1.0f / static_cast<float>(Renderer::height));
-        Renderer::SetUniform(m_defaultUniformIds.at("u_ssao_params"),
+        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                 DefaultUniform::u_ssao_params)],
                              ssaoParams);
-        Renderer::SetUniform(m_defaultUniformIds.at("u_ssao_resolution"),
+        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                 DefaultUniform::u_ssao_resolution)],
                              ssaoResolution);
         _ScreenSpaceQuad(VIEW_AO, program);
     } else if (program.id == m_internalPrograms.tonemapProgram) {
@@ -1605,12 +1510,14 @@ void RenderCore::_DrawPostProcess(const Program& program) {
                                  BGFX_INVALID_HANDLE); // Backbuffer
         bgfx::setTexture(
             0,
-            Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_sceneTex"))
+            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::s_tonemap_sceneTex)])
                 ->handle,
             m_buffers.sceneColor);
         bgfx::setTexture(
             1,
-            Renderer::GetUniform(m_defaultUniformIds.at("s_tonemap_ssaoTex"))
+            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::s_tonemap_ssaoTex)])
                 ->handle,
             m_buffers.ssaoBlurFinal);
         _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
@@ -1622,7 +1529,8 @@ void RenderCore::_DrawPostProcess(const Program& program) {
                 bgfx::setViewFrameBuffer(VIEW_AO + 1, m_buffers.ssaoBlurHFB);
                 bgfx::setTexture(0,
                                  Renderer::GetUniform(
-                                     m_defaultUniformIds.at("s_ssaob_ssaoTex"))
+                                     m_defaultUniformIds[DefaultUniformIndex(
+                                         DefaultUniform::s_ssaob_ssaoTex)])
                                      ->handle,
                                  m_buffers.ssaoTex);
             } else { // Vertical blur
@@ -1630,28 +1538,32 @@ void RenderCore::_DrawPostProcess(const Program& program) {
                 bgfx::setViewFrameBuffer(VIEW_AO + 2, m_buffers.ssaoBlurVFB);
                 bgfx::setTexture(0,
                                  Renderer::GetUniform(
-                                     m_defaultUniformIds.at("s_ssaob_ssaoTex"))
+                                     m_defaultUniformIds[DefaultUniformIndex(
+                                         DefaultUniform::s_ssaob_ssaoTex)])
                                      ->handle,
                                  m_buffers.ssaoBlurH);
             }
 
             bgfx::setTexture(
                 1,
-                Renderer::GetUniform(m_defaultUniformIds.at("s_ssaob_depthTex"))
+                Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                         DefaultUniform::s_ssao_depthTex)])
                     ->handle,
                 m_buffers.sceneDepth);
-            bgfx::setTexture(2,
-                             Renderer::GetUniform(
-                                 m_defaultUniformIds.at("s_ssaob_normalTex"))
-                                 ->handle,
-                             m_buffers.sceneNormal);
+            bgfx::setTexture(
+                2,
+                Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                         DefaultUniform::s_ssao_normalTex)])
+                    ->handle,
+                m_buffers.sceneNormal);
 
             const Math::Vector4 ssaoBlurParams(
                 1.5f,
                 static_cast<float>(i),
                 static_cast<float>(Renderer::width),
                 static_cast<float>(Renderer::height));
-            Renderer::SetUniform(m_defaultUniformIds.at("u_ssaob_params"),
+            Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::u_ssaob_params)],
                                  ssaoBlurParams);
             _ScreenSpaceQuad(ViewID(VIEW_AO + i + 1), program);
         }
@@ -1680,13 +1592,16 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
 
             // Pack center position and size into a vec4 and send it off
             const Math::Vector4 billboardData(pos, gizmo->size);
-            Renderer::SetUniform(m_defaultUniformIds["u_billboard"],
+            Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::u_billboard)],
                                  billboardData);
 
             Renderer::SetUniform(
-                m_defaultUniformIds["u_billboard_mode"],
+                m_defaultUniformIds[DefaultUniformIndex(
+                    DefaultUniform::u_billboard_mode)],
                 Math::Vector4()); // No rotation or mode for gizmos
-            Renderer::SetUniform(m_defaultUniformIds["u_billboard_lighting"],
+            Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                     DefaultUniform::u_billboard_lighting)],
                                  Math::Vector4()); // No lighting for gizmos
 
             // Dummy model matrix for the billboard
@@ -1697,10 +1612,12 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
             bgfx::setIndexBuffer(m_billboardIbh);
             bgfx::setTexture(
                 0,
-                Renderer::GetUniform(m_defaultUniformIds["s_bill_albedo"])
+                Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                         DefaultUniform::s_bill_albedo)])
                     ->handle,
                 gizmo
                     ->_GetTexture()); // Use the texture from the gizmo registry
+            Renderer::_UpdateDrawID();
             bgfx::submit(VIEW_BILL_DBG, program.program);
         }
     }
@@ -1736,13 +1653,15 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
     camera->Update(VIEW_FORWARD, safeWidth, safeHeight);
     Camera cam = camera->GetCamera();
 
-    Math::Vector4 viewPos(camera->GetPosition(), 1.0f);
-    Renderer::SetUniform(m_defaultUniformIds["u_default_viewPos"], viewPos);
-    Renderer::SetUniform(m_defaultUniformIds["u_texture_viewPos"], viewPos);
+    const Math::Vector4 viewPos(camera->GetPosition(), 1.0f);
+    Renderer::SetUniform(
+        m_defaultUniformIds[DefaultUniformIndex(DefaultUniform::u_viewPos)],
+        viewPos);
 
     const Math::Vector4 sunDir(Renderer::GetSunDirection(), 0.0f);
-    Renderer::SetUniform(m_defaultUniformIds["u_default_lightDir"], sunDir);
-    Renderer::SetUniform(m_defaultUniformIds["u_texture_lightDir"], sunDir);
+    Renderer::SetUniform(
+        m_defaultUniformIds[DefaultUniformIndex(DefaultUniform::u_lightDir)],
+        sunDir);
 
     std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightProj;
@@ -1751,21 +1670,20 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
         Math::Vector4 cascadeSplits;
         _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
 
-        int   farClip   = m_config.shadowDist;
-        Renderer::SetUniform(m_defaultUniformIds["u_default_csmSplits"],
-                             cascadeSplits);
-        Renderer::SetUniform(m_defaultUniformIds["u_texture_csmSplits"],
+        int farClip = m_config.shadowDist;
+        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                 DefaultUniform::u_csmSplits)],
                              cascadeSplits);
 
         Math::Vector4 shadowParams(
-            bgfx::getCaps()->homogeneousDepth ? 1.0f : 0.0f, // Homogeneous depth
-            1.0f / (float)(SHADOW_MAP_SIZE * 2),             // Inv shadow map size
-            static_cast<float>(farClip),                     // Light far plane
-            0.0f                                             // Debug value, not used
+            bgfx::getCaps()->homogeneousDepth ? 1.0f
+                                              : 0.0f, // Homogeneous depth
+            1.0f / (float)(SHADOW_MAP_SIZE * 2),      // Inv shadow map size
+            static_cast<float>(farClip),              // Light far plane
+            0.0f                                      // Debug value, not used
         );
-        Renderer::SetUniform(m_defaultUniformIds["u_default_shadowParams"],
-                             shadowParams);
-        Renderer::SetUniform(m_defaultUniformIds["u_texture_shadowParams"],
+        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
+                                 DefaultUniform::u_shadowParams)],
                              shadowParams);
     }
 
@@ -1811,8 +1729,10 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
             bgfx::setViewRect(view,
                               0,
                               0,
-                              uint16_t(view == VIEW_AO ? Renderer::width / 2 : Renderer::width),
-                              uint16_t(view == VIEW_AO ? Renderer::height / 2 : Renderer::height));
+                              uint16_t(view == VIEW_AO ? Renderer::width / 2
+                                                       : Renderer::width),
+                              uint16_t(view == VIEW_AO ? Renderer::height / 2
+                                                       : Renderer::height));
             uint16_t flags = view == VIEW_AO
                                  ? (BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH)
                                  : (BGFX_CLEAR_NONE);
@@ -1875,13 +1795,16 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 Core::_GetContext()->physicsManager->_GetDebugRenderer();
     }
 
-    if (!_PrepareRenderViews(camera)) return false;
+    if (!_PrepareRenderViews(camera)) {
+        Renderer::_UpdateDrawID();
+        return false;
+    }
     _CollectRenderPackets(camera);
 
     // Main render loop
     for (auto view : _allViews) {
-        auto progListIt = Renderer::viewPrograms.find(view);
-        if (progListIt == Renderer::viewPrograms.end()) continue;
+        auto progListIt = Renderer::m_viewPrograms.find(view);
+        if (progListIt == Renderer::m_viewPrograms.end()) continue;
 
         for (auto& program : progListIt->second) {
             if (!bgfx::isValid(program.program)) continue;
@@ -1920,6 +1843,7 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
 #endif
 
     bgfx::frame();
+    Renderer::_UpdateDrawID();
     return true;
 }
 

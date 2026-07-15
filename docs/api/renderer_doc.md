@@ -44,6 +44,9 @@ Renderer class to manage rendering and shader programs @section Renderer
 - [RegisterUniform()](#renderer-registeruniform)
 - [SetUniform()](#renderer-setuniform)
 - [SetUniform()](#renderer-setuniform-2)
+- [RemoveUniform()](#renderer-removeuniform)
+- [RemoveAllUniforms()](#renderer-removealluniforms)
+- [GetUniformID()](#renderer-getuniformid)
 - [GetSunDirection()](#renderer-getsundirection)
 - [SetSunDirection()](#renderer-setsundirection)
 - [SetGizmoSize()](#renderer-setgizmosize)
@@ -146,7 +149,6 @@ struct Program
 | `std::string` | `fsPath` | Fragment shader path |
 | `std::string` | `bundlePath` | Bundle path if loaded from a bundle |
 | `int` | `id` | Unique ID of the shader program |
-| `std::vector<Uniform>` | `uniforms` | List of shader uniforms |
 ---
 <a id="syngine-rendererconfig"></a>
 
@@ -408,7 +410,7 @@ Signature:
 
 Signature:
 ```cpp
- static size_t RegisterUniform(size_t program, const std::string& name, UniformType type, uint16_t num = 1);
+ static size_t RegisterUniform(const std::string& name, UniformType type, uint16_t num = 1);
 ```
 **Parameters:**
 - `program`: The ID of the shader program to register the uniform with
@@ -451,7 +453,7 @@ Signature:
 
 Signature:
 ```cpp
- static void SetUniform(size_t id, const Math::Vector4 data, uint16_t num = 1);
+ static void SetUniform(size_t id, const Math::Vector4& data, uint16_t num = 1);
 ```
 **Parameters:**
 - `id`: The ID of the uniform variable to set, returned from RegisterUniform
@@ -459,6 +461,61 @@ Signature:
 - `num`: The number of elements to set (default is 1)
 
 **Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="renderer-removeuniform"></a>
+
+#### **`Renderer::RemoveUniform()`**
+
+ Remove a uniform by its ID
+
+Signature:
+```cpp
+ static bool RemoveUniform(size_t id);
+```
+**Parameters:**
+- `id`: The ID of the uniform variable to remove, returned from RegisterUniform
+
+**Returns:** True if the uniform was removed successfully, false otherwise
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="renderer-removealluniforms"></a>
+
+#### **`Renderer::RemoveAllUniforms()`**
+
+ Remove all registered uniforms
+
+Signature:
+```cpp
+ static void RemoveAllUniforms();
+```
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="renderer-getuniformid"></a>
+
+#### **`Renderer::GetUniformID()`**
+
+ Get a uniform ID by its name
+
+Signature:
+```cpp
+ static size_t GetUniformID(const std::string& name);
+```
+**Parameters:**
+- `name`: The name of the uniform variable
+
+**Returns:** The ID of the uniform variable, or 0 if not found
+
+**Thread Safety:** read-only
 
 **This function has been available since:** v0.0.1
 
@@ -488,7 +545,7 @@ Signature:
 
 Signature:
 ```cpp
- static void SetSunDirection(const Math::Vector3 lightDir);
+ static void SetSunDirection(const Math::Vector3& lightDir);
 ```
 **Parameters:**
 - `lightDir`: A Vector3 representing the normalized sun light direction in world space
@@ -661,9 +718,11 @@ Signature:
 | --- | --- | --- | 
 | `int` | `width` | Width of the game window in pixels |
 | `int` | `height` | Height of the game window in pixels |
+| `uint64_t` | `currentDrawId` | Current frame number for tracking uniform updates |
 | `std::string` | `m_title` | Title of the game window |
 | `bool` | `m_isReady` | Whether the renderer is initialized and ready |
 | `static` | `std` | Registry of shader uniforms |
+| `std::vector<UniformCacheEntry>` | `m_uniformCache` | Cache of uniform data for the current frame |
 | `static` | `std` | Registry of gizmos |
 | `float` | `m_gizmoSize` | Default size for gizmos |
 | `static` | `std` | Shader programs organized by view ID |

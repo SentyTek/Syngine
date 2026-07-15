@@ -13,7 +13,6 @@
 #include "Syngine/Math/Matrix4x4.hpp"
 
 #include <cstdint>
-#include <unordered_map>
 #include <string>
 #include <array>
 
@@ -25,6 +24,44 @@ namespace Syngine {
 
 class RenderCore {
   public:
+    enum class DefaultUniform : size_t {
+        u_billboard = 0,
+        s_bill_albedo,
+        u_billboard_mode,
+        u_billboard_lighting,
+        s_shadowMap,
+        u_baseColor,
+        u_normalMatrix,
+        u_floats,
+        u_skyColor,
+        u_sunColor,
+        u_horizonColor,
+        s_normalMap,
+        u_useVertexColor,
+        u_skyColorZenith,
+        u_skyColorMidnight,
+        u_sky_cameraPos,
+        u_sky_time,
+        u_lightDir,
+        u_uvScale,
+        u_materialParams1,
+        s_heightMap,
+        u_csmSplits,
+        u_csmLightViewProj,
+        u_viewPos,
+        u_shadowParams,
+        u_csmTexelSize,
+        u_ssao_params,
+        u_ssao_resolution,
+        s_ssao_normalTex,
+        s_ssao_depthTex,
+        s_ssaob_ssaoTex,
+        u_ssaob_params,
+        s_tonemap_sceneTex,
+        s_tonemap_ssaoTex,
+        Count
+    };
+
     /// @brief Render a single frame. Calls several internal rendering functions.
     /// @param camera Pointer to the camera component for rendering
     /// @param debug Debug modes for rendering
@@ -49,10 +86,10 @@ class RenderCore {
     static bool _SetResolution(int width, int height);
 
     /// @brief Get default uniform data by name
-    /// @param name Name of the uniform
+    /// @param name Default uniform identifier
     /// @return Pointer to the Uniform struct, or nullptr if not found
     /// @internal
-    static Uniform* _GetDefaultUniform(const std::string& name);
+    static Uniform* _GetDefaultUniform(DefaultUniform name);
 
   private:
         static constexpr uint16_t SHADOW_MAP_SIZE = 2048;
@@ -218,7 +255,7 @@ class RenderCore {
     };
     static RenderCoreBuffers m_buffers;
 
-    static std::unordered_map<std::string, uint16_t> m_defaultUniformIds; //* Default uniform IDs
+    static std::array<uint16_t, static_cast<size_t>(DefaultUniform::Count)> m_defaultUniformIds; //* Default uniform IDs
 
     static float                   m_cascadeSizes[NUM_CASCADES];
     static float                   m_cascadeTexelSizes[NUM_CASCADES];
