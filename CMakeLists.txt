@@ -150,6 +150,13 @@ set_default_option(ASSIMP_INSTALL OFF "Disable installing Assimp targets and con
 set_default_option(JOLT_BUILD_EXAMPLES OFF "Disable building Jolt examples")
 set_default_option(JOLT_BUILD_TESTS OFF "Disable building Jolt tests")
 set_default_option(JOLT_PROFILE_ENABLED OFF "Disable Jolt profiling")
+# We may turn these on at some point. Currently we want to use bgfx for compute shaders,
+# and we don't need Jolt's fancy hair simulation that runs on the GPU. If they move more
+# to the GPU or we want to use Jolt's GPU features, we can turn these on.
+set_default_option("JOLT_USE_DX12" OFF "Disable Jolt DX12 Compute")
+set_default_option("JOLT_USE_VK" OFF "Disable Jolt Vulkan Compute")
+set_default_option("JOLT_USE_MTL" OFF "Disable Jolt Metal Compute")
+set_default_option("JOLT_USE_CPU_COMPUTE" OFF "Disable Jolt CPU Compute")
 
 # BGFX Options
 set_default_option(BGFX_BUILD_TOOLS ON "Enable building BGFX tools")
@@ -201,41 +208,20 @@ else() # Linux and other Unix-like systems
     add_compile_options(-frtti) # Jolt needs RTTI on Unix platforms
 endif()
 
-# --- BGFX Uniform Assert Patch ---
-set(BGFX_PATCH_FILE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/patches/fix_bgfx_uniform_assert.patch")
-set(BGFX_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bgfx.cmake/bgfx")
-message(STATUS "BGFX patch file: ${BGFX_PATCH_FILE}")
-message(STATUS "BGFX source directory: ${BGFX_SOURCE_DIR}")
+# Apply patches
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/ApplyPatches.cmake)
 
-if(EXISTS "${BGFX_PATCH_FILE}" AND EXISTS "${BGFX_SOURCE_DIR}/.git")
-    message(STATUS "Checking/Applying bgfx uniform assert patch...")
-
-    # 1. Check if the patch is already applied to avoid git errors
-    execute_process(
-        COMMAND git apply --check "${BGFX_PATCH_FILE}"
-        WORKING_DIRECTORY "${BGFX_SOURCE_DIR}"
-        RESULT_VARIABLE PATCH_CHECK_RES
-        OUTPUT_QUIET
-        ERROR_QUIET
+apply_patch(
+    "${CMAKE_CURRENT_LIST_DIR}/third_party/patches/fix_bgfx_uniform_assert.patch"
+    "${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bgfx"
+    "bgfx_uniform_assert_patch"
+)
+if (NOT APPLE AND NOT MSVC)
+    apply_patch("${CMAKE_CURRENT_LIST_DIR}/third_party/patches/fix_assimp_linux_minizip.patch"
+        "${CMAKE_CURRENT_LIST_DIR}/third_party/assimp"
+        "assimp_linux_minizip_patch"
     )
-
-    # If RESULT_VARIABLE is 0, the patch can be applied cleanly (meaning it isn't applied yet)
-    if(PATCH_CHECK_RES EQUAL 0)
-        execute_process(
-            COMMAND git apply "${BGFX_PATCH_FILE}"
-            WORKING_DIRECTORY "${BGFX_SOURCE_DIR}"
-            RESULT_VARIABLE PATCH_APPLY_RES
-        )
-        if(PATCH_APPLY_RES EQUAL 0)
-            message(STATUS "Successfully patched bgfx uniform validation.")
-        else()
-            message(WARNING "Failed to apply bgfx patch automatically.")
-        endif()
-    else()
-        message(STATUS "bgfx patch already applied or source modified. Skipping.")
-    endif()
 endif()
-# ---------------------------------
 
 # Configure all third party files by calling their cmake scripts
 # EXCLUDE_FROM_ALL is used so that its install targets and configs don't pollute upwards into the parent project
@@ -259,7 +245,7 @@ if (MSVC AND TARGET Jolt)
 endif()
 
 # Add the third party things to respective folders
-set_target_properties(SDL_uclibc PROPERTIES FOLDER "ThirdParty/SDL")
+# set_target_properties(SDL_uclibc PROPERTIES FOLDER "ThirdParty/SDL")
 set_target_properties(SDL3_test PROPERTIES FOLDER "ThirdParty/SDL")
 set_target_properties(SDL3-static PROPERTIES FOLDER "ThirdParty/SDL")
 set_target_properties(bgfx PROPERTIES FOLDER "ThirdParty/bgfx")
