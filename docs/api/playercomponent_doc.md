@@ -229,6 +229,7 @@ Signature:
 Signature:
 ```cpp
  Math::Vector2 GetRotation() const;
+ Math::Vector2 GetRotation() const;
 ```
 **Returns:** Vector2, where x is the yaw and y is the pitch, in radians
 
@@ -246,6 +247,25 @@ Signature:
 Signature:
 ```cpp
  void SetRotation(float yaw, float pitch);
+```
+**Parameters:**
+- `yaw`: The yaw rotation in radians.
+- `pitch`: The pitch rotation in radians.
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="playercomponent-setrotation"></a>
+
+#### **`PlayerComponent::SetRotation()`**
+
+ Sets the player's world space rotation.
+
+Signature:
+```cpp
+ void SetRotation(Math::Vector2 rotation);
 ```
 **Parameters:**
 - `yaw`: The yaw rotation in radians.

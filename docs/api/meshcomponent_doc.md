@@ -381,6 +381,7 @@ Signature:
 Signature:
 ```cpp
  Math::Vector2 GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
+ Math::Vector2 GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
 ```
 **Parameters:**
 - `materialIndex`: Index of the material to query
@@ -401,6 +402,7 @@ Signature:
 
 Signature:
 ```cpp
+ bool SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, Math::Vector2 uvScale);
  bool SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, Math::Vector2 uvScale);
 ```
 **Parameters:**

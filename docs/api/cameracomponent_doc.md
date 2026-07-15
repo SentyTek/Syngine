@@ -62,9 +62,14 @@ struct Camera
 | `Math::Vector3` | `eye` | Camera position in world space |
 | `Math::Vector3` | `target` | Camera target position |
 | `Math::Vector3` | `up` | Camera up vector |
+| `Math::Vector3` | `eye` | Camera position in world space |
+| `Math::Vector3` | `target` | Camera target position |
+| `Math::Vector3` | `up` | Camera up vector |
 | `float` | `fov` | Field of view in degrees |
 | `float` | `nearPlane` | Near clipping plane |
 | `float` | `farPlane` | Far clipping plane |
+| `Math::Matrix4x4` | `view` | View matrix |
+| `Math::Matrix4x4` | `proj` | Projection matrix |
 | `Math::Matrix4x4` | `view` | View matrix |
 | `Math::Matrix4x4` | `proj` | Projection matrix |
 | `float` | `yaw` | Yaw angle in radians |
@@ -188,6 +193,7 @@ Signature:
 Signature:
 ```cpp
  void SetPosition(Math::Vector3 position);
+ void SetPosition(Math::Vector3 position);
 ```
 **Parameters:**
 - `position`: Vector 3 representing the new camera position (x, y, z)
@@ -205,6 +211,7 @@ Signature:
 
 Signature:
 ```cpp
+ Math::Vector3 GetPosition() const;
  Math::Vector3 GetPosition() const;
 ```
 **Returns:** Vector 3 representing the camera position (x, y, z)
@@ -374,6 +381,7 @@ Signature:
 **Members:**
 | Type | Name | Description |
 | --- | --- | --- | 
+| `Math::Vector3` | `normal` | Normal vector of the plane |
 | `Math::Vector3` | `normal` | Normal vector of the plane |
 | `float` | `distance` | Distance from origin |
 **This function has been available since:** v0.0.1

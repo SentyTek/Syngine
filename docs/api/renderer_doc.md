@@ -408,7 +408,7 @@ Signature:
 
 Signature:
 ```cpp
- static size_t RegisterUniform(size_t program, const std::string& name, UniformType type, uint16_t num = 1);
+ static size_t RegisterUniform(const std::string& name, UniformType type, uint16_t num = 1);
 ```
 **Parameters:**
 - `program`: The ID of the shader program to register the uniform with
@@ -436,6 +436,26 @@ Signature:
 **Parameters:**
 - `id`: The ID of the uniform variable to set, returned from RegisterUniform
 - `data`: Pointer to the data to set the uniform to
+- `num`: The number of elements to set (default is 1)
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="renderer-setuniform"></a>
+
+#### **`Renderer::SetUniform()`**
+
+ Set a uniform variable
+
+Signature:
+```cpp
+ static void SetUniform(size_t id, const Math::Vector4& data, uint16_t num = 1);
+```
+**Parameters:**
+- `id`: The ID of the uniform variable to set, returned from RegisterUniform
+- `data`: The Vector4 data to set the uniform to
 - `num`: The number of elements to set (default is 1)
 
 **Thread Safety:** not-safe
@@ -472,6 +492,7 @@ Signature:
 Signature:
 ```cpp
  static Math::Vector3 GetSunDirection();
+ static Math::Vector3 GetSunDirection();
 ```
 **Returns:** A vector3 representing the normalized sun light direction in world space
 
@@ -483,6 +504,8 @@ Signature:
 #### **`Renderer::SetSunDirection()`**
 
  Set the global sun light direction
+
+**Note:** The direction should be normalized and in world space coordinates.
 
 **Note:** The direction should be normalized and in world space coordinates.
 
@@ -661,9 +684,11 @@ Signature:
 | --- | --- | --- | 
 | `int` | `width` | Width of the game window in pixels |
 | `int` | `height` | Height of the game window in pixels |
+| `uint64_t` | `currentDrawId` | Current frame number for tracking uniform updates |
 | `std::string` | `m_title` | Title of the game window |
 | `bool` | `m_isReady` | Whether the renderer is initialized and ready |
 | `static` | `std` | Registry of shader uniforms |
+| `std::vector<UniformCacheEntry>` | `m_uniformCache` | Cache of uniform data for the current frame |
 | `static` | `std` | Registry of gizmos |
 | `float` | `m_gizmoSize` | Default size for gizmos |
 | `static` | `std` | Shader programs organized by view ID |
