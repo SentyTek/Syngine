@@ -8,6 +8,14 @@
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
 
 cmake_minimum_required(VERSION 3.31)
+
+if (MSVC)
+    cmake_policy(SET CMP0091 NEW)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY
+        "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
+endif()
+
 project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
 set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
@@ -153,7 +161,7 @@ elseif(MSVC)
     set_default_option(SDL_RENDER_DISABLED ON "Disable SDL rendering subsystem on Windows platforms")
 
     set_default_option(ASSIMP_MSVC_STATIC_RUNTIME ON "Force Assimp to use static MSVC runtime (/MT or /MTd)")
-    set_default_option(USE_STATIC_MSVC_RUNTIME_LIBRARY ON "Force Jolt to use static MSVC runtime (/MT or /MTd)")
+    #set_default_option(USE_STATIC_MSVC_RUNTIME_LIBRARY ON "Force Jolt to use static MSVC runtime (/MT or /MTd)")
 else() # Linux and other Unix-like systems
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF "Disable Direct3D 12 Renderer")
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")
