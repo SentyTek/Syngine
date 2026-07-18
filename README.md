@@ -1,24 +1,27 @@
 ![Syngine Logo](.github/Syngine_Logo_Banner_Rounded.png)
 
+## Syngine is in early active development. All advertised features may not be available. Updates are posted on our [Website](https://sentytek.github.io/category/syngine/1/).
+
 **Syngine** is a cross-platform, modular, and modern C++ game engine built from the ground up for open-world and simulation-heavy physics based games. It focuses on flexibility, extensibility, developer control, and an incredibly powerful Lua modding API, with support for real-time detailed physics, procedural terrain generation, and more.
 
 **Read the full Syngine documentation with examples and instructions [here](docs/index.md).**
+
 **Get Started with Syngine: ["Quick" Start](docs/start.md).**
 
 ---
 
 ## Features
-- **Input & Windowing** - SDL3-based windowing with a custom input manager with keyboard & mouse and gamepad support with Steamworks
-- **Rendering** - Powered by bgfx for cross-platform games. Supports **Vulkan, Direct3D 12 and Metal** with user-moddable shaders and easy and powerful renderer management
-- **Physics** - Jolt Physics for a fast and accurate collision system with high quality dynamics and constraints.
+- **Input & Windowing** - SDL3-based windowing with a custom input manager with keyboard, mouse, and soon, gamepad support
+- **Rendering** - Powered by bgfx for cross-platform games. Supports **Vulkan, Direct3D 12, and Metal** with user-moddable shaders and easy and powerful renderer management
+- **Physics** - Jolt Physics for a fast and accurate collision system with high quality dynamics and constraints
 - **Scripting & Modding** - Deeply integrated Lua scripting SDK for moddable gameplay logic and assets
 - **Asset Pipeline** - Assimp + SPK, our custom binary bundle format, multithreaded for speedy load times
 - **Actor-Component System** - Custom entities allows for easy creation, modularity and management of all game objects. Combines ease of use of Unity GameObjects and cache benefits of Entity-Component-Systems
-- **Advanced tooling** - XML based asset pipeline, in-engine level editor, hot-reloading support, and more
+- **Advanced tooling** - XML-based asset pipeline, hot-reloading support, and more
 
 ## Roadmap (Subject to change)
 - Phase one: Core systems with Rendering, Physics, and Input subsystems - Completed Q4 2025
-- Phase two: Engine infrastructure and editing tools (Multithreading, job system, level editor, ~~packages~~). - In progress. Complete by Q3 2026.
+- Phase two: Engine infrastructure and editing tools (Multithreading, job system, level editor, ~~packages~~). - In progress. Complete during 2026.
 - Phase three: Simulation & Advanced rendering (Steamworks integration, Compute support, Forward+ rendering, audio subsystem, cooler rendering techniques)
 - Phase four: Modding, UI systems
 - Phase five: More advanced asset management, animations, advanced tech

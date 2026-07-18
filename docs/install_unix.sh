@@ -29,7 +29,7 @@ mkdir -p build
 
 touch CMakeLists.txt
 echo "# root/CMakeLists.txt
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.31)
 project(\"$PROJECT_NAME\")
 set(EXECUTABLE_NAME \${PROJECT_NAME})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -54,8 +54,15 @@ if(APPLE)
 endif()
 
 # Enable making a Windows executable if on Windows
-if(WIN32)
+if(MSVC)
     set(CMAKE_WIN32_EXECUTABLE ON)
+
+    # Use static runtime on MSVC. Several libraries we use require this.
+    # Please don't change this.
+    # Also set CMAKE_MSVC_RUNTIME_LIBRARY. Sub-projects might still query this variable.
+    # This is a really ugly fix
+    set(CMAKE_MSVC_RUNTIME_LIBRARY
+        "MultiThreaded\$\<\$<CONFIG:Debug\>:Debug\>")
 endif()
 
 # set the output directory for built objects.

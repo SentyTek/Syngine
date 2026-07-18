@@ -1,8 +1,8 @@
 diff --git a/src/bgfx_p.h b/src/bgfx_p.h
-index a2000c168..ca191520c 100644
+index f7f82bfb3..a2f4598b8 100644
 --- a/src/bgfx_p.h
 +++ b/src/bgfx_p.h
-@@ -3185,11 +3185,11 @@ namespace bgfx
+@@ -3213,11 +3213,11 @@ namespace bgfx
  		{
  			if (BX_ENABLED(BGFX_CONFIG_DEBUG_UNIFORM) )
  			{
