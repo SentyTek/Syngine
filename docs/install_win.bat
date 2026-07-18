@@ -28,7 +28,7 @@ if not exist build mkdir build
 
 (
 echo # root/CMakeLists.txt
-echo cmake_minimum_required^(VERSION 3.10^)
+echo cmake_minimum_required^(VERSION 3.31^)
 echo project^("%PROJECT_NAME%"^)
 echo set^(EXECUTABLE_NAME ${PROJECT_NAME}^)
 echo set^(CMAKE_EXPORT_COMPILE_COMMANDS ON^)
@@ -53,8 +53,15 @@ echo     set^(BUNDLE_IDENTIFIER "com.example.%PROJECT_NAME%"^)
 echo endif^(^)
 echo.
 echo # Enable making a Windows executable if on Windows
-echo if^(WIN32^)
+echo if^(MSVC^)
 echo     set^(CMAKE_WIN32_EXECUTABLE ON^)
+echo.
+echo     # Use static runtime on MSVC. Several libraries we use require this.
+echo     # Please don't change this.
+echo     # Also set CMAKE_MSVC_RUNTIME_LIBRARY. Sub-projects might still query this variable.
+echo     # This is a really ugly fix
+echo     set^(CMAKE_MSVC_RUNTIME_LIBRARY
+echo         "MultiThreaded$<$<CONFIG:Debug>:Debug>"^)
 echo endif^(^)
 echo.
 echo # set the output directory for built objects.

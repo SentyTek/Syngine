@@ -6,6 +6,19 @@
 # | Licensed under the MIT License       |
 # ╰──────────────────────────────────────╯
 
+cmake_minimum_required(VERSION 3.31)
+
+# Ensure CMP0091 is active for the test executable when run standalone
+if (MSVC)
+    cmake_policy(SET CMP0091 NEW)
+    # Only override if the parent project hasn't already set it
+    if (NOT DEFINED CMAKE_MSVC_RUNTIME_LIBRARY)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+endif()
+
+project(SyngineTests)
+
 include(FetchContent)
 
 FetchContent_Declare(
