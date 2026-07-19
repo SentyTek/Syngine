@@ -40,11 +40,11 @@ add_library(Syngine STATIC
     src/Syngine/Core/LuaManager.cpp
 
     # Graphics
-    src/Syngine/Graphics/Renderer.cpp
+    src/Syngine/Graphics/Rendering/Renderer.cpp
+    src/Syngine/Graphics/Rendering/RenderCore.cpp
+    src/Syngine/Graphics/Rendering/DebugRenderer.cpp
+    src/Syngine/Graphics/Resources/TextureHelpers.cpp
     src/Syngine/Graphics/Windowing.cpp
-    src/Syngine/Graphics/DebugRenderer.cpp
-    src/Syngine/Graphics/TextureHelpers.cpp
-    src/Syngine/Graphics/RenderCore.cpp
 
     # Utils
     src/Syngine/Utils/ModelLoader.cpp
@@ -56,7 +56,7 @@ add_library(Syngine STATIC
     # Physics
     src/Syngine/Physics/Physics.cpp
 
-    # ECS
+    # ACS
     src/Syngine/ECS/GameObject.cpp
     src/Syngine/ECS/Components/MeshComponent.cpp
     src/Syngine/ECS/Components/TransformComponent.cpp

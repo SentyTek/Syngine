@@ -6,38 +6,36 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Physics/Physics.h"
-#include "Syngine/Core/Core.h"
-#include "Syngine/Graphics/DebugRenderer.h"
-#include "Syngine/Core/Logger.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
+#include <Syngine/Physics/Physics.h>
+#include <Syngine/Core/Core.h>
+#include <Syngine/Graphics/Rendering/DebugRenderer.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/ECS/Components/CameraComponent.h>
 
 #include <thread> //for hardware_concurrency
 
-#include "Jolt/Jolt.h"
-#include "Jolt/Core/Factory.h"
-#include "Jolt/Core/TempAllocator.h"
-#include "Jolt/Geometry/IndexedTriangle.h"
-#include "Jolt/Math/Quat.h"
-#include "Jolt/Physics/Body/BodyCreationSettings.h"
-#include "Jolt/Physics/Body/BodyInterface.h"
-#include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
-#include "Jolt/Physics/Collision/Shape/MeshShape.h"
-#include "Jolt/Physics/Collision/Shape/ScaledShape.h"
-#include "Jolt/Physics/Collision/Shape/Shape.h"
-#include "Jolt/Physics/Collision/Shape/SphereShape.h"
-#include "Jolt/Physics/Collision/Shape/BoxShape.h"
-#include "Jolt/Physics/Collision/Shape/CylinderShape.h"
-#include "Jolt/Physics/PhysicsSettings.h"
-#include "Jolt/RegisterTypes.h"
-#include "Jolt/Core/Memory.h"
-#include "Jolt/Core/StreamWrapper.h"
-#include "Jolt/Core/IssueReporting.h"
-#include "Jolt/Math/MathTypes.h"
-#include "Jolt/Physics/Body/MotionType.h"
-#include "Jolt/Physics/Collision/Shape/StaticCompoundShape.h"
-
-#include "SDL3/SDL_log.h"
+// there are TOO MANY Jolt includes
+#include <Jolt/Jolt.h>
+#include <Jolt/Core/Factory.h>
+#include <Jolt/Core/TempAllocator.h>
+#include <Jolt/Geometry/IndexedTriangle.h>
+#include <Jolt/Math/Quat.h>
+#include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/ScaledShape.h>
+#include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
+#include <Jolt/Physics/PhysicsSettings.h>
+#include <Jolt/RegisterTypes.h>
+#include <Jolt/Core/Memory.h>
+#include <Jolt/Core/IssueReporting.h>
+#include <Jolt/Math/MathTypes.h>
+#include <Jolt/Physics/Body/MotionType.h>
+#include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 
 using namespace JPH;
 using namespace Syngine;

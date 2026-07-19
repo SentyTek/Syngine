@@ -7,13 +7,12 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Components/CameraComponent.h"
-#include "Syngine/Graphics/Renderer.h"
-#include "Syngine/ECS/AllComponents.h"
-#include "Syngine/Math/Matrix4x4.hpp"
+#include <Syngine/ECS/Components/CameraComponent.h>
+#include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/Math/Matrix4x4.hpp>
 
 #include <cstdint>
-#include <string>
 #include <array>
 
 #include <bgfx/bgfx.h>

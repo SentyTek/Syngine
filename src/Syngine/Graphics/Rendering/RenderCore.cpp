@@ -6,30 +6,28 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Graphics/RenderCore.h"
-#include "Syngine/Core/Core.h"
-#include "Syngine/Core/ZoneManager.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
-#include "Syngine/ECS/Components/MeshComponent.h"
-#include "Syngine/ECS/Components/TransformComponent.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/Graphics/DebugRenderer.h"
-#include "Syngine/Graphics/Renderer.h"
-#include "Syngine/Graphics/Windowing.h"
-#include "Syngine/Graphics/TextureHelpers.h"
-#include "Syngine/Math/Matrix4x4.hpp"
-#include "Syngine/Math/Vector3.hpp"
-#include "Syngine/Math/Vector4.hpp"
-#include "Syngine/Utils/ModelLoader.h"
-#include "Syngine/Utils/Serializer.h"
-#include "Syngine/Utils/Version.h"
-#include "Syngine/Utils/Profiler.h"
-#include "Syngine/Core/Logger.h"
+#include <Syngine/Graphics/Rendering/RenderCore.h>
+#include <Syngine/Core/Core.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/Core/ZoneManager.h>
+#include <Syngine/Graphics/Resources/TextureHelpers.h>
+#include <Syngine/Graphics/Rendering/DebugRenderer.h>
+#include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/Graphics/Windowing.h>
+#include <Syngine/ECS/Component.h>
+#include <Syngine/ECS/Components/CameraComponent.h>
+#include <Syngine/ECS/Components/MeshComponent.h>
+#include <Syngine/ECS/GameObject.h>
+#include <Syngine/Math/Matrix4x4.hpp>
+#include <Syngine/Math/Vector3.hpp>
+#include <Syngine/Math/Vector4.hpp>
+#include <Syngine/Utils/Serializer.h>
+#include <Syngine/Utils/Version.h>
+#include <Syngine/Utils/Profiler.h>
 
-#include "bgfx/bgfx.h"
-#include "bgfx/defines.h"
-#include "bx/math.h"
+#include <bgfx/bgfx.h>
+#include <bgfx/defines.h>
+#include <bx/math.h>
 
 #include <cstddef>
 #include <cstdint>

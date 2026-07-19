@@ -7,9 +7,9 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/Core/Logger.h"
-#include "Syngine/Utils/FsUtils.h"
-#include "Syngine/Utils/Serializer.h"
+#include <Syngine/Core/Logger.h>
+#include <Syngine/Utils/FsUtils.h>
+#include <Syngine/Utils/Serializer.h>
 
 #include <bgfx/bgfx.h>
 #include <SDL3/SDL.h>

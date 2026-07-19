@@ -6,7 +6,7 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "bgfx/bgfx.h"
+#include <bgfx/bgfx.h>
 #include <string>
 #include <SDL3/SDL.h>
 

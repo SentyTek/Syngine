@@ -6,33 +6,30 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Core/Logger.h"
-#include "Syngine/Graphics/Renderer.h"
-#include "Syngine/ECS/Components/BillboardComponent.h"
-#include "Syngine/Graphics/Shaders.h"
-#include "Syngine/Graphics/TextureHelpers.h"
-#include "Syngine/Graphics/RenderCore.h"
-#include "Syngine/ECS/AllComponents.h"
-#include "Syngine/Core/Core.h"
+#include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/Core/Core.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/Graphics/Resources/Shaders.h>
+#include <Syngine/Graphics/Resources/TextureHelpers.h>
+#include <Syngine/Graphics/Rendering/RenderCore.h>
+#include <Syngine/Math/Math.hpp>
+#include <Syngine/Math/Vector3.hpp>
+#include <Syngine/Utils/FsUtils.h>
 
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_video.h>
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_properties.h>
 
-#include "Syngine/Math/Math.hpp"
-#include "Syngine/Math/Vector3.hpp"
-#include "Syngine/Utils/FsUtils.h"
-#include "bgfx/bgfx.h"
-#include "bx/math.h"
 
-#include <algorithm>
+#include "bgfx/bgfx.h"
+
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <string_view>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #if BX_PLATFORM_OSX

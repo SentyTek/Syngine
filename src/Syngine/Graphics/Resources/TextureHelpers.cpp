@@ -6,10 +6,10 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Graphics/TextureHelpers.h"
-#include "Syngine/Core/Logger.h"
+#include <Syngine/Graphics/Resources/TextureHelpers.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/Utils/Serializer.h>
 
-#include "Syngine/Utils/Serializer.h"
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
 

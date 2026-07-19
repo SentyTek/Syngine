@@ -8,17 +8,17 @@
 
 #pragma once
 
-#include "Syngine/Core/Registry.h"
-#include "Syngine/Core/LuaManager.h"
-#include "Syngine/Graphics/Renderer.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
-#include "Syngine/ECS/Components/PlayerComponent.h"
-#include "Syngine/ECS/Components/RigidbodyComponent.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/Utils/ModelLoader.h"
-#include "Syngine/Physics/Physics.h"
-#include "Syngine/Utils/Profiler.h"
+#include <Syngine/Core/Registry.h>
+#include <Syngine/Core/LuaManager.h>
+#include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/ECS/Component.h>
+#include <Syngine/ECS/Components/CameraComponent.h>
+#include <Syngine/ECS/Components/PlayerComponent.h>
+#include <Syngine/ECS/Components/RigidbodyComponent.h>
+#include <Syngine/ECS/GameObject.h>
+#include <Syngine/Utils/ModelLoader.h>
+#include <Syngine/Physics/Physics.h>
+#include <Syngine/Utils/Profiler.h>
 
 #include <cstdint>
 #include <memory>

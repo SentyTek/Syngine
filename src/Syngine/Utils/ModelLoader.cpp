@@ -6,9 +6,9 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Core/Logger.h"
-#include "Syngine/Utils/ModelLoader.h"
-#include "Syngine/Graphics/TextureHelpers.h"
+#include <Syngine/Utils/ModelLoader.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/Graphics/Resources/TextureHelpers.h>
 
 #include <cstdint>
 

@@ -17,7 +17,7 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/ECS/GameObject.h"
 
-#include "Syngine/Graphics/Renderer.h"
+#include "Syngine/Graphics/Rendering/Renderer.h"
 #include "Syngine/Graphics/Windowing.h"
 
 #include "Syngine/Physics/Physics.h"

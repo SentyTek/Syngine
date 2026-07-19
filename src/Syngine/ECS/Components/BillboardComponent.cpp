@@ -6,11 +6,11 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/ECS/Components/BillboardComponent.h"
-#include "Syngine/ECS/ComponentRegistry.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/Utils/FsUtils.h"
-#include "Syngine/Graphics/TextureHelpers.h"
+#include <Syngine/ECS/Components/BillboardComponent.h>
+#include <Syngine/ECS/ComponentRegistry.h>
+#include <Syngine/ECS/GameObject.h>
+#include <Syngine/Utils/FsUtils.h>
+#include <Syngine/Graphics/Resources/TextureHelpers.h>
 
 #include <sol/sol.hpp>
 

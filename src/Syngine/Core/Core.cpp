@@ -25,30 +25,26 @@
 #define SCL_IMPL
 #include "miniscl.hpp"
 
-#include "Syngine/Core/Core.h"
-#include "Syngine/Core/Logger.h"
-#include "Syngine/Core/Registry.h"
-#include "Syngine/Core/Input.h"
-#include "Syngine/Core/ZoneManager.h"
-
-#include "Syngine/Graphics/Windowing.h"
-#include "Syngine/Graphics/Renderer.h"
-#include "Syngine/Graphics/RenderCore.h"
-
-#include "Syngine/Physics/Physics.h"
-
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/ECS/AllComponents.h"
-#include "Syngine/ECS/Component.h"
-
-#include "Syngine/Utils/FsUtils.h"
-#include "Syngine/Utils/Version.h"
-#include "Syngine/Utils/Profiler.h"
-#include "Syngine/Utils/SpecsHelpers.h"
+#include <Syngine/Core/Core.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/Core/Registry.h>
+#include <Syngine/Core/Input.h>
+#include <Syngine/Core/ZoneManager.h>
+#include <Syngine/Graphics/Windowing.h>
+#include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/Graphics/Rendering/RenderCore.h>
+#include <Syngine/Physics/Physics.h>
+#include <Syngine/ECS/GameObject.h>
+#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/ECS/Component.h>
+#include <Syngine/Utils/FsUtils.h>
+#include <Syngine/Utils/Version.h>
+#include <Syngine/Utils/Profiler.h>
+#include <Syngine/Utils/SpecsHelpers.h>
 
 #include <SDL3/SDL.h>
 
-#include "bgfx/defines.h"
+#include <bgfx/defines.h>
 
 #include <filesystem>
 #include <memory>

@@ -15,11 +15,9 @@ namespace Syngine {
     struct Camera; // Forward declaration
 }
 
-#include "bgfx/bgfx.h"
-
 // Jolt includes
 
-#include "Syngine/Utils/ModelLoader.h"
+#include <Syngine/Utils/ModelLoader.h>
 #include <Syngine/Math/Math.hpp>
 
 #include <Jolt/Jolt.h>
