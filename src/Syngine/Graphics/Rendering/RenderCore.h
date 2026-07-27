@@ -7,6 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include "Syngine/Graphics/Resources/ShaderManager.h"
+#include "Syngine/Graphics/Resources/UniformRegistry.h"
 #include <Syngine/ECS/Components/CameraComponent.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/ECS/AllComponents.h>
@@ -16,52 +18,14 @@
 #include <array>
 
 #include <bgfx/bgfx.h>
-#include <variant>
 #include <vector>
 
 namespace Syngine {
 
 class RenderCore {
   public:
-    enum class DefaultUniform : size_t {
-        u_billboard = 0,
-        s_bill_albedo,
-        u_billboard_mode,
-        u_billboard_lighting,
-        s_shadowMap,
-        u_baseColor,
-        u_normalMatrix,
-        u_floats,
-        u_skyColor,
-        u_sunColor,
-        u_horizonColor,
-        s_normalMap,
-        u_useVertexColor,
-        u_skyColorZenith,
-        u_skyColorMidnight,
-        u_sky_cameraPos,
-        u_sky_time,
-        u_lightDir,
-        u_uvScale,
-        u_materialParams1,
-        s_heightMap,
-        u_csmSplits,
-        u_csmLightViewProj,
-        u_viewPos,
-        u_shadowParams,
-        u_csmTexelSize,
-        u_ssao_params,
-        u_ssao_resolution,
-        s_ssao_normalTex,
-        s_ssao_depthTex,
-        s_ssaob_ssaoTex,
-        u_ssaob_params,
-        s_tonemap_sceneTex,
-        s_tonemap_ssaoTex,
-        Count
-    };
-
-    /// @brief Render a single frame. Calls several internal rendering functions.
+    /// @brief Render a single frame. Calls several internal rendering
+    /// functions.
     /// @param camera Pointer to the camera component for rendering
     /// @param debug Debug modes for rendering
     /// @return true on success, false on failure
@@ -84,22 +48,16 @@ class RenderCore {
     /// @internal
     static bool _SetResolution(int width, int height);
 
-    /// @brief Get default uniform data by name
-    /// @param name Default uniform identifier
-    /// @return Pointer to the Uniform struct, or nullptr if not found
-    /// @internal
-    static Uniform* _GetDefaultUniform(DefaultUniform name);
-
   private:
-        static constexpr uint16_t SHADOW_MAP_SIZE = 2048;
-        static constexpr uint8_t  NUM_CASCADES    = 4;
+    static constexpr uint16_t SHADOW_MAP_SIZE = 2048;
+    static constexpr uint8_t  NUM_CASCADES    = 4;
 
     // Called by _DrawShadows when CSM debug is enabled
-    static void _CalculateCascadeMatrices(
-        CameraComponent*                                   camera,
-        std::array<Math::Matrix4x4, 4>&                   outLightView,
-        std::array<Math::Matrix4x4, 4>&                   outLightProj,
-        Math::Vector4&                                    outCascadeSplits);
+    static void
+    _CalculateCascadeMatrices(CameraComponent*                camera,
+                              std::array<Math::Matrix4x4, 4>& outLightView,
+                              std::array<Math::Matrix4x4, 4>& outLightProj,
+                              Math::Vector4&                  outCascadeSplits);
 
     static constexpr std::array<Syngine::ViewID, 12> _allViews = {
         Syngine::VIEW_SHADOW,  Syngine::VIEW_SKY,
@@ -110,103 +68,37 @@ class RenderCore {
         Syngine::VIEW_UI,      Syngine::VIEW_UI_DEBUG
     };
 
-    /// @brief Struct representing a material instance for rendering. Used for
-    /// binding textures and uniforms.
-    /// @internal
-    struct MaterialInstance {
-        struct Texture {
-            uint8_t stage;
-            bgfx::UniformHandle handle;
-            bgfx::TextureHandle texture;
-            uint32_t samplerFlags;
-        };
-
-        // Uniform data struct for storing uniform handle, type, and data
-        struct UniformData {
-            bgfx::UniformHandle handle;
-            std::variant<Math::Vector4, Math::Mat4> data;
-            uint16_t                                num = 1;
-        };
-        std::vector<Texture> textures;
-        std::vector<UniformData> uniforms;
-
-        uint64_t renderState = BGFX_STATE_DEFAULT;
-
-        void Bind() const {
-            for (const auto& tex : textures) {
-                bgfx::setTexture(
-                    tex.stage,
-                    tex.handle,
-                    tex.texture,
-                    tex.samplerFlags);
-            }
-            for (const auto& uni : uniforms) {
-                size_t i = uni.data.index();
-                if (i == 0) {
-                    const Math::Vector4& vec = std::get<Math::Vector4>(uni.data);
-                    Renderer::SetUniform(uni.handle.idx, vec.data(), uni.num);
-                } else if (i == 1) {
-                    const Math::Mat4& mat = std::get<Math::Mat4>(uni.data);
-                    Renderer::SetUniform(uni.handle.idx, mat.data(), uni.num);
-                }
-            }
-        }
-    };
-
-    /// @brief Struct representing a render packet for submission to the GPU.
-    /// @internal
-    struct RenderPacket {
-        bgfx::VertexBufferHandle vbh;
-        bgfx::IndexBufferHandle  ibh;
-        Math::Matrix4x4          modelMtx;
-
-        uint32_t indexStart;
-        uint32_t indexCount;
-
-        MaterialInstance material;
-        Program          program;
-
-        bool visible;
-    };
-
-    struct internalPrograms {
-        size_t shadowProgram;
-        size_t skyProgram;
-        size_t defaultProgram;
-        size_t textureProgram;
-        size_t debugProgram;
-        size_t billboardProgram;
-        size_t ssaoProgram;
-        size_t ssaoBlurProgram;
-        size_t tonemapProgram;
-    };
-    static internalPrograms m_internalPrograms;
-
     static bool _CreateSceneBuffers();
 
-    static std::vector<RenderPacket> m_renderPackets; //* Collected render packets for the current frame
+    static std::vector<Renderer::RenderPacket>
+        m_renderPackets; //* All forward render packets for the current frame
+    static std::vector<Renderer::RenderPacket>
+        m_billboardRenderPackets; //* All billboard render packets for the
+                                  // current frame
     static void
     _CollectRenderPackets(CameraComponent* camera); //* Collect render packets
                                                     // for the current frame
 
     static bool _PrepareRenderViews(CameraComponent* camera);
     static CameraComponent::Frustum _GetCascadeFrustum(uint8_t          cascade,
-                                                      CameraComponent* camera);
+                                                       CameraComponent* camera);
 
-    static void _DrawShadows(const Program&   program,
+    static void _DrawShadows(const Shader*    program,
                              CameraComponent* camera,
                              uint8_t          cascade);
-    static void _DrawSky(const Program& program, const CameraComponent* camera);
-    static void _DrawForward(const Program& program, CameraComponent* camera);
-    static void _DrawDebug(const Program&   program,
+    static void _DrawSky(const Shader* program, const CameraComponent* camera);
+    static void _DrawForward(const Shader* program, CameraComponent* camera);
+    static void _DrawDebug(const Shader*    program,
                            CameraComponent* camera,
                            DebugModes       debug);
-    static void _DrawBillboard(const Program& program, CameraComponent* camera);
-    static void _DrawPostProcess(const Program& program);
-    static void _DrawDbgBillboard(const Program& program);
+    static void _DrawBillboard(const Shader* program, CameraComponent* camera);
+    static void _DrawSSAO(const Shader* program);
+    static void _DrawPostProcess(const Shader* program);
+    static void _DrawDbgBillboard(Shader* program);
     static void _DrawUIDebug(CameraComponent* camera);
 
-    static float m_maxSmallObjDistance; //* Small objects get culled beyond this distance
+    static float
+        m_maxSmallObjDistance; //* Small objects get culled beyond this distance
     static float _CalculateScreenSize(const MeshAABB&      aabb,
                                       const Math::Vector3& cameraPos,
                                       const Camera&        camera,
@@ -216,25 +108,38 @@ class RenderCore {
                                          CameraComponent* camera,
                                          uint8_t          cascade);
 
-    static void _ScreenSpaceQuad(ViewID view, Program program);
+    static void _ScreenSpaceQuad(ViewID view, const Shader* program);
+
+    static void _SetFrameUniforms(const Shader* shader);
+    static void _SetViewUniforms(const Shader* shader);
+    static void _SetObjectUniforms(const Shader*                 shader,
+                                   const Renderer::RenderPacket& packet);
+    static void _SetMaterialUniforms(const Shader*                 shader,
+                                     const Renderer::RenderPacket& packet,
+                                     uint32_t                      flags = 0);
 
     // Static members
     struct RenderCoreBuffers {
         bgfx::FrameBufferHandle sceneFB; //* Framebuffer for scene rendering
-        bgfx::TextureHandle     sceneColor; //* Color texture for scene rendering (RGBA16F)
-        bgfx::TextureHandle     sceneDepth; //* Depth texture for scene rendering (D24S8)
-        bgfx::TextureHandle     sceneNormal; //* Normal texture for scene rendering (RGBA8)
+        bgfx::TextureHandle
+            sceneColor; //* Color texture for scene rendering (RGBA16F)
+        bgfx::TextureHandle
+            sceneDepth; //* Depth texture for scene rendering (D24S8)
+        bgfx::TextureHandle
+            sceneNormal; //* Normal texture for scene rendering (RGBA8)
         bgfx::FrameBufferHandle ssaoFB; //* Framebuffer for SSAO rendering
-        bgfx::FrameBufferHandle ssaoBlurHFB; //* Temp framebuffer for SSAO blurring (horizontal)
-        bgfx::FrameBufferHandle ssaoBlurVFB; //* Temp framebuffer for SSAO blurring (vertical)
-        bgfx::TextureHandle     ssaoTex; //* SSAO texture (R8)
-        bgfx::TextureHandle     ssaoBlurH; //* SSAO texture mid-blur (R8)
-        bgfx::TextureHandle     ssaoBlurFinal; //* SSAO texture post-blur (Use this one) (R8)
+        bgfx::FrameBufferHandle
+            ssaoBlurHFB; //* Temp framebuffer for SSAO blurring (horizontal)
+        bgfx::FrameBufferHandle
+            ssaoBlurVFB; //* Temp framebuffer for SSAO blurring (vertical)
+        bgfx::TextureHandle ssaoTex;   //* SSAO texture (R8)
+        bgfx::TextureHandle ssaoBlurH; //* SSAO texture mid-blur (R8)
+        bgfx::TextureHandle
+            ssaoBlurFinal; //* SSAO texture post-blur (Use this one) (R8)
         bgfx::TextureHandle     shadowDepth; //* Shadow map depth texture handle
-        bgfx::FrameBufferHandle shadowFB; //* Shadow map framebuffer
+        bgfx::FrameBufferHandle shadowFB;    //* Shadow map framebuffer
 
-        template <class T>
-        void ForEachTexture(T&& t) {
+        template <class T> void ForEachTexture(T&& t) {
             t(sceneColor);
             t(sceneDepth);
             t(sceneNormal);
@@ -243,8 +148,7 @@ class RenderCore {
             t(ssaoBlurFinal);
             t(shadowDepth);
         }
-        template <class T>
-        void ForEachFrameBuffer(T&& t) {
+        template <class T> void ForEachFrameBuffer(T&& t) {
             t(sceneFB);
             t(ssaoFB);
             t(ssaoBlurHFB);
@@ -254,10 +158,18 @@ class RenderCore {
     };
     static RenderCoreBuffers m_buffers;
 
-    static std::array<uint16_t, static_cast<size_t>(DefaultUniform::Count)> m_defaultUniformIds; //* Default uniform IDs
+    static Shader*             m_ssaoProgram;
+    static bgfx::UniformHandle m_ssao_depthTex;
+    static bgfx::UniformHandle m_ssao_normalTex;
+    static bgfx::UniformHandle m_ssaob_ssaoTex;
+    static bgfx::UniformHandle m_tonemap_sceneTex;
+    static bgfx::UniformHandle m_tonemap_ssaoTex;
+    static bgfx::UniformHandle m_defaultShadowMap;
 
-    static float                   m_cascadeSizes[NUM_CASCADES];
-    static float                   m_cascadeTexelSizes[NUM_CASCADES];
+    static Math::Mat4 m_csmLightViewProj;
+    static Math::Vec4 m_csmCascadeSplits;
+    static float      m_cascadeSizes[NUM_CASCADES];
+    static float      m_cascadeTexelSizes[NUM_CASCADES];
 
     static RendererConfig m_config; //* Render configuration
 
@@ -266,7 +178,8 @@ class RenderCore {
     static bgfx::IndexBufferHandle
         m_billboardIbh; //* Index buffer handle for billboards
 
-    static bgfx::VertexBufferHandle m_fsQuadVbh; //* Vertex buffer handle for fullscreen quad
+    static bgfx::VertexBufferHandle
+        m_fsQuadVbh; //* Vertex buffer handle for fullscreen quad
 
     static SDL_Window* win; //* SDL window handle
 
@@ -280,14 +193,14 @@ class RenderCore {
 
     /// @brief Struct to hold counts of drawn objects per rendering pass
     struct DrawnObjectCount {
-        uint32_t shadows = 0;
-        uint32_t sky    = 0;
-        uint32_t forward = 0;
-        uint32_t debug   = 0;
-        uint32_t billboard = 0;
-        uint32_t ui        = 0;
-        uint32_t culledFrustum = 0;
-        uint32_t culledSize    = 0;
+        uint32_t shadows             = 0;
+        uint32_t sky                 = 0;
+        uint32_t forward             = 0;
+        uint32_t debug               = 0;
+        uint32_t billboard           = 0;
+        uint32_t ui                  = 0;
+        uint32_t culledFrustum       = 0;
+        uint32_t culledSize          = 0;
         uint32_t culledShadowFrustum = 0;
         uint32_t culledShadowSize    = 0;
     };
@@ -296,6 +209,8 @@ class RenderCore {
         m_drawnCounts; //* Counts of drawn objects per rendering pass
 
     friend class Core;
+    friend class Renderer;
+    friend class UniformRegistry;
 };
 
 } // namespace Syngine

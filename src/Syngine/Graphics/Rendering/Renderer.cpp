@@ -10,9 +10,11 @@
 #include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
 #include <Syngine/ECS/AllComponents.h>
-#include <Syngine/Graphics/Resources/Shaders.h>
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Graphics/Rendering/RenderCore.h>
+#include <Syngine/Graphics/Resources/ShaderManager.h>
+#include <Syngine/Graphics/Resources/UniformRegistry.h>
+#include <Syngine/Graphics/Resources/RegisterBuiltinUniformProviders.inl>
 #include <Syngine/Math/Math.hpp>
 #include <Syngine/Math/Vector3.hpp>
 #include <Syngine/Utils/FsUtils.h>
@@ -22,12 +24,10 @@
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_properties.h>
 
+#include "Syngine/ECS/Components/CameraComponent.h"
+#include "Syngine/Graphics/Resources/UniformRegistry.h"
 
-#include "bgfx/bgfx.h"
-
-#include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
@@ -45,18 +45,19 @@ bool        Renderer::m_isReady = false;
 
 float Renderer::m_gizmoSize = 1.0f;
 std::unordered_map<std::string, Syngine::BillboardComponent*>
-    Renderer::m_gizmoRegistry;
-std::unordered_map<bgfx::ViewId, std::vector<Program>> Renderer::m_viewPrograms;
+                                         Renderer::m_gizmoRegistry;
 std::vector<Renderer::UniformCacheEntry> Renderer::m_uniformCache;
 
-int Renderer::width = 0;
-int Renderer::height = 0;
+int      Renderer::width         = 0;
+int      Renderer::height        = 0;
 uint64_t Renderer::currentDrawId = 1;
 
+CameraComponent* Renderer::m_camera       = nullptr;
 CameraComponent* Renderer::m_pseudoCamera = nullptr;
+Math::Vector3    Renderer::m_sunDir       = Math::Vector3(0.0f, 1.0f, 0.0f);
 
 Renderer::Renderer(int width, int height, const RendererConfig& config) {
-    Renderer::width = width;
+    Renderer::width  = width;
     Renderer::height = height;
     Renderer::m_uniformCache.resize(256);
 
@@ -67,26 +68,8 @@ Renderer::Renderer(int width, int height, const RendererConfig& config) {
 
 Renderer::~Renderer() {
     // Destroy all registered uniforms
-    for (auto& [id, uniform] : m_uniformRegistry) {
-        if (bgfx::isValid(uniform.handle)) {
-            bgfx::destroy(uniform.handle);
-        }
-        if (uniform.data) {
-            free(uniform.data);
-            uniform.data = nullptr;
-        }
-    }
-    m_uniformRegistry.clear();
-
-    // Destroy all programs. Uniforms are already destroyed above via m_uniformRegistry
-    // (RegisterUniform copies the same handle/data pointer into both stores, so only
-    // destroy from one of them).
-    for (auto& view : m_viewPrograms) {
-        for (auto& prog : view.second) {
-            bgfx::destroy(prog.program);
-        }
-    }
-    m_viewPrograms.clear();
+    ShaderManager::UnloadAllShaders();
+    UniformRegistry::DestroyAllUniforms();
 
     // Clear gizmos
     for (auto& [tag, gizmo] : m_gizmoRegistry) {
@@ -94,14 +77,17 @@ Renderer::~Renderer() {
     }
     m_gizmoRegistry.clear();
 
-    RenderCore::_Shutdown(); // Destroys RenderCore buffers/textures/VBs and calls bgfx::shutdown()
+    RenderCore::_Shutdown(); // Destroys RenderCore buffers/textures/VBs and
+                             // calls bgfx::shutdown()
 }
 
 bool Renderer::_CreateRenderer(const RendererConfig& config) {
+    _RegisterBuiltinUniformProviders();
     RenderCore::_Initialize(config);
 
     // Initial sun direction in degrees (yaw, pitch, roll)
-    // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive = up).
+    // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive
+    // = up).
     const Math::Vector3 initialSunDir(45.0f, 45.0f, 0.0f);
     float pitch = static_cast<float>(Math::DEG2RAD(initialSunDir.x()));
     float yaw   = static_cast<float>(Math::DEG2RAD(initialSunDir.y()));
@@ -110,7 +96,8 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     float cy    = cosf(yaw);
     float sy    = sinf(yaw);
 
-    // y = +sin(pitch) when pitch is above horizon. (Ensure convention matches UI)
+    // y = +sin(pitch) when pitch is above horizon. (Ensure convention matches
+    // UI)
     Math::Vector3 dirVec(cy * cp, sp, sy * cp);
     dirVec = dirVec.normalized();
 
@@ -121,421 +108,6 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     return true;
 }
 
-size_t Renderer::AddProgram(const std::string& path,
-                            const std::string& name,
-                            Syngine::ViewID    viewId) {
-    if (!Renderer::IsReady())
-        Syngine::Logger::Fatal("Cannot add program before renderer is ready");
-    if (name.empty()) {
-        Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR, true, "Program name cannot be empty");
-        return -1;
-    }
-
-    if (!_FileExists(path.c_str())) {
-        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
-                              true,
-                              "Shader file not found: %s",
-                              path.c_str());
-        return -1;
-    }
-
-    if (GetProgram(name).id != 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              true,
-                              "Program with name \"%s\" already exists",
-                              name.c_str());
-        return -1;
-    }
-
-    std::string vsPath = path + ".vert.bin";
-    std::string fsPath = path + ".frag.bin";
-
-    bgfx::ShaderHandle vs = _LoadShader(vsPath.c_str());
-    bgfx::ShaderHandle fs = _LoadShader(fsPath.c_str());
-    bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
-    if (bgfx::isValid(vs) && bgfx::isValid(fs)) {
-        programHandle = bgfx::createProgram(vs, fs, true);
-    }
-
-    if (!bgfx::isValid(programHandle)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
-                              false,
-                              "Failed to create program %s",
-                              name.c_str());
-        bgfx::destroy(vs);
-        bgfx::destroy(fs);
-        return -1;
-    }
-
-    Program prog;
-    prog.program = programHandle;
-    prog.name    = name;
-    prog.viewId  = viewId;
-    prog.vsPath  = vsPath;
-    prog.fsPath  = fsPath;
-    prog.id = programHandle.idx;
-
-    m_viewPrograms[viewId].push_back(prog); // Store program by viewId
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO,
-                          true,
-                          "Program %s created successfully",
-                          name.c_str());
-    return prog.id;
-}
-
-size_t Renderer::AddProgram(const std::string& bundlePath, const std::string& path, const std::string& name, Syngine::ViewID viewId) {
-    if (!Renderer::IsReady()) {
-        Syngine::Logger::Fatal("Cannot add program before renderer is ready");
-        return -1;
-    }
-    std::string resolvedBundlePath = Syngine::_ResolveOSPath(bundlePath);
-    if (name.empty() || path.empty() || resolvedBundlePath.empty()) {
-         Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
-                              "Invalid parameters for AddProgram from bundle");
-        return -1;
-    }
-    if (GetProgram(name).id != 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
-                              "Program with name \"%s\" already exists",
-                              name.c_str());
-        return -1;
-    }
-
-    // Fallback if bundle doesn't exist
-    if (!_FileExists(resolvedBundlePath.c_str())) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN, true,
-                              "Bundle %s not found, falling back to regular AddProgram",
-                              bundlePath.c_str());
-        return AddProgram(path, name, viewId);
-    }
-
-    bgfx::ShaderHandle vs = _LoadShaderFromBundle(bundlePath, path + ".vert.bin");
-    bgfx::ShaderHandle fs = _LoadShaderFromBundle(bundlePath, path + ".frag.bin");
-    bgfx::ProgramHandle programHandle = BGFX_INVALID_HANDLE;
-    if (!bgfx::isValid(vs) || !bgfx::isValid(fs)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
-                              "Failed to load shaders for program %s from bundle",
-                              name.c_str());
-        if (bgfx::isValid(vs)) bgfx::destroy(vs);
-        if (bgfx::isValid(fs)) bgfx::destroy(fs);
-        return -1;
-    }
-    programHandle = bgfx::createProgram(vs, fs, true);
-
-    if (!bgfx::isValid(programHandle)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false, "Failed to create program %s from bundle", name.c_str());
-        bgfx::destroy(vs);
-        bgfx::destroy(fs);
-        return -1;
-    }
-
-    Program prog;
-    prog.program = programHandle;
-    prog.name    = name;
-    prog.viewId  = viewId;
-    prog.vsPath  = path + ".vert.bin";
-    prog.fsPath  = path + ".frag.bin";
-    prog.bundlePath = bundlePath;
-    prog.id      = programHandle.idx;
-
-    m_viewPrograms[viewId].push_back(prog); // Store program by viewId
-    Syngine::Logger::LogF(Syngine::LogLevel::INFO, true, "Program %s created successfully from bundle", name.c_str());
-    return prog.id;
-}
-
-Program Renderer::GetProgram(const std::string_view& name) {
-    for (const auto& programs : m_viewPrograms) {
-        for (const auto& program : programs.second) {
-            if (program.name == name && bgfx::isValid(program.program)) {
-                return program;
-            }
-        }
-    }
-    return Program();
-}
-Program Renderer::GetProgram(size_t id) {
-    Program* prog = _GetProgram(id);
-    if (prog) {
-        return *prog;
-    }
-    return Program();
-}
-Program* Renderer::_GetProgram(size_t id) {
-    for (auto& pair : m_viewPrograms) {
-        for (auto& prog : pair.second) {
-            if (prog.id == id) {
-                return &prog;
-            }
-        }
-    }
-    return nullptr;
-}
-
-bool Renderer::RemoveProgram(Syngine::ViewID viewId, const std::string_view& name) {
-    for (int i = 0; i < m_viewPrograms[viewId].size(); ++i) {
-        if (m_viewPrograms[viewId][i].name == name) {
-            bgfx::destroy(m_viewPrograms[viewId][i].program);
-            m_viewPrograms[viewId].erase(m_viewPrograms[viewId].begin() + i);
-            return true;
-        }
-    }
-    return false;
-}
-bool Renderer::RemoveProgram(Syngine::ViewID viewId, size_t id) {
-    if (id < m_viewPrograms[viewId].size()) {
-        bgfx::destroy(m_viewPrograms[viewId][id].program);
-        m_viewPrograms[viewId].erase(m_viewPrograms[viewId].begin() + id);
-        return true;
-    }
-    return false;
-}
-
-bool Renderer::RemoveAllPrograms() {
-    for (auto& programs : m_viewPrograms) {
-        for (auto& program : programs.second) {
-            bgfx::destroy(program.program);
-        }
-        programs.second.clear();
-    }
-    return true;
-}
-
-bool Renderer::RemoveUniform(size_t id) {
-    auto it = m_uniformRegistry.find(id);
-    if (it != m_uniformRegistry.end()) {
-        m_uniformRegistry.erase(it);
-        return true;
-    }
-    return false;
-}
-
-void Renderer::RemoveAllUniforms() {
-    for (auto& [id, uniform] : m_uniformRegistry) {
-        if (bgfx::isValid(uniform.handle)) {
-            bgfx::destroy(uniform.handle);
-        }
-        if (uniform.data) {
-            free(uniform.data);
-            uniform.data = nullptr;
-        }
-    }
-    m_uniformRegistry.clear();
-}
-
-size_t Renderer::GetUniformID(const std::string& name) {
-    for (const auto& [id, uniform] : m_uniformRegistry) {
-        if (uniform.name == name) {
-            return id;
-        }
-    }
-    return 0; // Return 0 if not found
-}
-
-bool Renderer::ReloadProgram(Syngine::ViewID viewId, const std::string_view& name) {
-    for (auto& prog : m_viewPrograms[viewId]) {
-        if (prog.name == name) {
-            bgfx::ShaderHandle vs = _LoadShader(prog.vsPath.c_str());
-            bgfx::ShaderHandle fs = _LoadShader(prog.fsPath.c_str());
-            bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
-
-            if (!bgfx::isValid(newProgram)) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
-                                      "Failed to reload program %s",
-                                      name.data());
-                bgfx::destroy(vs);
-                bgfx::destroy(fs);
-                return false;
-            }
-
-            bgfx::destroy(prog.program); // Destroy old program
-            prog.program = newProgram;   // Update to new program
-            return true;
-        }
-    }
-    return false;
-}
-
-bool Renderer::ReloadAllPrograms() {
-    for (auto& programs : m_viewPrograms) {
-        for (auto& prog : programs.second) {
-            bgfx::ShaderHandle  vs;
-            bgfx::ShaderHandle  fs;
-
-            // Load differently depending on whether this program was originally
-            // loaded from a bundle or not, since the shader loading functions
-            // are different for each case
-            if (prog.bundlePath.empty()) {
-                vs = _LoadShader(prog.vsPath.c_str());
-                fs = _LoadShader(prog.fsPath.c_str());
-            } else {
-                vs = _LoadShaderFromBundle(prog.bundlePath, prog.vsPath);
-                fs = _LoadShaderFromBundle(prog.bundlePath, prog.fsPath);
-            }
-
-            bgfx::ProgramHandle newProgram = bgfx::createProgram(vs, fs, true);
-            if (!bgfx::isValid(newProgram)) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                                      "Failed to reload program %s",
-                                      prog.name.c_str());
-                bgfx::destroy(vs);
-                bgfx::destroy(fs);
-                return false;
-            }
-
-            bgfx::destroy(prog.program); // Destroy old program
-            prog.program = newProgram;   // Update to new program
-        }
-    }
-    return true;
-}
-
-bool Renderer::IsReady() {
-    return m_isReady;
-}
-
-size_t Renderer::RegisterUniform(const std::string& name,
-                                 UniformType        type,
-                                 uint16_t           num) {
-    if (name.empty()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
-                              "Uniform name cannot be empty");
-        return 0;
-    }
-
-    const size_t existingId = GetUniformID(name);
-    if (existingId != 0) {
-        Uniform* existing = GetUniform(existingId);
-        if (existing &&
-            (existing->type != type || existing->num != num)) {
-            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
-                                  true,
-                                  "Uniform '%s' already exists with type/num mismatch (existing type=%d num=%u, requested type=%d num=%u)",
-                                  name.c_str(),
-                                  static_cast<int>(existing->type),
-                                  existing->num,
-                                  static_cast<int>(type),
-                                  num);
-        }
-        return existingId;
-    }
-
-    Uniform u = {
-        .handle = bgfx::createUniform(
-            name.c_str(), static_cast<bgfx::UniformType::Enum>(type), num),
-        .type = type,
-        .name = name,
-        .num  = num
-    };
-
-    if (!bgfx::isValid(u.handle)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              true,
-                              "Failed to create uniform '%s'",
-                              name.c_str());
-        return 0;
-    }
-
-    // Allocate memory based on uniform type
-    size_t size = 0;
-    switch (type) {
-    case UNIFORM_SAMPLER:
-        u.data = nullptr; // Samplers don't need data storage
-        break;
-    case UNIFORM_VEC4:
-        size = sizeof(float) * 4;
-        break;
-    case UNIFORM_MAT3:
-        size = sizeof(float) * 9;
-        break;
-    case UNIFORM_MAT4:
-        size = sizeof(float) * 16;
-        break;
-    default:
-        u.data = nullptr;
-        break;
-    }
-
-    if (size > 0) {
-        u.data = malloc(size * num);
-        memset(u.data, 0, size * num);
-    }
-
-    // Store in uniform registry for fast lookup
-    m_uniformRegistry[u.handle.idx] = u;
-    return u.handle.idx;
-}
-
-Uniform* Renderer::GetUniform(size_t id) {
-    auto it = m_uniformRegistry.find(static_cast<uint16_t>(id));
-    if (it != m_uniformRegistry.end()) {
-        return &it->second;
-    }
-    return nullptr;
-}
-
-void Renderer::SetUniform(size_t id, const void* data, uint16_t num) {
-    Uniform* u = GetUniform(id);
-    if (u && bgfx::isValid(u->handle)) {
-        if (u->type == UNIFORM_SAMPLER) {
-            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
-                                  true,
-                                  "Cannot set texture uniform. Use bgfx::setTexture instead.");
-            return;
-        }
-
-        if (num > u->num) {
-            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
-                                  true,
-                                  "Uniform '%s' requested count %u exceeds registered count %u, clamping",
-                                  u->name.c_str(),
-                                  num,
-                                  u->num);
-            num = u->num;
-        }
-
-        // Get size
-        size_t size = 0;
-        switch (u->type) {
-        case UNIFORM_VEC4:
-            size = sizeof(float) * 4;
-            break;
-        case UNIFORM_MAT3:
-            size = sizeof(float) * 9;
-            break;
-        case UNIFORM_MAT4:
-            size = sizeof(float) * 16;
-            break;
-        default:
-            Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "Unknown uniform type");
-            break;
-        }
-
-        // If the current data is the same as the last data set for this
-        // uniform, skip setting it again Unless the uniform has never been set
-        // before (version == 0), in which case we always set it
-        UniformCacheEntry& cache = m_uniformCache[u->handle.idx];
-
-        if (cache.drawId == currentDrawId &&
-            cache.lastData.size() == size * num &&
-            memcmp(cache.lastData.data(), data, size * num) == 0) {
-            // Data is the same as last frame, skip setting
-            return;
-        }
-
-        // Set
-        bgfx::setUniform(u->handle, static_cast<const float*>(data), num);
-        // Update uniform cache
-        cache.lastData.resize(size * num);
-        memcpy(cache.lastData.data(), data, size * num);
-        cache.drawId = currentDrawId;
-
-        if (size > 0) {
-            memcpy(u->data, data, size * num);
-        }
-    }
-}
-
 void Renderer::_RegisterGizmo(const std::string& tag) {
     for (auto& [existingTag, gizmo] : m_gizmoRegistry) {
         if (existingTag == tag) {
@@ -544,41 +116,27 @@ void Renderer::_RegisterGizmo(const std::string& tag) {
         }
     }
 
-    Syngine::BillboardComponent* gizmo = new Syngine::BillboardComponent(nullptr, "gizmos/default_gizmos.spk", tag + ".png", BillboardMode::CAMERA_ALIGNED, m_gizmoSize);
+    Syngine::BillboardComponent* gizmo =
+        new BillboardComponent(nullptr,
+                               "gizmos/default_gizmos.spk",
+                               tag + ".png",
+                               BillboardMode::CAMERA_ALIGNED,
+                               m_gizmoSize);
 
     m_gizmoRegistry[tag] = gizmo;
 }
 
-Math::Vector3 Renderer::GetSunDirection() {
-    Uniform* u = RenderCore::_GetDefaultUniform(
-        RenderCore::DefaultUniform::u_lightDir);
-    if (u && u->data) {
-        float* dir = static_cast<float*>(u->data);
-        return Math::Vector3(dir[0], dir[1], dir[2]);
-    } else {
-        // If the uniform is not found, default to a downward light direction
-        return Math::Vector3(0.0f, 1.0f, 0.0f);
-    }
-}
+Math::Vector3 Renderer::GetSunDirection() { return m_sunDir; }
 
 void Renderer::SetSunDirection(const Math::Vector3& lightDir) {
-    // Loop over every uniform with "u_lightDir" as the name and set its value
-    for (auto& pair : m_uniformRegistry) {
-        Uniform& uniform = pair.second;
-        const std::string& name = uniform.name;
-        if (name.find("u_lightDir") != std::string::npos && bgfx::isValid(uniform.handle)) {
-            SetUniform(pair.first, lightDir);
-        }
-    }
+    m_sunDir = lightDir.normalized();
 }
 
-void Renderer::_RenderFrame(CameraComponent* camera, DebugModes debug) {
-    RenderCore::_RenderFrame(camera, debug);
+void Renderer::_RenderFrame(DebugModes debug) {
+    RenderCore::_RenderFrame(m_camera, debug);
 }
 
-void Renderer::_UpdateDrawID() {
-    currentDrawId++;
-}
+void Renderer::_UpdateDrawID() { currentDrawId++; }
 
 void Renderer::SetPseudoCamera(CameraComponent* camera) {
     m_pseudoCamera = camera;

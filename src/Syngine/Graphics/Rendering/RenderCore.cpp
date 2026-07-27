@@ -6,10 +6,12 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include <Syngine/Graphics/Rendering/RenderCore.h>
 #include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
 #include <Syngine/Core/ZoneManager.h>
+#include <Syngine/Graphics/Rendering/RenderCore.h>
+#include "Syngine/Graphics/Resources/ModelLoader.h"
+#include "Syngine/Graphics/Resources/UniformRegistry.h"
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Graphics/Rendering/DebugRenderer.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
@@ -18,9 +20,7 @@
 #include <Syngine/ECS/Components/CameraComponent.h>
 #include <Syngine/ECS/Components/MeshComponent.h>
 #include <Syngine/ECS/GameObject.h>
-#include <Syngine/Math/Matrix4x4.hpp>
-#include <Syngine/Math/Vector3.hpp>
-#include <Syngine/Math/Vector4.hpp>
+#include <Syngine/Math/Math.hpp>
 #include <Syngine/Utils/Serializer.h>
 #include <Syngine/Utils/Version.h>
 #include <Syngine/Utils/Profiler.h>
@@ -66,16 +66,9 @@ _CreateSolidRGBA8Texture(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
                                  bgfx::copy(pixel, sizeof(pixel)));
 }
 
-constexpr size_t DefaultUniformIndex(RenderCore::DefaultUniform uniform) {
-    return static_cast<size_t>(uniform);
-}
-
 } // namespace
 
 // I present to you an unholy abomination of static member definitions
-std::array<uint16_t, static_cast<size_t>(RenderCore::DefaultUniform::Count)>
-    RenderCore::m_defaultUniformIds = {};
-
 RenderCore::RenderCoreBuffers RenderCore::m_buffers = {
     .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
     .sceneColor =
@@ -112,13 +105,22 @@ bgfx::VertexBufferHandle RenderCore::m_billboardVbh = BGFX_INVALID_HANDLE;
 bgfx::IndexBufferHandle  RenderCore::m_billboardIbh = BGFX_INVALID_HANDLE;
 bgfx::VertexBufferHandle RenderCore::m_fsQuadVbh    = BGFX_INVALID_HANDLE;
 
-std::unordered_map<uint16_t, Uniform> Renderer::m_uniformRegistry;
-RenderCore::DrawnObjectCount          RenderCore::m_drawnCounts;
-float                                 RenderCore::m_maxSmallObjDistance =
+Shader*             RenderCore::m_ssaoProgram      = nullptr;
+bgfx::UniformHandle RenderCore::m_defaultShadowMap = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderCore::m_ssao_depthTex    = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderCore::m_ssao_normalTex   = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderCore::m_ssaob_ssaoTex    = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderCore::m_tonemap_sceneTex = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderCore::m_tonemap_ssaoTex  = BGFX_INVALID_HANDLE;
+
+RenderCore::DrawnObjectCount RenderCore::m_drawnCounts;
+float                        RenderCore::m_maxSmallObjDistance =
     50.0f; //* Small objects get culled beyond this distance
 
-RenderCore::internalPrograms          RenderCore::m_internalPrograms;
-std::vector<RenderCore::RenderPacket> RenderCore::m_renderPackets;
+std::vector<Renderer::RenderPacket> RenderCore::m_renderPackets;
+std::vector<Renderer::RenderPacket> RenderCore::m_billboardRenderPackets;
+Math::Mat4                          RenderCore::m_csmLightViewProj;
+Math::Vec4                          RenderCore::m_csmCascadeSplits;
 
 bool RenderCore::_Initialize(const RendererConfig& config) {
     m_config = config;
@@ -254,216 +256,34 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     Renderer::m_isReady =
         true; // Teehee. Temporarily set to true to allow shader loading.
 
-    m_internalPrograms.skyProgram = Renderer::AddProgram(
-        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_sky", "skybox", VIEW_SKY);
-    if (m_internalPrograms.skyProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("skybox")
-    }
-
-    m_internalPrograms.defaultProgram = Renderer::AddProgram(
-        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default", "default");
-    if (m_internalPrograms.defaultProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("default")
-    }
-
-    m_internalPrograms.textureProgram = Renderer::AddProgram(
-        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_texture", "texture");
-    if (m_internalPrograms.textureProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("texture")
-    }
-
-    m_internalPrograms.debugProgram =
-        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
-                             "default_debug",
-                             "default_debugger",
-                             VIEW_DEBUG);
-    if (m_internalPrograms.debugProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("debugger")
-    }
-
-    m_internalPrograms.billboardProgram =
-        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
-                             "default_billboard",
-                             "billboard",
-                             VIEW_BILLBOARD);
-    if (m_internalPrograms.billboardProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("billboard")
-    }
-
-    m_internalPrograms.shadowProgram =
-        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
-                             "default_shadow",
-                             "shadow",
-                             VIEW_SHADOW);
-    if (m_internalPrograms.shadowProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("shadow")
-    }
-
-    m_internalPrograms.ssaoProgram = Renderer::AddProgram(
-        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao", "ssao", VIEW_POSTPROCESS);
-    if (m_internalPrograms.ssaoProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("ssao")
-    }
-
-    m_internalPrograms.ssaoBlurProgram =
-        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
-                             "ssao_blur",
-                             "ssao_blur",
-                             VIEW_POSTPROCESS);
-    if (m_internalPrograms.ssaoBlurProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("ssao_blur")
-    }
-
-    m_internalPrograms.tonemapProgram =
-        Renderer::AddProgram(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
-                             "tonemapping",
-                             "tonemapping",
-                             VIEW_POSTPROCESS);
-    if (m_internalPrograms.tonemapProgram == (size_t)-1) {
-        SYN_INT_RENDEREXIT("tonemapping")
-    }
-    Renderer::m_isReady = false;
-
-    // Create default uniforms (global, deduplicated by BGFX uniform name).
     {
-        const auto bindUniform = [](DefaultUniform slot,
-                                    const char*    bgfxName,
-                                    UniformType    type,
-                                    uint16_t       num = 1) {
-            size_t id = Renderer::GetUniformID(bgfxName);
-            if (id == 0) {
-                id = Renderer::RegisterUniform(bgfxName, type, num);
-            }
-            m_defaultUniformIds[DefaultUniformIndex(slot)] =
-                static_cast<uint16_t>(id);
-        };
+        ShaderManager::LoadShader(
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_sky", VIEW_SKY);
+        ShaderManager::LoadShader(
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default", VIEW_FORWARD);
+        ShaderManager::LoadShader(
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_texture", VIEW_FORWARD);
+        ShaderManager::LoadShader(
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_debug", VIEW_DEBUG);
+        ShaderManager::LoadShader(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
+                                  "default_billboard",
+                                  VIEW_BILLBOARD);
+        ShaderManager::LoadShader(
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_shadow", VIEW_SHADOW);
+        size_t ssao = ShaderManager::LoadShader(
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao", VIEW_AO);
+        ShaderManager::LoadShader(
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao_blur", VIEW_AO);
+        ShaderManager::LoadShader(
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "tonemapping", VIEW_POSTPROCESS);
 
-        bindUniform(DefaultUniform::u_billboard,
-                    "u_default_billboard",
-                    UniformType::UNIFORM_VEC4);
-        bindUniform(DefaultUniform::s_bill_albedo,
-                    "s_albedo",
-                    UniformType::UNIFORM_SAMPLER);
-        bindUniform(DefaultUniform::u_billboard_mode,
-                    "u_default_billboard_mode",
-                    UniformType::UNIFORM_VEC4);
-        bindUniform(DefaultUniform::u_billboard_lighting,
-                    "u_billboard_lighting",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::s_shadowMap,
-                    "s_shadowMap",
-                    UniformType::UNIFORM_SAMPLER);
-
-        bindUniform(DefaultUniform::u_baseColor,
-                    "u_baseColor",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_normalMatrix,
-                    "u_normalMatrix",
-                    UniformType::UNIFORM_MAT4);
-
-        bindUniform(DefaultUniform::u_floats,
-                    "u_floats",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_skyColor,
-                    "u_skyColor",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_sunColor,
-                    "u_sunColor",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_horizonColor,
-                    "u_horizonColor",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::s_normalMap,
-                    "s_normalMap",
-                    UniformType::UNIFORM_SAMPLER);
-
-        bindUniform(DefaultUniform::u_useVertexColor,
-                    "u_useVertexColor",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_skyColorZenith,
-                    "u_skyColorZenith",
-                    UniformType::UNIFORM_VEC4);
-        bindUniform(DefaultUniform::u_skyColorMidnight,
-                    "u_skyColorMidnight",
-                    UniformType::UNIFORM_VEC4);
-        bindUniform(DefaultUniform::u_sky_cameraPos,
-                    "u_cameraPos",
-                    UniformType::UNIFORM_VEC4);
-        bindUniform(
-            DefaultUniform::u_sky_time, "u_time", UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_lightDir,
-                    "u_lightDir",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_uvScale,
-                    "u_uvScale",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_materialParams1,
-                    "u_materialParams1",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::s_heightMap,
-                    "s_heightMap",
-                    UniformType::UNIFORM_SAMPLER);
-
-        bindUniform(DefaultUniform::u_csmSplits,
-                    "u_csmSplits",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_csmLightViewProj,
-                    "u_csmLightViewProj",
-                    UniformType::UNIFORM_MAT4,
-                    4);
-
-        bindUniform(DefaultUniform::u_viewPos,
-                    "u_viewPos",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_shadowParams,
-                    "u_shadowParams",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_csmTexelSize,
-                    "u_csmTexelSize",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::u_ssao_params,
-                    "u_ssaoParams",
-                    UniformType::UNIFORM_VEC4);
-        bindUniform(DefaultUniform::u_ssao_resolution,
-                    "u_ssaoResolution",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::s_ssao_normalTex,
-                    "s_normal",
-                    UniformType::UNIFORM_SAMPLER);
-
-        bindUniform(DefaultUniform::s_ssao_depthTex,
-                    "s_depth",
-                    UniformType::UNIFORM_SAMPLER);
-
-        bindUniform(DefaultUniform::s_ssaob_ssaoTex,
-                    "s_ssao",
-                    UniformType::UNIFORM_SAMPLER);
-        bindUniform(DefaultUniform::u_ssaob_params,
-                    "u_floats",
-                    UniformType::UNIFORM_VEC4);
-
-        bindUniform(DefaultUniform::s_tonemap_sceneTex,
-                    "s_sceneTex",
-                    UniformType::UNIFORM_SAMPLER);
-        bindUniform(DefaultUniform::s_tonemap_ssaoTex,
-                    "s_ssaoTex",
-                    UniformType::UNIFORM_SAMPLER);
+        m_ssaoProgram      = ShaderManager::Get(ssao);
+        m_defaultShadowMap = UniformRegistry::_GetUniformHandle("u_shadowMap");
+        m_ssao_depthTex    = UniformRegistry::_GetUniformHandle("u_depthTex");
+        m_ssao_normalTex   = UniformRegistry::_GetUniformHandle("u_normalTex");
+        m_ssaob_ssaoTex    = UniformRegistry::_GetUniformHandle("u_ssaoTex");
+        m_tonemap_sceneTex = UniformRegistry::_GetUniformHandle("u_sceneTex");
+        m_tonemap_ssaoTex  = UniformRegistry::_GetUniformHandle("u_ssaoTex");
     }
 
     if (!bgfx::isValid(s_fallbackAlbedo)) {
@@ -482,6 +302,8 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
             "Failed to create one or more fallback textures");
         return false;
     }
+
+    m_config.shadowMapSize = SHADOW_MAP_SIZE; // Ensure shadow map size is set
 
     // create billboard buffers
     static const float billboardVertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
@@ -547,28 +369,6 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         return false;
     }
 
-    // Set default sky colors
-    Math::Vector3 skyColorZenith   = { 0.529f, 0.808f, 0.922f };
-    Math::Vector3 skyColorMidnight = { 0.05f, 0.05f, 0.1f };
-    Math::Vector3 sunColor         = { 1.0f, 0.956f, 0.839f };
-    Math::Vector3 scatterColor     = { 0.8f, 0.5f, 0.3f };
-
-    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                             DefaultUniform::u_skyColorZenith)],
-                         skyColorZenith);
-    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                             DefaultUniform::u_skyColorMidnight)],
-                         skyColorMidnight);
-    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                             DefaultUniform::u_sunColor)],
-                         sunColor);
-    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                             DefaultUniform::u_skyColor)],
-                         skyColorZenith);
-    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                             DefaultUniform::u_horizonColor)],
-                         scatterColor);
-
     Window::_SetContextCreated(true);
 
     return true;
@@ -602,7 +402,6 @@ void RenderCore::_Shutdown() {
         fb = BGFX_INVALID_HANDLE;
     });
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
-    m_defaultUniformIds = {};
 
     bgfx::shutdown();
 }
@@ -744,14 +543,6 @@ bool RenderCore::_SetResolution(int width, int height) {
     return true;
 }
 
-Uniform* RenderCore::_GetDefaultUniform(DefaultUniform name) {
-    const uint16_t id = m_defaultUniformIds[DefaultUniformIndex(name)];
-    if (id == 0) {
-        return nullptr;
-    }
-    return Renderer::GetUniform(id);
-}
-
 /*
 --- Drawing helpers ---
 */
@@ -827,16 +618,8 @@ void RenderCore::_CalculateCascadeMatrices(
                    outLightProj[i].data());
     }
 
-    outCascadeSplits = cascadeDistances;
-
-    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                             DefaultUniform::u_csmLightViewProj)],
-                         lightViewProj[0].data(),
-                         NUM_CASCADES);
-    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                             DefaultUniform::u_csmLightViewProj)],
-                         lightViewProj[0].data(),
-                         NUM_CASCADES);
+    outCascadeSplits   = cascadeDistances;
+    m_csmLightViewProj = lightViewProj[0];
 }
 
 CameraComponent::Frustum
@@ -963,16 +746,19 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
 void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     m_renderPackets.clear();
+    m_billboardRenderPackets.clear();
 
     // Iterate registry
-    auto gameObjects = Registry::GetRenderableObjects();
+    auto gameObjects =
+        Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH);
+    m_renderPackets.reserve(gameObjects.size());
     for (auto& go : gameObjects) {
         if (!go || !go->IsActive()) continue;
 
         auto meshComp = go->GetComponent<MeshComponent>();
         if (!meshComp || !meshComp->isEnabled) continue;
 
-        MeshData& meshData = meshComp->meshData;
+        ModelData& meshData = meshComp->modelData;
         if (!meshData.valid) continue;
         if (_ShouldCullBySize(go, camera)) {
             m_drawnCounts.culledSize++;
@@ -986,8 +772,6 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
             m_drawnCounts.culledFrustum++;
             continue;
         }
-        bgfx::ProgramHandle program = Renderer::GetProgram(go->type).program;
-        if (!bgfx::isValid(program)) continue;
 
         Mat4 modelMtx =
             go->GetComponent<TransformComponent>()->GetModelMatrix();
@@ -999,173 +783,78 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
         // Emit one packet per submesh
         for (size_t submeshIdx = 0; submeshIdx < meshData.subMeshes.size();
              ++submeshIdx) {
-            const SubMesh& submesh = meshData.subMeshes[submeshIdx];
-            size_t materialIdx     = static_cast<size_t>(submesh.materialIndex);
+            const auto& subMesh = meshData.subMeshes[submeshIdx];
 
-            // Skip invalid materials
-            if (materialIdx >= meshComp->meshData.materials.size()) continue;
-
-            Material& mat = meshComp->meshData.materials[materialIdx];
-
-            // Create packet
-            MaterialInstance matInst;
-            RenderPacket     packet;
-            packet.vbh        = meshData.vbh;
-            packet.ibh        = meshData.ibh;
-            packet.indexStart = submesh.indexStart;
-            packet.indexCount = submesh.indexCount;
-
-            packet.modelMtx = modelMtx;
-            packet.program  = { program };
-
-            const bool isTextureProgram = go->type == "texture";
-            const bool isDefaultProgram = go->type == "default";
-            if (!isTextureProgram && !isDefaultProgram) {
-                continue;
-            }
-
-            const DefaultUniform normalMatrixSlot =
-                DefaultUniform::u_normalMatrix;
-
-            const uint16_t handle =
-                m_defaultUniformIds[DefaultUniformIndex(normalMatrixSlot)];
-            Uniform* uModel = Renderer::GetUniform(handle);
-            if (uModel) {
-                matInst.uniforms.push_back({ uModel->handle, normalMtx, 1 });
-            }
-
-            // This looks backwards, because it is. But so are the meshes. So it
-            // cancels out.
-            matInst.renderState =
-                (mirrored ? BGFX_STATE_CULL_CW : BGFX_STATE_FRONT_CCW);
-
-            // Material and uniforms
-            {
-                // UV scale
-                Math::Vector4 uvScale(
-                    1.0f); // W unused for now. One number for each texture.
-                if (meshComp->GetObjectUVScaleOverride() != 1.0f) {
-                    uvScale.setX(meshComp->GetObjectUVScaleOverride());
-                    uvScale.setY(meshComp->GetObjectUVScaleOverride());
-                    uvScale.setZ(meshComp->GetObjectUVScaleOverride());
-                } else {
-                    uvScale = mat.uvScale;
-                }
-
-                const DefaultUniform uvScaleSlot = DefaultUniform::u_uvScale;
-                MaterialInstance::UniformData uniformData1 = {
-                    Renderer::GetUniform(
-                        m_defaultUniformIds[DefaultUniformIndex(uvScaleSlot)])
-                        ->handle,
-                    uvScale,
-                    1
-                };
-                matInst.uniforms.push_back(uniformData1);
-
-                // Params1
-                // mixFactor, ambient, uvOverride, unuse
-
-                // Only texture shader uses mix factor, for blending
-                // with normal map. Default shader doesn't use it at
-                // all.
-                const float mixf =
-                    (go->type == "texture") ? mat.mixFactor : 0.0f;
-                Math::Vector4 params1(mixf,
-                                      mat.ambient,
-                                      meshComp->GetObjectUVScaleOverride(),
-                                      mat.useVertexColor ? 1.0f : 0.0f);
-                const DefaultUniform materialParamsSlot =
-                    DefaultUniform::u_materialParams1;
-                MaterialInstance::UniformData uniformData2 = {
-                    Renderer::GetUniform(
-                        m_defaultUniformIds[DefaultUniformIndex(
-                            materialParamsSlot)])
-                        ->handle,
-                    params1,
-                    1
-                };
-                matInst.uniforms.push_back(uniformData2);
-
-                // Textures
-                if (go->type == "texture") {
-                    uint32_t                  sflags = BGFX_SAMPLER_NONE;
-                    const bgfx::TextureHandle albedoTex =
-                        bgfx::isValid(mat.albedo) ? mat.albedo
-                                                  : s_fallbackAlbedo;
-                    const bgfx::TextureHandle normalTex =
-                        bgfx::isValid(mat.normalMap) ? mat.normalMap
-                                                     : s_fallbackNormal;
-                    const bgfx::TextureHandle heightTex =
-                        bgfx::isValid(mat.heightMap) ? mat.heightMap
-                                                     : s_fallbackHeight;
-
-                    matInst.textures.push_back(
-                        { 0,
-                          Renderer::GetUniform(
-                              m_defaultUniformIds[DefaultUniformIndex(
-                                  DefaultUniform::s_bill_albedo)])
-                              ->handle,
-                          albedoTex,
-                          sflags });
-                    matInst.textures.push_back(
-                        { 1,
-                          Renderer::GetUniform(
-                              m_defaultUniformIds[DefaultUniformIndex(
-                                  DefaultUniform::s_normalMap)])
-                              ->handle,
-                          normalTex,
-                          sflags });
-                    matInst.textures.push_back(
-                        { 2,
-                          Renderer::GetUniform(
-                              m_defaultUniformIds[DefaultUniformIndex(
-                                  DefaultUniform::s_heightMap)])
-                              ->handle,
-                          heightTex,
-                          sflags });
-                } else if (go->type == "default") {
-                    // just u_baseColor for default shader, no samplers
-                    MaterialInstance::UniformData uniformData = {
-                        Renderer::GetUniform(
-                            m_defaultUniformIds[DefaultUniformIndex(
-                                DefaultUniform::u_baseColor)])
-                            ->handle,
-                        mat.baseColor,
-                        1
-                    };
-                    matInst.uniforms.push_back(uniformData);
-
-                    matInst.textures.push_back(
-                        { 1,
-                          Renderer::GetUniform(
-                              m_defaultUniformIds[DefaultUniformIndex(
-                                  DefaultUniform::s_normalMap)])
-                              ->handle,
-                          s_fallbackNormal,
-                          BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                              BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP });
-                }
-            }
-            packet.material = matInst;
-            m_renderPackets.push_back(packet);
+            m_renderPackets.push_back(
+                { .vbh        = meshData.vbh,
+                  .ibh        = meshData.ibh,
+                  .modelMtx   = modelMtx,
+                  .indexStart = subMesh.indexStart,
+                  .indexCount = subMesh.indexCount,
+                  .material   = &meshData.materials[subMesh.materialIndex],
+                  .shader = meshData.materials[subMesh.materialIndex].shader,
+                  .go     = go });
         }
+    }
+
+    // Include billboards too
+    auto billboardGameObjects =
+        Registry::GetGameObjectsWithComponent(SYN_COMPONENT_BILLBOARD);
+    m_billboardRenderPackets.reserve(billboardGameObjects.size());
+    for (auto& go : billboardGameObjects) {
+        if (!go || !go->IsActive()) continue;
+
+        auto billboardComp = go->GetComponent<BillboardComponent>();
+        if (!billboardComp || !billboardComp->isEnabled) continue;
+
+        // Since we can't use _ShouldCullBySize for billboards (they don't have
+        // mesh data), we do a simple distance check here and skip if they're
+        // too far away to be visible
+        const Vector3 camPos = camera->GetPosition();
+        const Vector3 goPos =
+            go->GetComponent<TransformComponent>()->GetWorldPosition();
+        const float distance = (goPos - camPos).length();
+        if (distance > m_maxSmallObjDistance) {
+            m_drawnCounts.culledSize++;
+            continue;
+        }
+
+        const Vector3 min = billboardComp->GetMinBounds();
+        const Vector3 max = billboardComp->GetMaxBounds();
+        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
+            m_drawnCounts.culledFrustum++;
+            continue;
+        }
+
+        Mat4 modelMtx =
+            go->GetComponent<TransformComponent>()->GetModelMatrix();
+
+        m_billboardRenderPackets.push_back(
+            { .vbh        = m_billboardVbh,
+              .ibh        = m_billboardIbh,
+              .modelMtx   = modelMtx,
+              .indexStart = 0,
+              .indexCount = 6,
+              .material   = billboardComp->_GetMaterial(),
+              .shader     = billboardComp->_GetMaterial()->shader,
+              .go         = go });
     }
 }
 
-void RenderCore::_ScreenSpaceQuad(ViewID view, Program program) {
+void RenderCore::_ScreenSpaceQuad(ViewID view, const Shader* program) {
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_CULL_CW);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
     Renderer::_UpdateDrawID();
-    bgfx::submit(view, program.program);
+    bgfx::submit(view, program->m_program);
 }
 
 /*
 --- Drawing functions ---
 */
 
-void RenderCore::_DrawShadows(const Program&   program,
+void RenderCore::_DrawShadows(const Shader*    program,
                               CameraComponent* camera,
                               uint8_t          cascade) {
     SYN_PROFILE_FUNCTION();
@@ -1185,14 +874,14 @@ void RenderCore::_DrawShadows(const Program&   program,
     }
 
     std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
-    bgfx::setViewName(program.viewId + cascade, "Shadow Cascade");
+    bgfx::setViewName(program->m_viewId + cascade, "Shadow Cascade");
     for (auto& gameObject : gameObjects) {
         if (!gameObject) continue;
 
-        auto*    meshComp = gameObject->GetComponent<MeshComponent>();
-        MeshData meshData = meshComp->meshData;
+        auto*     meshComp  = gameObject->GetComponent<MeshComponent>();
+        ModelData modelData = meshComp->modelData;
 
-        if (!meshData.valid || !meshComp->isEnabled || !meshComp->castShadows)
+        if (!modelData.valid || !meshComp->isEnabled || !meshComp->castShadows)
             continue;
 
         // Size-based shadow culling from light's perspective
@@ -1217,84 +906,73 @@ void RenderCore::_DrawShadows(const Program&   program,
             gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
         bgfx::setTransform(modelMtx.data());
 
-        bgfx::setVertexBuffer(0, meshData.vbh);
-        bgfx::setIndexBuffer(meshData.ibh);
+        bgfx::setVertexBuffer(0, modelData.vbh);
+        bgfx::setIndexBuffer(modelData.ibh);
 
         // Shadow shaders are simple, just output depth
         Renderer::_UpdateDrawID();
-        bgfx::submit(program.viewId + cascade, program.program);
+        bgfx::submit(program->m_viewId + cascade, program->m_program);
         m_drawnCounts.shadows++;
     }
 }
 
-void RenderCore::_DrawSky(const Program&         program,
+void RenderCore::_DrawSky(const Shader*          program,
                           const CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setViewName(program.viewId, "Sky");
-    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
+    bgfx::setViewName(program->m_viewId, "Sky");
+    bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_WRITE_Z | BGFX_STATE_DEPTH_TEST_ALWAYS |
                    BGFX_STATE_MSAA | BGFX_STATE_CULL_CW);
 
-    const Math::Vector3 cameraPos = camera->GetPosition();
-    const Math::Vector4 skyCameraPos(cameraPos, 1.0f);
-    const Math::Vector4 timeVec(
-        static_cast<float>(Core::m_frameCounter.frameCount));
-
-    Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                             DefaultUniform::u_sky_cameraPos)],
-                         skyCameraPos);
-    Renderer::SetUniform(
-        m_defaultUniformIds[DefaultUniformIndex(DefaultUniform::u_sky_time)],
-        timeVec);
+    _SetFrameUniforms(program);
 
     bgfx::setVertexBuffer(0, m_fsQuadVbh);
     Renderer::_UpdateDrawID();
-    bgfx::submit(program.viewId, program.program);
+    bgfx::submit(program->m_viewId, program->m_program);
 }
 
-void RenderCore::_DrawForward(const Program& program, CameraComponent* camera) {
+void RenderCore::_DrawForward(const Shader* program, CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setViewName(VIEW_FORWARD, "Forward");
-    bgfx::setViewFrameBuffer(VIEW_FORWARD, m_buffers.sceneFB);
+    bgfx::setViewName(program->m_viewId, "Forward");
+    bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
+
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA;
+    bgfx::setState(renderState);
+    uint32_t flags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                     BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
+
+    _SetFrameUniforms(program);
+    _SetViewUniforms(program);
 
     for (auto& packet : m_renderPackets) {
-        if (program.program.idx != packet.program.program.idx)
+        if (program->m_program.idx != packet.shader->m_program.idx)
             continue; // Skip if not matching program
-        bgfx::setState(renderState | packet.material.renderState);
-        uint32_t flags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                         BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
-        packet.material.Bind(); // Set uniforms and textures
+        _SetObjectUniforms(program, packet);
+        _SetMaterialUniforms(program, packet, flags);
 
         if (m_config.useShadows) {
-            const DefaultUniform shadowMapSlot = DefaultUniform::s_shadowMap;
             bgfx::setTexture(
-                3,
-                Renderer::GetUniform(
-                    m_defaultUniformIds[DefaultUniformIndex(shadowMapSlot)])
-                    ->handle,
-                m_buffers.shadowDepth,
-                flags);
+                3, m_defaultShadowMap, m_buffers.shadowDepth, flags);
         }
 
         bgfx::setTransform(packet.modelMtx.data());
         bgfx::setVertexBuffer(0, packet.vbh);
         bgfx::setIndexBuffer(packet.ibh, packet.indexStart, packet.indexCount);
         Renderer::_UpdateDrawID();
-        bgfx::submit(program.viewId, program.program);
+        bgfx::submit(program->m_viewId, program->m_program);
         m_drawnCounts.forward++;
     }
 }
 
-void RenderCore::_DrawDebug(const Program&   program,
+void RenderCore::_DrawDebug(const Shader*    program,
                             CameraComponent* camera,
                             DebugModes       debug) {
     SYN_PROFILE_FUNCTION();
 
-    bgfx::setViewName(program.viewId, "Debug");
-    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
+    bgfx::setViewName(program->m_viewId, "Debug");
+    bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
 
     // Draw various debug overlays
     if (debug.Gizmos && m_drender) {
@@ -1369,206 +1047,78 @@ void RenderCore::_DrawDebug(const Program&   program,
         Core::_GetContext()->physicsManager->_DrawDebug(
             Renderer::width,
             Renderer::height,
-            program.program,
+            program->m_program,
             playerCamera->GetCamera(),
             camera->GetCamera(),
             debug);
     }
 }
 
-void RenderCore::_DrawBillboard(const Program&   program,
+void RenderCore::_DrawBillboard(const Shader*    program,
                                 CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
-    bgfx::setViewName(program.viewId, "Billboards");
-    bgfx::setViewFrameBuffer(program.viewId, m_buffers.sceneFB);
+    bgfx::setViewName(program->m_viewId, "Billboards");
+    bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA;
+    bgfx::setState(renderState);
 
-    // Draw regular billboards
-    std::vector<GameObject*> billboards =
-        Registry::GetGameObjectsWithComponent(SYN_COMPONENT_BILLBOARD);
-    for (auto go : billboards) {
-        auto* comp = go->GetComponent<BillboardComponent>();
-        if (!comp || !comp->isEnabled) continue;
+    _SetFrameUniforms(program);
+    _SetViewUniforms(program);
 
-        // Since we can't use _ShouldCullBySize for billboards (they don't have
-        // mesh data), we do a simple distance check here and skip if they're
-        // too far away to be visible
-        const Vector3 camPos = camera->GetPosition();
-        const Vector3 goPos =
-            go->GetComponent<TransformComponent>()->GetWorldPosition();
-        const float distance = (goPos - camPos).length();
-        if (distance > m_maxSmallObjDistance) {
-            m_drawnCounts.culledSize++;
-            continue;
-        }
+    // Draw billboards
+    for (auto packet : m_billboardRenderPackets) {
+        _SetObjectUniforms(program, packet);
+        _SetMaterialUniforms(program, packet);
 
-        const Vector3 min = comp->GetMinBounds();
-        const Vector3 max = comp->GetMaxBounds();
-        if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
-            m_drawnCounts.culledFrustum++;
-            continue;
-        }
-
-        const Vector3 pos =
-            go->GetComponent<TransformComponent>()->GetWorldPosition();
-
-        // Pack center position and size into a vec4 and send it off
-        Math::Vector4 billboardData(pos, comp->size);
-        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                 DefaultUniform::u_billboard)],
-                             billboardData);
-
-        // In addition, send the mode and rot as a vec4
-        Math::Vector4 billboardExtra(comp->GetRot(),
-                                     static_cast<float>(comp->GetMode()));
-        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                 DefaultUniform::u_billboard_mode)],
-                             billboardExtra);
-
-        Math::Vector4 lightingFlags(
-            comp->receiveSunLight ? 1.0f : 0.0f,
-            (comp->receiveShadows && m_config.useShadows) ? 1.0f : 0.0f,
-            0.0f,
-            0.0f);
-        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                 DefaultUniform::u_billboard_lighting)],
-                             lightingFlags);
-
-        // Dummy model matrix for the billboard
-        Math::Matrix4x4 modelMtx;
-        bgfx::setState(renderState);
-        bgfx::setTransform(modelMtx.data());
-        bgfx::setVertexBuffer(0, m_billboardVbh);
-        bgfx::setIndexBuffer(m_billboardIbh);
-
-        // Set shadow if applicable
-        if (m_config.useShadows && comp->receiveShadows) {
-            const uint64_t depthSampler =
-                BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
-            bgfx::setTexture(3,
-                             Renderer::GetUniform(
-                                 m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::s_shadowMap)])
-                                 ->handle,
-                             m_buffers.shadowDepth,
-                             depthSampler);
-        }
-
-        bgfx::setTexture(
-            0,
-            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::s_bill_albedo)])
-                ->handle,
-            comp->_GetTexture());
         Renderer::_UpdateDrawID();
-        bgfx::submit(program.viewId, program.program);
+        bgfx::submit(program->m_viewId, program->m_program);
         m_drawnCounts.billboard++;
     }
 }
 
-void RenderCore::_DrawPostProcess(const Program& program) {
+void RenderCore::_DrawSSAO(const Shader* program) {
     SYN_PROFILE_FUNCTION();
-    // I'd like to use a switch here but can't convert program IDs to case
-    // labels
-    if (program.id == m_internalPrograms.ssaoProgram) {
-        if (!m_config.useSSAO) return;
+    if (!m_config.useSSAO) return;
+
+    _SetFrameUniforms(program);
+    _SetViewUniforms(program);
+    if (program->m_program.idx == m_ssaoProgram->m_program.idx) {
         bgfx::setViewName(VIEW_AO, "SSAO Main");
         bgfx::setViewFrameBuffer(VIEW_AO, m_buffers.ssaoFB);
-        bgfx::setTexture(
-            0,
-            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::s_ssao_depthTex)])
-                ->handle,
-            m_buffers.sceneDepth);
-        bgfx::setTexture(
-            1,
-            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::s_ssao_normalTex)])
-                ->handle,
-            m_buffers.sceneNormal);
+        bgfx::setTexture(0, m_ssao_depthTex, m_buffers.sceneDepth);
+        bgfx::setTexture(1, m_ssao_normalTex, m_buffers.sceneNormal);
 
-        const Math::Vector4 ssaoParams(
-            0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width / 2.0f));
-        const Math::Vector4 ssaoResolution(
-            static_cast<float>(Renderer::width),
-            static_cast<float>(Renderer::height),
-            1.0f / static_cast<float>(Renderer::width),
-            1.0f / static_cast<float>(Renderer::height));
-        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                 DefaultUniform::u_ssao_params)],
-                             ssaoParams);
-        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                 DefaultUniform::u_ssao_resolution)],
-                             ssaoResolution);
         _ScreenSpaceQuad(VIEW_AO, program);
-    } else if (program.id == m_internalPrograms.tonemapProgram) {
-        bgfx::setViewName(program.viewId, "Tonemap");
-        bgfx::setViewFrameBuffer(VIEW_POSTPROCESS,
-                                 BGFX_INVALID_HANDLE); // Backbuffer
-        bgfx::setTexture(
-            0,
-            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::s_tonemap_sceneTex)])
-                ->handle,
-            m_buffers.sceneColor);
-        bgfx::setTexture(
-            1,
-            Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::s_tonemap_ssaoTex)])
-                ->handle,
-            m_buffers.ssaoBlurFinal);
-        _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
-    } else if (program.id == m_internalPrograms.ssaoBlurProgram) {
-        if (!m_config.useSSAO) return;
+    } else {
         for (int i = 0; i < 2; ++i) {
             if (i == 0) { // Horizontal blur
                 bgfx::setViewName(ViewID(VIEW_AO + 1), "SSAO Blur H");
                 bgfx::setViewFrameBuffer(VIEW_AO + 1, m_buffers.ssaoBlurHFB);
-                bgfx::setTexture(0,
-                                 Renderer::GetUniform(
-                                     m_defaultUniformIds[DefaultUniformIndex(
-                                         DefaultUniform::s_ssaob_ssaoTex)])
-                                     ->handle,
-                                 m_buffers.ssaoTex);
+                bgfx::setTexture(0, m_ssaob_ssaoTex, m_buffers.ssaoTex);
             } else { // Vertical blur
                 bgfx::setViewName(ViewID(VIEW_AO + 2), "SSAO Blur V");
                 bgfx::setViewFrameBuffer(VIEW_AO + 2, m_buffers.ssaoBlurVFB);
-                bgfx::setTexture(0,
-                                 Renderer::GetUniform(
-                                     m_defaultUniformIds[DefaultUniformIndex(
-                                         DefaultUniform::s_ssaob_ssaoTex)])
-                                     ->handle,
-                                 m_buffers.ssaoBlurH);
+                bgfx::setTexture(0, m_ssaob_ssaoTex, m_buffers.ssaoBlurH);
             }
 
-            bgfx::setTexture(
-                1,
-                Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                         DefaultUniform::s_ssao_depthTex)])
-                    ->handle,
-                m_buffers.sceneDepth);
-            bgfx::setTexture(
-                2,
-                Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                         DefaultUniform::s_ssao_normalTex)])
-                    ->handle,
-                m_buffers.sceneNormal);
-
-            const Math::Vector4 ssaoBlurParams(
-                1.5f,
-                static_cast<float>(i),
-                static_cast<float>(Renderer::width),
-                static_cast<float>(Renderer::height));
-            Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::u_ssaob_params)],
-                                 ssaoBlurParams);
+            bgfx::setTexture(1, m_ssao_depthTex, m_buffers.sceneDepth);
+            bgfx::setTexture(2, m_ssao_normalTex, m_buffers.sceneNormal);
             _ScreenSpaceQuad(ViewID(VIEW_AO + i + 1), program);
         }
     }
 }
 
-void RenderCore::_DrawDbgBillboard(const Program& program) {
+void RenderCore::_DrawPostProcess(const Shader* program) {
+    SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(program->m_viewId, "PostProcess");
+    bgfx::setViewFrameBuffer(VIEW_POSTPROCESS,
+                             BGFX_INVALID_HANDLE); // Backbuffer
+    bgfx::setTexture(0, m_tonemap_sceneTex, m_buffers.sceneColor);
+    bgfx::setTexture(1, m_tonemap_ssaoTex, m_buffers.ssaoBlurFinal);
+    _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
+}
+
+void RenderCore::_DrawDbgBillboard(Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_BILL_DBG, "Gizmos");
     bgfx::setViewFrameBuffer(VIEW_BILL_DBG, m_buffers.sceneFB);
@@ -1576,48 +1126,42 @@ void RenderCore::_DrawDbgBillboard(const Program& program) {
     // (forward pass ig) are depth-tested normally.
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                      BGFX_STATE_BLEND_ALPHA | BGFX_STATE_DEPTH_TEST_ALWAYS;
+    bgfx::setState(state);
+
+    _SetFrameUniforms(program);
+    _SetViewUniforms(program);
 
     // Draw all gizmos
     std::vector<GameObject*> gizmos = Registry::GetGizmos();
+
+    // Build render packets for gizmos and draw them
+    std::vector<Renderer::RenderPacket> packets;
     for (auto go : gizmos) {
         auto it = Renderer::m_gizmoRegistry.find(go->gizmo);
-        if (it != Renderer::m_gizmoRegistry.end()) {
-            auto* comp = go->GetComponent<Syngine::CameraComponent>();
-            if (!comp) continue;
+        if (it == Renderer::m_gizmoRegistry.end()) continue;
+        Renderer::RenderPacket packet;
+        packet.vbh      = m_billboardVbh;
+        packet.ibh      = m_billboardIbh;
+        packet.material = go->GetComponent<BillboardComponent>()->m_material;
+        packet.shader   = program;
+        packet.modelMtx = go->GetComponent<TransformComponent>()
+                              ->GetModelMatrix(); // Not used for gizmos
+        packet.go       = go;
+        packets.push_back(packet);
+    }
 
-            const BillboardComponent* gizmo = it->second;
-            const Vector3             pos   = comp->GetPosition();
+    for (auto& packet : packets) {
+        auto* comp = packet.go->GetComponent<Syngine::CameraComponent>();
+        if (!comp) continue;
 
-            // Pack center position and size into a vec4 and send it off
-            const Math::Vector4 billboardData(pos, gizmo->size);
-            Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::u_billboard)],
-                                 billboardData);
+        _SetObjectUniforms(program, packet);
+        _SetMaterialUniforms(program, packet);
 
-            Renderer::SetUniform(
-                m_defaultUniformIds[DefaultUniformIndex(
-                    DefaultUniform::u_billboard_mode)],
-                Math::Vector4()); // No rotation or mode for gizmos
-            Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                     DefaultUniform::u_billboard_lighting)],
-                                 Math::Vector4()); // No lighting for gizmos
-
-            // Dummy model matrix for the billboard
-            Math::Mat4 modelMtx;
-            bgfx::setState(state);
-            bgfx::setTransform(modelMtx.data());
-            bgfx::setVertexBuffer(0, m_billboardVbh);
-            bgfx::setIndexBuffer(m_billboardIbh);
-            bgfx::setTexture(
-                0,
-                Renderer::GetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                         DefaultUniform::s_bill_albedo)])
-                    ->handle,
-                gizmo
-                    ->_GetTexture()); // Use the texture from the gizmo registry
-            Renderer::_UpdateDrawID();
-            bgfx::submit(VIEW_BILL_DBG, program.program);
-        }
+        bgfx::setTransform(packet.modelMtx.data());
+        bgfx::setVertexBuffer(0, m_billboardVbh);
+        bgfx::setIndexBuffer(m_billboardIbh);
+        Renderer::_UpdateDrawID();
+        bgfx::submit(VIEW_BILL_DBG, program->m_program);
     }
 }
 
@@ -1651,38 +1195,13 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
     camera->Update(VIEW_FORWARD, safeWidth, safeHeight);
     Camera cam = camera->GetCamera();
 
-    const Math::Vector4 viewPos(camera->GetPosition(), 1.0f);
-    Renderer::SetUniform(
-        m_defaultUniformIds[DefaultUniformIndex(DefaultUniform::u_viewPos)],
-        viewPos);
-
-    const Math::Vector4 sunDir(Renderer::GetSunDirection(), 0.0f);
-    Renderer::SetUniform(
-        m_defaultUniformIds[DefaultUniformIndex(DefaultUniform::u_lightDir)],
-        sunDir);
-
     std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightProj;
     if (m_config.useShadows) {
         // Calculate the cascade matrices for shadow mapping and send to GPU
         Math::Vector4 cascadeSplits;
         _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
-
-        int farClip = m_config.shadowDist;
-        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                 DefaultUniform::u_csmSplits)],
-                             cascadeSplits);
-
-        Math::Vector4 shadowParams(
-            bgfx::getCaps()->homogeneousDepth ? 1.0f
-                                              : 0.0f, // Homogeneous depth
-            1.0f / (float)(SHADOW_MAP_SIZE * 2),      // Inv shadow map size
-            static_cast<float>(farClip),              // Light far plane
-            0.0f                                      // Debug value, not used
-        );
-        Renderer::SetUniform(m_defaultUniformIds[DefaultUniformIndex(
-                                 DefaultUniform::u_shadowParams)],
-                             shadowParams);
+        m_csmCascadeSplits = cascadeSplits;
     }
 
     // Update main camera matrices
@@ -1784,6 +1303,54 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
     return true;
 }
 
+// MARK: Uniform Uploading
+
+void RenderCore::_SetFrameUniforms(const Shader* shader) {
+    SYN_PROFILE_FUNCTION();
+    for (const auto& uniform : shader->m_frameUniforms) {
+        bgfx::setUniform(
+            uniform.handle, uniform.getter(nullptr), uniform.count);
+    }
+}
+
+void RenderCore::_SetViewUniforms(const Shader* shader) {
+    SYN_PROFILE_FUNCTION();
+    for (const auto& uniform : shader->m_viewUniforms) {
+        bgfx::setUniform(
+            uniform.handle, uniform.getter(nullptr), uniform.count);
+    }
+}
+
+void RenderCore::_SetObjectUniforms(const Shader*                 shader,
+                                    const Renderer::RenderPacket& packet) {
+    SYN_PROFILE_FUNCTION();
+    for (const auto& uniform : shader->m_drawUniforms) {
+        bgfx::setUniform(
+            uniform.handle, uniform.getter(&packet), uniform.count);
+    }
+}
+
+void RenderCore::_SetMaterialUniforms(const Shader*                 shader,
+                                      const Renderer::RenderPacket& packet,
+                                      uint32_t                      flags) {
+    SYN_PROFILE_FUNCTION();
+    for (size_t i = 0; i < shader->m_materialParams.size(); ++i) {
+        const auto& shaderDesc = shader->m_materialParams[i];
+        const auto& matData    = packet.material->m_parameters[i].storage;
+        bgfx::setUniform(shaderDesc.handle, matData.data(), shaderDesc.count);
+    }
+
+    for (const auto& uniform : shader->m_textureParams) {
+        bgfx::setTexture(
+            uniform.stage,
+            uniform.handle,
+            packet.material->m_textures[uniform.stage].handle,
+            flags | packet.material->m_textures[uniform.stage].samplerFlags);
+    }
+}
+
+// MARK: Main Render Loop
+
 bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     SYN_PROFILE_FUNCTION();
     if (m_isFirstFrame) {
@@ -1801,11 +1368,10 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
 
     // Main render loop
     for (auto view : _allViews) {
-        auto progListIt = Renderer::m_viewPrograms.find(view);
-        if (progListIt == Renderer::m_viewPrograms.end()) continue;
+        auto progList = ShaderManager::GetProgramsByViewID(view);
 
-        for (auto& program : progListIt->second) {
-            if (!bgfx::isValid(program.program)) continue;
+        for (auto& program : progList) {
+            if (!bgfx::isValid(program->m_program)) continue;
 
             // Draw logic based on view type
             switch (view) {
