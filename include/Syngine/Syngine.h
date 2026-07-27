@@ -7,21 +7,24 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/Math/Math.hpp"
-#include "Syngine/Core/Core.h"
-#include "Syngine/Core/Logger.h"
-#include "Syngine/Core/Registry.h"
-#include "Syngine/Core/Input.h"
+#include <Syngine/Math/Math.hpp>
+#include <Syngine/Core/Core.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/Core/Registry.h>
+#include <Syngine/Core/Input.h>
 
-#include "Syngine/ECS/AllComponents.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/GameObject.h"
+#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/ECS/Component.h>
+#include <Syngine/ECS/GameObject.h>
 
-#include "Syngine/Graphics/Rendering/Renderer.h"
-#include "Syngine/Graphics/Windowing.h"
+#include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/Graphics/Resources/ModelLoader.h>
+#include <Syngine/Graphics/Resources/MaterialManager.h>
+#include <Syngine/Graphics/Resources/ShaderManager.h>
+#include <Syngine/Graphics/Resources/UniformRegistry.h>
+#include <Syngine/Graphics/Windowing.h>
 
-#include "Syngine/Physics/Physics.h"
+#include <Syngine/Physics/Physics.h>
 
-#include "Syngine/Utils/Helpers.h"
-#include "Syngine/Utils/ModelLoader.h"
-#include "Syngine/Utils/Profiler.h"
+#include <Syngine/Utils/Helpers.h>
+#include <Syngine/Utils/Profiler.h>

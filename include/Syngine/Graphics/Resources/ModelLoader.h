@@ -8,13 +8,15 @@
 
 #pragma once
 
+#include <Syngine/Graphics/Resources/MaterialManager.h>
+#include <Syngine/Math/Math.hpp>
+
 #include <bgfx/bgfx.h>
 
+#include <cstdint>
 #include <vector>
 #include <string>
 #include <filesystem>
-
-#include <Syngine/Math/Math.hpp>
 
 // forward declarations
 namespace scl {
@@ -37,35 +39,6 @@ struct Vertex {
     Math::Vector4 tangent; //* Tangent vector at the vertex (for normal mapping)
 };
 
-/// @brief Material structure for mesh data
-/// @section ModelLoader
-/// @since v0.0.1
-struct Material {
-    // Base properties
-    std::string         name   = "empty";             //* Name of the material
-    bgfx::TextureHandle albedo = BGFX_INVALID_HANDLE; //* Albedo texture handle
-    bgfx::TextureHandle normalMap =
-        BGFX_INVALID_HANDLE; //* Normal map texture handle
-    bgfx::TextureHandle heightMap =
-        BGFX_INVALID_HANDLE; //* Height map texture handle
-
-    // Per material
-    Math::Vector3 uvScale =
-        Math::Vector3(1.0f); //* UV scale vector for each texture type (albedo,
-                             //normal, height)
-
-    // Per material properties
-    float heightScale = 0.01f; //* Matches blender displacement
-    float mixFactor   = 0.7f;  //* Mix between detail and macro maps
-    float ambient     = 0.2f;  //* Ambient floor
-
-    // baseColor is used when there is no albedo texture, or when useVertexColor
-    // is true. It can also be used to tint the albedo texture if useVertexColor
-    // is false.
-    bool useVertexColor = false; //* Whether to use vertex color or base color
-    Math::Vector4 baseColor = Math::Vector4(1.0f); //* RGBA base color
-};
-
 /// @brief SubMesh structure for storing submesh information
 /// @section ModelLoader
 /// @since v0.0.1
@@ -82,19 +55,21 @@ struct SubMesh {
         name; //* Name of the submesh (for debugging and editor purposes)
     Math::Vector3 boundMin; //* Minimum corner of the axis-aligned bounding box
     Math::Vector3 boundMax; //* Maximum corner of the axis-aligned bounding box
+
+    Material* material; //* Pointer to the material used by this submesh
 };
 
-/// @brief MeshData structure for storing mesh information
+/// @brief ModelData structure for storing mesh information
 /// @section ModelLoader
 /// @since v0.0.1
-struct MeshData {
+struct ModelData {
     // Base properties
     std::vector<Vertex>   vertices;     //* List of vertices in the mesh
     std::vector<uint32_t> indices;      //* List of indices for indexed drawing
-    std::vector<Material> materials;    //* List of materials used by the mesh
-    uint8_t               numMaterials; //* Number of materials used by the mesh
     std::vector<SubMesh>  subMeshes;    //* List of submeshes in the mesh
+    std::vector<Material> materials;    //* List of materials used by the mesh
     uint8_t               numSubMeshes; //* Number of submeshes in the mesh
+    uint8_t               numMaterials; //* Number of materials used by the mesh
 
     // GPU resources
     bgfx::VertexBufferHandle vbh; //* Handle to the vertex buffer on the GPU
@@ -112,14 +87,14 @@ struct MeshData {
 /// @since v0.0.1
 class ModelLoader {
   protected:
-    static std::vector<MeshData> loadedMeshes;
+    static std::vector<ModelData> loadedMeshes;
 
   public:
-    virtual bool _LoadModel(MeshData&          out,
+    virtual bool _LoadModel(ModelData&          out,
                             scl::stream*       meshStream,
                             const std::string& assetPath,
                             bool               loadTextures) = 0;
-    virtual bool _ReloadModel(MeshData&          out,
+    virtual bool _ReloadModel(ModelData&          out,
                               scl::stream*       stream,
                               const std::string& assetPath,
                               int                id) = 0;
@@ -134,21 +109,21 @@ class ModelLoader {
     static void _UnloadAllMeshes();
 
     /// @brief Get all loaded meshes
-    /// @return std::vector<MeshData>& A reference to the vector of all loaded
-    /// meshes
+    /// @return std::vector<ModelData>& A reference to the vector of all loaded
+    /// models
     /// @threadsafety read-only
     /// @since v0.0.1
     /// @internal
-    static std::vector<MeshData>& _GetMeshes();
+    static std::vector<ModelData>& _GetMeshes();
 
     /// @brief Get a mesh by its ID
     /// @param id ID of the mesh to get
-    /// @return MeshData* Pointer to the mesh with the given ID, nullptr if
+    /// @return ModelData* Pointer to the mesh with the given ID, nullptr if
     /// not found
     /// @threadsafety read-only
     /// @since v0.0.1
     /// @internal
-    static MeshData* _GetMeshById(int id);
+    static ModelData* _GetMeshById(int id);
 
     virtual ~ModelLoader() = default; // this keeps getting deleted???
 };
@@ -160,44 +135,43 @@ class AssimpLoader : public ModelLoader {
   public:
     /// @brief Loads a model from the specified path, returns true if
     /// successful
-    /// @param out MeshData to fill with the loaded model
+    /// @param out ModelData to fill with the loaded model
     /// @param meshStream Stream containing the model data
     /// @param loadTextures Whether to load textures for the model
     /// @return true if the model was loaded successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    bool _LoadModel(MeshData&          out,
+    bool _LoadModel(ModelData&          out,
                     scl::stream*       meshStream,
                     const std::string& assetPath,
                     bool               loadTextures) override;
 
     /// @brief Reloads a model by its ID, returns true if successful
-    /// @param out MeshData to fill with the reloaded model
+    /// @param out ModelData to fill with the reloaded model
     /// @param id ID of the model to reload
     /// @return true if the model was reloaded successfully, false otherwise
     /// @note This is used to reload models only when they change on disk for
     /// hot reloading
     /// @internal
-    bool _ReloadModel(MeshData&          out,
+    bool _ReloadModel(ModelData&          out,
                       scl::stream*       stream,
                       const std::string& assetPath,
                       int                id) override;
 
   private:
     /// @brief Processes the Assimp scene and fills the MeshData structure
-    /// @param out MeshData to fill with the processed data
+    /// @param out ModelData to fill with the processed data
     /// @param scene Assimp scene to process
     /// @param meshStream Stream containing the model data (for resolving relative texture paths)
-    /// @param loadTextures Whether to load textures for the model
     /// @return true if the scene was processed successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    static bool processScene(MeshData&          out,
+    static bool processScene(ModelData&          out,
                              const aiScene*     scene,
                              scl::stream*       meshStream,
-                             bool               loadTextures);
+                             bool               loadTextures = true);
 
 
     /// @brief Processes an Assimp material and fills the Material structure
@@ -211,7 +185,7 @@ class AssimpLoader : public ModelLoader {
     static Material _ProcessMaterial(aiMaterial*        aiMat,
                                      const aiScene*     scene,
                                      scl::stream*       meshStream,
-                                     bool               loadTextures);
+                                     bool               loadTextures = true);
 
     /// @brief Creates a default material with no textures
     /// @return Material structure filled with default material data
