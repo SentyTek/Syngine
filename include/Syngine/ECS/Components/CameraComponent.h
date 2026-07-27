@@ -10,7 +10,6 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/Math/Math.hpp"
 #include "Syngine/Math/Matrix4x4.hpp"
-#include "bx/math.h"
 
 namespace Syngine {
 
@@ -154,6 +153,10 @@ class CameraComponent : public Syngine::Component {
     /// @threadsafety read-only
     /// @since v0.0.1
     Syngine::Camera GetCamera() const;
+
+    Math::Mat4 GetViewProjMatrix() const {
+        return GetCamera().proj * GetCamera().view;
+    }
 
   private:
     GameObject* m_owner; // Reference to the owner game object

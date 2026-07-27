@@ -44,10 +44,11 @@ add_library(Syngine STATIC
     src/Syngine/Graphics/Rendering/RenderCore.cpp
     src/Syngine/Graphics/Rendering/DebugRenderer.cpp
     src/Syngine/Graphics/Resources/TextureHelpers.cpp
+    src/Syngine/Graphics/Resources/ShaderManager.cpp
+    src/Syngine/Graphics/Resources/ModelLoader.cpp
     src/Syngine/Graphics/Windowing.cpp
 
     # Utils
-    src/Syngine/Utils/ModelLoader.cpp
     src/Syngine/Utils/FsUtils.cpp
     src/Syngine/Utils/Profiler.cpp
     src/Syngine/Utils/Serializer.cpp
@@ -66,6 +67,7 @@ add_library(Syngine STATIC
     src/Syngine/ECS/Components/ZoneComponent.cpp
     src/Syngine/ECS/Components/BillboardComponent.cpp
     src/Syngine/ECS/ComponentRegistry.cpp
+    src/Syngine/Graphics/Resources/MaterialManager.cpp
 )
 
 set_target_properties(Syngine PROPERTIES FOLDER "Engine")

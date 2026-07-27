@@ -220,7 +220,7 @@ T* GameObject::GetComponent() const {
         return nullptr; // Component not found
     }
 
-    return dynamic_cast<T*>(it->second.get());
+    return static_cast<T*>(it->second.get());
 };
 
 

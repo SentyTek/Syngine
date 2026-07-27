@@ -16,7 +16,7 @@
 #include <Syngine/ECS/Components/PlayerComponent.h>
 #include <Syngine/ECS/Components/RigidbodyComponent.h>
 #include <Syngine/ECS/GameObject.h>
-#include <Syngine/Utils/ModelLoader.h>
+#include <Syngine/Graphics/Resources/ModelLoader.h>
 #include <Syngine/Physics/Physics.h>
 #include <Syngine/Utils/Profiler.h>
 
@@ -28,7 +28,7 @@ namespace Syngine {
 // Forward declare
 class ZoneManager;
 class Window;
-//class LuaManager;
+// class LuaManager;
 
 /// @brief Struct to hold hardware specifications
 /// @section Core
@@ -56,25 +56,25 @@ struct HardwareSpecs {
 /// @section Core
 /// @since v0.0.1
 struct EngineConfig {
-    std::string gameName = "SyngineGame";  //* Title of the game window
-    int         windowWidth = 800;  //* Width of the game window in pixels
+    std::string gameName     = "SyngineGame"; //* Title of the game window
+    int         windowWidth  = 800; //* Width of the game window in pixels
     int         windowHeight = 600; //* Height of the game window in pixels
     bool        usePhysics = true;  //* Whether to initialize the physics system
-    bool        useLua = true;      //* Whether to initialize the Lua scripting system
-    LuaLibs     luaLibs =
-        LuaLibs::DEFAULT; //* Which Lua libraries to load if useLua is true
+    bool    useLua = true; //* Whether to initialize the Lua scripting system
+    LuaLibs luaLibs =
+        LuaLibs::DEFAULT;  //* Which Lua libraries to load if useLua is true
     bool headless = false; //* Whether to run in headless mode (no window, for
-                           //servers or testing)
+                           // servers or testing)
 };
 
 /// @brief the various debug modes possible
 /// @section Core
 /// @since v0.0.1
 struct DebugModes {
-    bool Enabled = true; //* Global debug toggle
+    bool Enabled        = true;  //* Global debug toggle
     bool PhysWireframes = false; //* Whether to draw physics wireframes
-    bool Gizmos = true; //* Gizmos such as cameras, lights, and audio sources
-    bool CSMBounds = false; //* Cascading Shadow Map zone bounds.
+    bool Gizmos    = true; //* Gizmos such as cameras, lights, and audio sources
+    bool CSMBounds = false;         //* Cascading Shadow Map zone bounds.
     bool DrawBoundingBoxes = false; //* Whether to draw mesh bounding boxes
 };
 
@@ -95,7 +95,8 @@ class Core {
 
     /// @brief Initialize the core system. Creates a window, renderer, and other
     /// subsystems.
-    /// @param rendererConfig Renderer configuration options (Syngine::RendererConfig)
+    /// @param rendererConfig Renderer configuration options
+    /// (Syngine::RendererConfig)
     /// @return True on success, false on failure
     /// @since v0.0.1
     static bool Initialize(const RendererConfig rendererConfig);
@@ -121,10 +122,10 @@ class Core {
     /// @since v0.0.1
     bool Update();
 
-    /// @brief Render the application
+    /// @brief Render the application to the screen
     /// @return True if the render was successful, false otherwise
     /// @since v0.0.1
-    bool Render(CameraComponent* camera);
+    bool Render();
 
     /// @brief Get the physics manager.
     /// @return Pointer to the physics manager, or nullptr if not initialized
@@ -160,7 +161,7 @@ class Core {
     /// @since v0.0.1
     static bool IsPhysicsEnabled() {
         return m_instance && m_instance->m_context &&
-            m_instance->m_context->config.usePhysics;
+               m_instance->m_context->config.usePhysics;
     }
 
     /// @brief Set the current debug modes
@@ -213,14 +214,15 @@ class Core {
     /// @section Core
     /// @since v0.0.1
     struct Context {
-        EngineConfig                    config;         //* Engine configuration
-        std::unique_ptr<Window>         window;         //* Pointer to the window
-        std::unique_ptr<Renderer>       renderer;       //* Pointer to the render system
-        std::unique_ptr<ModelLoader>    synModels;      //* Pointer to the model loader
-        std::unique_ptr<Phys>           physicsManager; //* Pointer to the physics manager
-        std::unique_ptr<ZoneManager>    zoneManager;    //* Pointer to the zone manager
-        std::unique_ptr<LuaManager>     luaState;       //* Pointer to the Lua state
-        DebugModes debug;                               //* Debug modes flags
+        EngineConfig                 config;    //* Engine configuration
+        std::unique_ptr<Window>      window;    //* Pointer to the window
+        std::unique_ptr<Renderer>    renderer;  //* Pointer to the render system
+        std::unique_ptr<ModelLoader> synModels; //* Pointer to the model loader
+        std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
+        std::unique_ptr<ZoneManager>
+                                    zoneManager; //* Pointer to the zone manager
+        std::unique_ptr<LuaManager> luaState;    //* Pointer to the Lua state
+        DebugModes                  debug;       //* Debug modes flags
     };
 
     /// @brief Get the global App instance
@@ -234,17 +236,19 @@ class Core {
     /// @since v0.0.1
     /// @internal
     static inline EngineConfig* _GetConfig() {
-        return m_instance && m_instance->m_context ? &m_instance->m_context->config : nullptr;
+        return m_instance && m_instance->m_context
+                   ? &m_instance->m_context->config
+                   : nullptr;
     }
 
     struct FrameCounts {
         struct DrawnObjectCount {
-            uint32_t shadows = 0;
-            uint32_t sky    = 0;
-            uint32_t forward = 0;
-            uint32_t debug   = 0;
-            uint32_t billboard = 0;
-            uint32_t ui        = 0;
+            uint32_t shadows       = 0;
+            uint32_t sky           = 0;
+            uint32_t forward       = 0;
+            uint32_t debug         = 0;
+            uint32_t billboard     = 0;
+            uint32_t ui            = 0;
             uint32_t culledFrustum = 0;
             uint32_t culledSize    = 0;
         } drawnObjects;
@@ -291,7 +295,7 @@ class Core {
                         m_frameCounts.drawnObjects.culledSize);
 #endif
 
-                m_frameCounts.updates = 0;
+                m_frameCounts.updates      = 0;
                 m_frameCounts.drawnObjects = FrameCounts::DrawnObjectCount();
             }
         }
@@ -302,10 +306,10 @@ class Core {
     static void _ReloadShaders();
     static void _ReloadLua();
 
-    static Core*         m_instance;     //* Pointer to the global Core instance
-    static Context*      m_context;      //* Pointer to the global Context instance
-    static bool          m_shouldClose;  //* Whether the application should close
-    static _internal     m_internal;     //* Internal state struct
+    static Core*         m_instance; //* Pointer to the global Core instance
+    static Context*      m_context;  //* Pointer to the global Context instance
+    static bool          m_shouldClose; //* Whether the application should close
+    static _internal     m_internal;    //* Internal state struct
     static _FrameCounter m_frameCounter; //* Frame counter for FPS/TPS tracking
 
     /// @brief Handle key events for debug actions

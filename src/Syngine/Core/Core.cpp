@@ -433,14 +433,14 @@ bool Core::Update() {
     return true;
 }
 
-bool Core::Render(CameraComponent* camera) {
+bool Core::Render() {
     SYN_PROFILE_FUNCTION();
     // Render the application
     if (Renderer::IsReady()) {
         m_frameCounter.frameCount++;
         m_frameCounter.frameDisplay++;
 
-        m_context->renderer->_RenderFrame(camera, m_context->debug);
+        m_context->renderer->_RenderFrame(m_context->debug);
         m_frameCounts.drawnObjects.debug = RenderCore::m_drawnCounts.debug;
         m_frameCounts.drawnObjects.sky   = RenderCore::m_drawnCounts.sky;
         m_frameCounts.drawnObjects.forward = RenderCore::m_drawnCounts.forward;
@@ -589,7 +589,7 @@ void Core::_ReloadChangedAssets() {
     for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
         MeshComponent* mc = go->GetComponent<MeshComponent>();
         if (!mc) continue;
-        MeshData& mesh = mc->meshData;
+        ModelData& mesh = mc->modelData;
         if (!mesh.valid || mc->m_bundlePath.empty()) continue;
         if (mesh.lastWriteTime != std::filesystem::last_write_time(_ResolveOSPath(mc->m_bundlePath))) {
             mc->ReloadMesh();
@@ -597,7 +597,7 @@ void Core::_ReloadChangedAssets() {
     }
 }
 
-void Core::_ReloadShaders() { m_context->renderer->ReloadAllPrograms(); }
+void Core::_ReloadShaders() { ShaderManager::ReloadAllShaders(); }
 
 void Core::_ReloadLua() {
     if (m_context->luaState) {
@@ -650,7 +650,7 @@ void Core::_HandleKeyEvent(const SDL_Event& event) {
                 for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
                     MeshComponent* mc = go->GetComponent<MeshComponent>();
                     if (!mc) continue;
-                    MeshData& mesh = mc->meshData;
+                    ModelData& mesh = mc->modelData;
                     if (!mesh.valid) continue;
                     if (mesh.lastWriteTime !=
                         std::filesystem::last_write_time(mc->m_bundlePath)) {
@@ -661,7 +661,7 @@ void Core::_HandleKeyEvent(const SDL_Event& event) {
             }
             case SDLK_F6: {
                 // Reload all shaders
-                m_context->renderer->ReloadAllPrograms();
+                ShaderManager::ReloadAllShaders();
             }
         }
     }

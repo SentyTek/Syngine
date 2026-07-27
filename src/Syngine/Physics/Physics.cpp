@@ -223,7 +223,7 @@ BodyID Phys::_CreateBox(RVec3Arg position, QuatArg rotation, Vec3Arg halfExtent,
     return box->GetID();
 }
 
-BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale, const float mass) {
+BodyID Phys::_CreateMeshBody(RVec3Arg position, QuatArg rotation, const ModelData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale, const float mass) {
     BodyInterface &bodyInterface = mPhysicsSystem.GetBodyInterface();
     if (meshData.vertices.empty() || meshData.indices.empty()) {
         Syngine::Logger::Error("SynginePhys::CreateMeshBody: Mesh data is empty.");

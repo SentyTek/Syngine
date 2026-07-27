@@ -7,8 +7,9 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/GameObject.h"
+#include <Syngine/ECS/Component.h>
+#include <Syngine/ECS/GameObject.h>
+#include <Syngine/Graphics/Resources/MaterialManager.h>
 
 #include <bgfx/bgfx.h>
 
@@ -40,11 +41,19 @@ class BillboardComponent : public Syngine::Component {
     bgfx::TextureHandle m_texture =
         BGFX_INVALID_HANDLE; //* Texture handle for the billboard
     std::string m_texturePath; //* Path to the billboard texture
-    std::string m_bundlePath;  //* Path to the shader bundle containing the billboard texture
+    std::string m_bundlePath;  //* Path to the shader bundle containing the
+                               //billboard texture
+
+    Material* m_material = nullptr; //* Material used for rendering the billboard
 
     GameObject* m_owner; // Reference to the owner game object
 
     Vector3 m_rot = Vector3(); //* Rotation around X, Y, Z axes in radians
+
+    bgfx::TextureHandle _GetTexture() const { return this->m_texture; }
+    Material*           _GetMaterial() const { return this->m_material; }
+
+    friend class RenderCore; // RenderCore needs access to private members for rendering
   public:
 
     float size = 1.0f; //* Size of the billboard
@@ -115,13 +124,6 @@ class BillboardComponent : public Syngine::Component {
     /// @param deltaTime Time elapsed since the last update, in seconds
     /// @since v0.0.1
     void Update(float deltaTime) override {};
-
-    /// @brief Get the texture handle of the billboard
-    /// @return bgfx::TextureHandle The texture handle
-    /// @threadsafety read-only
-    /// @since v0.0.1
-    /// @internal
-    bgfx::TextureHandle _GetTexture() const { return this->m_texture; }
 
     /// @brief Set rotation around X, Y, Z axes
     /// @param rot Rotation around X axis in radians
