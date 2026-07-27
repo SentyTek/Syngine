@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <cxxabi.h>
 #endif
+
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -35,9 +36,9 @@ class Core;
 /// @section Logger
 /// @since v0.0.1
 enum class LogLevel {
-    INFO, //* Informational messages
-    WARN, //* Warning messages
-    ERR,  //* Error messages
+    INFO,  //* Informational messages
+    WARN,  //* Warning messages
+    ERR,   //* Error messages
     FATAL, //* Fatal error messages. Will terminate the application
 };
 
@@ -64,6 +65,7 @@ class Logger {
     static std::string _LogLevelToString(LogLevel level) noexcept;
 
     static inline std::string                    m_appName;
+    static inline std::string                    m_logFilePath;
     static inline std::unique_ptr<std::ofstream> m_logFile;
     static inline std::mutex                     m_logMutex;
     static inline LogLevel                       m_minLogLevel;
@@ -81,8 +83,8 @@ class Logger {
         m_mainWindow = window;
     }
 #ifdef _WIN32
-    static LONG WINAPI
-    _WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
+    static LONG
+        WINAPI _WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
 #endif
     static void _Init(
         const std::string&           appname,
@@ -95,6 +97,7 @@ class Logger {
 
     friend class Core;
     friend class Window;
+
   public:
     /// @brief Log a message to disk with an optional log level
     /// @param message Message to log
@@ -121,7 +124,8 @@ class Logger {
     /// @threadsafety not-safe
     /// @throws std::runtime_error if the log file is locked or unavailable
     /// @since v0.0.1
-    static void LogF(LogLevel level, bool writeOnlyInDebug, const char* fmt, ...);
+    static void
+    LogF(LogLevel level, bool writeOnlyInDebug, const char* fmt, ...);
 
     /// @brief Log an error
     /// @param message Error message to log
@@ -130,7 +134,8 @@ class Logger {
     /// false.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void Error(const std::string_view message, bool writeOnlyInDebug = false);
+    static void Error(const std::string_view message,
+                      bool                   writeOnlyInDebug = false);
 
     /// @brief Log an informational message
     /// @param message Informational message to log
@@ -139,7 +144,8 @@ class Logger {
     /// false.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void Info(const std::string_view message, bool writeOnlyInDebug = false);
+    static void Info(const std::string_view message,
+                     bool                   writeOnlyInDebug = false);
 
     /// @brief Show a popup and log an informational message
     /// @param message Informational message to log
@@ -154,11 +160,13 @@ class Logger {
     /// false.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void Warn(const std::string_view message, bool writeOnlyInDebug = false);
+    static void Warn(const std::string_view message,
+                     bool                   writeOnlyInDebug = false);
 
     /// @brief Log a fatal error and shutdown the logger
     /// @param message Fatal error message to log
-    /// @note This will terminate the application. If core debug is on, will also pause the app.
+    /// @note This will terminate the application. If core debug is on, will
+    /// also pause the app.
     /// @threadsafety not-safe
     /// @since v0.0.1
     static void Fatal(const std::string_view message);
@@ -187,7 +195,7 @@ class Logger {
     /// @brief Force flush the log file
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void Flush();    /// @brief Returns true if the log file is open
+    static void Flush(); /// @brief Returns true if the log file is open
     /// @return True if the log file is open, false otherwise
     /// @threadsafety safe
     /// @since v0.0.1
@@ -222,7 +230,8 @@ class Logger {
     /// @since v0.0.1
     static void PrintStackTrace();
 
-    /// @brief Set the verbose mode. When verbose, certain messages that are normally only logged in debug mode will also be logged in release mode.
+    /// @brief Set the verbose mode. When verbose, certain messages that are
+    /// normally only logged in debug mode will also be logged in release mode.
     /// @param verbose Whether to enable verbose mode
     /// @threadsafety safe
     /// @since v0.0.1
