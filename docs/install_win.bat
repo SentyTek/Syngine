@@ -197,7 +197,7 @@ echo     }
 echo.
 echo     // Cleanup
 echo     Syngine::Registry::Clear^(^);
-echo     Renderer::RemoveAllPrograms^(^);
+echo     ShaderManager::UnloadAllShaders^(^);
 echo     Syngine::Logger::Shutdown^(^);
 echo     return 0;
 echo }

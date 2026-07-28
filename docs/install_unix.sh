@@ -193,7 +193,7 @@ int AppMain(int argc, char* argv[]) {
 
     // Cleanup
     Syngine::Registry::Clear();
-    Renderer::RemoveAllPrograms();
+    ShaderManager::UnloadAllShaders();
     Syngine::Logger::Shutdown();
     return 0;
 }

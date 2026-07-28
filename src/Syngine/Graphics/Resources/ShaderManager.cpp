@@ -13,6 +13,7 @@
 
 #include <bgfx/bgfx.h>
 #include <miniscl.hpp>
+
 #include <string>
 #include <vector>
 
@@ -127,10 +128,10 @@ ShaderManager::_parseShaderMetadata(scl::pack::Packager& packager,
             scl::string uNum  = numAttr->data();
 
             // Make sure type and freq is valid at all
-            auto typeIt =
-                UniformRegistry::GetInstance().m_uniformTypeMap.find(uType);
-            auto freqIt =
-                UniformRegistry::GetInstance().m_uniformFreqMap.find(uFreq);
+            auto typeIt = UniformRegistry::GetInstance().m_uniformTypeMap.find(
+                uType.cstr());
+            auto freqIt = UniformRegistry::GetInstance().m_uniformFreqMap.find(
+                uFreq.cstr());
             if (typeIt ==
                     UniformRegistry::GetInstance().m_uniformTypeMap.end() ||
                 freqIt ==
@@ -179,8 +180,8 @@ ShaderManager::_parseShaderMetadata(scl::pack::Packager& packager,
             scl::string uNum  = numAttr->data();
 
             // Make sure type is valid at all
-            auto typeIt =
-                UniformRegistry::GetInstance().m_uniformTypeMap.find(uType);
+            auto typeIt = UniformRegistry::GetInstance().m_uniformTypeMap.find(
+                uType.cstr());
             if (typeIt ==
                 UniformRegistry::GetInstance().m_uniformTypeMap.end()) {
                 Syngine::Logger::LogF(Syngine::LogLevel::ERR,

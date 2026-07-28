@@ -13,7 +13,6 @@
 #include <string>
 #include <unordered_map>
 
-#include <miniscl.hpp>
 #include <bgfx/bgfx.h>
 
 namespace Syngine {
@@ -59,9 +58,9 @@ class UniformRegistry {
     std::vector<bgfx::UniformHandle>
         m_UniformHandles; // for bgfx uniform handles
 
-    std::unordered_map<scl::string, UniformType>
+    std::unordered_map<std::string, UniformType>
         m_uniformTypeMap; // for shader metadata parsing
-    std::unordered_map<scl::string, UniformFrequency>
+    std::unordered_map<std::string, UniformFrequency>
         m_uniformFreqMap; // for shader metadata parsing
 
     static UniformRegistry& GetInstance() {

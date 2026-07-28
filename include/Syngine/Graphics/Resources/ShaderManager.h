@@ -13,18 +13,17 @@
 
 #include <bgfx/bgfx.h>
 #include <SDL3/SDL.h>
+
+#include <array>
 #include <cstdint>
 #include <sys/stat.h>
 #include <vector>
 #include <string>
 
-#include <miniscl.hpp>
-
 #define SYNINT_SHADER_METADATA_VERSION "1.0"
 
 namespace Syngine {
 enum ViewID : bgfx::ViewId;
-
 
 struct MaterialParameterDesc {
     std::string               name;
@@ -65,7 +64,7 @@ class Shader {
            const std::vector<EngineUniform>& frameUniforms,
            const std::vector<EngineUniform>& viewUniforms,
            const std::vector<EngineUniform>& drawUniforms,
-           ViewID                   viewId)
+           ViewID                            viewId)
         : m_program(program), bundlePath(bundlePath), shaderName(shaderName),
           m_frameUniforms(frameUniforms), m_viewUniforms(viewUniforms),
           m_drawUniforms(drawUniforms), m_viewId(viewId) {}

@@ -20,6 +20,10 @@
 #include <string>
 #include <vector>
 
+namespace scl {
+class stream;
+}
+
 namespace Syngine {
 
 class Shader;
