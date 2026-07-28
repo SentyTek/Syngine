@@ -86,7 +86,7 @@ target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
     target_sources(Syngine PRIVATE
-        src/Syngine/Graphics/MetalBridge.mm
+        src/Syngine/Graphics/Rendering/MetalBridge.mm
     )
 endif()
 

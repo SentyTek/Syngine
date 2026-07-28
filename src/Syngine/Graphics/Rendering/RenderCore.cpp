@@ -34,7 +34,7 @@
 #include <vector>
 
 #if BX_PLATFORM_OSX
-#include "Syngine/Graphics/MetalBridge.h"
+#include "Syngine/Graphics/Rendering/MetalBridge.h"
 #endif
 
 #define SYNINT_DEFAULT_SHADERBUNDLE_NAME "shaders/default_shaders.spk"
@@ -306,10 +306,10 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     m_config.shadowMapSize = SHADOW_MAP_SIZE; // Ensure shadow map size is set
 
     // create billboard buffers
-    static const float billboardVertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-                                               0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
-                                               0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-                                               -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
+    static const float billboardVertices[]   = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
+                                                 0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
+                                                 0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
+                                                 -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
     static const uint16_t billboardIndices[] = { 0, 1, 2, 0, 2, 3 };
 
     bgfx::VertexLayout billboardLayout;
@@ -442,11 +442,11 @@ bool RenderCore::_CreateSceneBuffers() {
         BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
     m_buffers.sceneColor  = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                  uint16_t(Renderer::height),
-                                                  false,
-                                                  1,
-                                                  bgfx::TextureFormat::RGBA16F,
-                                                  tsFlags);
+                                                 uint16_t(Renderer::height),
+                                                 false,
+                                                 1,
+                                                 bgfx::TextureFormat::RGBA16F,
+                                                 tsFlags);
     m_buffers.sceneNormal = bgfx::createTexture2D(uint16_t(Renderer::width),
                                                   uint16_t(Renderer::height),
                                                   false,
@@ -454,11 +454,11 @@ bool RenderCore::_CreateSceneBuffers() {
                                                   bgfx::TextureFormat::RGBA16F,
                                                   tsFlags);
     m_buffers.sceneDepth  = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                  uint16_t(Renderer::height),
-                                                  false,
-                                                  1,
-                                                  bgfx::TextureFormat::D24S8,
-                                                  BGFX_TEXTURE_RT);
+                                                 uint16_t(Renderer::height),
+                                                 false,
+                                                 1,
+                                                 bgfx::TextureFormat::D24S8,
+                                                 BGFX_TEXTURE_RT);
 
     if (m_config.useSSAO) {
         m_buffers.ssaoTex =
@@ -1146,7 +1146,7 @@ void RenderCore::_DrawDbgBillboard(Shader* program) {
         packet.shader   = program;
         packet.modelMtx = go->GetComponent<TransformComponent>()
                               ->GetModelMatrix(); // Not used for gizmos
-        packet.go       = go;
+        packet.go = go;
         packets.push_back(packet);
     }
 
