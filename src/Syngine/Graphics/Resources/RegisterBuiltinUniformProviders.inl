@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "bgfx/bgfx.h"
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
 #include <Syngine/Core/Core.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
@@ -136,9 +137,9 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
     // Debug uniforms
     UniformRegistry::RegisterProvider(
         "Renderer.Debug.CSMLightViewProj",
-        UniformDataProvider{ UniformType::VEC4,
+        UniformDataProvider{ UniformType::MAT4,
                              UniformFrequency::FRAME,
-                             1,
+                             4,
                              [](const void* rawPacket) -> const void* {
                                  return RenderCore::m_csmLightViewProj.data();
                              } });
@@ -165,6 +166,74 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                 };
                 return shadowParams;
             } });
+    UniformRegistry::RegisterProvider(
+        "Renderer.NormalMatrix",
+        { UniformType::MAT4,
+          UniformFrequency::DRAW,
+          1,
+          [](const void* context) -> const void* {
+              const auto& packet =
+                  UniformRegistry::GetContext<const Renderer::RenderPacket>(
+                      context);
+              auto* transform = packet.go->GetComponent<TransformComponent>();
+              if (!transform) {
+                  return nullptr;
+              }
+              static Math::Mat4 normalMatrix;
+              normalMatrix = transform->GetModelMatrix().inverse().transposed();
+              return normalMatrix.data();
+          } });
+
+    // Default texture providers
+    UniformRegistry::RegisterProvider(
+        "Renderer.ShadowMap",
+        { UniformType::SAMPLER,
+          UniformFrequency::DRAW,
+          1,
+          [](const void* context) -> const void* {
+              static bgfx::TextureHandle shadowMap =
+                  RenderCore::m_buffers.shadowDepth;
+              return &shadowMap;
+          } });
+    UniformRegistry::RegisterProvider("Renderer.ssaoTex",
+                                      { UniformType::SAMPLER,
+                                        UniformFrequency::DRAW,
+                                        1,
+                                        [](const void* context) -> const void* {
+                                            static bgfx::TextureHandle ssaoTex =
+                                                RenderCore::m_buffers.ssaoTex;
+                                            return &ssaoTex;
+                                        } });
+    UniformRegistry::RegisterProvider(
+        "Renderer.sceneColor",
+        { UniformType::SAMPLER,
+          UniformFrequency::DRAW,
+          1,
+          [](const void* context) -> const void* {
+              static bgfx::TextureHandle sceneColor =
+                  RenderCore::m_buffers.sceneColor;
+              return &sceneColor;
+          } });
+    UniformRegistry::RegisterProvider(
+        "Renderer.sceneNormal",
+        { UniformType::SAMPLER,
+          UniformFrequency::DRAW,
+          1,
+          [](const void* context) -> const void* {
+              static bgfx::TextureHandle sceneNormal =
+                  RenderCore::m_buffers.sceneNormal;
+              return &sceneNormal;
+          } });
+    UniformRegistry::RegisterProvider(
+        "Renderer.sceneDepth",
+        { UniformType::SAMPLER,
+          UniformFrequency::DRAW,
+          1,
+          [](const void* context) -> const void* {
+              static bgfx::TextureHandle sceneDepth =
+                  RenderCore::m_buffers.sceneDepth;
+              return &sceneDepth;
+          } });
 
     // SSAO providers
     UniformRegistry::RegisterProvider(
@@ -205,11 +274,17 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                 const auto& packet =
                     UniformRegistry::GetContext<const Renderer::RenderPacket>(
                         rawPacket);
-                auto* transform = packet.go->GetComponent<TransformComponent>();
                 auto* billboard = packet.go->GetComponent<BillboardComponent>();
 
                 thread_local Math::Vec4 data;
-                data = { transform->GetWorldPosition(), billboard->size };
+                if (billboard) {
+                    auto* transform =
+                        packet.go->GetComponent<TransformComponent>();
+                    data = { transform->GetWorldPosition(), billboard->size };
+                } else {
+                    auto* camera = packet.go->GetComponent<CameraComponent>();
+                    data         = { camera->GetPosition(), 1.0f };
+                }
 
                 return data.data();
             } });
@@ -227,8 +302,12 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                 auto* billboard = packet.go->GetComponent<BillboardComponent>();
 
                 thread_local Math::Vec4 data;
-                data = { billboard->GetRot(),
-                         static_cast<float>(billboard->GetMode()) };
+                if (billboard) {
+                    data = { billboard->GetRot(),
+                             static_cast<float>(billboard->GetMode()) };
+                } else {
+                    data = { 0.0f, 0.0f, 0.0f, 0.0f };
+                }
 
                 return data.data();
             } });
@@ -246,13 +325,17 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                 auto* billboard = packet.go->GetComponent<BillboardComponent>();
 
                 thread_local Math::Vec4 data;
-                data = { billboard->receiveSunLight ? 1.0f : 0.0f,
-                         (billboard->receiveShadows &&
-                          RenderCore::m_config.useShadows)
-                             ? 1.0f
-                             : 0.0f,
-                         0.0f,
-                         0.0f };
+                if (billboard) {
+                    data = { billboard->receiveSunLight ? 1.0f : 0.0f,
+                             (billboard->receiveShadows &&
+                              RenderCore::m_config.useShadows)
+                                 ? 1.0f
+                                 : 0.0f,
+                             0.0f,
+                             0.0f };
+                } else {
+                    data = { 0.0f, 0.0f, 0.0f, 0.0f };
+                }
 
                 return data.data();
             } });

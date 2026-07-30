@@ -265,9 +265,9 @@ void MeshComponent::SetObjectUVScaleOverride(float uvScaleOverride) {
 
 bool MeshComponent::UploadMesh(std::vector<float>    vertices,
                                std::vector<uint32_t> indices,
-                               std::vector<uint8_t>  baseColor) {
+                               Math::Vector4         baseColor) {
     Syngine::ModelData modelData;
-    int vertexSize = baseColor.empty()
+    int vertexSize = (baseColor == Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f))
                          ? 12
                          : 8; // if no baseColor provided, expect vertex colors
 
@@ -283,10 +283,7 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         static_cast<uint32_t>(vertices.size() / vertexSize));
 
     // build vertices, apply baseColor if provided
-    if (!baseColor.empty()) {
-        if (baseColor.size() == 3) {
-            baseColor.push_back(255); // add alpha if missing
-        }
+    if (!baseColor.isZero()) {
         // apply base color to all vertices
         std::vector<Vertex>::iterator vertexIt = modelData.vertices.begin();
         for (size_t i = 0; i < vertices.size(); i += 8) {
@@ -295,10 +292,7 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
             vertex.normal =
                 Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
             vertex.uv0   = Vector2(vertices[i + 6], vertices[i + 7]);
-            vertex.color = Vector4(static_cast<float>(baseColor[0]) / 255.0f,
-                                   static_cast<float>(baseColor[1]) / 255.0f,
-                                   static_cast<float>(baseColor[2]) / 255.0f,
-                                   static_cast<float>(baseColor[3]) / 255.0f);
+            vertex.color = baseColor;
             *vertexIt++  = vertex;
         }
     } else {
@@ -346,10 +340,8 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
     // Add dummy material
-    Material mat("default_material");
-    mat.Set("u_baseColor",
-            Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f).data(),
-            sizeof(Math::Vector4));
+    Material mat("default_material", ShaderManager::Get("default"));
+    mat.Set("u_baseColor", baseColor.data(), sizeof(Math::Vector4));
     modelData.materials.push_back(mat);
 
     // checks

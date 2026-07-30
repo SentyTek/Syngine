@@ -166,10 +166,10 @@ class RenderCore {
     static bgfx::UniformHandle m_tonemap_ssaoTex;
     static bgfx::UniformHandle m_defaultShadowMap;
 
-    static Math::Mat4 m_csmLightViewProj;
-    static Math::Vec4 m_csmCascadeSplits;
-    static float      m_cascadeSizes[NUM_CASCADES];
-    static float      m_cascadeTexelSizes[NUM_CASCADES];
+    static std::array<Math::Matrix4x4, NUM_CASCADES> m_csmLightViewProj;
+    static Math::Vec4                                m_csmCascadeSplits;
+    static float m_cascadeSizes[NUM_CASCADES];
+    static float m_cascadeTexelSizes[NUM_CASCADES];
 
     static RendererConfig m_config; //* Render configuration
 

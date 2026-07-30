@@ -399,7 +399,7 @@ bool AssimpLoader::_ReloadModel(ModelData&         out,
     mesh->valid = false; // Mark as invalid before reloading
 
     Assimp::Importer importer;
-    const int flags = aiProcess_JoinIdenticalVertices |
+    const int        flags = aiProcess_JoinIdenticalVertices |
                       aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
                       aiProcess_DropNormals;
     const std::string formatHint = _GetAssimpFormatHint(assetPath);
@@ -452,15 +452,16 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
 
     // Start with default material
     // This loads in the base parameters used by most sahders
-    Material mat = MaterialManager::GetDefaultMaterialPBR();
+    bool     hasTex = (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
+                   aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0);
+    Material mat    = MaterialManager::GetDefaultMaterialPBR(hasTex);
 
     // base color
-    aiColor4D color(1.0f, 1.0f, 1.0f, 1.0f);
-    if (aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
-        mat.shader = ShaderManager::Get("default");
-        mat.Set("baseColor", _ToVector4(color).data(), sizeof(Math::Vector4));
-    } else {
-        mat.shader = ShaderManager::Get("texture");
+    aiColor4D baseColor(1.0f, 1.0f, 1.0f, 1.0f);
+    if (!loadTextures &&
+        aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, baseColor) == AI_SUCCESS) {
+        mat.Set(
+            "u_baseColor", _ToVector4(baseColor).data(), sizeof(Math::Vector4));
     }
 
     // Import or derive UV scales
@@ -469,19 +470,21 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
         scaleProperty = 1.0f; // default if not specified
     }
 
-    mat.Set("uvScale", &scaleProperty, sizeof(float));
+    mat.Set("u_uvScale", &scaleProperty, sizeof(float));
 
     // Load textures if requested
     if (loadTextures) {
         aiString texPath;
         if (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
             aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath);
-            mat.SetTexture("albedo", _LoadAssimpTexture(scene, texPath), 0, 0);
+            mat.SetTexture(
+                "s_albedo", _LoadAssimpTexture(scene, texPath), 0, 0);
         } else if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
-            mat.SetTexture("albedo", _LoadAssimpTexture(scene, texPath), 0, 0);
+            mat.SetTexture(
+                "s_albedo", _LoadAssimpTexture(scene, texPath), 0, 0);
         } else {
-            mat.SetTexture("albedo", BGFX_INVALID_HANDLE, 0, 0);
+            mat.SetTexture("s_albedo", BGFX_INVALID_HANDLE, 0, 0);
         }
 
         // Normal map
@@ -489,9 +492,9 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
             aiString normalPath;
             aiMat->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
             mat.SetTexture(
-                "normalMap", _LoadAssimpTexture(scene, normalPath), 0, 2);
+                "s_normalMap", _LoadAssimpTexture(scene, normalPath), 0, 2);
         } else {
-            mat.SetTexture("normalMap", BGFX_INVALID_HANDLE, 0, 2);
+            mat.SetTexture("s_normalMap", BGFX_INVALID_HANDLE, 0, 2);
         }
 
         // Height map - try to find a texture with _height suffix
@@ -508,9 +511,9 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
 
         // HEIGHT MAPS ARE NO LONGER USED BY SHADERS
     } else {
-        mat.SetTexture("albedo", BGFX_INVALID_HANDLE, 0, 0);
-        mat.SetTexture("normalMap", BGFX_INVALID_HANDLE, 0, 1);
-        mat.SetTexture("heightMap", Syngine::CreateFlatTexture(), 0, 2);
+        mat.SetTexture("s_albedo", BGFX_INVALID_HANDLE, 0, 0);
+        mat.SetTexture("s_normalMap", BGFX_INVALID_HANDLE, 0, 1);
+        mat.SetTexture("s_heightMap", Syngine::CreateFlatTexture(), 0, 2);
     }
     return mat;
 }

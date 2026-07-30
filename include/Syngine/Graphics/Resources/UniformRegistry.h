@@ -55,13 +55,21 @@ struct UniformDataProvider {
 
 class UniformRegistry {
     std::unordered_map<std::string, UniformDataProvider> m_UniformProviders;
-    std::vector<bgfx::UniformHandle>
-        m_UniformHandles; // for bgfx uniform handles
+    std::unordered_map<std::string, bgfx::UniformHandle> m_UniformHandlesMap;
+    std::vector<bgfx::UniformHandle>                     m_UniformHandles;
 
-    std::unordered_map<std::string, UniformType>
-        m_uniformTypeMap; // for shader metadata parsing
-    std::unordered_map<std::string, UniformFrequency>
-        m_uniformFreqMap; // for shader metadata parsing
+    std::unordered_map<std::string, UniformType> m_uniformTypeMap = {
+        { "sampler", UniformType::SAMPLER },
+        { "vec4", UniformType::VEC4 },
+        { "mat4", UniformType::MAT4 },
+        { "mat3", UniformType::MAT3 },
+    }; // for shader metadata parsing
+
+    std::unordered_map<std::string, UniformFrequency> m_uniformFreqMap = {
+        { "draw", UniformFrequency::DRAW },
+        { "view", UniformFrequency::VIEW },
+        { "frame", UniformFrequency::FRAME },
+    }; // for shader metadata parsing
 
     static UniformRegistry& GetInstance() {
         static UniformRegistry instance;
@@ -70,12 +78,9 @@ class UniformRegistry {
 
     static bgfx::UniformHandle _GetUniformHandle(const std::string& name) {
         auto& instance = GetInstance();
-        for (size_t i = 0; i < instance.m_UniformHandles.size(); ++i) {
-            auto it = instance.m_UniformProviders.begin();
-            std::advance(it, i);
-            if (it->second.name == name) {
-                return instance.m_UniformHandles[i];
-            }
+        auto  it       = instance.m_UniformHandlesMap.find(name);
+        if (it != instance.m_UniformHandlesMap.end()) {
+            return it->second;
         }
         return BGFX_INVALID_HANDLE;
     }

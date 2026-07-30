@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include "Syngine/Math/Vector4.hpp"
 #include <Syngine/ECS/Component.h>
 #include <Syngine/ECS/GameObject.h>
 #include <Syngine/Graphics/Resources/ModelLoader.h>
@@ -154,9 +155,10 @@ class MeshComponent : public Syngine::Component {
     /// @return true on success, false on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool UploadMesh(std::vector<float>    vertices,
-                    std::vector<uint32_t> indices,
-                    std::vector<uint8_t>  baseColor = {});
+    bool
+    UploadMesh(std::vector<float>    vertices,
+               std::vector<uint32_t> indices,
+               Math::Vector4 baseColor = Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f));
 
     ModelData modelData; //* Mesh data for the GameObject
 

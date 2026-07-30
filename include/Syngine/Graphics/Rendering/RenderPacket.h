@@ -22,6 +22,7 @@ struct RenderPacket {
     bgfx::VertexBufferHandle vbh;
     bgfx::IndexBufferHandle  ibh;
     Math::Matrix4x4          modelMtx;
+    bool                     mirror;
 
     uint32_t indexStart;
     uint32_t indexCount;
