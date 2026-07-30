@@ -45,10 +45,17 @@ class Shader {
         UniformGetter       getter = nullptr;
         uint16_t            count  = 1;
     };
+    struct EngineSampler {
+        std::string         name;
+        bgfx::UniformHandle handle = BGFX_INVALID_HANDLE;
+        uint8_t             stage  = 0;
+        UniformGetter       getter = nullptr;
+    };
 
     std::vector<EngineUniform>         m_frameUniforms;
     std::vector<EngineUniform>         m_viewUniforms;
     std::vector<EngineUniform>         m_drawUniforms;
+    std::vector<EngineSampler>         m_engineSamplers;
     std::vector<MaterialParameterDesc> m_materialParams;
     std::vector<TextureParameterDesc>  m_textureParams;
     bgfx::ProgramHandle                m_program = BGFX_INVALID_HANDLE;
@@ -58,19 +65,25 @@ class Shader {
     std::string shaderName; // Name of the shader
 
     ViewID m_viewId;
-    Shader(bgfx::ProgramHandle               program,
-           const std::string&                bundlePath,
-           const std::string&                shaderName,
-           const std::vector<EngineUniform>& frameUniforms,
-           const std::vector<EngineUniform>& viewUniforms,
-           const std::vector<EngineUniform>& drawUniforms,
-           ViewID                            viewId)
+    Shader(bgfx::ProgramHandle                       program,
+           const std::string&                        bundlePath,
+           const std::string&                        shaderName,
+           const std::vector<EngineUniform>&         frameUniforms,
+           const std::vector<EngineUniform>&         viewUniforms,
+           const std::vector<EngineUniform>&         drawUniforms,
+           const std::vector<EngineSampler>&         engineSamplers,
+           const std::vector<MaterialParameterDesc>& materialParams,
+           const std::vector<TextureParameterDesc>&  textureParams,
+           ViewID                                    viewId)
         : m_program(program), bundlePath(bundlePath), shaderName(shaderName),
           m_frameUniforms(frameUniforms), m_viewUniforms(viewUniforms),
-          m_drawUniforms(drawUniforms), m_viewId(viewId) {}
+          m_drawUniforms(drawUniforms), m_engineSamplers(engineSamplers),
+          m_materialParams(materialParams), m_textureParams(textureParams),
+          m_viewId(viewId) {}
 
     friend class ShaderManager;
     friend class RenderCore;
+    friend class Material;
 
   public:
     Shader(Shader&&) noexcept            = default;
@@ -90,6 +103,7 @@ class ShaderManager {
         uint16_t         num;
         std::string      src;
         _UniformStage    stage;
+        uint8_t          texStage;
         UniformGetter    getter;
     };
 
@@ -104,6 +118,7 @@ class ShaderManager {
                     std::vector<Shader::EngineUniform>& outFrameUniforms,
                     std::vector<Shader::EngineUniform>& outViewUniforms,
                     std::vector<Shader::EngineUniform>& outDrawUniforms,
+                    std::vector<Shader::EngineSampler>& outEngineSamplers,
                     std::vector<MaterialParameterDesc>& outMaterialParams,
                     std::vector<TextureParameterDesc>&  outTextureParams);
 

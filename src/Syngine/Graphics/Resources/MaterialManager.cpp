@@ -175,8 +175,9 @@ Material MaterialManager::GetMaterialFromFile(const std::string& filePath) {
     return _DeserializeMaterial(xmlStream);
 }
 
-Material MaterialManager::GetDefaultMaterialPBR() {
-    Material mat("default_texture");
+Material MaterialManager::GetDefaultMaterialPBR(bool textured) {
+    std::string name = textured ? "default_texture" : "default";
+    Material    mat(name, ShaderManager::Get(name));
     mat.Set("u_materialParams1",
             Math::Vector4(0.0f, 0.2f, 0.0f, 0.0f).data(),
             sizeof(Math::Vector4));

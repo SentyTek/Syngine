@@ -52,16 +52,20 @@ ShaderManager::_parseShaderMetadata(scl::pack::Packager& packager,
      *     <Shader name="shaderName">
      *         <Uniforms>
      *             <Uniform name="uniformName" type="vec4" freq="draw" num="1" src="Camera.ViewProjection" />
-     *             <Param name="u_baseColor" type="vec4" num="1" />
-     *             <Sampler name="s_albedo" />
      *         </Uniforms>
+     *         <MaterialParams>
+     *             <Param name="u_baseColor" type="vec4" num="1" />
+     *         </MaterialParams>
+     *         <Samplers>
+     *             <Sampler name="s_albedo" stage="0" />
+     *         </Samplers>
      *     </Shader>
      *     ...
      * </SyngineShaderMetadata>
      */
     /* clang-format on */
 
-    auto versionAttr = doc.find_attr("version");
+    auto versionAttr = doc.find_attr("Version");
     if (!versionAttr || versionAttr->data() != SYNINT_SHADER_METADATA_VERSION) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
@@ -73,15 +77,9 @@ ShaderManager::_parseShaderMetadata(scl::pack::Packager& packager,
         return {};
     }
 
-    auto* root = doc.find_children("SyngineShaderMetadata").front();
-    if (!root) {
-        Syngine::Logger::Error("ParseShaderMetadata: malformed meta.xml");
-        return {};
-    }
-
     // Find the shader element with the matching name
     scl::xml::XmlElem* shaderElem = nullptr;
-    for (auto* child : root->find_children("Shader")) {
+    for (auto* child : doc.find_children("Shader")) {
         auto nameAttr = child->find_attr("name");
         if (nameAttr && nameAttr->data() == shaderName) {
             shaderElem = child;
@@ -101,133 +99,171 @@ ShaderManager::_parseShaderMetadata(scl::pack::Packager& packager,
     std::vector<_UniformMeta> requestedBindings;
 
     // Parse uniforms
+    char sectionsWithUniforms = 0; // Count of uniform sections that are empty
+
+    // Engine uniforms (uniforms with a source provided by the engine)
     auto* uniformsElem = shaderElem->find_children("Uniforms").front();
-    if (uniformsElem) {
-        // Engine uniforms (uniforms with a source provided by the engine)
-        for (auto* uniformElem : uniformsElem->find_children("Uniform")) {
-            auto nameAttr = uniformElem->find_attr("name");
-            auto typeAttr = uniformElem->find_attr("type");
-            auto freqAttr = uniformElem->find_attr("freq");
-            auto srcAttr  = uniformElem->find_attr("src");
-            auto numAttr  = uniformElem->find_attr("num");
+    for (auto* uniformElem : uniformsElem->find_children("Uniform")) {
+        sectionsWithUniforms++;
+        auto nameAttr = uniformElem->find_attr("name");
+        auto typeAttr = uniformElem->find_attr("type");
+        auto freqAttr = uniformElem->find_attr("freq");
+        auto srcAttr  = uniformElem->find_attr("src");
+        auto numAttr  = uniformElem->find_attr("num");
 
-            // Validate
-            if (!nameAttr || !typeAttr || !freqAttr || !srcAttr || !numAttr) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                                      true,
-                                      "ParseShaderMetadata: uniform missing "
-                                      "required attributes in shader '%s'",
-                                      shaderName.c_str());
-                return {};
-            }
-
-            scl::string uName = nameAttr->data();
-            scl::string uType = typeAttr->data();
-            scl::string uFreq = freqAttr->data();
-            scl::string uSrc  = srcAttr->data();
-            scl::string uNum  = numAttr->data();
-
-            // Make sure type and freq is valid at all
-            auto typeIt = UniformRegistry::GetInstance().m_uniformTypeMap.find(
-                uType.cstr());
-            auto freqIt = UniformRegistry::GetInstance().m_uniformFreqMap.find(
-                uFreq.cstr());
-            if (typeIt ==
-                    UniformRegistry::GetInstance().m_uniformTypeMap.end() ||
-                freqIt ==
-                    UniformRegistry::GetInstance().m_uniformFreqMap.end()) {
-                Syngine::Logger::LogF(
-                    Syngine::LogLevel::ERR,
-                    true,
-                    "ParseShaderMetadata: unknown uniform param(s) type '%s' "
-                    "or frequency '%s' in shader '%s'",
-                    uType.cstr(),
-                    uFreq.cstr(),
-                    shaderName.c_str());
-                return {};
-            }
-
-            // All checks passed
-            // .getter is omitted here and set in _resolveBindings
-            requestedBindings.push_back(
-                { uName.cstr(),
-                  typeIt->second,
-                  freqIt->second,
-                  static_cast<uint16_t>(std::stoi(uNum.cstr())),
-                  uSrc.cstr(),
-                  _UniformStage::ENGINE });
+        // Validate
+        if (!nameAttr || !typeAttr || !freqAttr || !srcAttr) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  true,
+                                  "ParseShaderMetadata: uniform missing "
+                                  "required attributes in shader '%s'",
+                                  shaderName.c_str());
+            return {};
         }
 
-        // Material parameter uniforms (uniforms with no source, provided by the
-        // material)
-        for (auto* paramElem : uniformsElem->find_children("Param")) {
-            auto nameAttr = paramElem->find_attr("name");
-            auto typeAttr = paramElem->find_attr("type");
-            auto numAttr  = paramElem->find_attr("num");
+        scl::string uName = nameAttr->data();
+        scl::string uType = typeAttr->data();
+        scl::string uFreq = freqAttr->data();
+        scl::string uSrc  = srcAttr->data();
+        scl::string uNum =
+            numAttr ? numAttr->data() : "1"; // Default to 1 if not specified
 
-            // Validate
-            if (!nameAttr || !typeAttr || !numAttr) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                                      true,
-                                      "ParseShaderMetadata: param missing "
-                                      "required attributes in shader '%s'",
-                                      shaderName.c_str());
-                return {};
-            }
-
-            scl::string uName = nameAttr->data();
-            scl::string uType = typeAttr->data();
-            scl::string uNum  = numAttr->data();
-
-            // Make sure type is valid at all
-            auto typeIt = UniformRegistry::GetInstance().m_uniformTypeMap.find(
-                uType.cstr());
-            if (typeIt ==
-                UniformRegistry::GetInstance().m_uniformTypeMap.end()) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                                      true,
-                                      "ParseShaderMetadata: unknown param type "
-                                      "'%s' in shader '%s'",
-                                      uType.cstr(),
-                                      shaderName.c_str());
-                return {};
-            }
-
-            // All checks passed
-            requestedBindings.push_back(
-                { uName.cstr(),
-                  typeIt->second,
-                  UniformFrequency::DRAW, // Material params are always per-draw
-                  static_cast<uint16_t>(std::stoi(uNum.cstr())),
-                  "none",
-                  _UniformStage::MATERIAL });
+        // Make sure type and freq is valid at all
+        auto typeIt =
+            UniformRegistry::GetInstance().m_uniformTypeMap.find(uType.cstr());
+        auto freqIt =
+            UniformRegistry::GetInstance().m_uniformFreqMap.find(uFreq.cstr());
+        if (typeIt == UniformRegistry::GetInstance().m_uniformTypeMap.end() ||
+            freqIt == UniformRegistry::GetInstance().m_uniformFreqMap.end()) {
+            Syngine::Logger::LogF(
+                Syngine::LogLevel::ERR,
+                true,
+                "ParseShaderMetadata: unknown uniform param(s) type '%s' "
+                "or frequency '%s' in shader '%s'",
+                uType.cstr(),
+                uFreq.cstr(),
+                shaderName.c_str());
+            return {};
         }
 
-        // Sampler uniforms (textures)
-        for (auto* samplerElem : uniformsElem->find_children("Sampler")) {
-            auto nameAttr  = samplerElem->find_attr("name");
-            auto stageAttr = samplerElem->find_attr("stage");
+        // All checks passed
+        // .getter is omitted here and set in _resolveBindings
+        requestedBindings.push_back(
+            { uName.cstr(),
+              typeIt->second,
+              freqIt->second,
+              static_cast<uint16_t>(std::stoi(uNum.cstr())),
+              uSrc.cstr(),
+              _UniformStage::ENGINE });
+    }
 
-            // Validate
-            if (!nameAttr || !stageAttr) {
-                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                                      true,
-                                      "ParseShaderMetadata: sampler missing "
-                                      "required attributes in shader '%s'",
-                                      shaderName.c_str());
-                return {};
-            }
+    // Engine samplers are samplers provided by the engine rather than by
+    // materials
+    auto* engineSamplersElem =
+        shaderElem->find_children("EngineSamplers").front();
+    for (auto* samplerElem : engineSamplersElem->find_children("Sampler")) {
+        sectionsWithUniforms++;
+        auto nameAttr  = samplerElem->find_attr("name");
+        auto stageAttr = samplerElem->find_attr("stage");
+        auto srcAttr   = samplerElem->find_attr("src");
 
-            // All checks passed
-            requestedBindings.push_back(
-                { nameAttr->data().cstr(),
-                  UniformType::SAMPLER,
-                  UniformFrequency::DRAW, // Samplers are always per-draw
-                  1,
-                  "none",
-                  _UniformStage::SAMPLER });
+        // Validate
+        if (!nameAttr || !stageAttr || !srcAttr) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  true,
+                                  "ParseShaderMetadata: engine sampler missing "
+                                  "required attributes in shader '%s'",
+                                  shaderName.c_str());
+            return {};
         }
-    } else {
+
+        // All checks passed
+        requestedBindings.push_back(
+            { nameAttr->data().cstr(),
+              UniformType::SAMPLER,
+              UniformFrequency::DRAW, // Engine samplers are always per-draw
+              1,
+              srcAttr->data().cstr(),
+              _UniformStage::SAMPLER,
+              static_cast<uint8_t>(std::stoi(stageAttr->data().cstr())) });
+    }
+
+    // Material parameter uniforms (uniforms with no source, provided by the
+    // material)
+    auto* materialParamsElem =
+        shaderElem->find_children("MaterialParams").front();
+    for (auto* paramElem : materialParamsElem->find_children("Param")) {
+        sectionsWithUniforms++;
+        auto nameAttr = paramElem->find_attr("name");
+        auto typeAttr = paramElem->find_attr("type");
+        auto numAttr  = paramElem->find_attr("num");
+
+        // Validate
+        if (!nameAttr || !typeAttr || !numAttr) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  true,
+                                  "ParseShaderMetadata: param missing "
+                                  "required attributes in shader '%s'",
+                                  shaderName.c_str());
+            return {};
+        }
+
+        scl::string uName = nameAttr->data();
+        scl::string uType = typeAttr->data();
+        scl::string uNum  = numAttr->data();
+
+        // Make sure type is valid at all
+        auto typeIt =
+            UniformRegistry::GetInstance().m_uniformTypeMap.find(uType.cstr());
+        if (typeIt == UniformRegistry::GetInstance().m_uniformTypeMap.end()) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  true,
+                                  "ParseShaderMetadata: unknown param type "
+                                  "'%s' in shader '%s'",
+                                  uType.cstr(),
+                                  shaderName.c_str());
+            return {};
+        }
+
+        // All checks passed
+        requestedBindings.push_back(
+            { uName.cstr(),
+              typeIt->second,
+              UniformFrequency::DRAW, // Material params are always per-draw
+              static_cast<uint16_t>(std::stoi(uNum.cstr())),
+              "none",
+              _UniformStage::MATERIAL });
+    }
+
+    // Sampler uniforms (textures)
+    auto* samplersElem = shaderElem->find_children("Samplers").front();
+    for (auto* samplerElem : samplersElem->find_children("Sampler")) {
+        sectionsWithUniforms++;
+        auto nameAttr  = samplerElem->find_attr("name");
+        auto stageAttr = samplerElem->find_attr("stage");
+
+        // Validate
+        if (!nameAttr || !stageAttr) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  true,
+                                  "ParseShaderMetadata: sampler missing "
+                                  "required attributes in shader '%s'",
+                                  shaderName.c_str());
+            return {};
+        }
+
+        // All checks passed
+        requestedBindings.push_back(
+            { nameAttr->data().cstr(),
+              UniformType::SAMPLER,
+              UniformFrequency::DRAW, // Samplers are always per-draw
+              1,
+              "none",
+              _UniformStage::SAMPLER,
+              static_cast<uint8_t>(std::stoi(stageAttr->data().cstr())) });
+    }
+
+    if (sectionsWithUniforms == 0) {
         // No uniforms. Still valid, so return something so it doesnt fail out
         // of the function
         requestedBindings.push_back({ "none",
@@ -246,6 +282,20 @@ bool ShaderManager::_resolveBindings(
     // Check if all requested bindings are registered in the UniformRegistry
     // If they do, make sure the type matches as well
     for (auto& uMeta : requestedBindings) {
+        // if name is none then this is a placeholder for shaders with no
+        // uniforms, so skip it
+        if (uMeta.name == "none") {
+            break;
+        }
+        if (uMeta.stage == ShaderManager::_UniformStage::MATERIAL ||
+            (uMeta.stage == ShaderManager::_UniformStage::SAMPLER &&
+             uMeta.src == "none")) {
+            // Material params and samplers don't have a source, so skip them
+            // Engine samplers do have a source, so dont skip those
+            // The renderer creates the actual textures for EngineSamplers, the
+            // src just calls a provider to get the texture handle
+            continue;
+        }
         UniformDataProvider* srcIt = UniformRegistry::FindProvider(uMeta.src);
         if (!srcIt) {
             Syngine::Logger::LogF(
@@ -256,14 +306,30 @@ bool ShaderManager::_resolveBindings(
             return false;
         }
         if (srcIt->type != uMeta.type) {
+            std::string expectedTypeStr;
+            std::string actualTypeStr;
+            switch (srcIt->type) {
+            case UniformType::SAMPLER: expectedTypeStr = "sampler"; break;
+            case UniformType::VEC4: expectedTypeStr = "vec4"; break;
+            case UniformType::MAT4: expectedTypeStr = "mat4"; break;
+            case UniformType::MAT3: expectedTypeStr = "mat3"; break;
+            default: expectedTypeStr = "unknown"; break;
+            }
+            switch (uMeta.type) {
+            case UniformType::SAMPLER: actualTypeStr = "sampler"; break;
+            case UniformType::VEC4: actualTypeStr = "vec4"; break;
+            case UniformType::MAT4: actualTypeStr = "mat4"; break;
+            case UniformType::MAT3: actualTypeStr = "mat3"; break;
+            default: actualTypeStr = "unknown"; break;
+            }
             Syngine::Logger::LogF(
                 Syngine::LogLevel::ERR,
                 true,
                 "ParseShaderMetadata: uniform source '%s' type mismatch. "
                 "Expected '%s', got '%s'.",
                 uMeta.src.c_str(),
-                static_cast<int>(uMeta.type),
-                static_cast<int>(srcIt->type));
+                expectedTypeStr.c_str(),
+                actualTypeStr.c_str());
             return false;
         }
         // fill in the getter function pointer from the registry
@@ -278,12 +344,14 @@ bool ShaderManager::_createUniforms(
     std::vector<Shader::EngineUniform>&             outFrameUniforms,
     std::vector<Shader::EngineUniform>&             outViewUniforms,
     std::vector<Shader::EngineUniform>&             outDrawUniforms,
+    std::vector<Shader::EngineSampler>&             outEngineSamplers,
     std::vector<MaterialParameterDesc>&             outMaterialParams,
     std::vector<TextureParameterDesc>&              outTextureParams) {
 
     outFrameUniforms.reserve(requestedBindings.size());
     outViewUniforms.reserve(requestedBindings.size());
     outDrawUniforms.reserve(requestedBindings.size());
+    outEngineSamplers.reserve(requestedBindings.size());
     outMaterialParams.reserve(requestedBindings.size());
     outTextureParams.reserve(requestedBindings.size());
 
@@ -292,11 +360,6 @@ bool ShaderManager::_createUniforms(
         if (uMeta.name == "none") {
             return true; // none uniform is a placeholder for shaders with no
                          // uniforms, so skip it
-        }
-        if (uMeta.stage == ShaderManager::_UniformStage::SAMPLER) {
-            // Sampler uniforms are handled in the model loader
-            outTextureParams.push_back({ uMeta.name, 0, BGFX_INVALID_HANDLE });
-            continue;
         }
         bgfx::UniformHandle handle = bgfx::createUniform(
             uMeta.name.c_str(),
@@ -312,9 +375,23 @@ bool ShaderManager::_createUniforms(
                                   uMeta.num);
             return false;
         }
+
+        UniformRegistry::GetInstance().m_UniformHandles.push_back(handle);
+        UniformRegistry::GetInstance().m_UniformHandlesMap[uMeta.name] = handle;
+
         if (uMeta.stage == ShaderManager::_UniformStage::MATERIAL) {
             outMaterialParams.push_back(
                 { uMeta.name, uMeta.type, uMeta.num, handle });
+        } else if (uMeta.stage == ShaderManager::_UniformStage::SAMPLER) {
+            if (uMeta.src == "none") {
+                outTextureParams.push_back(
+                    { uMeta.name, uMeta.texStage, handle });
+            } else {
+                // This is an engine sampler, so add it to the engine
+                // samplers
+                outEngineSamplers.push_back(
+                    { uMeta.name, handle, uMeta.texStage, uMeta.getter });
+            }
         } else if (uMeta.stage == ShaderManager::_UniformStage::ENGINE) {
             switch (uMeta.frequency) {
             case UniformFrequency::FRAME:
@@ -342,6 +419,7 @@ bool ShaderManager::_createUniforms(
     outFrameUniforms.shrink_to_fit();
     outViewUniforms.shrink_to_fit();
     outDrawUniforms.shrink_to_fit();
+    outEngineSamplers.shrink_to_fit();
     outMaterialParams.shrink_to_fit();
     outTextureParams.shrink_to_fit();
 
@@ -395,7 +473,8 @@ size_t ShaderManager::LoadShader(const std::string&    bundlePath,
                 Syngine::LogLevel::FATAL,
                 false,
                 "LoadShader: failed to parse shader metadata "
-                "for default shader %s in bundle %s. Look at the log for more "
+                "for default shader %s in bundle %s. Look at the log for "
+                "more "
                 "details.",
                 shaderName.c_str(),
                 bundlePath.c_str());
@@ -419,22 +498,23 @@ size_t ShaderManager::LoadShader(const std::string&    bundlePath,
     }
 
     // Load binaries
-    scl::stream vertStream =
-        Serializer::_ReadFromBundle("", shaderName + ".vert.bin", packager);
-    scl::stream fragStream =
-        Serializer::_ReadFromBundle("", shaderName + ".frag.bin", packager);
+    scl::stream vertStream = Serializer::_ReadFromBundle(
+        bundlePath, shaderName + ".vert.bin", packager);
+    scl::stream fragStream = Serializer::_ReadFromBundle(
+        bundlePath, shaderName + ".frag.bin", packager);
     if (vertStream.size() == 0 || fragStream.size() == 0) {
-        Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR,
-            false,
-            "LoadShader: failed to read shader binaries for %s in bundle %s",
-            shaderName.c_str(),
-            bundlePath.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
+                              "LoadShader: failed to read shader binaries "
+                              "for %s in bundle %s",
+                              shaderName.c_str(),
+                              bundlePath.c_str());
         return 0;
     }
 
     // Resolve bindings
-    if (!ShaderManager::_resolveBindings(requestedUniforms)) {
+    if (requestedUniforms.front().name != "none" &&
+        !ShaderManager::_resolveBindings(requestedUniforms)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               false,
                               "LoadShader: failed to resolve uniform bindings "
@@ -448,12 +528,14 @@ size_t ShaderManager::LoadShader(const std::string&    bundlePath,
     std::vector<Shader::EngineUniform> frameUniforms;
     std::vector<Shader::EngineUniform> viewUniforms;
     std::vector<Shader::EngineUniform> drawUniforms;
+    std::vector<Shader::EngineSampler> engineSamplers;
     std::vector<MaterialParameterDesc> materialParams;
     std::vector<TextureParameterDesc>  textureParams;
     if (!ShaderManager::_createUniforms(requestedUniforms,
                                         frameUniforms,
                                         viewUniforms,
                                         drawUniforms,
+                                        engineSamplers,
                                         materialParams,
                                         textureParams)) {
         Syngine::Logger::LogF(
@@ -491,6 +573,9 @@ size_t ShaderManager::LoadShader(const std::string&    bundlePath,
                   frameUniforms,
                   viewUniforms,
                   drawUniforms,
+                  engineSamplers,
+                  materialParams,
+                  textureParams,
                   viewId);
     m_loadedShaders.push_back(
         std::move(shader)); // Move the shader into the vector
@@ -523,7 +608,8 @@ bool ShaderManager::ReloadShader(size_t shaderId) {
         return false;
     }
 
-    // Load new shader first just in case it fails, so we don't lose the old one
+    // Load new shader first just in case it fails, so we don't lose the old
+    // one
     const size_t loadedBefore = m_loadedShaders.size();
     size_t       newShaderId  = LoadShader(
         oldShader.bundlePath, oldShader.shaderName, oldShader.m_viewId);
