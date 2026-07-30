@@ -46,6 +46,7 @@ function(compile_all_shaders)
         SHADER_FILES_OUTPUT_VAR     # Variable name to store the list of all compiled .bin files
         BUNDLE_OUTPUT_DIRECTORY     # Directory where generated .spk bundles are written
         SINGLE_BUNDLE_NAME          # If provided, all compiled outputs are packed into this bundle
+        ROOT_OUTPUT_SUBDIR          # Output/bundle group name for shaders located directly in SOURCE_DIRECTORY
         BUNDLE_FILES_OUTPUT_VAR     # Variable name to store generated bundle file paths
         VARYING_SUFFIX              # Suffix for varying definition files (e.g., .vary.bgsl)
         VERTEX_SUFFIX               # Suffix for vertex shader files (e.g., .vert.bgsl)
@@ -110,6 +111,30 @@ function(compile_all_shaders)
         "${ARG_SOURCE_DIRECTORY}/*${resolved_fragment_suffix}"
     )
 
+    # Collect all .bgsl files so meta.xml is regenerated when shader sources change.
+    file(GLOB_RECURSE ALL_BGSL_FILES
+        RELATIVE "${ARG_SOURCE_DIRECTORY}"
+        "${ARG_SOURCE_DIRECTORY}/*.bgsl"
+    )
+
+    set(meta_generation_deps ${tool_deps})
+    foreach(shader_src_rel ${ALL_BGSL_FILES})
+        list(APPEND meta_generation_deps "${ARG_SOURCE_DIRECTORY}/${shader_src_rel}")
+    endforeach()
+
+    # --- Generate the meta.xml file for the directory ---
+    set(meta_output_path "${ARG_OUTPUT_DIRECTORY}/meta.xml")
+    set(meta_output_path_rel "meta.xml")
+    add_custom_command(
+        OUTPUT "${meta_output_path}"
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIRECTORY}"
+        COMMAND $<TARGET_FILE:syntools> sm "${ARG_SOURCE_DIRECTORY}" "--output=${ARG_OUTPUT_DIRECTORY}"
+        DEPENDS ${meta_generation_deps}
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Generating shader metadata for directory: ${ARG_SOURCE_DIRECTORY}"
+        VERBATIM
+    )
+
     set(compiled_shader_list_accumulator "")
     set(bundle_group_ids "")
     foreach(frag_shader_relative_path ${ALL_FRAG_FILES})
@@ -144,11 +169,18 @@ function(compile_all_shaders)
 
         # --- Build output paths ---
         set(output_base_name "${shader_base_name}")
-        if(shader_dir_relative)
+        if(ARG_BUNDLE_BY_TOP_LEVEL_DIR)
+            if(shader_dir_relative)
+                set(output_base_name "${shader_dir_relative}/${shader_base_name}")
+            elseif(ARG_ROOT_OUTPUT_SUBDIR)
+                set(output_base_name "${ARG_ROOT_OUTPUT_SUBDIR}/${shader_base_name}")
+            endif()
+        elseif(shader_dir_relative)
             string(REPLACE "/" "_" output_base_name "${shader_dir_relative}_${shader_base_name}")
         endif()
 
         set(output_path_final "${ARG_OUTPUT_DIRECTORY}/${output_base_name}")
+        get_filename_component(output_path_dir "${output_path_final}" DIRECTORY)
         set(output_vert_file "${output_path_final}.vert.bin")
         set(output_frag_file "${output_path_final}.frag.bin")
 
@@ -165,7 +197,7 @@ function(compile_all_shaders)
         # --- Create custom command to compile shaders ---
         add_custom_command(
             OUTPUT ${output_vert_file} ${output_frag_file}
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIRECTORY}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_path_dir}"
             COMMAND ${syntools_cmd}
             DEPENDS ${vert_shader_path} ${ARG_SOURCE_DIRECTORY}/${frag_shader_relative_path} ${tool_deps}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
@@ -182,6 +214,8 @@ function(compile_all_shaders)
         elseif(ARG_BUNDLE_BY_TOP_LEVEL_DIR)
             if(shader_dir_relative)
                 string(REGEX MATCH "^[^/\\\\]+" bundle_group_name "${shader_dir_relative}")
+            elseif(ARG_ROOT_OUTPUT_SUBDIR)
+                set(bundle_group_name "${ARG_ROOT_OUTPUT_SUBDIR}")
             else()
                 set(bundle_group_name "shaders")
             endif()
@@ -194,9 +228,13 @@ function(compile_all_shaders)
                 list(APPEND bundle_group_ids ${bundle_group_id})
             endif()
             list(APPEND bundle_group_files_${bundle_group_id} ${output_vert_file_rel} ${output_frag_file_rel})
-            list(APPEND bundle_group_depends_${bundle_group_id} ${output_vert_file} ${output_frag_file})
+            list(APPEND bundle_group_depends_${bundle_group_id} ${output_vert_file} ${output_frag_file} ${meta_output_path})
         endif()
     endforeach()
+
+    if(compiled_shader_list_accumulator)
+        list(APPEND compiled_shader_list_accumulator ${meta_output_path})
+    endif()
 
     # Build one or more .spk bundles from the compiled shader outputs.
     set(generated_bundle_files "")
@@ -204,6 +242,11 @@ function(compile_all_shaders)
         set(bundle_group_name "${bundle_group_name_${bundle_group_id}}")
         set(bundle_group_files "${bundle_group_files_${bundle_group_id}}")
         set(bundle_group_depends "${bundle_group_depends_${bundle_group_id}}")
+
+        # Include metadata once per bundle; duplicate paths can make bundle validation fail.
+        list(APPEND bundle_group_files ${meta_output_path_rel})
+        list(REMOVE_DUPLICATES bundle_group_files)
+        list(REMOVE_DUPLICATES bundle_group_depends)
 
         create_file_bundle(
             BUNDLE_NAME "${bundle_group_name}"

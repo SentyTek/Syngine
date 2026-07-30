@@ -25,6 +25,8 @@ function(compile_collect_shaders SHADER_SRC_DIR ALL_SHADERS_LIST)
     set(BUNDLED_SHADER_PACKS)     # Temp list for this call
 
     if(SHADER_SRC_DIR STREQUAL "${SYNGINE_SOURCE_DIR}/default/shaders")
+        set(LOCAL_SHADER_OUTPUT_DIR "${LOCAL_SHADER_OUTPUT_DIR}/default")
+        file(MAKE_DIRECTORY ${LOCAL_SHADER_OUTPUT_DIR})
         compile_all_shaders(
             SOURCE_DIRECTORY ${SHADER_SRC_DIR}
             OUTPUT_DIRECTORY ${LOCAL_SHADER_OUTPUT_DIR}
@@ -42,6 +44,7 @@ function(compile_collect_shaders SHADER_SRC_DIR ALL_SHADERS_LIST)
             SHADER_FILES_OUTPUT_VAR COMPILED_SHADER_BINARIES
             BUNDLE_OUTPUT_DIRECTORY ${LOCAL_SHADER_BUNDLE_DIR}
             BUNDLE_BY_TOP_LEVEL_DIR
+            ROOT_OUTPUT_SUBDIR assets_root
             BUNDLE_FILES_OUTPUT_VAR BUNDLED_SHADER_PACKS
         )
     endif()
@@ -50,7 +53,7 @@ function(compile_collect_shaders SHADER_SRC_DIR ALL_SHADERS_LIST)
         message(STATUS "Found shaders to compile in ${SHADER_SRC_DIR}")
         # Depend on bundles; they already depend on compiled shader binaries.
         list(APPEND ${ALL_SHADERS_LIST} ${BUNDLED_SHADER_PACKS})
-        set(${ALL_SHADERS_LIST} "${${ALL_SHADERS_LIST}};${BUNDLED_SHADER_PACKS}" PARENT_SCOPE)
+        set(${ALL_SHADERS_LIST} "${${ALL_SHADERS_LIST}}" PARENT_SCOPE)
     endif()
 endfunction()
 
