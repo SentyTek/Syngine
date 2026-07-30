@@ -2,9 +2,13 @@ $input v_texcoord0
 
 #include <bgfx_shader.sh>
 
+// @EngineSampler name="s_ssao" stage="0" src="Renderer.ssaoTex"
 SAMPLER2D(s_ssao, 0);
+// @EngineSampler name="s_depth" stage="1" src="Renderer.sceneDepth"
 SAMPLER2D(s_depth, 1);
+// @EngineSampler name="s_normal" stage="2" src="Renderer.sceneNormal"
 SAMPLER2D(s_normal, 2);
+// @MaterialParameter
 uniform vec4 u_floats; // x = radius, y = vertical (1.0) or horizontal (0.0) blur, z = width, w = height
 
 void GatherDepthNormal(vec2 uv, out float outDepth, out vec3 outNormal) {

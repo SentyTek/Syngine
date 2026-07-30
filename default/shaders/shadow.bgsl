@@ -1,8 +1,16 @@
+
+// @EngineSampler name="s_shadowMap" stage="3" src="Renderer.ShadowMap"
 SAMPLER2D(s_shadowMap, 3);
+
+// @EngineUniform freq="frame" src="Renderer.Debug.CSMCascadeSplits"
 uniform vec4 u_csmSplits;
+
+// @EngineUniform freq="frame" src="Renderer.Debug.CSMLightViewProj" num="4"
 uniform mat4 u_csmLightViewProj[4];
-uniform vec4 u_viewPos;
+// @EngineUniform freq="frame" src="Renderer.ShadowParams"
 uniform vec4 u_shadowParams; // x = homogeneous depth?, y = shadow map size, z = light far plane, w unused.
+
+uniform vec4 u_viewPos;
 uniform vec4 u_csmTexelSize; // x = casc0, y = casc1, z = casc2, w = casc3
 
 float sampleShadowPCF(vec2 uv, float bias, float texelSize, float radius, float zReceiver, vec4 bounds) {

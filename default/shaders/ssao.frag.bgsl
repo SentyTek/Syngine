@@ -2,10 +2,14 @@ $input v_texcoord0
 
 #include <bgfx_shader.sh>
 
+// @Sampler name="s_depth" stage="0" src="Renderer.sceneDepth"
 SAMPLER2D(s_depth, 0);
+// @Sampler name="s_normal" stage="1" src="Renderer.sceneNormal"
 SAMPLER2D(s_normal, 1);
 
+// @EngineUniform freq="frame" src="Renderer.SSAO.Params"
 uniform vec4 u_ssaoParams; // x: radius, y: bias (angle), z: intensity, w: reserved
+// @EngineUniform freq="frame" src="Renderer.SSAO.Resolution"
 uniform vec4 u_ssaoResolution; // x: width, y: height, z: invWidth, w: invHeight
 
 #define PI 3.14159265

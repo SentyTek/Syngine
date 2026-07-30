@@ -7,8 +7,13 @@ $output v_worldPos v_normal v_viewDepth v_vertexColor v_uvScaled v_uvMacro v_uvD
 // u_projection is the projection matrix
 // u_modelViewProj is u_proj * u_view * u_model
 
+// @EngineUniform freq="draw" src="Renderer.NormalMatrix"
 uniform mat4 u_normalMatrix; // should be the inverse transpose of the model matrix
+
+// @MaterialParameter
 uniform vec4 u_uvScale; // x = uvScaleAlbedo, y = uvScaleNormal, z = uvScaleHeight, w = unused
+
+// @MaterialParameter
 uniform vec4 u_materialParams1; // x = mixFactor for normal mapping, y = ambient multiplier, z = uvOverride, w = use vertex color
 
 void main() {
