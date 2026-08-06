@@ -169,10 +169,32 @@ class Renderer {
         uint64_t             drawId = 0;
     };
 
+    // Persistent backing storage for uniform-provider return values. Providers
+    // refresh these fields before returning their data; no provider returns a
+    // local, static-local, or thread-local pointer.
+    struct UniformProviderData {
+        Math::Vec4 frameCount;
+        Math::Mat4 cameraViewProjection;
+        Math::Vec4 cameraPosition;
+        Math::Vec4 sunDirection;
+        Math::Vec4 skyColorZenith = Math::Vec4(0.529f, 0.808f, 0.922f, 1.0f);
+        Math::Vec4 skyColorMidnight = Math::Vec4(0.05f, 0.05f, 0.1f, 1.0f);
+        Math::Vec4 sunColor = Math::Vec4(1.0f, 0.956f, 0.839f, 1.0f);
+        Math::Vec4 horizonColor = Math::Vec4(0.8f, 0.5f, 0.3f, 1.0f);
+        Math::Vec4 shadowParams;
+        Math::Mat4 normalMatrix;
+        Math::Vec4 ssaoParams;
+        Math::Vec4 ssaoResolution;
+        Math::Vec4 billboardPosition;
+        Math::Vec4 billboardMode;
+        Math::Vec4 billboardLighting;
+    };
+
     static std::string m_title; //* Title of the game window
     static bool m_isReady; //* Whether the renderer is initialized and ready
     static std::vector<UniformCacheEntry>
         m_uniformCache; //* Cache of uniform data for the current frame
+    static UniformProviderData m_uniformProviderData;
 
     static std::unordered_map<std::string, Syngine::BillboardComponent*>
                  m_gizmoRegistry; //* Registry of gizmos

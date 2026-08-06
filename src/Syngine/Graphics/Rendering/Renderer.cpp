@@ -47,6 +47,7 @@ float Renderer::m_gizmoSize = 1.0f;
 std::unordered_map<std::string, Syngine::BillboardComponent*>
                                          Renderer::m_gizmoRegistry;
 std::vector<Renderer::UniformCacheEntry> Renderer::m_uniformCache;
+Renderer::UniformProviderData Renderer::m_uniformProviderData;
 
 int      Renderer::width         = 0;
 int      Renderer::height        = 0;

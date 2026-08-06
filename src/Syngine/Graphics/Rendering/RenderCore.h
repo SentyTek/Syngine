@@ -48,9 +48,19 @@ class RenderCore {
     /// @internal
     static bool _SetResolution(int width, int height);
 
+    static void SetResolutionFlag(int reqW, int reqH) {
+        m_changeResolutionThisFrame = true;
+        m_requestedWidth            = reqW;
+        m_requestedHeight           = reqH;
+    }
+
   private:
     static constexpr uint16_t SHADOW_MAP_SIZE = 2048;
     static constexpr uint8_t  NUM_CASCADES    = 4;
+
+    static bool m_changeResolutionThisFrame;
+    static int  m_requestedWidth;
+    static int  m_requestedHeight;
 
     // Called by _DrawShadows when CSM debug is enabled
     static void
@@ -83,9 +93,7 @@ class RenderCore {
     static CameraComponent::Frustum _GetCascadeFrustum(uint8_t          cascade,
                                                        CameraComponent* camera);
 
-    static void _DrawShadows(const Shader*    program,
-                             CameraComponent* camera,
-                             uint8_t          cascade);
+    static void _DrawShadows(const Shader* program, CameraComponent* camera);
     static void _DrawSky(const Shader* program, const CameraComponent* camera);
     static void _DrawForward(const Shader* program, CameraComponent* camera);
     static void _DrawDebug(const Shader*    program,
@@ -99,10 +107,9 @@ class RenderCore {
 
     static float
         m_maxSmallObjDistance; //* Small objects get culled beyond this distance
-    static float _CalculateScreenSize(const MeshAABB&      aabb,
-                                      const Math::Vector3& cameraPos,
-                                      const Camera&        camera,
-                                      float                distance);
+    static float _CalculateScreenSize(const MeshAABB& aabb,
+                                      const Camera&   camera,
+                                      float           distance);
     static bool  _ShouldCullBySize(GameObject* go, CameraComponent* camera);
     static bool  _ShouldCullBySizeShadow(GameObject*      go,
                                          CameraComponent* camera,

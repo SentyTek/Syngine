@@ -28,7 +28,7 @@ struct RenderPacket {
     uint32_t indexCount;
     uint32_t depth;
 
-    Material*   material;
+    MaterialInstance* material;
     Shader*     shader;
     GameObject* go;
 

@@ -32,6 +32,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <vector>
 
 #if BX_PLATFORM_OSX
@@ -90,6 +91,10 @@ RenderCore::RenderCoreBuffers RenderCore::m_buffers = {
     .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
     .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
 };
+
+bool RenderCore::m_changeResolutionThisFrame = false;
+int  RenderCore::m_requestedWidth            = 0;
+int  RenderCore::m_requestedHeight           = 0;
 
 RendererConfig RenderCore::m_config;
 SDL_Window*    RenderCore::win = nullptr;
@@ -403,6 +408,21 @@ void RenderCore::_Shutdown() {
         }
         fb = BGFX_INVALID_HANDLE;
     });
+
+    // When SSAO is disabled, these are standalone dummy textures and are not
+    // owned by any framebuffer.
+    if (!m_config.useSSAO) {
+        if (bgfx::isValid(m_buffers.ssaoTex)) {
+            bgfx::destroy(m_buffers.ssaoTex);
+        }
+        if (bgfx::isValid(m_buffers.ssaoBlurH)) {
+            bgfx::destroy(m_buffers.ssaoBlurH);
+        }
+        if (bgfx::isValid(m_buffers.ssaoBlurFinal)) {
+            bgfx::destroy(m_buffers.ssaoBlurFinal);
+        }
+    }
+
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
 
     bgfx::shutdown();
@@ -463,27 +483,15 @@ bool RenderCore::_CreateSceneBuffers() {
                                                  BGFX_TEXTURE_RT);
 
     if (m_config.useSSAO) {
-        m_buffers.ssaoTex =
-            bgfx::createTexture2D(uint16_t(Renderer::width / 2),
-                                  uint16_t(Renderer::height / 2),
-                                  false,
-                                  1,
-                                  bgfx::TextureFormat::R16,
-                                  tsFlags);
-        m_buffers.ssaoBlurH =
-            bgfx::createTexture2D(uint16_t(Renderer::width / 2),
-                                  uint16_t(Renderer::height / 2),
-                                  false,
-                                  1,
-                                  bgfx::TextureFormat::R16,
-                                  tsFlags);
-        m_buffers.ssaoBlurFinal =
-            bgfx::createTexture2D(uint16_t(Renderer::width / 2),
-                                  uint16_t(Renderer::height / 2),
-                                  false,
-                                  1,
-                                  bgfx::TextureFormat::R16,
-                                  tsFlags);
+        const uint16_t ssaoWidth  = uint16_t(std::max(1, Renderer::width / 2));
+        const uint16_t ssaoHeight = uint16_t(std::max(1, Renderer::height / 2));
+
+        m_buffers.ssaoTex = bgfx::createTexture2D(
+            ssaoWidth, ssaoHeight, false, 1, bgfx::TextureFormat::R16, tsFlags);
+        m_buffers.ssaoBlurH = bgfx::createTexture2D(
+            ssaoWidth, ssaoHeight, false, 1, bgfx::TextureFormat::R16, tsFlags);
+        m_buffers.ssaoBlurFinal = bgfx::createTexture2D(
+            ssaoWidth, ssaoHeight, false, 1, bgfx::TextureFormat::R16, tsFlags);
         m_buffers.ssaoFB = bgfx::createFrameBuffer(1, &m_buffers.ssaoTex, true);
         m_buffers.ssaoBlurHFB =
             bgfx::createFrameBuffer(1, &m_buffers.ssaoBlurH, true);
@@ -522,25 +530,54 @@ bool RenderCore::_CreateSceneBuffers() {
 }
 
 bool RenderCore::_SetResolution(int width, int height) {
-    Renderer::height                        = height;
-    Renderer::width                         = width;
-    Serializer::m_coreSettings.video.width  = width;
-    Serializer::m_coreSettings.video.height = height;
-    bgfx::reset(uint32_t(width),
-                uint32_t(height),
-                m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
-    bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
+    if (width <= 0 || height <= 0) {
+        Syngine::Logger::LogF(LogLevel::WARN,
+                              true,
+                              "Ignoring invalid resolution: %dx%d",
+                              width,
+                              height);
+        return false;
+    }
 
-    // Reset all frame buffers to new res. Framebuffer destroy also releases
-    // attached textures because those FBOs were created with
-    // destroyTextures=true.
+    if (width == Renderer::width && height == Renderer::height) {
+        return true;
+    }
+
+    // Destroy current render targets before reset/recreate to keep backend
+    // resource lifetime transitions clean during live resize.
     m_buffers.ForEachFrameBuffer([](auto& fb) {
         if (bgfx::isValid(fb)) {
             bgfx::destroy(fb);
         }
         fb = BGFX_INVALID_HANDLE;
     });
+
+    // When SSAO is disabled, these are standalone dummy textures and are not
+    // owned by any framebuffer.
+    if (!m_config.useSSAO) {
+        if (bgfx::isValid(m_buffers.ssaoTex)) {
+            bgfx::destroy(m_buffers.ssaoTex);
+        }
+        if (bgfx::isValid(m_buffers.ssaoBlurH)) {
+            bgfx::destroy(m_buffers.ssaoBlurH);
+        }
+        if (bgfx::isValid(m_buffers.ssaoBlurFinal)) {
+            bgfx::destroy(m_buffers.ssaoBlurFinal);
+        }
+    }
+
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
+
+    Renderer::height                        = height;
+    Renderer::width                         = width;
+    Serializer::m_coreSettings.video.width  = width;
+    Serializer::m_coreSettings.video.height = height;
+
+    bgfx::reset(uint32_t(width),
+                uint32_t(height),
+                m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
+    bgfx::setViewRect(0, 0, 0, uint16_t(width), uint16_t(height));
+
     if (!_CreateSceneBuffers()) return false;
     return true;
 }
@@ -562,10 +599,6 @@ void RenderCore::_CalculateCascadeMatrices(
     Math::Vector4                             cascadeDistances;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightViewProj;
 
-    // How far light is from camera
-    // Light is always targeting camera, will be some distance away
-    float lightDistance = 50.0f;
-
     Math::Vector3 zero;
     Math::Mat4    lightViewRaw;
     bx::mtxLookAt(lightViewRaw.data(), zero.toBxVec3(), lightDirVec.toBxVec3());
@@ -586,6 +619,12 @@ void RenderCore::_CalculateCascadeMatrices(
         float xOffset = xSnapped - camPosLightSpace.x();
         float yOffset = ySnapped - camPosLightSpace.y();
 
+        // Keep the light camera's depth range proportional to this cascade.
+        // The previous fixed 20..(shadowDist + 50) interval was used for all
+        // cascades, leaving the near cascades with only a tiny fraction of the
+        // D16 depth range and visibly quantized depth values.
+        const float   lightDistance   = size * 2.0f;
+        const float   depthPadding    = size * 1.5f;
         Math::Vector3 lightPosSnapped = target + lightDirVec * lightDistance;
 
         if (Core::_GetContext()->debug.CSMBounds) {
@@ -600,9 +639,8 @@ void RenderCore::_CalculateCascadeMatrices(
                       lightPosSnapped.toBxVec3(),
                       target.toBxVec3());
 
-        // Try and keep tight near/far planes for good precision
-        float lightNear = 20.0f;
-        float lightFar  = m_config.shadowDist + 50.0f; // Some margin
+        const float lightNear = std::max(0.1f, lightDistance - depthPadding);
+        const float lightFar  = lightDistance + depthPadding;
 
         bx::mtxOrtho(outLightProj[i].data(),
                      -size + xOffset,
@@ -626,6 +664,7 @@ void RenderCore::_CalculateCascadeMatrices(
 
 CameraComponent::Frustum
 RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
+    SYN_PROFILE_FUNCTION();
     CameraComponent::Frustum                  cascadeFrustum;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightProj;
@@ -665,84 +704,90 @@ RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
     return cascadeFrustum;
 }
 
-float RenderCore::_CalculateScreenSize(const MeshAABB&      aabb,
-                                       const Math::Vector3& cameraPos,
-                                       const Camera&        camera,
-                                       float                distance) {
-    // Very close == huge on screen
+float RenderCore::_CalculateScreenSize(const MeshAABB& aabb,
+                                       const Camera&   camera,
+                                       float           distance) {
+    SYN_PROFILE_FUNCTION();
     if (distance <= 0.01f) return 1000.0f;
 
+    // Fast max without initializer_list
     float maxExtent =
-        std::max(
-            { aabb.halfExtents[0], aabb.halfExtents[1], aabb.halfExtents[2] }) *
+        std::max(aabb.halfExtents[0],
+                 std::max(aabb.halfExtents[1], aabb.halfExtents[2])) *
         2.0f;
 
-    // Project to screen size
-    // Screen size = (objSize / dist) * (screenHeight / (2 * tan(fov/2)))
-    float fovRad        = camera.fov * (3.14159265f / 180.0f);
-    float projectedSize = (maxExtent / distance) *
-                          (Renderer::height / (2.0f * tanf(fovRad / 2.0f)));
+    // Use a precomputed focal length off the camera if you can!
+    // e.g., camera.GetFocalLength() or pass down precomputed (Renderer::height
+    // / (2.0f * tanf(fov / 2)))
+    float projectedSize = (maxExtent / distance) * camera.screenFocalLength;
+
     return projectedSize;
 }
 
 bool RenderCore::_ShouldCullBySize(GameObject* go, CameraComponent* camera) {
+    SYN_PROFILE_FUNCTION();
     auto* meshComp = go->GetComponent<MeshComponent>();
     if (!meshComp || !meshComp->isEnabled) return false;
 
-    MeshAABB            aabb   = meshComp->GetAABB();
-    const Math::Vector3 camPos = camera->GetPosition();
-    Camera              cam    = camera->GetCamera();
+    const MeshAABB&      aabb   = meshComp->GetAABB();
+    const Math::Vector3& camPos = camera->GetPosition();
 
-    // Calculate distance to object
-    float dx       = aabb.center[0] - camPos.x();
-    float dy       = aabb.center[1] - camPos.y();
-    float dz       = aabb.center[2] - camPos.z();
-    float distance = sqrtf(dx * dx + dy * dy + dz * dz);
+    // 1. Quick distance check using SQUARED distance (no sqrt)
+    // Vector3 length/distance squared is way cheaper
+    float distSq = camPos.distanceSquared(aabb.center);
 
-    // Don't cull close objects
-    if (distance < 20.0f) return false;
-    if (distance > m_maxSmallObjDistance) {
-        float screenSize = _CalculateScreenSize(aabb, camPos, cam, distance);
-        return screenSize < 4.0f; // Cull if smaller than 4 pixels
+    // 20.0f squared is 400.0f
+    if (distSq < 400.0f) return false;
+
+    // Compare against max distance squared to avoid sqrt if it's too close
+    // anyway
+    float maxDistSq = m_maxSmallObjDistance * m_maxSmallObjDistance;
+    if (distSq > maxDistSq) {
+        float distance =
+            std::sqrt(distSq); // Only pay for sqrt when actually needed
+        float screenSize =
+            _CalculateScreenSize(aabb, camera->GetCamera(), distance);
+        return screenSize < 4.0f;
     }
+
     return false;
 }
 
 bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
                                          CameraComponent* camera,
                                          uint8_t          cascade) {
+    SYN_PROFILE_FUNCTION();
     auto* meshComp = go->GetComponent<MeshComponent>();
     if (!meshComp || !meshComp->isEnabled) return false;
 
-    MeshAABB aabb = meshComp->GetAABB();
+    const MeshAABB& aabb = meshComp->GetAABB();
 
-    // Get light position for this cascade
-    Math::Vector3       lightDir = Renderer::GetSunDirection();
-    const Math::Vector3 camPos   = camera->GetPosition();
-    float lightDistance = 100.0f; // Same as in _CalculateCascadeMatrices
-    const Math::Vector3 lightPos = camPos + lightDir * lightDistance;
-
-    float distance    = lightPos.distance(aabb.center);
-    float camDistance = camPos.distance(aabb.center);
-
-    // Don't cull very close objects to light, nor close to the camera
-    if (distance < 10.0f || camDistance < 20.0f) return false;
-
-    // For orthographic projection, objects far from light contribute less to
-    // shadows
-    // Get object size
+    // 1. CHEAPEST CHECK FIRST: Size relative to cascade
+    // Eliminate small details before touching any vector math
     float maxExtent =
-        std::max(
-            { aabb.halfExtents[0], aabb.halfExtents[1], aabb.halfExtents[2] }) *
+        std::max(aabb.halfExtents[0],
+                 std::max(aabb.halfExtents[1], aabb.halfExtents[2])) *
         2.0f;
 
-    // For ortho shadows, cull based on shadow contribution
-    // Objects that are very small relative to the cascade size won't contribute
-    // meaningful shadows
-    float cascadeSize = m_cascadeSizes[cascade];
+    float cascadeThreshold = m_cascadeSizes[cascade] * 0.015f;
+    if (maxExtent < cascadeThreshold) {
+        return true; // Cull small objects immediately
+    }
 
-    // If object is smaller than 1.5% of cascade size, cull it
-    return maxExtent < (cascadeSize * 0.015f);
+    // 2. EXPENSIVE CHECK SECOND: Distances (Use squared distances to avoid
+    // sqrt!)
+    const Math::Vector3& camPos    = camera->GetPosition();
+    float                camDistSq = camPos.distanceSquared(aabb.center);
+    if (camDistSq < 400.0f)
+        return false; // Within 20 units of camera? Don't cull
+
+    Math::Vector3 lightDir    = Renderer::GetSunDirection();
+    Math::Vector3 lightPos    = camPos + lightDir * 100.0f;
+    float         lightDistSq = lightPos.distanceSquared(aabb.center);
+    if (lightDistSq < 100.0f)
+        return false; // Within 10 units of light? Don't cull
+
+    return false; // Otherwise, don't cull by size for shadows
 }
 
 void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
@@ -751,27 +796,26 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
     m_billboardRenderPackets.clear();
 
     // Iterate registry
-    auto gameObjects =
-        Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH);
+    const auto& gameObjects = Registry::GetRenderableObjects();
     m_renderPackets.reserve(gameObjects.size());
     for (auto& go : gameObjects) {
         if (!go || !go->IsActive()) continue;
 
         auto meshComp = go->GetComponent<MeshComponent>();
-        if (!meshComp || !meshComp->isEnabled) continue;
-
-        ModelData& meshData = meshComp->modelData;
-        if (!meshData.valid) continue;
-        if (_ShouldCullBySize(go, camera)) {
-            m_drawnCounts.culledSize++;
-            continue;
-        }
+        if (!meshComp->isEnabled) continue;
 
         MeshAABB      aabb = meshComp->GetAABB();
         Math::Vector3 min  = aabb.min;
         Math::Vector3 max  = aabb.max;
         if (!camera->_aabbInsideFrustum(camera->_extractFrustum(), min, max)) {
             m_drawnCounts.culledFrustum++;
+            continue;
+        }
+
+        ModelData& meshData = meshComp->modelData;
+        if (!meshData.valid) continue;
+        if (_ShouldCullBySize(go, camera)) {
+            m_drawnCounts.culledSize++;
             continue;
         }
 
@@ -795,10 +839,22 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                   .indexStart = subMesh.indexStart,
                   .indexCount = subMesh.indexCount,
                   .material   = &meshData.materials[subMesh.materialIndex],
-                  .shader = meshData.materials[subMesh.materialIndex].shader,
-                  .go     = go });
+                  .shader =
+                      meshData.materials[subMesh.materialIndex].GetShader(),
+                  .go = go });
         }
     }
+
+    // Sort forward packets by shader and material
+    std::sort(m_renderPackets.begin(),
+              m_renderPackets.end(),
+              [](const RenderPacket& a, const RenderPacket& b) {
+                  if (a.shader != b.shader) {
+                      return std::less<Shader*>{}(a.shader, b.shader);
+                  }
+                  return std::less<MaterialInstance*>{}(a.material,
+                                                        b.material);
+              });
 
     // Include billboards too
     auto billboardGameObjects =
@@ -839,8 +895,8 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
               .mirror     = false,
               .indexStart = 0,
               .indexCount = 6,
-              .material   = billboardComp->_GetMaterial(),
-              .shader     = billboardComp->_GetMaterial()->shader,
+              .material   = &billboardComp->_GetMaterial(),
+              .shader     = billboardComp->_GetMaterial().GetShader(),
               .go         = go });
     }
 }
@@ -858,9 +914,7 @@ void RenderCore::_ScreenSpaceQuad(ViewID view, const Shader* program) {
 --- Drawing functions ---
 */
 
-void RenderCore::_DrawShadows(const Shader*    program,
-                              CameraComponent* camera,
-                              uint8_t          cascade) {
+void RenderCore::_DrawShadows(const Shader* program, CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     const uint64_t renderState =
         BGFX_STATE_DEFAULT &
@@ -877,46 +931,52 @@ void RenderCore::_DrawShadows(const Shader*    program,
         }
     }
 
-    std::vector<GameObject*> gameObjects = Registry::GetRenderableObjects();
-    bgfx::setViewName(program->m_viewId + cascade, "Shadow Cascade");
-    for (auto& gameObject : gameObjects) {
-        if (!gameObject) continue;
+    const auto& gameObjects = Registry::GetRenderableObjects();
 
-        auto*     meshComp  = gameObject->GetComponent<MeshComponent>();
-        ModelData modelData = meshComp->modelData;
+    for (uint8_t cascade = 0; cascade < NUM_CASCADES; ++cascade) {
+        auto cascadeFrustum = _GetCascadeFrustum(cascade, camera);
 
-        if (!modelData.valid || !meshComp->isEnabled || !meshComp->castShadows)
-            continue;
+        bgfx::setViewName(program->m_viewId + cascade, "Shadow Cascade");
+        bgfx::touch(program->m_viewId + cascade);
+        for (const auto& gameObject : gameObjects) {
+            if (!gameObject) continue;
 
-        // Size-based shadow culling from light's perspective
-        if (_ShouldCullBySizeShadow(gameObject, camera, cascade)) {
-            m_drawnCounts.culledShadowSize++;
-            continue;
+            auto* meshComp = gameObject->GetComponent<MeshComponent>();
+            const ModelData& modelData = meshComp->modelData;
+
+            if (!modelData.valid || !meshComp->isEnabled ||
+                !meshComp->castShadows)
+                continue;
+
+            const MeshAABB& aabb = meshComp->GetAABB();
+            Math::Vector3   min  = aabb.min;
+            Math::Vector3   max  = aabb.max;
+            if (!camera->_aabbInsideFrustum(cascadeFrustum, min, max)) {
+                m_drawnCounts.culledShadowFrustum++;
+                continue;
+            }
+
+            // Size-based shadow culling from light's perspective
+            if (_ShouldCullBySizeShadow(gameObject, camera, cascade)) {
+                m_drawnCounts.culledShadowSize++;
+                continue;
+            }
+
+            bgfx::setState(renderState);
+
+            // Get the transform for this object
+            Mat4 modelMtx = gameObject->GetComponent<TransformComponent>()
+                                ->GetModelMatrix();
+            bgfx::setTransform(modelMtx.data());
+
+            bgfx::setVertexBuffer(0, modelData.vbh);
+            bgfx::setIndexBuffer(modelData.ibh);
+
+            // Shadow shaders are simple, just output depth
+            Renderer::_UpdateDrawID();
+            bgfx::submit(program->m_viewId + cascade, program->m_program);
+            m_drawnCounts.shadows++;
         }
-
-        MeshAABB      aabb = meshComp->GetAABB();
-        Math::Vector3 min  = aabb.min;
-        Math::Vector3 max  = aabb.max;
-        if (!camera->_aabbInsideFrustum(
-                _GetCascadeFrustum(cascade, camera), min, max)) {
-            m_drawnCounts.culledShadowFrustum++;
-            continue;
-        }
-
-        bgfx::setState(renderState);
-
-        // Get the transform for this object
-        Mat4 modelMtx =
-            gameObject->GetComponent<TransformComponent>()->GetModelMatrix();
-        bgfx::setTransform(modelMtx.data());
-
-        bgfx::setVertexBuffer(0, modelData.vbh);
-        bgfx::setIndexBuffer(modelData.ibh);
-
-        // Shadow shaders are simple, just output depth
-        Renderer::_UpdateDrawID();
-        bgfx::submit(program->m_viewId + cascade, program->m_program);
-        m_drawnCounts.shadows++;
     }
 }
 
@@ -950,20 +1010,23 @@ void RenderCore::_DrawForward(const Shader* program, CameraComponent* camera) {
     for (auto& packet : m_renderPackets) {
         if (program->m_program.idx != packet.shader->m_program.idx)
             continue; // Skip if not matching program
+
         bgfx::setState(renderState | (packet.mirror ? BGFX_STATE_CULL_CW
                                                     : BGFX_STATE_FRONT_CCW));
 
         _SetObjectUniforms(program, packet);
         _SetMaterialUniforms(program, packet, flags);
 
-        if (m_config.useShadows) {
-            bgfx::setTexture(
-                3, m_defaultShadowMap, m_buffers.shadowDepth, flags);
-        }
-
         bgfx::setTransform(packet.modelMtx.data());
         bgfx::setVertexBuffer(0, packet.vbh);
         bgfx::setIndexBuffer(packet.ibh, packet.indexStart, packet.indexCount);
+
+        bgfx::setTexture(3,
+                         m_defaultShadowMap,
+                         m_buffers.shadowDepth,
+                         BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                             BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_U_CLAMP |
+                             BGFX_SAMPLER_V_CLAMP);
         Renderer::_UpdateDrawID();
         bgfx::submit(program->m_viewId, program->m_program);
         m_drawnCounts.forward++;
@@ -1033,9 +1096,10 @@ void RenderCore::_DrawDebug(const Shader*    program,
         }
     }
 
-    // Flush all queued debug lines (physics wireframes, frustums, CSM lines,
-    // zone bounds, and AABBs) in a single pass.
-    // TODO: Rework this to draw camera frustums as gizmos instead of hardcoded
+    // Flush all queued debug lines (physics wireframes, frustums, CSM
+    // lines, zone bounds, and AABBs) in a single pass.
+    // TODO: Rework this to draw camera frustums as gizmos instead of
+    // hardcoded
     GameObject* p = Registry::GetGameObjectByName("player");
     if (p && Core::IsPhysicsEnabled()) {
         CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
@@ -1151,8 +1215,8 @@ void RenderCore::_DrawDbgBillboard(Shader* program) {
         BillboardComponent*    gizmo = it->second;
         packet.vbh                   = m_billboardVbh;
         packet.ibh                   = m_billboardIbh;
-        packet.material              = gizmo->_GetMaterial();
-        packet.shader                = packet.material->shader;
+        packet.material              = &gizmo->_GetMaterial();
+        packet.shader                = packet.material->GetShader();
         packet.modelMtx =
             go->GetComponent<TransformComponent>()->GetModelMatrix();
         packet.go = go;
@@ -1167,6 +1231,12 @@ void RenderCore::_DrawDbgBillboard(Shader* program) {
         bgfx::setTransform(packet.modelMtx.data());
         bgfx::setVertexBuffer(0, m_billboardVbh);
         bgfx::setIndexBuffer(m_billboardIbh);
+        bgfx::setTexture(3,
+                         m_defaultShadowMap,
+                         m_buffers.shadowDepth,
+                         BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                             BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_U_CLAMP |
+                             BGFX_SAMPLER_V_CLAMP);
         Renderer::_UpdateDrawID();
         bgfx::submit(VIEW_BILL_DBG, program->m_program);
     }
@@ -1285,8 +1355,8 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
                               uint16_t(Renderer::width),
                               uint16_t(Renderer::height));
             // bgfx::setViewClear(
-            //     view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f,
-            //     0);
+            //     view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
+            //     0x000000ff, 1.0f, 0);
             bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
             break;
         }
@@ -1343,16 +1413,19 @@ void RenderCore::_SetMaterialUniforms(const Shader*                 shader,
     SYN_PROFILE_FUNCTION();
 
     // Bind material paramters
+    if (!packet.material || !packet.material->m_material) return;
     for (size_t i = 0; i < shader->m_materialParams.size(); ++i) {
         const auto& shaderDesc = shader->m_materialParams[i];
-        const auto& matData    = packet.material->m_parameters[i].storage;
+        const auto& override   = packet.material->m_parameterOverrides[i];
+        const auto& matData =
+            override ? override->storage
+                     : packet.material->m_material->m_parameters[i].storage;
         bgfx::setUniform(shaderDesc.handle, matData.data(), shaderDesc.count);
     }
 
-    // Bind engine samplers
     for (const auto& uniform : shader->m_engineSamplers) {
         const bgfx::TextureHandle* texHandle =
-            (const bgfx::TextureHandle*)uniform.getter(nullptr);
+            static_cast<const bgfx::TextureHandle*>(uniform.getter(nullptr));
         bgfx::setTexture(uniform.stage,
                          uniform.handle,
                          *texHandle,
@@ -1362,12 +1435,20 @@ void RenderCore::_SetMaterialUniforms(const Shader*                 shader,
     }
 
     // Bind material textures
-    if (!packet.material || packet.material->m_textures.empty()) return;
     for (const auto& uniform : shader->m_textureParams) {
-        const bgfx::TextureHandle texHandle =
-            packet.material->m_textures[uniform.stage].handle;
-        const uint32_t realFlags =
-            flags | packet.material->m_textures[uniform.stage].samplerFlags;
+        auto it = std::find_if(packet.material->m_material->m_textures.begin(),
+                               packet.material->m_material->m_textures.end(),
+                               [&](const TextureParameter& texture) {
+                                   return texture.name == uniform.name;
+                               });
+        if (it == packet.material->m_material->m_textures.end()) continue;
+        const size_t index = static_cast<size_t>(
+            it - packet.material->m_material->m_textures.begin());
+        const auto& texture = packet.material->m_textureOverrides[index]
+                                  ? *packet.material->m_textureOverrides[index]
+                                  : *it;
+        const bgfx::TextureHandle texHandle = texture.handle;
+        const uint32_t            realFlags = flags | texture.samplerFlags;
         bgfx::setTexture(uniform.stage, uniform.handle, texHandle, realFlags);
     }
 }
@@ -1381,6 +1462,19 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         if (Core::IsPhysicsEnabled())
             m_drender =
                 Core::_GetContext()->physicsManager->_GetDebugRenderer();
+    }
+
+    if (!camera) {
+        Syngine::Logger::Fatal("No camera provided to render frame");
+        return false;
+    }
+
+    if (m_changeResolutionThisFrame) {
+        m_changeResolutionThisFrame = false;
+        if (!_SetResolution(m_requestedWidth, m_requestedHeight)) {
+            Renderer::_UpdateDrawID();
+            return false;
+        }
     }
 
     if (!_PrepareRenderViews(camera)) {
@@ -1400,9 +1494,7 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
             switch (view) {
             case VIEW_SHADOW:
                 if (m_config.useShadows) {
-                    for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
-                        _DrawShadows(program, camera, i);
-                    }
+                    _DrawShadows(program, camera);
                 }
                 break;
             case VIEW_SKY: _DrawSky(program, camera); break;
@@ -1411,8 +1503,8 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
             case VIEW_BILL_DBG:
-                // Debug billboard draws are submitted from VIEW_BILLBOARD using
-                // this view ID.
+                // Debug billboard draws are submitted from VIEW_BILLBOARD
+                // using this view ID.
                 break;
             case VIEW_BILLBOARD:
                 if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
