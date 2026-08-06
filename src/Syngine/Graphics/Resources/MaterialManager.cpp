@@ -17,7 +17,42 @@
 
 namespace Syngine {
 
-Material MaterialManager::_DeserializeMaterial(scl::stream& xmlStream) {
+std::vector<std::unique_ptr<Material>> MaterialManager::m_materials;
+
+namespace {
+
+bgfx::TextureHandle
+_CreateSolidRGBA8Texture(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
+    const uint8_t pixel[4] = { r, g, b, a };
+    return bgfx::createTexture2D(1,
+                                 1,
+                                 false,
+                                 1,
+                                 bgfx::TextureFormat::RGBA8,
+                                 BGFX_SAMPLER_MIN_POINT |
+                                     BGFX_SAMPLER_MAG_POINT,
+                                 bgfx::copy(pixel, sizeof(pixel)));
+}
+
+bgfx::TextureHandle _CreateFlatNormalTexture() {
+    static bgfx::TextureHandle texture = BGFX_INVALID_HANDLE;
+    if (!bgfx::isValid(texture)) {
+        texture = _CreateSolidRGBA8Texture(128, 128, 255, 255);
+    }
+    return texture;
+}
+
+bgfx::TextureHandle _CreateFallbackAlbedoTexture() {
+    static bgfx::TextureHandle texture = BGFX_INVALID_HANDLE;
+    if (!bgfx::isValid(texture)) {
+        texture = _CreateSolidRGBA8Texture(255, 0, 255, 255);
+    }
+    return texture;
+}
+
+} // namespace
+
+Material& MaterialManager::_DeserializeMaterial(scl::stream& xmlStream) {
     scl::xml::XmlDocument doc;
     scl::string           xmlStr;
     xmlStream.seek(scl::StreamPos::start, 0);
@@ -26,27 +61,30 @@ Material MaterialManager::_DeserializeMaterial(scl::stream& xmlStream) {
     if (!doc.load_string(xmlStr)) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR, true, "Failed to parse material XML");
-        return Material("");
+        static Material dummy("");
+        return dummy;
     }
 
     auto versionAttr = doc.find_attr(SYNINT_MATERIAL_VERSION);
     if (!versionAttr || versionAttr->data() != SYNINT_MATERIAL_VERSION) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR, true, "Material version mismatch");
-        return Material("");
+        static Material dummy("");
+        return dummy;
     }
 
     auto root = doc.find_children("Material").front();
     if (!root) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR, true, "Material XML missing root element");
-        return Material("");
+        static Material dummy("");
+        return dummy;
     }
 
-    std::string matName = root->find_attr("name")
-                              ? root->find_attr("name")->data().cstr()
-                              : "unknown material";
-    Material    mat(matName);
+    std::string     matName = root->find_attr("name")
+                                  ? root->find_attr("name")->data().cstr()
+                                  : "unknown material";
+    static Material mat(matName);
 
     // Deserialize the default material
     auto texElem = root->find_children("Textures").front();
@@ -83,9 +121,9 @@ Material MaterialManager::_DeserializeMaterial(scl::stream& xmlStream) {
                         Serializer::_ParseFloatArray(valueStr);
 
                     if (components.size() == 4) {
-                        mat.Set(uniformName,
-                                components.data(),
-                                sizeof(float) * components.size());
+                        mat._SetDefault(uniformName,
+                                        components.data(),
+                                        sizeof(float) * components.size());
                     } else {
                         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                                               true,
@@ -96,7 +134,7 @@ Material MaterialManager::_DeserializeMaterial(scl::stream& xmlStream) {
                     }
                 } else {
                     float fvalue = std::stof(value->data().cstr());
-                    mat.Set(uniformName, &fvalue, sizeof(fvalue));
+                    mat._SetDefault(uniformName, &fvalue, sizeof(fvalue));
                 }
             } else {
                 // For vec4s, parse its child components as individual
@@ -121,7 +159,7 @@ Material MaterialManager::_DeserializeMaterial(scl::stream& xmlStream) {
                         }
                     }
 
-                    mat.Set(
+                    mat._SetDefault(
                         uniformName, vec4Value.data(), sizeof(Math::Vector4));
                 } else {
                     Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -139,7 +177,7 @@ Material MaterialManager::_DeserializeMaterial(scl::stream& xmlStream) {
     return mat;
 }
 
-Material
+Material&
 MaterialManager::GetMaterialFromBundle(const std::string& bundlePath,
                                        const std::string& materialName) {
     scl::stream xmlStream =
@@ -148,7 +186,7 @@ MaterialManager::GetMaterialFromBundle(const std::string& bundlePath,
     return _DeserializeMaterial(xmlStream);
 }
 
-Material MaterialManager::GetMaterialFromFile(const std::string& filePath) {
+Material& MaterialManager::GetMaterialFromFile(const std::string& filePath) {
     std::string filePathStr(_ResolveOSPath(filePath));
 
     SDL_IOStream* rw = SDL_IOFromFile(filePathStr.c_str(), "rb");
@@ -157,7 +195,8 @@ Material MaterialManager::GetMaterialFromFile(const std::string& filePath) {
                               true,
                               "Failed to open material file %s",
                               filePathStr.c_str());
-        return Material("");
+        static Material dummy("");
+        return dummy;
     }
 
     // Not the biggest fan of loading into a vector and then copying into a
@@ -175,19 +214,46 @@ Material MaterialManager::GetMaterialFromFile(const std::string& filePath) {
     return _DeserializeMaterial(xmlStream);
 }
 
-Material MaterialManager::GetDefaultMaterialPBR(bool textured) {
-    std::string name = textured ? "default_texture" : "default";
-    Material    mat(name, ShaderManager::Get(name));
-    mat.Set("u_materialParams1",
-            Math::Vector4(0.0f, 0.2f, 0.0f, 0.0f).data(),
-            sizeof(Math::Vector4));
-    mat.Set("u_uvScale",
-            Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f).data(),
-            sizeof(Math::Vector4));
-    mat.Set("u_baseColor",
-            Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f).data(),
-            sizeof(Math::Vector4));
+Material& MaterialManager::GetDefaultMaterialPBR(bool textured) {
+    const std::string name = textured ? "default_texture" : "default";
+    if (MaterialManager::MaterialExists(name)) {
+        return MaterialManager::GetMaterialByName(name);
+    }
+    Material& mat =
+        MaterialManager::CreateMaterial(name, ShaderManager::Get(name));
+    mat._SetDefault("u_materialParams1",
+                    Math::Vector4(0.0f, 0.2f, 0.0f, 0.0f).data(),
+                    sizeof(Math::Vector4));
+    mat._SetDefault("u_uvScale",
+                    Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f).data(),
+                    sizeof(Math::Vector4));
+
+    // baseColor only exists in default shader, while s_albedo only exists in
+    // default_texture shader. So we set one or the other depending on the
+    // shader. Kinda awful but it works
+    if (!textured) {
+        mat._SetDefault("u_baseColor",
+                        Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f).data(),
+                        sizeof(Math::Vector4));
+    } else {
+        mat._SetDefaultTexture("s_albedo",
+                               GetFallbackAlbedoTexture(),
+                               BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
+                               0);
+    }
+    mat._SetDefaultTexture("s_normalMap",
+                           GetFallbackNormalTexture(),
+                           BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
+                           2);
     return mat;
+}
+
+bgfx::TextureHandle MaterialManager::GetFallbackAlbedoTexture() {
+    return _CreateFallbackAlbedoTexture();
+}
+
+bgfx::TextureHandle MaterialManager::GetFallbackNormalTexture() {
+    return _CreateFlatNormalTexture();
 }
 
 } // namespace Syngine
