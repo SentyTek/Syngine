@@ -166,7 +166,7 @@ class MeshComponent : public Syngine::Component {
     /// @return Reference to the MeshAABB structure
     /// @threadsafety read-only
     /// @since v0.0.1
-    MeshAABB& GetAABB();
+    const MeshAABB& GetAABB() const;
 
     /// @brief Get the submesh count
     /// @return Number of submeshes in the mesh
@@ -190,6 +190,12 @@ class MeshComponent : public Syngine::Component {
     /// @threadsafety not-safe
     /// @since v0.0.1
     bool SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materialIndex);
+
+    /// @brief Get the mutable material instance assigned to a submesh.
+    /// @return The instance, or nullptr when the submesh/material index is
+    /// invalid.
+    MaterialInstance*       GetMaterialInstance(uint8_t submeshIndex);
+    const MaterialInstance* GetMaterialInstance(uint8_t submeshIndex) const;
 
     /// @brief Gets the UV scale override for the whole object
     /// @return UV scale override for the whole object. 1.0f by default.

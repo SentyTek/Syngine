@@ -31,10 +31,10 @@ namespace Syngine {
 /// @section ModelLoader
 /// @since v0.0.1
 struct Vertex {
-    Math::Vector3 pos; //* Position of the vertex in 3D space
+    Math::Vector3 pos;    //* Position of the vertex in 3D space
     Math::Vector3 normal; //* Normal vector at the vertex
-    Math::Vector2 uv0; //* Primary texture coordinates (macro UV)
-    Math::Vector2 uv1; //* Secondary texture coordinates (for detail maps)
+    Math::Vector2 uv0;    //* Primary texture coordinates (macro UV)
+    Math::Vector2 uv1;    //* Secondary texture coordinates (for detail maps)
     Math::Vector4 color = Math::Vector4(1.0f); //* Vertex color (RGBA)
     Math::Vector4 tangent; //* Tangent vector at the vertex (for normal mapping)
 };
@@ -55,8 +55,6 @@ struct SubMesh {
         name; //* Name of the submesh (for debugging and editor purposes)
     Math::Vector3 boundMin; //* Minimum corner of the axis-aligned bounding box
     Math::Vector3 boundMax; //* Maximum corner of the axis-aligned bounding box
-
-    Material* material; //* Pointer to the material used by this submesh
 };
 
 /// @brief ModelData structure for storing mesh information
@@ -64,12 +62,13 @@ struct SubMesh {
 /// @since v0.0.1
 struct ModelData {
     // Base properties
-    std::vector<Vertex>   vertices;     //* List of vertices in the mesh
-    std::vector<uint32_t> indices;      //* List of indices for indexed drawing
-    std::vector<SubMesh>  subMeshes;    //* List of submeshes in the mesh
-    std::vector<Material> materials;    //* List of materials used by the mesh
-    uint8_t               numSubMeshes; //* Number of submeshes in the mesh
-    uint8_t               numMaterials; //* Number of materials used by the mesh
+    std::vector<Vertex>   vertices;  //* List of vertices in the mesh
+    std::vector<uint32_t> indices;   //* List of indices for indexed drawing
+    std::vector<SubMesh>  subMeshes; //* List of submeshes in the mesh
+    std::vector<MaterialInstance>
+            materials;    //* Per-mesh material instances used by the mesh
+    uint8_t numSubMeshes; //* Number of submeshes in the mesh
+    uint8_t numMaterials; //* Number of materials used by the mesh
 
     // GPU resources
     bgfx::VertexBufferHandle vbh; //* Handle to the vertex buffer on the GPU
@@ -79,7 +78,12 @@ struct ModelData {
     int  id; //* Unique ID for the mesh (for hot reloading and editor purposes)
     bool valid; //* Whether the mesh data is valid and can be rendered
     std::filesystem::file_time_type
-         lastWriteTime; //* Last write time of the mesh file (for hot reloading)
+        lastWriteTime; //* Last write time of the mesh file (for hot reloading)
+
+    Math::Vector3
+        localMin; //* Minimum corner of the local axis-aligned bounding box
+    Math::Vector3
+        localMax; //* Maximum corner of the local axis-aligned bounding box
 };
 
 /// @brief Model class for loading 3D models
@@ -90,14 +94,14 @@ class ModelLoader {
     static std::vector<ModelData> loadedMeshes;
 
   public:
-    virtual bool _LoadModel(ModelData&          out,
+    virtual bool _LoadModel(ModelData&         out,
                             scl::stream*       meshStream,
                             const std::string& assetPath,
                             bool               loadTextures) = 0;
-    virtual bool _ReloadModel(ModelData&          out,
+    virtual bool _ReloadModel(ModelData&         out,
                               scl::stream*       stream,
                               const std::string& assetPath,
-                              int                id) = 0;
+                              int                id)          = 0;
 
     /// @brief Unloads all loaded models
     /// @note This is used to clear all loaded models, for example when the
@@ -142,7 +146,7 @@ class AssimpLoader : public ModelLoader {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    bool _LoadModel(ModelData&          out,
+    bool _LoadModel(ModelData&         out,
                     scl::stream*       meshStream,
                     const std::string& assetPath,
                     bool               loadTextures) override;
@@ -154,7 +158,7 @@ class AssimpLoader : public ModelLoader {
     /// @note This is used to reload models only when they change on disk for
     /// hot reloading
     /// @internal
-    bool _ReloadModel(ModelData&          out,
+    bool _ReloadModel(ModelData&         out,
                       scl::stream*       stream,
                       const std::string& assetPath,
                       int                id) override;
@@ -163,36 +167,30 @@ class AssimpLoader : public ModelLoader {
     /// @brief Processes the Assimp scene and fills the MeshData structure
     /// @param out ModelData to fill with the processed data
     /// @param scene Assimp scene to process
-    /// @param meshStream Stream containing the model data (for resolving relative texture paths)
+    /// @param meshStream Stream containing the model data (for resolving
+    /// relative texture paths)
     /// @return true if the scene was processed successfully, false otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    static bool processScene(ModelData&          out,
-                             const aiScene*     scene,
-                             scl::stream*       meshStream,
-                             bool               loadTextures = true);
-
+    static bool processScene(ModelData&     out,
+                             const aiScene* scene,
+                             scl::stream*   meshStream,
+                             bool           loadTextures = true);
 
     /// @brief Processes an Assimp material and fills the Material structure
     /// @param aiMat Assimp material to process
-    /// @param meshStream Stream containing the model data (for resolving relative texture paths)
+    /// @param meshStream Stream containing the model data (for resolving
+    /// relative texture paths)
     /// @param loadTextures Whether to load textures for the material
     /// @return Material structure filled with the processed material data
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    static Material _ProcessMaterial(aiMaterial*        aiMat,
-                                     const aiScene*     scene,
-                                     scl::stream*       meshStream,
-                                     bool               loadTextures = true);
-
-    /// @brief Creates a default material with no textures
-    /// @return Material structure filled with default material data
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    /// @internal
-    static Material _CreateDefaultMaterial();
+    static MaterialInstance _ProcessMaterial(aiMaterial*    aiMat,
+                                             const aiScene* scene,
+                                             scl::stream*   meshStream,
+                                             bool loadTextures = true);
 };
 
 } // namespace Syngine

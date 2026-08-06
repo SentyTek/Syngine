@@ -21,33 +21,46 @@
 
 namespace Syngine {
 CameraComponent::CameraComponent(GameObject* owner) {
-    this->m_owner = owner;
-    this->camera = {};
-    this->camera.eye = Math::Vector3();
-    this->camera.target = Math::Vector3();
-    this->camera.up = Math::Vector3(0.0f, 1.0f, 0.0f);
+    this->m_owner          = owner;
+    this->camera           = {};
+    this->camera.eye       = Math::Vector3();
+    this->camera.target    = Math::Vector3();
+    this->camera.up        = Math::Vector3(0.0f, 1.0f, 0.0f);
+    this->camera.fov       = 70.0f;
+    this->camera.nearPlane = 0.1f;
+    this->camera.farPlane  = 100.0f;
+    this->camera.view      = Math::Matrix4x4();
+    this->camera.proj      = Math::Matrix4x4();
+    this->camera.yaw       = 0.0f;
+    this->camera.pitch     = 0.0f;
+    this->camera.roll      = 0.0f;
+
+    this->camera.screenFocalLength = this->_setScreenFocalLength();
 
     if (this->m_owner) {
-        this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+        this->m_owner->gizmo =
+            "camera_render"; // Set gizmo type for this component
     }
 }
 
 CameraComponent::CameraComponent(const CameraComponent& other) {
     this->m_owner = other.m_owner;
-    this->camera = other.camera;
+    this->camera  = other.camera;
 
     if (this->m_owner) {
-        this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+        this->m_owner->gizmo =
+            "camera_render"; // Set gizmo type for this component
     }
 }
 
 CameraComponent& CameraComponent::operator=(const CameraComponent& other) {
     if (this != &other) {
         this->m_owner = other.m_owner;
-        this->camera = other.camera;
+        this->camera  = other.camera;
 
         if (this->m_owner) {
-            this->m_owner->gizmo = "camera_render"; // Set gizmo type for this component
+            this->m_owner->gizmo =
+                "camera_render"; // Set gizmo type for this component
         }
     }
     return *this;
@@ -60,21 +73,21 @@ CameraComponent::~CameraComponent() {
 Serializer::DataNode CameraComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
-    node / "eye" = std::vector<float>(camera.eye);
-    node / "fov" = camera.fov;
+    node / "eye"  = std::vector<float>(camera.eye);
+    node / "fov"  = camera.fov;
     node / "farPlane" = camera.farPlane;
-    node / "yaw" = camera.yaw;
-    node / "pitch" = camera.pitch;
+    node / "yaw"      = camera.yaw;
+    node / "pitch"    = camera.pitch;
     return node;
 }
 
 void CameraComponent::Update(int viewId, int width, int height) {
     // update view and projection matrices
-    Syngine::Camera& cam = this->camera;
-    Math::Vec3 eyeVec = this->camera.eye.toBxVec3();
-    const int safeWidth = std::max(width, 1);
-    const int safeHeight = std::max(height, 1);
-    float aspect = float(safeWidth) / float(safeHeight);
+    Syngine::Camera& cam        = this->camera;
+    Math::Vec3       eyeVec     = this->camera.eye.toBxVec3();
+    const int        safeWidth  = std::max(width, 1);
+    const int        safeHeight = std::max(height, 1);
+    float            aspect     = float(safeWidth) / float(safeHeight);
 
     Math::Vec3 forward(cosf(cam.pitch) * sinf(cam.yaw),
                        sinf(cam.pitch),
@@ -86,9 +99,12 @@ void CameraComponent::Update(int viewId, int width, int height) {
     right = right.normalized();
 
     Math::Vec3 targetVec = eyeVec + forward;
-    Math::Vec3 upVec = right.cross(forward);
+    Math::Vec3 upVec     = right.cross(forward);
 
-    bx::mtxLookAt(cam.view.data(), eyeVec.toBxVec3(), targetVec.toBxVec3(), upVec.toBxVec3());
+    bx::mtxLookAt(cam.view.data(),
+                  eyeVec.toBxVec3(),
+                  targetVec.toBxVec3(),
+                  upVec.toBxVec3());
     bx::mtxProj(cam.proj.data(),
                 cam.fov,
                 aspect,
@@ -105,21 +121,21 @@ void CameraComponent::SetPosition(Math::Vector3 position) {
     this->camera.eye = position;
 }
 
-Math::Vector3 CameraComponent::GetPosition() const {
-    return this->camera.eye;
-}
+Math::Vector3 CameraComponent::GetPosition() const { return this->camera.eye; }
 
 void CameraComponent::SetFOV(float fov) {
     if (fov < 1.0f || fov > 179.0f) {
         return;
     }
-    this->camera.fov = fov;
+    this->camera.fov               = fov;
+    this->camera.screenFocalLength = this->_setScreenFocalLength();
 }
 
 float CameraComponent::GetFOV() const { return this->camera.fov; }
 
 void CameraComponent::SetFarPlane(float farPlane) {
-    if (farPlane < 0.0f && farPlane > this->camera.nearPlane && farPlane > 50000.0f) {
+    if (farPlane < 0.0f && farPlane > this->camera.nearPlane &&
+        farPlane > 50000.0f) {
         return;
     }
     this->camera.farPlane = farPlane;
@@ -128,7 +144,7 @@ void CameraComponent::SetFarPlane(float farPlane) {
 float CameraComponent::GetFarPlane() const { return this->camera.farPlane; }
 
 void CameraComponent::SetAngles(float yaw, float pitch) {
-    this->camera.yaw = yaw;
+    this->camera.yaw   = yaw;
     this->camera.pitch = pitch;
 }
 
@@ -156,19 +172,19 @@ CameraComponent::Frustum CameraComponent::_extractFrustum() {
 
     const auto extractPlane = [&vp](int axis, float sign) {
         Plane plane;
-        plane.normal = Math::Vec3(vp.m(0, 3) + sign * vp.m(0, axis),
+        plane.normal   = Math::Vec3(vp.m(0, 3) + sign * vp.m(0, axis),
                                   vp.m(1, 3) + sign * vp.m(1, axis),
                                   vp.m(2, 3) + sign * vp.m(2, axis));
         plane.distance = vp.m(3, 3) + sign * vp.m(3, axis);
         return plane;
     };
 
-    frustum.left = extractPlane(0, 1.0f);
-    frustum.right = extractPlane(0, -1.0f);
+    frustum.left   = extractPlane(0, 1.0f);
+    frustum.right  = extractPlane(0, -1.0f);
     frustum.bottom = extractPlane(1, 1.0f);
-    frustum.top = extractPlane(1, -1.0f);
-    frustum.n = extractPlane(2, 1.0f);
-    frustum.f = extractPlane(2, -1.0f);
+    frustum.top    = extractPlane(1, -1.0f);
+    frustum.n      = extractPlane(2, 1.0f);
+    frustum.f      = extractPlane(2, -1.0f);
 
     _normalizePlane(frustum.left);
     _normalizePlane(frustum.right);
@@ -180,7 +196,9 @@ CameraComponent::Frustum CameraComponent::_extractFrustum() {
     return frustum;
 }
 
-bool CameraComponent::_aabbInsidePlane(const Plane& plane, const Math::Vector3& min, const Math::Vector3& max) {
+bool CameraComponent::_aabbInsidePlane(const Plane&         plane,
+                                       const Math::Vector3& min,
+                                       const Math::Vector3& max) {
     const Math::Vector3 positiveVertex(
         (plane.normal.x() >= 0.0f) ? max.x() : min.x(),
         (plane.normal.y() >= 0.0f) ? max.y() : min.y(),
@@ -191,7 +209,7 @@ bool CameraComponent::_aabbInsidePlane(const Plane& plane, const Math::Vector3& 
     return distance >= 0;
 }
 
-bool CameraComponent::_aabbInsideFrustum(const Frustum&  frustum,
+bool CameraComponent::_aabbInsideFrustum(const Frustum&       frustum,
                                          const Math::Vector3& min,
                                          const Math::Vector3& max) {
     return _aabbInsidePlane(frustum.left, min, max) &&
@@ -208,9 +226,10 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
     // ParseXml
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
+        node / "type" =
+            static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
         for (const auto& attr : elem->attributes()) {
-            scl::string key = attr->tag();
+            scl::string key   = attr->tag();
             std::string value = attr->data().cstr();
             if (key == "eye") {
                 scl::string eyeValue(value);
@@ -229,11 +248,13 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
     },
 
     // Instantiate
-    [](Syngine::GameObject* owner, const Serializer::DataNode& data) -> std::unique_ptr<Syngine::Component> {
+    [](Syngine::GameObject* owner, const Serializer::DataNode& data)
+        -> std::unique_ptr<Syngine::Component> {
         auto comp = std::make_unique<CameraComponent>(owner);
         if (data.Has("eye")) {
-            const std::vector<float>& eyeArr = data["eye"].As<std::vector<float>>();
-            comp->SetPosition(Math::Vector3{eyeArr});
+            const std::vector<float>& eyeArr =
+                data["eye"].As<std::vector<float>>();
+            comp->SetPosition(Math::Vector3{ eyeArr });
         }
         if (data.Has("fov")) {
             comp->SetFOV(data["fov"].As<float>());
@@ -245,7 +266,6 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
             comp->SetAngles(data["yaw"].As<float>(), data["pitch"].As<float>());
         }
         return comp;
-    }
-);
+    });
 
 } // namespace Syngine

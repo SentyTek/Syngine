@@ -27,7 +27,6 @@ enum class BillboardMode {
     COUNT          = 3  //* Number of billboard modes (for validation)
 };
 
-
 /// @brief Syngine Billboard Component. The BillboardComponent is used to
 /// represent a 2D model in the 3D game world.
 /// @section BillboardComponent
@@ -36,28 +35,31 @@ enum class BillboardMode {
 /// @since v0.0.1
 class BillboardComponent : public Syngine::Component {
 
-    BillboardMode m_mode = BillboardMode::CAMERA_ALIGNED; //* Billboard rendering mode
+    BillboardMode m_mode =
+        BillboardMode::CAMERA_ALIGNED; //* Billboard rendering mode
 
     bgfx::TextureHandle m_texture =
-        BGFX_INVALID_HANDLE; //* Texture handle for the billboard
+        BGFX_INVALID_HANDLE;   //* Texture handle for the billboard
     std::string m_texturePath; //* Path to the billboard texture
     std::string m_bundlePath;  //* Path to the shader bundle containing the
-                               //billboard texture
+                               // billboard texture
 
-    Material* m_material = nullptr; //* Material used for rendering the billboard
+    MaterialInstance
+        m_material; //* Material instance used for rendering the billboard
 
     GameObject* m_owner; // Reference to the owner game object
 
     Vector3 m_rot = Vector3(); //* Rotation around X, Y, Z axes in radians
 
-    bgfx::TextureHandle _GetTexture() const { return this->m_texture; }
-    Material*           _GetMaterial() const { return this->m_material; }
+    bgfx::TextureHandle     _GetTexture() const { return this->m_texture; }
+    MaterialInstance&       _GetMaterial() { return this->m_material; }
+    const MaterialInstance& _GetMaterial() const { return this->m_material; }
 
-    friend class RenderCore; // RenderCore needs access to private members for rendering
+    friend class RenderCore; // RenderCore needs access to private members for
+                             // rendering
   public:
-
-    float size = 1.0f; //* Size of the billboard
-    bool  receiveShadows = true; //* Whether the billboard receives shadows
+    float size            = 1.0f; //* Size of the billboard
+    bool  receiveShadows  = true; //* Whether the billboard receives shadows
     bool  receiveSunLight = true; //* Whether the billboard receives sunlight
 
     static constexpr Syngine::ComponentTypeID componentType =
@@ -101,7 +103,7 @@ class BillboardComponent : public Syngine::Component {
 
     /// @brief Get the type of this component
     /// @return The component type as an enum value
-    ComponentTypeID GetComponentType() override;
+    ComponentTypeID            GetComponentType() override;
     std::unique_ptr<Component> Clone() const override {
         return std::make_unique<BillboardComponent>(*this);
     }
@@ -112,7 +114,8 @@ class BillboardComponent : public Syngine::Component {
     Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the billboard component
-    /// @param bundlePath Path to the shader bundle containing the billboard texture
+    /// @param bundlePath Path to the shader bundle containing the billboard
+    /// texture
     /// @param texturePath Path to the billboard texture
     /// @note This should only be called when the component is added to a
     /// GameObject
@@ -138,16 +141,22 @@ class BillboardComponent : public Syngine::Component {
     void SetRotZ(float rotZ) { this->m_rot.setZ(rotZ); }
 
     /// @brief Set rotation around X, Y, Z axes
-    /// @param rot The rotation vector containing rotation around X, Y, Z axes in radians
+    /// @param rot The rotation vector containing rotation around X, Y, Z axes
+    /// in radians
     void SetRot(const Vector3& rot) { this->m_rot = rot; }
 
     /// @brief Get rotation around X, Y, Z axes
-    /// @return Vector3 The rotation vector containing rotation around X, Y, Z axes in radians
+    /// @return Vector3 The rotation vector containing rotation around X, Y, Z
+    /// axes in radians
     Vector3 GetRot() const { return this->m_rot; }
 
     /// @brief Get the billboard mode
     /// @return BillboardMode The billboard rendering mode
     BillboardMode GetMode() const { return this->m_mode; }
+
+    /// @brief Get this billboard's mutable material instance.
+    MaterialInstance&       GetMaterialInstance() { return m_material; }
+    const MaterialInstance& GetMaterialInstance() const { return m_material; }
 
     /// @brief Get the min bounds of the billboard's bounding box
     /// @return Vector3 The minimum corner of the bounding box

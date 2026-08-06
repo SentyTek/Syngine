@@ -255,6 +255,23 @@ bool MeshComponent::SetSubmeshMaterialIndex(uint8_t submeshIndex,
     return true; // Success
 }
 
+MaterialInstance* MeshComponent::GetMaterialInstance(uint8_t submeshIndex) {
+    if (submeshIndex >= modelData.subMeshes.size()) return nullptr;
+    const uint8_t materialIndex =
+        modelData.subMeshes[submeshIndex].materialIndex;
+    if (materialIndex >= modelData.materials.size()) return nullptr;
+    return &modelData.materials[materialIndex];
+}
+
+const MaterialInstance*
+MeshComponent::GetMaterialInstance(uint8_t submeshIndex) const {
+    if (submeshIndex >= modelData.subMeshes.size()) return nullptr;
+    const uint8_t materialIndex =
+        modelData.subMeshes[submeshIndex].materialIndex;
+    if (materialIndex >= modelData.materials.size()) return nullptr;
+    return &modelData.materials[materialIndex];
+}
+
 float MeshComponent::GetObjectUVScaleOverride() const {
     return this->m_objectUVScaleOverride;
 }
@@ -340,7 +357,8 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
     // Add dummy material
-    Material mat("default_material", ShaderManager::Get("default"));
+    MaterialInstance mat =
+        MaterialManager::GetDefaultMaterialPBR(false).CreateInstance();
     mat.Set("u_baseColor", baseColor.data(), sizeof(Math::Vector4));
     modelData.materials.push_back(mat);
 
@@ -352,6 +370,23 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         return false;
     }
 
+    // create aabb
+    Math::Vector3 min(FLT_MAX, FLT_MAX, FLT_MAX);
+    Math::Vector3 max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    for (const auto& vertex : modelData.vertices) {
+        min.setX(std::min(min.x(), vertex.pos.x()));
+        min.setY(std::min(min.y(), vertex.pos.y()));
+        min.setZ(std::min(min.z(), vertex.pos.z()));
+
+        max.setX(std::max(max.x(), vertex.pos.x()));
+        max.setY(std::max(max.y(), vertex.pos.y()));
+        max.setZ(std::max(max.z(), vertex.pos.z()));
+    }
+    modelData.localMin = min;
+    modelData.localMax = max;
+    m_aabb.min         = min;
+    m_aabb.max         = max;
+
     // assign to meshData
     modelData.valid     = true;
     this->modelData     = modelData;
@@ -360,78 +395,79 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
     return true;
 }
 
-MeshAABB& MeshComponent::GetAABB() {
-    uint64_t currentTransformVersion = 0;
-    if (this->m_owner && this->m_owner->HasComponent(SYN_COMPONENT_TRANSFORM)) {
-        TransformComponent* transform =
-            this->m_owner->GetComponent<TransformComponent>();
+const MeshAABB& MeshComponent::GetAABB() const {
+    SYN_PROFILE_FUNCTION();
+
+    TransformComponent* transform               = nullptr;
+    uint64_t            currentTransformVersion = 0;
+
+    transform = this->m_owner->GetComponent<TransformComponent>();
+    if (transform) {
         currentTransformVersion = transform->GetVersion();
     }
 
+    // Fast Cache Return
     if (!m_aabbDirty && m_cachedTransformVersion == currentTransformVersion) {
         return m_aabb;
     }
 
-    MeshAABB& boundingBox = m_aabb;
-
-    if (this->modelData.vertices.empty()) {
-        return boundingBox; // Return default AABB if no vertices
+    if (this->modelData.subMeshes.empty()) {
+        m_aabbDirty              = false;
+        m_cachedTransformVersion = currentTransformVersion;
+        return m_aabb; // Return default empty AABB
     }
 
-    // Compute local min/max
-    Math::Vector3 min(FLT_MAX);
-    Math::Vector3 max(-FLT_MAX);
-    min = this->modelData.vertices[0].pos;
-    max = this->modelData.vertices[0].pos;
-    for (const auto& vertex : this->modelData.vertices) {
-        for (int i = 0; i < 3; ++i) {
-            min = min.min(vertex.pos);
-            max = max.max(vertex.pos);
-        }
+    // Get local AABB
+    Math::Vector3 localMin(this->modelData.localMin);
+    Math::Vector3 localMax(this->modelData.localMax);
+
+    Math::Vector3 localCenter  = (localMin + localMax) * 0.5f;
+    Math::Vector3 localExtents = (localMax - localMin) * 0.5f;
+
+    // If no transform component, return local AABB straight up
+    if (!transform) {
+        m_aabb.min         = localMin;
+        m_aabb.max         = localMax;
+        m_aabb.center      = localCenter;
+        m_aabb.halfExtents = localExtents;
+
+        m_aabbDirty              = false;
+        m_cachedTransformVersion = currentTransformVersion;
+        return m_aabb;
     }
 
-    MeshAABB result;
-    // If transform exists, transform all 8 corners
-    if (this->m_owner && this->m_owner->HasComponent(SYN_COMPONENT_TRANSFORM)) {
-        TransformComponent* transform =
-            this->m_owner->GetComponent<TransformComponent>();
-        Mat4 modelMatrix = transform->GetModelMatrix();
+    // Fast World AABB Transformation via Basis Vectors (Jim Arvo's Method)
+    // Avoids transforming 8 individual corners or touching vertex memory.
+    const Mat4& M = transform->GetModelMatrix();
 
-        Vec3 corners[8] = {
-            Vec3(min.x(), min.y(), min.z()), Vec3(max.x(), min.y(), min.z()),
-            Vec3(min.x(), max.y(), min.z()), Vec3(max.x(), max.y(), min.z()),
-            Vec3(min.x(), min.y(), max.z()), Vec3(max.x(), min.y(), max.z()),
-            Vec3(min.x(), max.y(), max.z()), Vec3(max.x(), max.y(), max.z())
-        };
+    // World position from matrix translation column/row
+    Math::Vector3 worldCenter = Math::Vector3(M.m(3, 0), M.m(3, 1), M.m(3, 2));
+    Math::Vector3 worldExtents(0.0f);
 
-        Vector3 tmin(FLT_MAX);
-        Vector3 tmax(-FLT_MAX);
-        for (int c = 0; c < 8; ++c) {
-            Math::Vector4 t =
-                Math::Vector4(
-                    corners[c][0], corners[c][1], corners[c][2], 1.0f) *
-                modelMatrix;
-            tmin = tmin.min(t.xyz());
-            tmax = tmax.max(t.xyz());
+    for (int i = 0; i < 3; ++i) {
+        // Transform center: center_world.i += localCenter.x * M[0][i] +
+        // localCenter.y * M[1][i] + localCenter.z * M[2][i]
+        worldCenter.set(i,
+                        worldCenter[i] + (localCenter[0] * M.m(0, i) +
+                                          localCenter[1] * M.m(1, i) +
+                                          localCenter[2] * M.m(2, i)));
+        // Transform extents using absolute values of the transform matrix basis
+        float extentI = 0.0f;
+        for (int j = 0; j < 3; ++j) {
+            extentI += std::abs(M.m(j, i)) * localExtents[j];
         }
-        for (int i = 0; i < 3; ++i) {
-            result.min.set(i, tmin[i]);
-            result.max.set(i, tmax[i]);
-            result.center.set(i, (tmin[i] + tmax[i]) / 2.0f);
-            result.halfExtents.set(i, (tmax[i] - tmin[i]) / 2.0f);
-        }
-    } else { // No transform, use local min/max
-        for (int i = 0; i < 3; ++i) {
-            result.min.set(i, min[i]);
-            result.max.set(i, max[i]);
-            result.center.set(i, (min[i] + max[i]) / 2.0f);
-            result.halfExtents.set(i, (max[i] - min[i]) / 2.0f);
-        }
+        worldExtents.set(i, extentI);
     }
+
+    // Store final world AABB
+    m_aabb.center      = worldCenter;
+    m_aabb.halfExtents = worldExtents;
+    m_aabb.min         = worldCenter - worldExtents;
+    m_aabb.max         = worldCenter + worldExtents;
 
     m_aabbDirty              = false;
     m_cachedTransformVersion = currentTransformVersion;
-    m_aabb                   = result;
+
     return m_aabb;
 }
 

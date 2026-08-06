@@ -19,11 +19,15 @@ namespace Syngine {
 BillboardComponent::BillboardComponent(GameObject*   owner,
                                        std::string   texturePath,
                                        BillboardMode mode,
-                                       float         size) {
+                                       float         size)
+    : m_material(
+          MaterialManager::CreateMaterial(
+              "billboard_material", ShaderManager::Get("default_billboard"))
+              .CreateInstance()) {
     this->m_owner       = owner;
     this->size          = size;
     this->m_mode        = mode;
-    this->m_texturePath = texturePath;
+    this->m_texturePath = std::move(texturePath);
     this->m_bundlePath  = "imgs/imgs.spk";
     this->Init("imgs/imgs.spk", texturePath);
 }
@@ -32,16 +36,21 @@ BillboardComponent::BillboardComponent(GameObject*   owner,
                                        std::string   bundlePath,
                                        std::string   texturePath,
                                        BillboardMode mode,
-                                       float         size) {
+                                       float         size)
+    : m_material(
+          MaterialManager::CreateMaterial(
+              "billboard_material", ShaderManager::Get("default_billboard"))
+              .CreateInstance()) {
     this->m_owner       = owner;
     this->size          = size;
     this->m_mode        = mode;
-    this->m_texturePath = texturePath;
-    this->m_bundlePath  = bundlePath;
-    this->Init(bundlePath, texturePath);
+    this->m_texturePath = std::move(texturePath);
+    this->m_bundlePath  = std::move(bundlePath);
+    this->Init(m_bundlePath, m_texturePath);
 }
 
-BillboardComponent::BillboardComponent(const BillboardComponent& other) {
+BillboardComponent::BillboardComponent(const BillboardComponent& other)
+    : m_material(other.m_material) {
     this->m_owner       = other.m_owner;
     this->size          = other.size;
     this->m_mode        = other.m_mode;
@@ -65,6 +74,7 @@ BillboardComponent::operator=(const BillboardComponent& other) {
         this->m_mode        = other.m_mode;
         this->m_texturePath = other.m_texturePath;
         this->m_bundlePath  = other.m_bundlePath;
+        this->m_material    = other.m_material;
         if (!this->m_texturePath.empty()) {
             this->Init(this->m_bundlePath, this->m_texturePath);
         }
@@ -111,14 +121,9 @@ void BillboardComponent::Init(const std::string& bundlePath,
                               true,
                               "Failed to load billboard texture from %s",
                               texturePath.c_str());
+    } else {
+        this->m_material.SetTexture("s_albedo", this->m_texture, 0, 0);
     }
-
-    // Create material for the billboard
-    // Literally just a material with a single texture and the default billboard
-    // shader
-    this->m_material         = new Material("billboard_material");
-    this->m_material->shader = ShaderManager::Get("default_billboard");
-    this->m_material->SetTexture("s_albedo", this->m_texture, 0, 0);
 }
 
 static Syngine::ComponentRegistrar s_billboardRegistrar(

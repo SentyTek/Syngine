@@ -129,11 +129,7 @@ ModelData* ModelLoader::_GetMeshById(int id) {
 
 void ModelLoader::_UnloadAllMeshes() {
     for (auto& mesh : loadedMeshes) {
-        for (auto& subMesh : mesh.subMeshes) {
-            if (subMesh.material) {
-                subMesh.material->Destroy();
-            }
-        }
+        for (auto& material : mesh.materials) material.Destroy();
         bgfx::destroy(mesh.vbh);
         bgfx::destroy(mesh.ibh);
     }
@@ -198,19 +194,20 @@ bool AssimpLoader::processScene(ModelData&     out,
     out.indices.clear();
     out.subMeshes.clear();
 
-    std::vector<Material> allMaterials;
+    std::vector<MaterialInstance> allMaterials;
     {
         // Process all aiScene materials
         for (uint32_t i = 0; i < scene->mNumMaterials; ++i) {
             aiMaterial* aiMat = scene->mMaterials[i];
-            Material    mat =
+            MaterialInstance mat =
                 _ProcessMaterial(aiMat, scene, meshStream, loadTextures);
             allMaterials.push_back(mat);
         }
 
         // Ensure at least one fallback material
         if (allMaterials.empty()) {
-            allMaterials.push_back(_CreateDefaultMaterial());
+            allMaterials.push_back(
+                MaterialManager::GetDefaultMaterialPBR().CreateInstance());
         }
 
         out.materials    = allMaterials;
@@ -343,6 +340,19 @@ bool AssimpLoader::processScene(ModelData&     out,
         indexOffset += aiMeshPtr->mNumFaces * 3;
     }
 
+    Math::Vector3 minBounds(std::numeric_limits<float>::max());
+    Math::Vector3 maxBounds(std::numeric_limits<float>::lowest());
+
+    for (const auto& subMesh : out.subMeshes) {
+        for (int i = 0; i < 3; ++i) {
+            minBounds.set(i, std::min(minBounds[i], subMesh.boundMin[i]));
+            maxBounds.set(i, std::max(maxBounds[i], subMesh.boundMax[i]));
+        }
+    }
+
+    out.localMin = minBounds;
+    out.localMax = maxBounds;
+
     out.numSubMeshes = static_cast<uint8_t>(out.subMeshes.size());
 
     // create bgfx vertex layout
@@ -444,17 +454,16 @@ bool AssimpLoader::_ReloadModel(ModelData&         out,
     return true;
 }
 
-Material AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
-                                        const aiScene* scene,
-                                        scl::stream*   meshStream,
-                                        bool           loadTextures) {
-    std::string matName = aiMat->GetName().C_Str();
-
+MaterialInstance AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
+                                                const aiScene* scene,
+                                                scl::stream*   meshStream,
+                                                bool           loadTextures) {
     // Start with default material
-    // This loads in the base parameters used by most sahders
-    bool     hasTex = (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
+    // This loads in the base parameters used by most shaders.
+    bool      hasTex = (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
                    aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0);
-    Material mat    = MaterialManager::GetDefaultMaterialPBR(hasTex);
+    MaterialInstance mat =
+        MaterialManager::GetDefaultMaterialPBR(hasTex).CreateInstance();
 
     // base color
     aiColor4D baseColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -477,24 +486,27 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
         aiString texPath;
         if (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
             aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath);
-            mat.SetTexture(
-                "s_albedo", _LoadAssimpTexture(scene, texPath), 0, 0);
+            const bgfx::TextureHandle albedo = _LoadAssimpTexture(scene, texPath);
+            if (bgfx::isValid(albedo)) {
+                mat.SetTexture("s_albedo", albedo, 0, 0);
+            }
         } else if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
-            mat.SetTexture(
-                "s_albedo", _LoadAssimpTexture(scene, texPath), 0, 0);
-        } else {
-            mat.SetTexture("s_albedo", BGFX_INVALID_HANDLE, 0, 0);
+            const bgfx::TextureHandle albedo = _LoadAssimpTexture(scene, texPath);
+            if (bgfx::isValid(albedo)) {
+                mat.SetTexture("s_albedo", albedo, 0, 0);
+            }
         }
 
         // Normal map
         if (aiMat->GetTextureCount(aiTextureType_NORMALS) > 0) {
             aiString normalPath;
             aiMat->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
-            mat.SetTexture(
-                "s_normalMap", _LoadAssimpTexture(scene, normalPath), 0, 2);
-        } else {
-            mat.SetTexture("s_normalMap", BGFX_INVALID_HANDLE, 0, 2);
+            const bgfx::TextureHandle normal =
+                _LoadAssimpTexture(scene, normalPath);
+            if (bgfx::isValid(normal)) {
+                mat.SetTexture("s_normalMap", normal, 0, 2);
+            }
         }
 
         // Height map - try to find a texture with _height suffix
@@ -510,14 +522,8 @@ Material AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
         }*/
 
         // HEIGHT MAPS ARE NO LONGER USED BY SHADERS
-    } else {
-        mat.SetTexture("s_albedo", BGFX_INVALID_HANDLE, 0, 0);
-        mat.SetTexture("s_normalMap", BGFX_INVALID_HANDLE, 0, 1);
-        mat.SetTexture("s_heightMap", Syngine::CreateFlatTexture(), 0, 2);
     }
     return mat;
 }
-
-Material AssimpLoader::_CreateDefaultMaterial() { return Material("default"); }
 
 } // namespace Syngine
