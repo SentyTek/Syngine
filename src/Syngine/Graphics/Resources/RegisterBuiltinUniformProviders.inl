@@ -29,35 +29,40 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
     // current frame count of the engine.
     UniformRegistry::RegisterProvider(
         "Engine.FrameCount",
-        UniformDataProvider{ UniformType::VEC4,
-                             UniformFrequency::FRAME,
-                             1,
-                             [](const void* rawPacket) -> const void* {
-                                 static float frameCount[4] = {
-                                     static_cast<float>(
-                                         Core::m_frameCounter.frameCount),
-                                     0.0f,
-                                     0.0f,
-                                     0.0f,
-                                 };
-                                 return frameCount;
-                             } });
+        UniformDataProvider{
+            UniformType::VEC4,
+            UniformFrequency::FRAME,
+            1,
+            [](const void* rawPacket) -> const void* {
+                Renderer::m_uniformProviderData.frameCount = {
+                    static_cast<float>(Core::m_frameCounter.frameCount),
+                    0.0f,
+                    0.0f,
+                    0.0f
+                };
+                return Renderer::m_uniformProviderData.frameCount.data();
+            } });
 
     // Camera ones
     // Register the "Camera.ViewProjection" uniform provider, which provides the
     // view-projection matrix of the active camera.
     UniformRegistry::RegisterProvider(
         "Camera.ViewProjection",
-        UniformDataProvider{ UniformType::MAT4,
-                             UniformFrequency::VIEW,
-                             1,
-                             [](const void* rawPacket) -> const void* {
-                                 return Renderer::GetActiveCamera()
-                                            ? Renderer::GetActiveCamera()
-                                                  ->GetViewProjMatrix()
-                                                  .data()
-                                            : nullptr;
-                             } });
+        UniformDataProvider{
+            UniformType::MAT4,
+            UniformFrequency::VIEW,
+            1,
+            [](const void* rawPacket) -> const void* {
+                auto* camera = Renderer::GetActiveCamera();
+                if (!camera) {
+                    return nullptr;
+                }
+
+                Renderer::m_uniformProviderData.cameraViewProjection =
+                    camera->GetViewProjMatrix();
+                return Renderer::m_uniformProviderData.cameraViewProjection
+                    .data();
+            } });
 
     UniformRegistry::RegisterProvider(
         "Camera.Position",
@@ -66,9 +71,14 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* rawPacket) -> const void* {
-                return Math::Vec4(Renderer::GetActiveCamera()->GetPosition(),
-                                  1.0f)
-                    .data();
+                auto* camera = Renderer::GetActiveCamera();
+                if (!camera) {
+                    return nullptr;
+                }
+
+                Renderer::m_uniformProviderData.cameraPosition =
+                    Math::Vec4(camera->GetPosition(), 1.0f);
+                return Renderer::m_uniformProviderData.cameraPosition.data();
             } });
 
     // Renderer stuff
@@ -81,9 +91,10 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* rawPacket) -> const void* {
-                Math::Vector3 dir       = Renderer::GetSunDirection();
-                static float  dirArr[4] = { dir.x(), dir.y(), dir.z(), 0.0f };
-                return dirArr;
+                const Math::Vector3 dir = Renderer::GetSunDirection();
+                Renderer::m_uniformProviderData.sunDirection =
+                    Math::Vec4(dir, 0.0f);
+                return Renderer::m_uniformProviderData.sunDirection.data();
             } });
 
     /* Set default sky colors
@@ -94,15 +105,13 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
      */
     UniformRegistry::RegisterProvider(
         "Renderer.SkyColorZenith",
-        UniformDataProvider{ UniformType::VEC4,
-                             UniformFrequency::FRAME,
-                             1,
-                             [](const void* rawPacket) -> const void* {
-                                 static float skyColorZenith[4] = {
-                                     0.529f, 0.808f, 0.922f, 1.0f
-                                 };
-                                 return skyColorZenith;
-                             } });
+        UniformDataProvider{
+            UniformType::VEC4,
+            UniformFrequency::FRAME,
+            1,
+            [](const void* rawPacket) -> const void* {
+                return Renderer::m_uniformProviderData.skyColorZenith.data();
+            } });
     UniformRegistry::RegisterProvider(
         "Renderer.SkyColorMidnight",
         UniformDataProvider{
@@ -110,8 +119,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* rawPacket) -> const void* {
-                static float skyColorMidnight[4] = { 0.05f, 0.05f, 0.1f, 1.0f };
-                return skyColorMidnight;
+                return Renderer::m_uniformProviderData.skyColorMidnight.data();
             } });
     UniformRegistry::RegisterProvider(
         "Renderer.SunColor",
@@ -120,8 +128,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* rawPacket) -> const void* {
-                static float sunColor[4] = { 1.0f, 0.956f, 0.839f, 1.0f };
-                return sunColor;
+                return Renderer::m_uniformProviderData.sunColor.data();
             } });
     UniformRegistry::RegisterProvider(
         "Renderer.HorizonColor",
@@ -130,8 +137,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* rawPacket) -> const void* {
-                static float horizonColor[4] = { 0.8f, 0.5f, 0.3f, 1.0f };
-                return horizonColor;
+                return Renderer::m_uniformProviderData.horizonColor.data();
             } });
 
     // Debug uniforms
@@ -158,13 +164,13 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* rawPacket) -> const void* {
-                static float shadowParams[4] = {
+                Renderer::m_uniformProviderData.shadowParams = {
                     bgfx::getCaps()->homogeneousDepth ? 1.0f : 0.0f,
                     1.0f / (float)(RenderCore::m_config.shadowMapSize),
                     0.0f,
                     0.0f
                 };
-                return shadowParams;
+                return Renderer::m_uniformProviderData.shadowParams.data();
             } });
     UniformRegistry::RegisterProvider(
         "Renderer.NormalMatrix",
@@ -179,9 +185,9 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
               if (!transform) {
                   return nullptr;
               }
-              static Math::Mat4 normalMatrix;
-              normalMatrix = transform->GetModelMatrix().inverse().transposed();
-              return normalMatrix.data();
+              Renderer::m_uniformProviderData.normalMatrix =
+                  transform->GetModelMatrix().inverse().transposed();
+              return Renderer::m_uniformProviderData.normalMatrix.data();
           } });
 
     // Default texture providers
@@ -191,28 +197,23 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              static bgfx::TextureHandle shadowMap =
-                  RenderCore::m_buffers.shadowDepth;
-              return &shadowMap;
+              return &RenderCore::m_buffers.shadowDepth;
           } });
-    UniformRegistry::RegisterProvider("Renderer.ssaoTex",
-                                      { UniformType::SAMPLER,
-                                        UniformFrequency::DRAW,
-                                        1,
-                                        [](const void* context) -> const void* {
-                                            static bgfx::TextureHandle ssaoTex =
-                                                RenderCore::m_buffers.ssaoTex;
-                                            return &ssaoTex;
-                                        } });
+    UniformRegistry::RegisterProvider(
+        "Renderer.ssaoTex",
+        { UniformType::SAMPLER,
+          UniformFrequency::DRAW,
+          1,
+          [](const void* context) -> const void* {
+              return &RenderCore::m_buffers.ssaoTex;
+          } });
     UniformRegistry::RegisterProvider(
         "Renderer.sceneColor",
         { UniformType::SAMPLER,
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              static bgfx::TextureHandle sceneColor =
-                  RenderCore::m_buffers.sceneColor;
-              return &sceneColor;
+              return &RenderCore::m_buffers.sceneColor;
           } });
     UniformRegistry::RegisterProvider(
         "Renderer.sceneNormal",
@@ -220,9 +221,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              static bgfx::TextureHandle sceneNormal =
-                  RenderCore::m_buffers.sceneNormal;
-              return &sceneNormal;
+              return &RenderCore::m_buffers.sceneNormal;
           } });
     UniformRegistry::RegisterProvider(
         "Renderer.sceneDepth",
@@ -230,9 +229,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              static bgfx::TextureHandle sceneDepth =
-                  RenderCore::m_buffers.sceneDepth;
-              return &sceneDepth;
+              return &RenderCore::m_buffers.sceneDepth;
           } });
 
     // SSAO providers
@@ -243,25 +240,26 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* rawPacket) -> const void* {
-                static float ssaoParams[4] = {
+                Renderer::m_uniformProviderData.ssaoParams = {
                     0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width / 2.0f)
                 };
-                return ssaoParams;
+                return Renderer::m_uniformProviderData.ssaoParams.data();
             } });
     UniformRegistry::RegisterProvider(
         "Renderer.SSAO.Resolution",
-        UniformDataProvider{ UniformType::VEC4,
-                             UniformFrequency::FRAME,
-                             1,
-                             [](const void* rawPacket) -> const void* {
-                                 static float ssaoResolution[4] = {
-                                     static_cast<float>(Renderer::width),
-                                     static_cast<float>(Renderer::height),
-                                     1.0f / static_cast<float>(Renderer::width),
-                                     1.0f / static_cast<float>(Renderer::height)
-                                 };
-                                 return ssaoResolution;
-                             } });
+        UniformDataProvider{
+            UniformType::VEC4,
+            UniformFrequency::FRAME,
+            1,
+            [](const void* rawPacket) -> const void* {
+                Renderer::m_uniformProviderData.ssaoResolution = {
+                    static_cast<float>(Renderer::width),
+                    static_cast<float>(Renderer::height),
+                    1.0f / static_cast<float>(Renderer::width),
+                    1.0f / static_cast<float>(Renderer::height)
+                };
+                return Renderer::m_uniformProviderData.ssaoResolution.data();
+            } });
 
     // Billboard uniforms
     UniformRegistry::RegisterProvider(
