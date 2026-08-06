@@ -16,6 +16,7 @@
 
 #include <array>
 #include <cstdint>
+#include <optional>
 #include <sys/stat.h>
 #include <vector>
 #include <string>
@@ -124,6 +125,11 @@ class ShaderManager {
 
     static bgfx::ShaderHandle _LoadShaderFromMemory(const void* data,
                                                     size_t      size);
+
+    static std::optional<Shader>
+    _BuildShader(const std::string& bundlePath,
+                 const std::string& shaderName,
+                 const ViewID       viewId);
 
     ShaderManager() = delete; // Prevent instantiation of this class
 
