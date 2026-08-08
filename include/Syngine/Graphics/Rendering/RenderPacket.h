@@ -17,7 +17,6 @@
 
 namespace Syngine {
 
-/// @brief Struct representing a render packet for submission to the GPU.
 struct RenderPacket {
     bgfx::VertexBufferHandle vbh;
     bgfx::IndexBufferHandle  ibh;
@@ -29,8 +28,8 @@ struct RenderPacket {
     uint32_t depth;
 
     MaterialInstance* material;
-    Shader*     shader;
-    GameObject* go;
+    Shader*           shader;
+    GameObject*       go;
 
     bool visible;
 };

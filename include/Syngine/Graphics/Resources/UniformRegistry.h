@@ -53,6 +53,10 @@ struct UniformDataProvider {
     std::string      name;    //* Name of the uniform
 };
 
+/// @brief Class to manage uniform data providers and their associated bgfx
+/// uniform handles
+/// @section Uniforms
+/// @since v0.0.2
 class UniformRegistry {
     std::unordered_map<std::string, UniformDataProvider> m_UniformProviders;
     std::unordered_map<std::string, bgfx::UniformHandle> m_UniformHandlesMap;
@@ -71,11 +75,22 @@ class UniformRegistry {
         { "frame", UniformFrequency::FRAME },
     }; // for shader metadata parsing
 
+    /// @brief Get the singleton instance of the UniformRegistry
+    /// @return UniformRegistry& Reference to the singleton instance
+    /// @threadsafety thread-safe
+    /// @internal
+    /// @since v0.0.2
     static UniformRegistry& GetInstance() {
         static UniformRegistry instance;
         return instance;
     }
 
+    /// @brief Get the bgfx uniform handle for a given uniform name
+    /// @param name Name of the uniform
+    /// @return bgfx::UniformHandle Handle to the bgfx uniform
+    /// @threadsafety thread-safe
+    /// @internal
+    /// @since v0.0.2
     static bgfx::UniformHandle _GetUniformHandle(const std::string& name) {
         auto& instance = GetInstance();
         auto  it       = instance.m_UniformHandlesMap.find(name);
@@ -88,6 +103,11 @@ class UniformRegistry {
     friend class ShaderManager; // for shader metadata parsing
     friend class RenderCore;    // for uniform updates during rendering
   public:
+    /// @brief Register a uniform data provider with the registry
+    /// @param name Name of the uniform
+    /// @param provider UniformDataProvider struct containing the provider
+    /// @threadsafety thread-safe
+    /// @since v0.0.2
     static void RegisterProvider(const std::string&  name,
                                  UniformDataProvider provider) {
         if (provider.name.empty()) {
@@ -96,6 +116,12 @@ class UniformRegistry {
         GetInstance().m_UniformProviders[name] = provider;
     }
 
+    /// @brief Find a uniform data provider by name
+    /// @param name Name of the uniform
+    /// @return UniformDataProvider* Pointer to the provider, nullptr if not
+    /// found
+    /// @threadsafety thread-safe
+    /// @since v0.0.2
     static UniformDataProvider* FindProvider(const std::string& name) {
         auto& providers = GetInstance().m_UniformProviders;
         auto  it        = providers.find(name);
@@ -105,6 +131,10 @@ class UniformRegistry {
         return nullptr;
     }
 
+    /// @brief Destroys all registered uniform data providers and their
+    /// associated bgfx uniform handles
+    /// @threadsafety thread-safe
+    /// @since v0.0.2
     static void DestroyAllUniforms() {
         // Destroy bgfx uniform handle if it exists
         for (auto& handle : GetInstance().m_UniformHandles) {
@@ -116,6 +146,13 @@ class UniformRegistry {
         GetInstance().m_UniformProviders.clear();
     }
 
+    /// @brief Convert a void pointer to a specific type T and return a
+    /// reference to it
+    /// @tparam T The type to convert the pointer to
+    /// @param ptr The void pointer to convert
+    /// @return const T& Reference to the converted type
+    /// @threadsafety thread-safe
+    /// @since v0.0.2
     template <typename T> static const T& GetContext(const void* ptr) {
         return *static_cast<const T*>(ptr);
     }
