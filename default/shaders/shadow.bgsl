@@ -207,7 +207,7 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec4 lightDir, float viewD
 
     // Push base bias into the negatives. With backface shadows, negative bias pulls
     // the shadow outward towards the light slightly, closing contact leaking gaps perfectly.
-    float baseBias = -0.0001;
+    float baseBias = -0.0003;
     float maxBias = 0.00035;
 
     // Slight cascade scale

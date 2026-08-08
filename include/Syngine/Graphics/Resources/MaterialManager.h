@@ -311,7 +311,7 @@ class MaterialManager {
     static Material& GetMaterialFromBundle(const std::string& bundlePath,
                                            const std::string& materialName);
 
-    static Material& GetDefaultMaterialPBR(bool textured = true);
+    static Material&           GetDefaultMaterialPBR();
     static bgfx::TextureHandle GetFallbackAlbedoTexture();
     static bgfx::TextureHandle GetFallbackNormalTexture();
 

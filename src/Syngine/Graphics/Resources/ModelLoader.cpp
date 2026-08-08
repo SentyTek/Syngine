@@ -198,7 +198,7 @@ bool AssimpLoader::processScene(ModelData&     out,
     {
         // Process all aiScene materials
         for (uint32_t i = 0; i < scene->mNumMaterials; ++i) {
-            aiMaterial* aiMat = scene->mMaterials[i];
+            aiMaterial*      aiMat = scene->mMaterials[i];
             MaterialInstance mat =
                 _ProcessMaterial(aiMat, scene, meshStream, loadTextures);
             allMaterials.push_back(mat);
@@ -460,18 +460,21 @@ MaterialInstance AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
                                                 bool           loadTextures) {
     // Start with default material
     // This loads in the base parameters used by most shaders.
-    bool      hasTex = (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
+    bool hasTex = (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
                    aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0);
     MaterialInstance mat =
-        MaterialManager::GetDefaultMaterialPBR(hasTex).CreateInstance();
+        MaterialManager::GetDefaultMaterialPBR().CreateInstance();
 
     // base color
     aiColor4D baseColor(1.0f, 1.0f, 1.0f, 1.0f);
-    if (!loadTextures &&
-        aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, baseColor) == AI_SUCCESS) {
+    if (aiMat->Get(AI_MATKEY_COLOR_DIFFUSE, baseColor) == AI_SUCCESS) {
         mat.Set(
             "u_baseColor", _ToVector4(baseColor).data(), sizeof(Math::Vector4));
     }
+
+    const float   useTexture = (loadTextures && hasTex) ? 1.0f : 0.0f;
+    Math::Vector4 materialFlags(useTexture, 0.0f, 0.0f, 0.0f);
+    mat.Set("u_materialParams2", materialFlags.data(), sizeof(Math::Vector4));
 
     // Import or derive UV scales
     float scaleProperty = 1.0f;
@@ -486,13 +489,15 @@ MaterialInstance AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
         aiString texPath;
         if (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
             aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath);
-            const bgfx::TextureHandle albedo = _LoadAssimpTexture(scene, texPath);
+            const bgfx::TextureHandle albedo =
+                _LoadAssimpTexture(scene, texPath);
             if (bgfx::isValid(albedo)) {
                 mat.SetTexture("s_albedo", albedo, 0, 0);
             }
         } else if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
-            const bgfx::TextureHandle albedo = _LoadAssimpTexture(scene, texPath);
+            const bgfx::TextureHandle albedo =
+                _LoadAssimpTexture(scene, texPath);
             if (bgfx::isValid(albedo)) {
                 mat.SetTexture("s_albedo", albedo, 0, 0);
             }

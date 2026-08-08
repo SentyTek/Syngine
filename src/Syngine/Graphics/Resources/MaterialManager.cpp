@@ -10,6 +10,7 @@
 #include <Syngine/Utils/Serializer.h>
 #include "SDL3/SDL_iostream.h"
 #include "Syngine/Utils/FsUtils.h"
+#include "bgfx/defines.h"
 
 #include <miniscl.hpp>
 
@@ -214,36 +215,35 @@ Material& MaterialManager::GetMaterialFromFile(const std::string& filePath) {
     return _DeserializeMaterial(xmlStream);
 }
 
-Material& MaterialManager::GetDefaultMaterialPBR(bool textured) {
-    const std::string name = textured ? "default_texture" : "default";
+Material& MaterialManager::GetDefaultMaterialPBR() {
+    const std::string name     = "default_pbr";
+    Material*         existing = nullptr;
     if (MaterialManager::MaterialExists(name)) {
-        return MaterialManager::GetMaterialByName(name);
+        existing = &MaterialManager::GetMaterialByName(name);
     }
     Material& mat =
-        MaterialManager::CreateMaterial(name, ShaderManager::Get(name));
+        existing
+            ? *existing
+            : MaterialManager::CreateMaterial(name, ShaderManager::Get(name));
     mat._SetDefault("u_materialParams1",
                     Math::Vector4(0.0f, 0.2f, 0.0f, 0.0f).data(),
+                    sizeof(Math::Vector4));
+    mat._SetDefault("u_materialParams2",
+                    Math::Vector4(0.0f, 0.0f, 0.0f, 0.0f).data(),
                     sizeof(Math::Vector4));
     mat._SetDefault("u_uvScale",
                     Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f).data(),
                     sizeof(Math::Vector4));
-
-    // baseColor only exists in default shader, while s_albedo only exists in
-    // default_texture shader. So we set one or the other depending on the
-    // shader. Kinda awful but it works
-    if (!textured) {
-        mat._SetDefault("u_baseColor",
-                        Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f).data(),
-                        sizeof(Math::Vector4));
-    } else {
-        mat._SetDefaultTexture("s_albedo",
-                               GetFallbackAlbedoTexture(),
-                               BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
-                               0);
-    }
+    mat._SetDefault("u_baseColor",
+                    Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f).data(),
+                    sizeof(Math::Vector4));
+    mat._SetDefaultTexture("s_albedo",
+                           GetFallbackAlbedoTexture(),
+                           BGFX_SAMPLER_MIN_ANISOTROPIC,
+                           0);
     mat._SetDefaultTexture("s_normalMap",
                            GetFallbackNormalTexture(),
-                           BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
+                           BGFX_SAMPLER_MIN_ANISOTROPIC,
                            2);
     return mat;
 }

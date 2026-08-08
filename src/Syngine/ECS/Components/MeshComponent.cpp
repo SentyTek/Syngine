@@ -11,6 +11,7 @@
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
+#include "Syngine/Math/Vector4.hpp"
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/GameObject.h"
@@ -284,9 +285,10 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
                                std::vector<uint32_t> indices,
                                Math::Vector4         baseColor) {
     Syngine::ModelData modelData;
-    int vertexSize = (baseColor == Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f))
-                         ? 12
-                         : 8; // if no baseColor provided, expect vertex colors
+    bool useVertexColors = (baseColor == Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f));
+    int  vertexSize      = useVertexColors
+                               ? 12
+                               : 8; // if no baseColor provided, expect vertex colors
 
     Syngine::SubMesh subMesh;
     subMesh.indexStart    = 0;
@@ -300,7 +302,7 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         static_cast<uint32_t>(vertices.size() / vertexSize));
 
     // build vertices, apply baseColor if provided
-    if (!baseColor.isZero()) {
+    if (!useVertexColors) {
         // apply base color to all vertices
         std::vector<Vertex>::iterator vertexIt = modelData.vertices.begin();
         for (size_t i = 0; i < vertices.size(); i += 8) {
@@ -358,8 +360,19 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
 
     // Add dummy material
     MaterialInstance mat =
-        MaterialManager::GetDefaultMaterialPBR(false).CreateInstance();
+        MaterialManager::GetDefaultMaterialPBR().CreateInstance();
     mat.Set("u_baseColor", baseColor.data(), sizeof(Math::Vector4));
+
+    if (useVertexColors) {
+        Math::Vector4 mp = mat.Get<Math::Vector4>("u_materialParams1");
+        mp.setW(1.0f); // Enable VERTEX color usage
+        mat.Set("u_materialParams1", mp.data(), sizeof(Math::Vector4));
+    }
+
+    Math::Vector4 mp = mat.Get<Math::Vector4>("u_materialParams2");
+    mp.setY(1.0f); // Enable normal map usage
+    mat.Set("u_materialParams2", mp.data(), sizeof(Math::Vector4));
+
     modelData.materials.push_back(mat);
 
     // checks

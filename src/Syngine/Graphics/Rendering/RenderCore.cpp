@@ -267,9 +267,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
         ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_sky", VIEW_SKY);
         ShaderManager::LoadShader(
-            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default", VIEW_FORWARD);
-        ShaderManager::LoadShader(
-            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_texture", VIEW_FORWARD);
+            SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_pbr", VIEW_FORWARD);
         ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_debug", VIEW_DEBUG);
         ShaderManager::LoadShader(SYNINT_DEFAULT_SHADERBUNDLE_NAME,
@@ -998,7 +996,6 @@ void RenderCore::_DrawForward(const Shader* program, CameraComponent* camera) {
     bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
 
     const uint64_t renderState = BGFX_STATE_DEFAULT | BGFX_STATE_MSAA;
-    uint32_t       flags       = BGFX_SAMPLER_MIN_ANISOTROPIC;
 
     _SetFrameUniforms(program);
     _SetViewUniforms(program);
@@ -1011,18 +1008,12 @@ void RenderCore::_DrawForward(const Shader* program, CameraComponent* camera) {
                                                     : BGFX_STATE_FRONT_CCW));
 
         _SetObjectUniforms(program, packet);
-        _SetMaterialUniforms(program, packet, flags);
+        _SetMaterialUniforms(program, packet);
 
         bgfx::setTransform(packet.modelMtx.data());
         bgfx::setVertexBuffer(0, packet.vbh);
         bgfx::setIndexBuffer(packet.ibh, packet.indexStart, packet.indexCount);
 
-        bgfx::setTexture(3,
-                         m_defaultShadowMap,
-                         m_buffers.shadowDepth,
-                         BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                             BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_U_CLAMP |
-                             BGFX_SAMPLER_V_CLAMP);
         Renderer::_UpdateDrawID();
         bgfx::submit(program->m_viewId, program->m_program);
         m_drawnCounts.forward++;
