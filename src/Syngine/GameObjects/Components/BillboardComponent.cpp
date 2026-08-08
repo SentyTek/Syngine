@@ -6,9 +6,9 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include <Syngine/ECS/Components/BillboardComponent.h>
-#include <Syngine/ECS/ComponentRegistry.h>
-#include <Syngine/ECS/GameObject.h>
+#include <Syngine/GameObjects/Components/BillboardComponent.h>
+#include <Syngine/GameObjects/ComponentRegistry.h>
+#include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/Utils/FsUtils.h>
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Graphics/Resources/ShaderManager.h>

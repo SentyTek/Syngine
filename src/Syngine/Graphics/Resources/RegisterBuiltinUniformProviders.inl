@@ -13,7 +13,7 @@
 #include <Syngine/Core/Core.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Graphics/Rendering/RenderCore.h>
-#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/GameObjects/AllComponents.h>
 
 // This file registers built-in uniform providers for the renderer. These
 // providers supply data for commonly used uniforms, such as camera matrices and

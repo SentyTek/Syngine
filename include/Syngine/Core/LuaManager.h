@@ -10,7 +10,7 @@
 
 #include "sol/forward.hpp"
 #include <Syngine/Core/Logger.h>
-#include <Syngine/ECS/GameObject.h>
+#include <Syngine/GameObjects/GameObject.h>
 
 namespace Syngine {
 
@@ -19,26 +19,26 @@ namespace Syngine {
 enum class LuaLibs : uint32_t {
     NONE = 0, //* Do not open any libraries
     DEFAULT =
-        2, //* Open the default set of libraries (string, utf8, math, table,
-            //* require)
+        2,     //* Open the default set of libraries (string, utf8, math, table,
+               //* require)
     ALL   = 4, //* Open all standard Lua libraries
     DEBUG = 8, //* Open additional libraries useful for debugging (e.g.,
-                //* debug and print)
-    IO = 16, //* Open the io library for file operations (use with caution)
-    OS = 32, //* Open the os library for operating system interactions
+               //* debug and print)
+    IO      = 16, //* Open the io library for file operations (use with caution)
+    OS      = 32, //* Open the os library for operating system interactions
     ERRHAND = 64, //* Open the default library for error handling and
-                    //* stack traces (pcall, xpcall)
+                  //* stack traces (pcall, xpcall)
     NOMETATABLES =
         128, //* Do not set metatables on Lua objects (for extra security)
     COROUTINES = 256, //* Open the coroutines library for Lua coroutines
     RAWFAMILY  = 512, //* Open the raw* functions (rawget, rawset, etc.) for
-                        //* low-level
-                        //* table manipulation (use with caution)
+                      //* low-level
+                      //* table manipulation (use with caution)
     NOSYNGINE =
         1024, //* Do not register any Syngine bindings. This disables the
-                //* ECS, logger, and input bindings, and is intended for
-                //* sandboxed environments where you want to allow Lua scripting
-                //* but not give access to engine internals.
+              //* ECS, logger, and input bindings, and is intended for
+              //* sandboxed environments where you want to allow Lua scripting
+              //* but not give access to engine internals.
 };
 
 /// @brief Manages the Lua state and scripting environment for the engine.
@@ -47,13 +47,15 @@ class LuaManager {
     static sol::state* m_luaState;
     static sol::state* _GetState() { return m_luaState; }
     static bool        m_initialized;
-    static bool        m_allowTicking; // Whether to allow ticking Lua scripts (set to false during reloads)
+    static bool m_allowTicking; // Whether to allow ticking Lua scripts (set to
+                                // false during reloads)
 
 #if defined(SYN_TEST_MODE)
-    public:
-        // Test-only access to the underlying Lua state.
-        static sol::state* GetStateForTests() { return m_luaState; }
-    private:
+  public:
+    // Test-only access to the underlying Lua state.
+    static sol::state* GetStateForTests() { return m_luaState; }
+
+  private:
 #endif
 
     static void _RegisterEntityBindings(sol::state& lua);
@@ -72,7 +74,8 @@ class LuaManager {
 
     static void _ReloadLuaState();
 
-    /// @brief Unregister a GameObject from Lua ownership tracking (called automatically on GameObject destruction)
+    /// @brief Unregister a GameObject from Lua ownership tracking (called
+    /// automatically on GameObject destruction)
     /// @param obj The GameObject to unregister
     static void _UnregisterLuaOwnedObject(GameObject* obj);
 
@@ -83,8 +86,8 @@ class LuaManager {
 
     static LuaLibs m_libs; // Libraries to open in the Lua state
 
-    friend struct ComponentRegistrar; // Allow ComponentRegistrar to register Lua
-                                     // bindings
+    friend struct ComponentRegistrar; // Allow ComponentRegistrar to register
+                                      // Lua bindings
     friend class Core;
     friend class GameObject;
 
@@ -113,12 +116,15 @@ class LuaManager {
     _AddFunctionImpl<std::function<void(int)>>(const std::string&       name,
                                                std::function<void(int)> func,
                                                const std::string& namespace_);
+
   public:
     friend LuaLibs operator|(LuaLibs a, LuaLibs b) {
-        return static_cast<LuaLibs>(static_cast<uint32_t>(a) | static_cast<uint32_t>(b));
+        return static_cast<LuaLibs>(static_cast<uint32_t>(a) |
+                                    static_cast<uint32_t>(b));
     }
     friend LuaLibs operator&(LuaLibs a, LuaLibs b) {
-        return static_cast<LuaLibs>(static_cast<uint32_t>(a) & static_cast<uint32_t>(b));
+        return static_cast<LuaLibs>(static_cast<uint32_t>(a) &
+                                    static_cast<uint32_t>(b));
     }
     friend LuaLibs operator~(LuaLibs a) {
         return static_cast<LuaLibs>(~static_cast<uint32_t>(a));
@@ -185,7 +191,8 @@ class LuaManager {
     /// seconds (not affected by time scaling)
     /// @param simulating Whether the simulation is currently running
     /// @since v0.0.1
-    static void DoTick(float physDeltaTime, float realDeltaTime, bool simulating);
+    static void
+    DoTick(float physDeltaTime, float realDeltaTime, bool simulating);
 
     /// @brief Set whether to allow ticking Lua scripts (used to prevent ticking
     /// during reloads)
@@ -193,7 +200,7 @@ class LuaManager {
     /// @return The previous allow ticking state
     /// @since v0.0.1
     static inline bool SetAllowTicking(bool allow) {
-        bool previous = m_allowTicking;
+        bool previous  = m_allowTicking;
         m_allowTicking = allow;
         return previous;
     }
@@ -205,20 +212,15 @@ class LuaManager {
     /// @tparam T The type to convert the result to
     /// @return The converted result, or default T if conversion failed
     /// @since v0.0.2
-    template <typename T>
-    static T GetLastResult();
+    template <typename T> static T GetLastResult();
 
-    template <>
-    int GetLastResult<int>();
+    template <> int GetLastResult<int>();
 
-    template <>
-    bool GetLastResult<bool>();
+    template <> bool GetLastResult<bool>();
 
-    template <>
-    float GetLastResult<float>();
+    template <> float GetLastResult<float>();
 
     template <> std::string GetLastResult<std::string>();
-
 };
 
 } // namespace Syngine

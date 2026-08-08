@@ -8,7 +8,7 @@
 
 #include "Syngine/Utils/Serializer.h"
 #include "Syngine/Utils/FsUtils.h"
-#include "Syngine/ECS/GameObject.h"
+#include "Syngine/GameObjects/GameObject.h"
 
 #include "../../lib/miniscl.hpp"
 #include <filesystem>
@@ -21,7 +21,8 @@ namespace Internal {
 std::string ResolvePath(const char* path) { return _ResolveOSPath(path); }
 } // namespace Internal
 
-Serializer::CoreSettings Serializer::m_coreSettings = Serializer::CoreSettings{};
+Serializer::CoreSettings Serializer::m_coreSettings =
+    Serializer::CoreSettings{};
 
 bool Serializer::DataNode::Has(const std::string& key) const {
     if (!std::holds_alternative<NodeMap>(m_data)) return false;
@@ -77,7 +78,8 @@ const Serializer::DataNode& Serializer::DataNode::At(size_t index) const {
     return arr[index];
 }
 
-Serializer::DataNode::NodeMap::const_iterator Serializer::DataNode::begin() const {
+Serializer::DataNode::NodeMap::const_iterator
+Serializer::DataNode::begin() const {
     static const NodeMap emptyMap{};
     if (!std::holds_alternative<NodeMap>(m_data)) {
         return emptyMap.begin();
@@ -85,7 +87,8 @@ Serializer::DataNode::NodeMap::const_iterator Serializer::DataNode::begin() cons
     return std::get<NodeMap>(m_data).begin();
 }
 
-Serializer::DataNode::NodeMap::const_iterator Serializer::DataNode::end() const {
+Serializer::DataNode::NodeMap::const_iterator
+Serializer::DataNode::end() const {
     static const NodeMap emptyMap{};
     if (!std::holds_alternative<NodeMap>(m_data)) {
         return emptyMap.end();
@@ -104,7 +107,8 @@ std::vector<std::string> Serializer::DataNode::GetKeys() const {
 }
 
 void Serializer::_LoadCoreSettings(const std::string& gameName) {
-    std::filesystem::path settingsPath = Syngine::_GetAppDataPath(gameName) / "settings.xml";
+    std::filesystem::path settingsPath =
+        Syngine::_GetAppDataPath(gameName) / "settings.xml";
     if (std::filesystem::exists(settingsPath)) {
         m_coreSettings = CoreSettings::LoadFromFile(settingsPath.string());
     } else {
@@ -113,9 +117,11 @@ void Serializer::_LoadCoreSettings(const std::string& gameName) {
 }
 
 void Serializer::_SaveCoreSettings(const std::string& gameName) {
-    std::filesystem::path settingsPath = Syngine::_GetAppDataPath(gameName) / "settings.xml";
+    std::filesystem::path settingsPath =
+        Syngine::_GetAppDataPath(gameName) / "settings.xml";
     if (!CoreSettings::SaveToFile(settingsPath.string(), m_coreSettings)) {
-        Logger::Error("Failed to save settings to file: " + settingsPath.string());
+        Logger::Error("Failed to save settings to file: " +
+                      settingsPath.string());
     } else {
         Logger::Info("Settings saved successfully to " + settingsPath.string());
     }
@@ -200,14 +206,16 @@ Serializer::CoreSettings::LoadFromFile(const std::string& path) {
     return settings;
 }
 
-bool Serializer::CoreSettings::SaveToFile(const std::string& path, const CoreSettings& settings) {
+bool Serializer::CoreSettings::SaveToFile(const std::string&  path,
+                                          const CoreSettings& settings) {
     scl::xml::XmlDocument doc;
-    scl::path             inputPath = path.c_str();
+    scl::path             inputPath  = path.c_str();
     bool                  fileExists = inputPath.exists();
 
     doc.set_tag("CoreSettings");
 
-    scl::xml::XmlAttr* versionAttr = doc.new_attr("Version", SYNINT_CORESETTINGS_VERSION);
+    scl::xml::XmlAttr* versionAttr =
+        doc.new_attr("Version", SYNINT_CORESETTINGS_VERSION);
     doc.add_attr(versionAttr);
 
     // Create root node
@@ -216,14 +224,22 @@ bool Serializer::CoreSettings::SaveToFile(const std::string& path, const CoreSet
 
     // Serialize main video settings as XML attributes
     scl::xml::XmlElem* videoElem = doc.new_elem("Video");
-    videoElem->add_attr(doc.new_attr("width", std::to_string(settings.video.width)));
-    videoElem->add_attr(doc.new_attr("height", std::to_string(settings.video.height)));
-    videoElem->add_attr(doc.new_attr("fullscreen", settings.video.fullscreen ? "true" : "false"));
-    videoElem->add_attr(doc.new_attr("brightness", std::to_string(settings.video.brightness)));
-    videoElem->add_attr(doc.new_attr("vSync", settings.video.vSync ? "true" : "false"));
-    videoElem->add_attr(doc.new_attr("useShadows", settings.video.useShadows ? "true" : "false"));
-    videoElem->add_attr(doc.new_attr("shadowDist", std::to_string(settings.video.shadowDist)));
-    videoElem->add_attr(doc.new_attr("useSSAO", settings.video.useSSAO ? "true" : "false"));
+    videoElem->add_attr(
+        doc.new_attr("width", std::to_string(settings.video.width)));
+    videoElem->add_attr(
+        doc.new_attr("height", std::to_string(settings.video.height)));
+    videoElem->add_attr(doc.new_attr(
+        "fullscreen", settings.video.fullscreen ? "true" : "false"));
+    videoElem->add_attr(
+        doc.new_attr("brightness", std::to_string(settings.video.brightness)));
+    videoElem->add_attr(
+        doc.new_attr("vSync", settings.video.vSync ? "true" : "false"));
+    videoElem->add_attr(doc.new_attr(
+        "useShadows", settings.video.useShadows ? "true" : "false"));
+    videoElem->add_attr(
+        doc.new_attr("shadowDist", std::to_string(settings.video.shadowDist)));
+    videoElem->add_attr(
+        doc.new_attr("useSSAO", settings.video.useSSAO ? "true" : "false"));
     root->add_child(videoElem);
 
     // Write XML document to file

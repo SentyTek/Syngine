@@ -9,7 +9,7 @@
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
-#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/GameObjects/AllComponents.h>
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Graphics/Rendering/RenderCore.h>
 #include <Syngine/Graphics/Resources/ShaderManager.h>
@@ -24,7 +24,7 @@
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_properties.h>
 
-#include "Syngine/ECS/Components/CameraComponent.h"
+#include "Syngine/GameObjects/Components/CameraComponent.h"
 #include "Syngine/Graphics/Resources/UniformRegistry.h"
 
 #include <cstdint>
@@ -47,7 +47,7 @@ float Renderer::m_gizmoSize = 1.0f;
 std::unordered_map<std::string, Syngine::BillboardComponent*>
                                          Renderer::m_gizmoRegistry;
 std::vector<Renderer::UniformCacheEntry> Renderer::m_uniformCache;
-Renderer::UniformProviderData Renderer::m_uniformProviderData;
+Renderer::UniformProviderData            Renderer::m_uniformProviderData;
 
 int      Renderer::width         = 0;
 int      Renderer::height        = 0;

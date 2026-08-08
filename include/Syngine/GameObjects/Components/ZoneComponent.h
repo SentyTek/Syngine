@@ -7,8 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/GameObject.h"
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/GameObject.h"
 
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Math/Quaternion.hpp"
@@ -40,7 +40,7 @@ class ZoneComponent : public Syngine::Component {
         Math::Vector3(); //* Position of the zone center (world space)
     Math::Quaternion m_rot =
         Math::Quaternion(); //* Rotation of the zone (for box shape). This is a
-                            //quaternion. Not used for sphere shape
+                            // quaternion. Not used for sphere shape
 
     ZoneShape m_shape = ZoneShape::BOX; //* Shape of the zone (box or sphere)
 
@@ -49,8 +49,8 @@ class ZoneComponent : public Syngine::Component {
     bool m_oneShot = false; //* Whether the zone is a one-shot zone
     std::vector<GameObject*>
         m_objectsIn; //* Objects that are currently in the zone
-    std::vector<GameObject*>
-        m_triggeredObjects; //* Objects that have triggered the zone (for one-shot zones)
+    std::vector<GameObject*> m_triggeredObjects; //* Objects that have triggered
+                                                 //the zone (for one-shot zones)
 
     std::vector<std::string> m_tags; //* Tags of the zone
 
@@ -64,7 +64,8 @@ class ZoneComponent : public Syngine::Component {
     /// @param shape The shape of the zone (box or sphere).
     /// @param pos The position of the zone center.
     /// @param size The size of the zone (whd for box, r for sphere).
-    /// @param oneShot Whether the zone is a one-shot zone (triggers only once per object).
+    /// @param oneShot Whether the zone is a one-shot zone (triggers only once
+    /// per object).
     /// @note This should only be called by GameObject::AddComponent<T>()
     ZoneComponent(GameObject*          owner,
                   ZoneShape            shape,
@@ -98,8 +99,10 @@ class ZoneComponent : public Syngine::Component {
     /// @param shape The shape of the zone (box or sphere).
     /// @param pos The position of the zone center.
     /// @param size The size of the zone (whd for box, r for sphere).
-    /// @param oneShot Whether the zone is a one-shot zone (triggers only once per object).
-    /// @note This should only be called when the component is added to a GameObject
+    /// @param oneShot Whether the zone is a one-shot zone (triggers only once
+    /// per object).
+    /// @note This should only be called when the component is added to a
+    /// GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
@@ -123,7 +126,8 @@ class ZoneComponent : public Syngine::Component {
 
     /// @brief Get the position of the zone center.
     /// @return The position of the zone center as a Math::Vector3.
-    /// @note For box shape, this is the center of the box. For sphere shape, this is the center of the sphere.
+    /// @note For box shape, this is the center of the box. For sphere shape,
+    /// this is the center of the sphere.
     /// @threadsafety read-only
     /// @since v0.0.1
     Math::Vector3 GetPosition() const;
@@ -135,7 +139,8 @@ class ZoneComponent : public Syngine::Component {
     void SetPosition(const Math::Vector3& pos);
 
     /// @brief Get the size of the zone.
-    /// @return The size of the zone as a Math::Vector3 (whd for box, r for sphere).
+    /// @return The size of the zone as a Math::Vector3 (whd for box, r for
+    /// sphere).
     /// @threadsafety read-only
     /// @since v0.0.1
     Math::Vector3 GetSize() const;
@@ -266,7 +271,8 @@ class ZoneComponent : public Syngine::Component {
 
     /// @brief Get all GameObjects inside the zone with a specific tag.
     /// @param tag The tag to filter GameObjects.
-    /// @return A vector of pointers to GameObjects inside the zone with the specified tag.
+    /// @return A vector of pointers to GameObjects inside the zone with the
+    /// specified tag.
     /// @pre The GameObjects must have a TransformComponent.
     /// @threadsafety read-only
     /// @since v0.0.1
@@ -280,8 +286,10 @@ class ZoneComponent : public Syngine::Component {
     /// @internal
     GameObject* _GetOwner() const;
 
-    std::function<void(GameObject*)> OnEnter; //* Function called when an object enters the zone
-    std::function<void(GameObject*)> OnExit;  //* Function called when an object exits the zone
+    std::function<void(GameObject*)>
+        OnEnter; //* Function called when an object enters the zone
+    std::function<void(GameObject*)>
+        OnExit; //* Function called when an object exits the zone
 };
 
 } // namespace Syngine

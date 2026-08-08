@@ -15,8 +15,8 @@
 
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/LuaManager.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/Components/TransformComponent.h"
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
@@ -30,14 +30,15 @@ namespace Syngine {
 class GameObject {
   public:
     std::string name; //* Name of the GameObject, used for identification and
-                 //* debugging.
+                      //* debugging.
 
     std::string type; //* Type of the GameObject, used for shaders.
 
     std::string gizmo; //* Gizmo type for rendering in the editor, e.g.,
-                  //* "camera_render", "mesh_render"
+                       //* "camera_render", "mesh_render"
 
-    std::vector<std::string> tags; //* Tags for grouping and identifying GameObjects
+    std::vector<std::string>
+        tags; //* Tags for grouping and identifying GameObjects
 
     /// @brief Constructor for the GameObject class
     /// @param name Name of the GameObject
@@ -164,11 +165,13 @@ class GameObject {
     /// @return Const reference to the components map
     /// @threadsafety safe
     /// @since v0.0.1
-    const std::map<ComponentTypeID, std::unique_ptr<Component>>& GetComponents() const {
+    const std::map<ComponentTypeID, std::unique_ptr<Component>>&
+    GetComponents() const {
         return components;
     }
 
-    /// @brief Serialize the GameObject and its components into a DataNode for saving
+    /// @brief Serialize the GameObject and its components into a DataNode for
+    /// saving
     /// @return DataNode representing the serialized GameObject
     /// @threadsafety safe
     /// @since v0.0.1
@@ -181,7 +184,8 @@ class GameObject {
     void SetParent(GameObject* parent);
 
     /// @brief Get the parent of the GameObject
-    /// @return Pointer to the parent GameObject, or nullptr if there is no parent
+    /// @return Pointer to the parent GameObject, or nullptr if there is no
+    /// parent
     /// @threadsafety safe
     /// @since v0.0.1
     GameObject* GetParent() const;
@@ -213,8 +217,7 @@ class GameObject {
     bool isActive = true; // Whether the GameObject is active or not
 };
 
-template<typename T>
-T* GameObject::GetComponent() const {
+template <typename T> T* GameObject::GetComponent() const {
     auto it = this->components.find(T::componentType);
     if (it == this->components.end()) {
         return nullptr; // Component not found
@@ -223,14 +226,14 @@ T* GameObject::GetComponent() const {
     return static_cast<T*>(it->second.get());
 };
 
-
 template <typename T, typename... Args>
 T* GameObject::AddComponent(Args&&... args) {
     auto type = T::componentType;
     if (components.contains(type)) return nullptr;
 
     // Forward the arguments to the component constructor
-    std::unique_ptr<T> component = std::make_unique<T>(this, std::forward<Args>(args)...);
+    std::unique_ptr<T> component =
+        std::make_unique<T>(this, std::forward<Args>(args)...);
     T* raw = component.get();
 
     components[type] = std::move(component);

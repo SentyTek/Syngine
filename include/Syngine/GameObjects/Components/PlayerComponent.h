@@ -7,8 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include <Syngine/ECS/Component.h>
-#include <Syngine/ECS/GameObject.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Physics/Physics.h>
 #include <Syngine/Utils/Serializer.h>
@@ -49,7 +49,8 @@ enum class PlayerState {
 /// @since v0.0.1
 class PlayerComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_PLAYER; //* Player component type
+    static constexpr Syngine::ComponentTypeID componentType =
+        SYN_COMPONENT_PLAYER; //* Player component type
 
     /// @brief Constructor for PlayerComponent
     /// @param owner The GameObject that owns this component.
@@ -87,7 +88,8 @@ class PlayerComponent : public Syngine::Component {
     /// @param camera The camera component to use for the player.
     /// @param win The SDL window for the player.
     /// @param physicsManager The physics manager to use for the player.
-    /// @note This should only be called when the component is added to a GameObject
+    /// @note This should only be called when the component is added to a
+    /// GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
@@ -95,7 +97,8 @@ class PlayerComponent : public Syngine::Component {
 
     /// @brief Handles input events for the player component.
     /// @param event The SDL Events.
-    /// @note This is called every time an input event occurs, such as key presses or mouse movements.
+    /// @note This is called every time an input event occurs, such as key
+    /// presses or mouse movements.
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
@@ -138,35 +141,45 @@ class PlayerComponent : public Syngine::Component {
     void SetRotation(float yaw, float pitch);
 
     /// @brief Sets the player's world space rotation.
-    /// @param rotation Vector2, where x is the yaw and y is the pitch, in radians
+    /// @param rotation Vector2, where x is the yaw and y is the pitch, in
+    /// radians
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetRotation(Math::Vector2 rotation) {
-      // Internal logic uses yaw and pitch separately, so it makes more sense to call the other SetRotation function.
-      SetRotation(rotation.x(), rotation.y());
+        // Internal logic uses yaw and pitch separately, so it makes more sense
+        // to call the other SetRotation function.
+        SetRotation(rotation.x(), rotation.y());
     };
 
-    float maxPitchAngle = 89.0f; //* Max vertical angle for the camera pitch (in degrees).
+    float maxPitchAngle =
+        89.0f; //* Max vertical angle for the camera pitch (in degrees).
 
-    float sprintMult    = 2.0f; //* Multiplier for sprinting speed.
-    float crouchSpeed   = 0.5f; //* Speed when crouching.
-    float moveSpeed     = 1.5f; //* Default movement speed of the player.
-    float mouseSens     = 0.002f; //* Mouse sensitivity for camera movement.
-    float standHeight   = 2.0f;   //* Height of the player when standing.
-    float crouchHeight  = 1.0f;   //* Height of the player when crouching.
-    float playerRadius  = 0.35f;  //* Radius of the player collider.
-    float slideDecay    = 4.5f;   //* Rate at which sliding speed decays (Meters/second^2).
-    float slideSpeedMult = 1.45f; //* Multiplier for slide speed based on sprinting speed.
+    float sprintMult   = 2.0f;   //* Multiplier for sprinting speed.
+    float crouchSpeed  = 0.5f;   //* Speed when crouching.
+    float moveSpeed    = 1.5f;   //* Default movement speed of the player.
+    float mouseSens    = 0.002f; //* Mouse sensitivity for camera movement.
+    float standHeight  = 2.0f;   //* Height of the player when standing.
+    float crouchHeight = 1.0f;   //* Height of the player when crouching.
+    float playerRadius = 0.35f;  //* Radius of the player collider.
+    float slideDecay =
+        4.5f; //* Rate at which sliding speed decays (Meters/second^2).
+    float slideSpeedMult =
+        1.45f; //* Multiplier for slide speed based on sprinting speed.
 
-    bool enableMovement  = true; //* Whether player movement is enabled (on by default).
-    bool enableSliding   = true; //* Whether player sliding is enabled (on by default).
-    bool enableJumping   = true; //* Whether player jumping is enabled (on by default).
-    bool enableSprinting = true; //* Whether player sprinting is enabled (on by default).
-    bool enableCrouching = true; //* Whether player crouching is enabled (on by default).
+    bool enableMovement =
+        true; //* Whether player movement is enabled (on by default).
+    bool enableSliding =
+        true; //* Whether player sliding is enabled (on by default).
+    bool enableJumping =
+        true; //* Whether player jumping is enabled (on by default).
+    bool enableSprinting =
+        true; //* Whether player sprinting is enabled (on by default).
+    bool enableCrouching =
+        true; //* Whether player crouching is enabled (on by default).
 
-    float normalFov = 70.0f; //* Normal field of view for the camera.
-    float sprintFov = 90.0f; //* Field of view when sprinting.
-    float crouchFov = 60.0f; //* Field of view when crouching.
+    float normalFov = 70.0f;  //* Normal field of view for the camera.
+    float sprintFov = 90.0f;  //* Field of view when sprinting.
+    float crouchFov = 60.0f;  //* Field of view when crouching.
     float slideFov  = 100.0f; //* Field of view when sliding.
 
   private:
@@ -179,15 +192,19 @@ class PlayerComponent : public Syngine::Component {
         standHeight * 0.9f; // offset from feet to eye level. This is the target
                             // value that the actual eye height lerps towards
                             // for smooth crouching/standing transitions
-    float m_crouchEyeHeight = crouchHeight * 0.9f; // eye height when crouching, used for smooth transitions
+    float m_crouchEyeHeight =
+        crouchHeight *
+        0.9f; // eye height when crouching, used for smooth transitions
     float m_targetMoveSpeed = 1.0f;
-    float m_eyeHeight       = m_targetEyeHeight; //* Current eye height, used for smooth crouching/standing transitions
-    float m_realMoveSpeed   = 1.0f;
+    float m_eyeHeight =
+        m_targetEyeHeight; //* Current eye height, used for smooth
+                           //crouching/standing transitions
+    float m_realMoveSpeed = 1.0f;
 
-    float m_currentPitch  = 0.0f;
-    float m_currentYaw    = 0.0f;
+    float m_currentPitch = 0.0f;
+    float m_currentYaw   = 0.0f;
 
-    PlayerState m_playerState = PlayerState::IDLE;
+    PlayerState m_playerState     = PlayerState::IDLE;
     PlayerState m_prevPlayerState = PlayerState::IDLE;
     bool        m_simulate        = true;
     float       m_deltaTime       = 0.0f;
@@ -195,12 +212,12 @@ class PlayerComponent : public Syngine::Component {
     // m_newVelocity stays as a JPH vec because it interacts directly with Jolt.
     // I feel it more natural to keep it as a Jolt type rather than converting
     // back and forth to a Syngine type.
-    Vector3 m_moveDirection;
-    JPH::Vec3 m_newVelocity   = { 0.0f,
-                                 0.0f,
-                                 0.0f }; // New velocity to be applied to the character
+    Vector3   m_moveDirection;
+    JPH::Vec3 m_newVelocity = {
+        0.0f, 0.0f, 0.0f
+    }; // New velocity to be applied to the character
 
-    Syngine::Phys* m_physicsManager = nullptr;
+    Syngine::Phys*           m_physicsManager = nullptr;
     JPH::Ref<JPH::Character> m_character;
 };
 

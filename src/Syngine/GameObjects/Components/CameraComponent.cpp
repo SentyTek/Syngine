@@ -6,9 +6,9 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/ECS/Components/CameraComponent.h"
-#include "Syngine/ECS/ComponentRegistry.h"
-#include "Syngine/ECS/GameObject.h"
+#include "Syngine/GameObjects/Components/CameraComponent.h"
+#include "Syngine/GameObjects/ComponentRegistry.h"
+#include "Syngine/GameObjects/GameObject.h"
 
 #include "Syngine/Math/Math.hpp"
 #include "Syngine/Utils/Profiler.h"

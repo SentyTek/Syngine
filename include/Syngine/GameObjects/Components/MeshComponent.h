@@ -7,8 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include <Syngine/ECS/Component.h>
-#include <Syngine/ECS/GameObject.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/Graphics/Resources/ModelLoader.h>
 #include <Syngine/Utils/Serializer.h>
 #include <Syngine/Math/Math.hpp>

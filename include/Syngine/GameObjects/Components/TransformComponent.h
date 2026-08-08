@@ -7,8 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/GameObject.h"
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/GameObject.h"
 #include "Syngine/Math/Quaternion.hpp"
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Utils/Serializer.h"
@@ -23,18 +23,18 @@ using namespace Syngine::Math;
 /// @since v0.0.1
 class TransformComponent : public Syngine::Component {
     // local TRS
-    Vector3 m_position; //* Position of the transform
+    Vector3    m_position; //* Position of the transform
     Quaternion m_rotation; //* Rotation of the transform (Quaternion)
-    Vector3 m_scale;       //* Scale of the transform
+    Vector3    m_scale;    //* Scale of the transform
 
     TransformComponent* m_parent =
         nullptr; //* Parent transform component (if any)
     std::vector<TransformComponent*> m_children; //* Child transform components
 
     // Cached matrices and world TRS
-    mutable Mat4 m_localMtx;
-    mutable Mat4 m_worldMtx;
-    mutable Vector3 m_worldPosition;
+    mutable Mat4       m_localMtx;
+    mutable Mat4       m_worldMtx;
+    mutable Vector3    m_worldPosition;
     mutable Quaternion m_worldRotation;
 
     mutable bool m_dirtyLocal = true;
@@ -48,6 +48,7 @@ class TransformComponent : public Syngine::Component {
 
     void _UpdateLocalMatrix() const;
     void _UpdateWorldMatrix() const;
+
   public:
     static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_TRANSFORM; //* Transform component type
@@ -98,7 +99,8 @@ class TransformComponent : public Syngine::Component {
         return TransformComponent::componentType;
     };
 
-    /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in radians)
+    /// @brief Get the GLOBAL rotation of the transform as XYZ Euler angles (in
+    /// radians)
     /// @return Vector3 representing the rotation (x, y, z)
     /// @threadsafety read-only
     /// @since v0.0.1
@@ -112,14 +114,16 @@ class TransformComponent : public Syngine::Component {
 
     /// @brief Get a GLOBAL model matrix for the transform
     /// @return 4x4 matrix filled with the global model matrix
-    /// @note This matrix is computed from the GLOBAL position, rotation, and scale
+    /// @note This matrix is computed from the GLOBAL position, rotation, and
+    /// scale
     /// @threadsafety read-only
     /// @since v0.0.1
     Mat4 GetModelMatrix() const;
 
     /// @brief Get a LOCAL model matrix for the transform
     /// @return 4x4 matrix filled with the local model matrix
-    /// @note This matrix is computed from the LOCAL position, rotation, and scale
+    /// @note This matrix is computed from the LOCAL position, rotation, and
+    /// scale
     /// @threadsafety read-only
     /// @since v0.0.1
     Mat4 GetLocalMatrix() const;
@@ -152,7 +156,8 @@ class TransformComponent : public Syngine::Component {
     /// @since v0.0.1
     Quaternion GetRotationQuaternion() const;
 
-    /// @brief Get the LOCAL rotation of the transform as XYZ Euler angles (in radians)
+    /// @brief Get the LOCAL rotation of the transform as XYZ Euler angles (in
+    /// radians)
     /// @return Vector3 representing the rotation (x, y, z)
     /// @note LOCAL rotation
     /// @threadsafety read-only

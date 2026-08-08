@@ -7,7 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Component.h"
+#include "Syngine/GameObjects/Component.h"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -86,7 +86,8 @@ class Registry {
     /// GameObjects. The map is indexed by GameObject ID.
     /// @threadsafety read-only
     /// @since v0.0.1
-    static inline std::unordered_map<int, GameObject*>& GetAllGameObjects() noexcept {
+    static inline std::unordered_map<int, GameObject*>&
+    GetAllGameObjects() noexcept {
         return m_AllObjects;
     }
 
@@ -131,8 +132,6 @@ class Registry {
         return m_AllObjects.size();
     }
 
-
-
     /// @brief Internal call to notify the registry that a component has been
     /// added to a GameObject. This is used to update the indexed sublists.
     /// @param gameobject The GameObject to which the component was added.
@@ -143,8 +142,8 @@ class Registry {
     static void _NotifyComponentAdded(GameObject*              gameobject,
                                       Syngine::ComponentTypeID type) noexcept;
 
-    /// @brief Internal call to notify the registry that a component has been removed
-    /// from a GameObject. This is used to update the indexed sublists.
+    /// @brief Internal call to notify the registry that a component has been
+    /// removed from a GameObject. This is used to update the indexed sublists.
     /// @param gameobject The GameObject from which the component was removed.
     /// @param type The type of component that was removed.
     /// @threadsafety safe
@@ -157,9 +156,12 @@ class Registry {
     // Could be worth using unordered_set for faster removals on the sublists.
 
     static std::unordered_map<int, GameObject*> m_AllObjects; // All GameObjects
-    static std::vector<GameObject*> m_PhysicsObjects; // GameObjects with physics enabled
-    static std::vector<GameObject*> m_RenderableObjects; // GameObjects that are renderable
-    static std::vector<GameObject*> m_ScriptedObjects; // GameObjects that have a script attached
+    static std::vector<GameObject*>
+        m_PhysicsObjects; // GameObjects with physics enabled
+    static std::vector<GameObject*>
+        m_RenderableObjects; // GameObjects that are renderable
+    static std::vector<GameObject*>
+        m_ScriptedObjects; // GameObjects that have a script attached
     static std::vector<GameObject*> m_Gizmos; // GameObjects that are gizmos
 };
 

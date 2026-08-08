@@ -8,29 +8,31 @@
 
 #include "Syngine/Core/Registry.h"
 #include "Syngine/Core/LuaManager.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/Components/RigidbodyComponent.h"
-#include "Syngine/ECS/Components/TransformComponent.h"
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/Components/RigidbodyComponent.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/Utils/Serializer.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/ECS/ComponentRegistry.h"
+#include "Syngine/GameObjects/GameObject.h"
+#include "Syngine/GameObjects/ComponentRegistry.h"
 
 using namespace Syngine;
 
-GameObject::GameObject(std::string name, std::string type, std::string initialTag) {
+GameObject::GameObject(std::string name,
+                       std::string type,
+                       std::string initialTag) {
     this->name = name;
     this->type = type;
     this->tags.push_back(initialTag);
-    this->id   = -1;
+    this->id    = -1;
     this->gizmo = "none";
 
     Registry::AddGameObject(this);
 }
 
 GameObject::GameObject(const Serializer::DataNode& data) {
-    this->name = data["name"].As<std::string>();
-    this->type = data["type"].As<std::string>();
-    this->gizmo = data["gizmo"].As<std::string>();
+    this->name     = data["name"].As<std::string>();
+    this->type     = data["type"].As<std::string>();
+    this->gizmo    = data["gizmo"].As<std::string>();
     this->isActive = data["isActive"].As<bool>();
     if (data.Has("tags")) {
         this->tags = data["tags"].As<std::vector<std::string>>();
@@ -39,9 +41,11 @@ GameObject::GameObject(const Serializer::DataNode& data) {
     // Deserialize components
     if (data.Has("components")) {
         const auto& componentsNode = data["components"];
-        for (const auto& [typeStr, data] : componentsNode.As<Serializer::DataNode::NodeMap>()) {
-            Syngine::ComponentTypeID typeId = std::stoull(typeStr);
-            std::unique_ptr<Component> comp = ComponentRegistry::Instantiate(typeId, this, data);
+        for (const auto& [typeStr, data] :
+             componentsNode.As<Serializer::DataNode::NodeMap>()) {
+            Syngine::ComponentTypeID   typeId = std::stoull(typeStr);
+            std::unique_ptr<Component> comp =
+                ComponentRegistry::Instantiate(typeId, this, data);
             if (comp) {
                 this->components[typeId] = std::move(comp);
                 Registry::_NotifyComponentAdded(this, typeId);
@@ -54,7 +58,8 @@ GameObject::GameObject(const Serializer::DataNode& data) {
     // Children.
     if (data.Has("children")) {
         const auto& childrenNode = data["children"];
-        for (const auto& childData : childrenNode.As<Serializer::DataNode::NodeArray>()) {
+        for (const auto& childData :
+             childrenNode.As<Serializer::DataNode::NodeArray>()) {
             GameObject* child = new GameObject(childData);
             this->AddChild(child);
         }
@@ -62,16 +67,16 @@ GameObject::GameObject(const Serializer::DataNode& data) {
 }
 
 GameObject::GameObject(const GameObject& other) {
-    this->name = other.name;
-    this->type = other.type;
-    this->gizmo = other.gizmo;
-    this->tags = other.tags;
-    this->id   = other.id;
+    this->name     = other.name;
+    this->type     = other.type;
+    this->gizmo    = other.gizmo;
+    this->tags     = other.tags;
+    this->id       = other.id;
     this->isActive = other.isActive;
 
     // Deep copy components
     for (const auto& [type, comp] : other.components) {
-        this->components[type] = comp->Clone();
+        this->components[type]          = comp->Clone();
         this->components[type]->m_owner = this;
     }
 
@@ -86,11 +91,11 @@ GameObject& GameObject::operator=(const GameObject& other) {
     // Unregister the current GameObject
     Registry::RemoveGameObject(this);
 
-    this->name = other.name;
-    this->type = other.type;
-    this->gizmo = other.gizmo;
-    this->tags = other.tags;
-    this->id   = other.id;
+    this->name     = other.name;
+    this->type     = other.type;
+    this->gizmo    = other.gizmo;
+    this->tags     = other.tags;
+    this->id       = other.id;
     this->isActive = other.isActive;
 
     // Clear existing components
@@ -99,7 +104,7 @@ GameObject& GameObject::operator=(const GameObject& other) {
     // Deep copy components
     for (const auto& [type, comp] : other.components) {
         // Use the AddComponent method to ensure proper registration
-        this->components[type] = comp->Clone();
+        this->components[type]          = comp->Clone();
         this->components[type]->m_owner = this;
         Registry::_NotifyComponentAdded(this, type);
     }
@@ -170,14 +175,14 @@ Component* GameObject::GetComponent(Syngine::ComponentTypeID type) const {
 
 Serializer::DataNode GameObject::Serialize() const {
     Serializer::DataNode node;
-    node["name"] = this->name;
-    node["type"] = this->type;
-    node["gizmo"] = this->gizmo;
+    node["name"]     = this->name;
+    node["type"]     = this->type;
+    node["gizmo"]    = this->gizmo;
     node["isActive"] = this->isActive;
 
     // Serialize tags
     std::vector<std::string> tagList = this->tags;
-    node["tags"] = tagList;
+    node["tags"]                     = tagList;
 
     // Serialize components
     Serializer::DataNode componentsNode;
@@ -187,7 +192,8 @@ Serializer::DataNode GameObject::Serialize() const {
     node["components"] = componentsNode;
 
     // Serialize parent-child relationships
-    // This assumes that the TransformComponent is responsible for parent-child relationships
+    // This assumes that the TransformComponent is responsible for parent-child
+    // relationships
     TransformComponent* tComp = this->GetComponent<TransformComponent>();
     if (tComp) {
         Serializer::DataNode childrenNodes;
@@ -219,7 +225,8 @@ void GameObject::SetParent(GameObject* parent) {
         return;
     }
     TransformComponent* tComp = this->GetComponent<TransformComponent>();
-    TransformComponent* parentTComp = parent->GetComponent<TransformComponent>();
+    TransformComponent* parentTComp =
+        parent->GetComponent<TransformComponent>();
     if (tComp && parentTComp) {
         tComp->SetParent(parentTComp);
         parent->AddChild(this);
@@ -266,7 +273,8 @@ void GameObject::AddChild(GameObject* child) {
             rb->SyncBodyToTransform();
         }
     } else {
-        Syngine::Logger::Error("Child GameObject must have a TransformComponent to be added as a child");
+        Syngine::Logger::Error("Child GameObject must have a "
+                               "TransformComponent to be added as a child");
     }
 }
 

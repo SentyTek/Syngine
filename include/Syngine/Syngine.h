@@ -13,9 +13,9 @@
 #include <Syngine/Core/Registry.h>
 #include <Syngine/Core/Input.h>
 
-#include <Syngine/ECS/AllComponents.h>
-#include <Syngine/ECS/Component.h>
-#include <Syngine/ECS/GameObject.h>
+#include <Syngine/GameObjects/AllComponents.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/GameObjects/GameObject.h>
 
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Graphics/Resources/ModelLoader.h>

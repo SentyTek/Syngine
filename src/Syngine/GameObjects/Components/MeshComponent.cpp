@@ -7,14 +7,14 @@
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Logger.h"
-#include "Syngine/ECS/ComponentRegistry.h"
-#include "Syngine/ECS/Components/TransformComponent.h"
+#include "Syngine/GameObjects/ComponentRegistry.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
 #include "Syngine/Math/Vector4.hpp"
 #include "Syngine/Utils/FsUtils.h"
-#include "Syngine/ECS/Components/MeshComponent.h"
-#include "Syngine/ECS/GameObject.h"
+#include "Syngine/GameObjects/Components/MeshComponent.h"
+#include "Syngine/GameObjects/GameObject.h"
 #include "Syngine/Utils/Profiler.h"
 #include "Syngine/Utils/Serializer.h"
 

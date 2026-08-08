@@ -9,9 +9,9 @@
 #pragma once
 #include "Syngine/Graphics/Resources/ShaderManager.h"
 #include "Syngine/Graphics/Resources/UniformRegistry.h"
-#include <Syngine/ECS/Components/CameraComponent.h>
+#include <Syngine/GameObjects/Components/CameraComponent.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
-#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/GameObjects/AllComponents.h>
 #include <Syngine/Math/Matrix4x4.hpp>
 
 #include <cstdint>

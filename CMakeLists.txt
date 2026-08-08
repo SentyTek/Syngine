@@ -58,15 +58,15 @@ add_library(Syngine STATIC
     src/Syngine/Physics/Physics.cpp
 
     # ACS
-    src/Syngine/ECS/GameObject.cpp
-    src/Syngine/ECS/Components/MeshComponent.cpp
-    src/Syngine/ECS/Components/TransformComponent.cpp
-    src/Syngine/ECS/Components/RigidbodyComponent.cpp
-    src/Syngine/ECS/Components/PlayerComponent.cpp
-    src/Syngine/ECS/Components/CameraComponent.cpp
-    src/Syngine/ECS/Components/ZoneComponent.cpp
-    src/Syngine/ECS/Components/BillboardComponent.cpp
-    src/Syngine/ECS/ComponentRegistry.cpp
+    src/Syngine/GameObjects/GameObject.cpp
+    src/Syngine/GameObjects/Components/MeshComponent.cpp
+    src/Syngine/GameObjects/Components/TransformComponent.cpp
+    src/Syngine/GameObjects/Components/RigidbodyComponent.cpp
+    src/Syngine/GameObjects/Components/PlayerComponent.cpp
+    src/Syngine/GameObjects/Components/CameraComponent.cpp
+    src/Syngine/GameObjects/Components/ZoneComponent.cpp
+    src/Syngine/GameObjects/Components/BillboardComponent.cpp
+    src/Syngine/GameObjects/ComponentRegistry.cpp
     src/Syngine/Graphics/Resources/MaterialManager.cpp
 )
 

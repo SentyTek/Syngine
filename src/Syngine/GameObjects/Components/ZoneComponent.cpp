@@ -6,13 +6,13 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/ECS/Components/ZoneComponent.h"
+#include "Syngine/GameObjects/Components/ZoneComponent.h"
 #include "Syngine/Core/LuaManager.h"
 #include "Syngine/Core/Registry.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/ComponentRegistry.h"
-#include "Syngine/ECS/Components/TransformComponent.h"
-#include "Syngine/ECS/GameObject.h"
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/ComponentRegistry.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
+#include "Syngine/GameObjects/GameObject.h"
 #include "Syngine/Math/Quaternion.hpp"
 
 #include <sol/sol.hpp>
@@ -32,11 +32,11 @@ ZoneComponent::ZoneComponent(GameObject*          owner,
 }
 
 ZoneComponent::ZoneComponent(const ZoneComponent& other) {
-    this->m_owner = other.m_owner;
-    m_pos         = other.m_pos;
-    m_size        = other.m_size;
-    m_rot         = other.m_rot;
-    m_shape       = other.m_shape;
+    this->m_owner      = other.m_owner;
+    m_pos              = other.m_pos;
+    m_size             = other.m_size;
+    m_rot              = other.m_rot;
+    m_shape            = other.m_shape;
     m_active           = other.m_active;
     m_oneShot          = other.m_oneShot;
     m_triggeredObjects = other.m_triggeredObjects;
@@ -46,12 +46,12 @@ ZoneComponent::ZoneComponent(const ZoneComponent& other) {
 
 ZoneComponent& ZoneComponent::operator=(const ZoneComponent& other) {
     if (this != &other) {
-        m_pos = other.m_pos;
-        m_size = other.m_size;
-        m_rot  = other.m_rot;
-        m_shape = other.m_shape;
-        m_active = other.m_active;
-        m_oneShot = other.m_oneShot;
+        m_pos              = other.m_pos;
+        m_size             = other.m_size;
+        m_rot              = other.m_rot;
+        m_shape            = other.m_shape;
+        m_active           = other.m_active;
+        m_oneShot          = other.m_oneShot;
         m_triggeredObjects = other.m_triggeredObjects;
         m_tags             = other.m_tags;
         m_owner            = other.m_owner;
@@ -60,18 +60,20 @@ ZoneComponent& ZoneComponent::operator=(const ZoneComponent& other) {
 }
 
 ZoneComponent::~ZoneComponent() {}
-Syngine::ComponentTypeID ZoneComponent::GetComponentType() { return componentType; }
+Syngine::ComponentTypeID ZoneComponent::GetComponentType() {
+    return componentType;
+}
 
 Serializer::DataNode ZoneComponent::Serialize() const {
     Serializer::DataNode node;
-    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
+    node / "type"  = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
     node / "shape" = static_cast<int>(m_shape);
     node / "position" = std::vector<float>(m_pos);
-    node / "size" = std::vector<float>(m_size);
+    node / "size"     = std::vector<float>(m_size);
     node / "rotation" = std::vector<float>(m_rot);
-    node / "active" = m_active;
-    node / "oneShot" = m_oneShot;
-    node / "tags" = m_tags;
+    node / "active"   = m_active;
+    node / "oneShot"  = m_oneShot;
+    node / "tags"     = m_tags;
     return node;
 }
 
@@ -106,44 +108,44 @@ void ZoneComponent::SetSize(const Math::Vector3& size) {
 
 Math::Quaternion ZoneComponent::GetRotation() const { return m_rot; }
 
-void ZoneComponent::SetRotation(const Math::Quaternion& rot) {
-    m_rot = rot;
-}
+void ZoneComponent::SetRotation(const Math::Quaternion& rot) { m_rot = rot; }
 
 bool ZoneComponent::IsActive() const { return m_active; }
 void ZoneComponent::SetActive(bool active) { m_active = active; }
 bool ZoneComponent::IsOneShot() const { return m_oneShot; }
 
 void ZoneComponent::_AddObject(GameObject* object) {
-    if (object && std::find(m_objectsIn.begin(), m_objectsIn.end(),
-                            object) == m_objectsIn.end()) {
+    if (object && std::find(m_objectsIn.begin(), m_objectsIn.end(), object) ==
+                      m_objectsIn.end()) {
         m_objectsIn.emplace_back(object);
     }
 
-    if (m_oneShot && object && std::find(m_triggeredObjects.begin(), m_triggeredObjects.end(),
-                            object) == m_triggeredObjects.end()) {
+    if (m_oneShot && object &&
+        std::find(m_triggeredObjects.begin(),
+                  m_triggeredObjects.end(),
+                  object) == m_triggeredObjects.end()) {
         m_triggeredObjects.emplace_back(object);
     }
 }
 
 bool ZoneComponent::_HasOneTimeObject(GameObject* object) {
-    return m_oneShot && object && (std::find(m_triggeredObjects.begin(),
-                                m_triggeredObjects.end(),
-                                object) != m_triggeredObjects.end());
+    return m_oneShot && object &&
+           (std::find(m_triggeredObjects.begin(),
+                      m_triggeredObjects.end(),
+                      object) != m_triggeredObjects.end());
 }
 
 bool ZoneComponent::_IsTrackingObject(GameObject* object) const {
-    return object && (std::find(m_objectsIn.begin(),
-                                m_objectsIn.end(),
-                                object) != m_objectsIn.end());
+    return object &&
+           (std::find(m_objectsIn.begin(), m_objectsIn.end(), object) !=
+            m_objectsIn.end());
 }
 
 void ZoneComponent::_RemoveObject(GameObject* object) {
     if (object) {
-        m_objectsIn.erase(std::remove(m_objectsIn.begin(),
-                                             m_objectsIn.end(),
-                                             object),
-                                 m_objectsIn.end());
+        m_objectsIn.erase(
+            std::remove(m_objectsIn.begin(), m_objectsIn.end(), object),
+            m_objectsIn.end());
     }
 }
 
@@ -183,19 +185,19 @@ GameObject* ZoneComponent::_GetOwner() const { return m_owner; }
 // but also for scene optimization like quadtrees or actrees.
 bool ZoneComponent::IsInZone(const Math::Vector3& point) const {
     switch (m_shape) {
-        case ZoneShape::BOX: {
-            return (point.x() >= m_pos.x() - m_size.x() / 2.0f &&
-                    point.x() <= m_pos.x() + m_size.x() / 2.0f &&
-                    point.y() >= m_pos.y() - m_size.y() / 2.0f &&
-                    point.y() <= m_pos.y() + m_size.y() / 2.0f &&
-                    point.z() >= m_pos.z() - m_size.z() / 2.0f &&
-                    point.z() <= m_pos.z() + m_size.z() / 2.0f);
-        }
-        case ZoneShape::SPHERE: {
-            return m_pos.distance(point) <= m_size.x(); // size[0] is radius for sphere
-        }
-        default:
-            return false;
+    case ZoneShape::BOX: {
+        return (point.x() >= m_pos.x() - m_size.x() / 2.0f &&
+                point.x() <= m_pos.x() + m_size.x() / 2.0f &&
+                point.y() >= m_pos.y() - m_size.y() / 2.0f &&
+                point.y() <= m_pos.y() + m_size.y() / 2.0f &&
+                point.z() >= m_pos.z() - m_size.z() / 2.0f &&
+                point.z() <= m_pos.z() + m_size.z() / 2.0f);
+    }
+    case ZoneShape::SPHERE: {
+        return m_pos.distance(point) <=
+               m_size.x(); // size[0] is radius for sphere
+    }
+    default: return false;
     }
 }
 
@@ -241,9 +243,10 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
     // ParseXml
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
+        node / "type" =
+            static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_ZONE);
         for (const auto& attr : elem->attributes()) {
-            scl::string key = attr->tag();
+            scl::string key   = attr->tag();
             scl::string value = attr->data();
 
             if (key == "shape") {
@@ -260,7 +263,8 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
                 node["oneShot"] = (value == "true");
             } else if (key == "tags") {
                 // tags are CSV in XML, convert back to array
-                std::vector<std::string> tags = Serializer::_ParseStringArray(value);
+                std::vector<std::string> tags =
+                    Serializer::_ParseStringArray(value);
                 node["tags"] = tags;
             }
         }
@@ -271,11 +275,15 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
     [](GameObject*                 owner,
        const Serializer::DataNode& data) -> std::unique_ptr<Component> {
         ZoneShape shape = static_cast<ZoneShape>(data["shape"].As<int>(0));
-        std::vector<float> pos = data["position"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
-        std::vector<float> size = data["size"].As<std::vector<float>>({1.0f, 1.0f, 1.0f});
-        std::vector<float> rot = data["rotation"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
+        std::vector<float> pos =
+            data["position"].As<std::vector<float>>({ 0.0f, 0.0f, 0.0f });
+        std::vector<float> size =
+            data["size"].As<std::vector<float>>({ 1.0f, 1.0f, 1.0f });
+        std::vector<float> rot =
+            data["rotation"].As<std::vector<float>>({ 0.0f, 0.0f, 0.0f });
         bool oneShot = data["oneShot"].As<bool>(false);
-        auto comp = std::make_unique<ZoneComponent>(owner, shape, Math::Vector3(pos), Math::Vector3(size), oneShot);
+        auto comp    = std::make_unique<ZoneComponent>(
+            owner, shape, Math::Vector3(pos), Math::Vector3(size), oneShot);
         comp->SetRotation(Math::Quaternion(rot));
         comp->SetActive(data["active"].As<bool>(true));
         comp->SetTags(data["tags"].As<std::vector<std::string>>({}));

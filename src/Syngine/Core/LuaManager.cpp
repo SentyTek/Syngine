@@ -9,9 +9,9 @@
 #include "Syngine/Core/LuaManager.h"
 #include "Syngine/Core/Input.h"
 #include "Syngine/Core/Logger.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/ECS/AllComponents.h"
-#include "Syngine/ECS/ComponentRegistry.h"
+#include "Syngine/GameObjects/GameObject.h"
+#include "Syngine/GameObjects/AllComponents.h"
+#include "Syngine/GameObjects/ComponentRegistry.h"
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/Math/Math.hpp"
 

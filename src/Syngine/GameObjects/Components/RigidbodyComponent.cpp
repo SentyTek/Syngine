@@ -8,12 +8,12 @@
 
 #include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/Components/RigidbodyComponent.h"
-#include "Syngine/ECS/ComponentRegistry.h"
-#include "Syngine/ECS/Components/MeshComponent.h"
-#include "Syngine/ECS/Components/TransformComponent.h"
-#include "Syngine/ECS/GameObject.h"
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/Components/RigidbodyComponent.h"
+#include "Syngine/GameObjects/ComponentRegistry.h"
+#include "Syngine/GameObjects/Components/MeshComponent.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
+#include "Syngine/GameObjects/GameObject.h"
 #include "Syngine/Math/Quaternion.hpp"
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Physics/Physics.h"
@@ -213,12 +213,12 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         float radius     = shapeParameters.y();
         float halfHeight = shapeParameters.x();
         bodyID           = physicsManager->_CreateCylinder(curPos,
-                                                           transformRot,
-                                                           radius,
-                                                           halfHeight,
-                                                           params.motionType,
-                                                           params.layer,
-                                                           mass);
+                                                 transformRot,
+                                                 radius,
+                                                 halfHeight,
+                                                 params.motionType,
+                                                 params.layer,
+                                                 mass);
         break;
     }
     case PhysicsShapes::COMPOUND: {

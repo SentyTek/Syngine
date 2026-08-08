@@ -8,7 +8,7 @@
 
 #include "./DebugRenderer.h"
 #include <Syngine/Graphics/Rendering/Renderer.h>
-#include <Syngine/ECS/Components/CameraComponent.h>
+#include <Syngine/GameObjects/Components/CameraComponent.h>
 #include <Syngine/Math/Matrix4x4.hpp>
 #include <Syngine/Math/Vector4.hpp>
 
@@ -24,11 +24,11 @@ DebugRender::DebugRender() {
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
 }
-DebugRender::~DebugRender() {
-    debugLines.clear();
-}
+DebugRender::~DebugRender() { debugLines.clear(); }
 
-void DebugRender::DrawLine(JPH::RVec3Arg from, JPH::RVec3Arg to, JPH::ColorArg color) {
+void DebugRender::DrawLine(JPH::RVec3Arg from,
+                           JPH::RVec3Arg to,
+                           JPH::ColorArg color) {
     debugLines.push_back({ .from  = { from.GetX(), from.GetY(), from.GetZ() },
                            .to    = { to.GetX(), to.GetY(), to.GetZ() },
                            .color = color.GetUInt32() });
@@ -59,7 +59,8 @@ void DebugRender::DrawGeometry(JPH::RMat44Arg     modelMatrix,
     const Batch& batchRef = geometry->mLODs[0].mTriangleBatch;
     if (batchRef == nullptr) return;
 
-    // Cast back to our implementation (do not ever do dynamic_cast in Jolt or you will explode)
+    // Cast back to our implementation (do not ever do dynamic_cast in Jolt or
+    // you will explode)
     const BatchImpl* batch = static_cast<const BatchImpl*>(batchRef.GetPtr());
 
     // Draw the batch
@@ -76,7 +77,9 @@ void DebugRender::DrawGeometry(JPH::RMat44Arg     modelMatrix,
     }
 }
 
-void DebugRender::DrawSphere(JPH::RVec3Arg center, float radius, JPH::ColorArg color) {
+void DebugRender::DrawSphere(JPH::RVec3Arg center,
+                             float         radius,
+                             JPH::ColorArg color) {
     const int segments = 32; // Number of segments for the circle approximation
     const float step   = (2.0f * 3.14159265f) / segments;
 
@@ -121,7 +124,9 @@ void DebugRender::DrawText3D(JPH::RVec3Arg           position,
     // Not implemented
 }
 
-JPH::DebugRenderer::Batch DebugRender::CreateTriangleBatch(const Triangle* inTriangles, int inTriangleCount) {
+JPH::DebugRenderer::Batch
+DebugRender::CreateTriangleBatch(const Triangle* inTriangles,
+                                 int             inTriangleCount) {
     BatchImpl* batch = new BatchImpl();
     if (inTriangles != nullptr && inTriangleCount > 0) {
         batch->mTriangles.assign(inTriangles, inTriangles + inTriangleCount);
@@ -129,7 +134,11 @@ JPH::DebugRenderer::Batch DebugRender::CreateTriangleBatch(const Triangle* inTri
     return batch;
 }
 
-JPH::DebugRenderer::Batch DebugRender::CreateTriangleBatch(const Vertex* inVertices, int inVertexCount, const JPH::uint32* inIndices, int inIndexCount) {
+JPH::DebugRenderer::Batch
+DebugRender::CreateTriangleBatch(const Vertex*      inVertices,
+                                 int                inVertexCount,
+                                 const JPH::uint32* inIndices,
+                                 int                inIndexCount) {
     BatchImpl* batch = new BatchImpl();
     if (inVertices != nullptr && inIndices != nullptr && inIndexCount > 0) {
         batch->mTriangles.reserve(inIndexCount / 3);
@@ -165,7 +174,7 @@ void DebugRender::DrawFrustum(const Math::Mat4& view, const Math::Mat4& proj) {
     for (int i = 0; i < 8; ++i) {
         Math::Vector4 corner(corners[i], 1.0f);
         worldCorners[i] = corner * invVP;
-        float w = worldCorners[i].w();
+        float w         = worldCorners[i].w();
         if (w != 0.0f) {
             worldCorners[i].setX(worldCorners[i].x() / w); // Normalize by w
             worldCorners[i].setY(worldCorners[i].y() / w);
@@ -174,20 +183,44 @@ void DebugRender::DrawFrustum(const Math::Mat4& view, const Math::Mat4& proj) {
     }
 
     // Draw the frustum lines
-    DrawLine(worldCorners[0].toJoltVec3(), worldCorners[1].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[1].toJoltVec3(), worldCorners[2].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[2].toJoltVec3(), worldCorners[3].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[3].toJoltVec3(), worldCorners[0].toJoltVec3(), JPH::Color::sWhite);
+    DrawLine(worldCorners[0].toJoltVec3(),
+             worldCorners[1].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[1].toJoltVec3(),
+             worldCorners[2].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[2].toJoltVec3(),
+             worldCorners[3].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[3].toJoltVec3(),
+             worldCorners[0].toJoltVec3(),
+             JPH::Color::sWhite);
     // Far plane
-    DrawLine(worldCorners[4].toJoltVec3(), worldCorners[5].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[5].toJoltVec3(), worldCorners[6].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[6].toJoltVec3(), worldCorners[7].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[7].toJoltVec3(), worldCorners[4].toJoltVec3(), JPH::Color::sWhite);
+    DrawLine(worldCorners[4].toJoltVec3(),
+             worldCorners[5].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[5].toJoltVec3(),
+             worldCorners[6].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[6].toJoltVec3(),
+             worldCorners[7].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[7].toJoltVec3(),
+             worldCorners[4].toJoltVec3(),
+             JPH::Color::sWhite);
     // Connecting edges
-    DrawLine(worldCorners[0].toJoltVec3(), worldCorners[4].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[1].toJoltVec3(), worldCorners[5].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[2].toJoltVec3(), worldCorners[6].toJoltVec3(), JPH::Color::sWhite);
-    DrawLine(worldCorners[3].toJoltVec3(), worldCorners[7].toJoltVec3(), JPH::Color::sWhite);
+    DrawLine(worldCorners[0].toJoltVec3(),
+             worldCorners[4].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[1].toJoltVec3(),
+             worldCorners[5].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[2].toJoltVec3(),
+             worldCorners[6].toJoltVec3(),
+             JPH::Color::sWhite);
+    DrawLine(worldCorners[3].toJoltVec3(),
+             worldCorners[7].toJoltVec3(),
+             JPH::Color::sWhite);
 }
 
 void DebugRender::DrawBox(const Math::Vector3& min,
@@ -226,7 +259,8 @@ void DebugRender::RenderLines(const Math::Mat4&   view,
                               bgfx::ProgramHandle program) {
     if (debugLines.empty()) return;
 
-    unsigned short viewId = ViewID::VIEW_DEBUG; // Why the hell does anyone use shorts
+    unsigned short viewId =
+        ViewID::VIEW_DEBUG; // Why the hell does anyone use shorts
     bgfx::setViewTransform(viewId, view.data(), proj.data());
     bgfx::setViewRect(viewId, 0, 0, width, height);
     bgfx::touch(viewId);
@@ -238,18 +272,19 @@ void DebugRender::RenderLines(const Math::Mat4&   view,
     DebugVertex* vertex = (DebugVertex*)tvb.data;
     for (size_t i = 0; i < debugLines.size(); ++i) {
         const DebugLine& line = debugLines[i];
-        vertex[i * 2 + 0]     = { line.from.x, line.from.y, line.from.z, line.color };
+        vertex[i * 2 + 0]     = {
+            line.from.x, line.from.y, line.from.z, line.color
+        };
         vertex[i * 2 + 1] = { line.to.x, line.to.y, line.to.z, line.color };
     }
 
     bgfx::setVertexBuffer(0, &tvb);
-    bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
-                   BGFX_STATE_PT_LINES | BGFX_STATE_DEPTH_TEST_ALWAYS); // may change this later to LEQUAL
+    bgfx::setState(
+        BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_PT_LINES |
+        BGFX_STATE_DEPTH_TEST_ALWAYS); // may change this later to LEQUAL
     bgfx::submit(viewId, program);
 }
 
-void DebugRender::ClearLines() {
-    debugLines.clear();
-}
+void DebugRender::ClearLines() { debugLines.clear(); }
 
 } // namespace Syngine

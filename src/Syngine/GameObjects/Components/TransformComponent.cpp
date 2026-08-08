@@ -6,10 +6,10 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/ECS/Components/TransformComponent.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/ComponentRegistry.h"
-#include "Syngine/ECS/GameObject.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/ComponentRegistry.h"
+#include "Syngine/GameObjects/GameObject.h"
 #include "Syngine/Math/Math.hpp"
 #include "Syngine/Math/Quaternion.hpp"
 #include "Syngine/Math/Vector3.hpp"
@@ -22,25 +22,26 @@
 
 namespace Syngine {
 TransformComponent::TransformComponent(GameObject* owner) {
-    m_position = Vector3();
-    m_rotation = Quaternion();
-    m_scale = Vector3(1.0f);
+    m_position    = Vector3();
+    m_rotation    = Quaternion();
+    m_scale       = Vector3(1.0f);
     this->m_owner = owner;
 }
 
 TransformComponent::TransformComponent(const TransformComponent& other) {
-    this->m_owner = other.m_owner;
+    this->m_owner    = other.m_owner;
     this->m_position = other.m_position;
     this->m_rotation = other.m_rotation;
-    this->m_scale = other.m_scale;
+    this->m_scale    = other.m_scale;
 }
 
-TransformComponent& TransformComponent::operator=(const TransformComponent& other) {
+TransformComponent&
+TransformComponent::operator=(const TransformComponent& other) {
     if (this != &other) {
-        this->m_owner = other.m_owner;
+        this->m_owner    = other.m_owner;
         this->m_position = other.m_position;
         this->m_rotation = other.m_rotation;
-        this->m_scale = other.m_scale;
+        this->m_scale    = other.m_scale;
     }
     return *this;
 }
@@ -53,7 +54,8 @@ Serializer::DataNode TransformComponent::Serialize() const {
     };
     Serializer::Float3 scale{ m_scale.x(), m_scale.y(), m_scale.z() };
 
-    transformNode / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_TRANSFORM);
+    transformNode / "type" =
+        static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_TRANSFORM);
     transformNode / "position" = pos;
     transformNode / "rotation" = rot;
     transformNode / "scale"    = scale;
@@ -61,9 +63,9 @@ Serializer::DataNode TransformComponent::Serialize() const {
     return transformNode;
 }
 
-void TransformComponent::Init(Vector3 position,
+void TransformComponent::Init(Vector3    position,
                               Quaternion rotation,
-                              Vector3 scale) {
+                              Vector3    scale) {
     // Everything is assumed local by default
     this->m_position = position;
     this->m_rotation = rotation;
@@ -93,7 +95,7 @@ void TransformComponent::_UpdateLocalMatrix() const {
     if (!m_dirtyLocal) return;
 
     // Build local matrix as: S * R * T
-    m_localMtx = Mat4(m_scale, m_rotation, m_position);
+    m_localMtx   = Mat4(m_scale, m_rotation, m_position);
     m_dirtyLocal = false;
 }
 
@@ -105,11 +107,11 @@ void TransformComponent::_UpdateWorldMatrix() const {
         m_parent->_UpdateWorldMatrix();
 
         // World = Parent * local (reversed here for stupid reasons?)
-        m_worldMtx = m_parent->m_worldMtx * m_localMtx;
+        m_worldMtx      = m_parent->m_worldMtx * m_localMtx;
         m_worldRotation = m_parent->m_worldRotation * m_rotation;
         m_worldRotation.normalize();
     } else { // No parent, world = local
-        m_worldMtx = m_localMtx;
+        m_worldMtx      = m_localMtx;
         m_worldRotation = m_rotation;
     }
 
@@ -177,7 +179,7 @@ void TransformComponent::SetWorldPosition(Vector3 position) {
 
         invParentMtx.invert();
         Vector4 localPos = Math::Vector4(position, 1) * invParentMtx;
-        m_position = localPos.xyz();
+        m_position       = localPos.xyz();
     } else {
         m_position = position;
     }
@@ -198,7 +200,7 @@ void TransformComponent::SetWorldRotationQuat(Quaternion rotation) {
         Quaternion parentInv = m_parent->m_worldRotation;
         parentInv.invert();
         Quaternion localQ = parentInv * rotation;
-        m_rotation = localQ;
+        m_rotation        = localQ;
         m_rotation.normalize();
     } else {
         m_rotation = rotation;
@@ -239,7 +241,7 @@ Vector3 TransformComponent::GetRotationEuler() const {
     return eulerVec;
 }
 
-Vector3    TransformComponent::GetScale() const { return m_scale; }
+Vector3 TransformComponent::GetScale() const { return m_scale; }
 
 Mat4 TransformComponent::GetLocalMatrix() const {
     _UpdateLocalMatrix();
@@ -253,7 +255,8 @@ void TransformComponent::SetParent(TransformComponent* parent) {
     // Remove from current parent
     if (m_parent) {
         auto& siblings = m_parent->m_children;
-        siblings.erase(std::remove(siblings.begin(), siblings.end(), this), siblings.end());
+        siblings.erase(std::remove(siblings.begin(), siblings.end(), this),
+                       siblings.end());
     }
 
     m_parent = parent;
@@ -266,9 +269,7 @@ void TransformComponent::SetParent(TransformComponent* parent) {
     _MarkWorldDirty();
 }
 
-TransformComponent* TransformComponent::GetParent() const {
-    return m_parent;
-}
+TransformComponent* TransformComponent::GetParent() const { return m_parent; }
 
 std::vector<TransformComponent*>& TransformComponent::GetChildren() const {
     return (std::vector<TransformComponent*>&)m_children;
@@ -280,21 +281,22 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
     // ParseXml
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_TRANSFORM);
+        node / "type" =
+            static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_TRANSFORM);
 
         for (const auto& attr : elem->attributes()) {
-            scl::string key = attr->tag();
+            scl::string key   = attr->tag();
             scl::string value = attr->data();
 
             if (key == "position") {
                 std::vector<float> pos = Serializer::_ParseFloatArray(value);
-                node / "position" = pos;
+                node / "position"      = pos;
             } else if (key == "rotation") {
                 std::vector<float> rot = Serializer::_ParseFloatArray(value);
-                node / "rotation" = rot;
+                node / "rotation"      = rot;
             } else if (key == "scale") {
                 std::vector<float> scale = Serializer::_ParseFloatArray(value);
-                node / "scale" = scale;
+                node / "scale"           = scale;
             }
         }
 
@@ -302,11 +304,14 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
     },
 
     // Instantiate
-    [](GameObject* owner,
+    [](GameObject*                 owner,
        const Serializer::DataNode& data) -> std::unique_ptr<Component> {
-        std::vector<float> pos = data["position"].As<std::vector<float>>({0.0f, 0.0f, 0.0f});
-        std::vector<float> rot = data["rotation"].As<std::vector<float>>({0.0f, 0.0f, 0.0f, 1.0f});
-        std::vector<float> scale = data["scale"].As<std::vector<float>>({1.0f, 1.0f, 1.0f});
+        std::vector<float> pos =
+            data["position"].As<std::vector<float>>({ 0.0f, 0.0f, 0.0f });
+        std::vector<float> rot =
+            data["rotation"].As<std::vector<float>>({ 0.0f, 0.0f, 0.0f, 1.0f });
+        std::vector<float> scale =
+            data["scale"].As<std::vector<float>>({ 1.0f, 1.0f, 1.0f });
         auto comp = std::make_unique<TransformComponent>(owner);
         comp->Init(pos, rot, scale); // This probably isn't Good Practice
         return comp;
@@ -317,53 +322,60 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
         lua.new_usertype<TransformComponent>(
             "TransformComponent",
             // Methods
-            "SetPosition", [](TransformComponent& self, float x, float y, float z) {
+            "SetPosition",
+            [](TransformComponent& self, float x, float y, float z) {
                 self.SetPosition(Vector3(x, y, z));
             },
-            "SetRotationEuler", [](TransformComponent& self, float x, float y, float z) {
+            "SetRotationEuler",
+            [](TransformComponent& self, float x, float y, float z) {
                 self.SetRotationEuler(Vector3(x, y, z));
             },
-            "SetRotationQuat", [](TransformComponent& self, float x, float y, float z, float w) {
+            "SetRotationQuat",
+            [](TransformComponent& self, float x, float y, float z, float w) {
                 self.SetRotationQuat(Quaternion(x, y, z, w));
             },
-            "SetScale", [](TransformComponent& self, float x, float y, float z) {
+            "SetScale",
+            [](TransformComponent& self, float x, float y, float z) {
                 self.SetScale(Vector3(x, y, z));
             },
-            "GetPosition", [](TransformComponent& self) -> std::tuple<float, float, float> {
-                float x, y, z;
+            "GetPosition",
+            [](TransformComponent& self) -> std::tuple<float, float, float> {
+                float   x, y, z;
                 Vector3 pos = self.GetPosition();
-                x = pos.x();
-                y = pos.y();
-                z = pos.z();
+                x           = pos.x();
+                y           = pos.y();
+                z           = pos.z();
                 return { x, y, z };
             },
-            "GetScale", [](TransformComponent& self) -> std::tuple<float, float, float> {
-                float x, y, z;
+            "GetScale",
+            [](TransformComponent& self) -> std::tuple<float, float, float> {
+                float   x, y, z;
                 Vector3 scale = self.GetScale();
-                x = scale.x();
-                y = scale.y();
-                z = scale.z();
+                x             = scale.x();
+                y             = scale.y();
+                z             = scale.z();
                 return { x, y, z };
             },
-            "GetRotationEuler", [](TransformComponent& self) -> std::tuple<float, float, float> {
-                float x, y, z;
+            "GetRotationEuler",
+            [](TransformComponent& self) -> std::tuple<float, float, float> {
+                float   x, y, z;
                 Vector3 rot = self.GetWorldRotationEuler();
-                x = rot.x();
-                y = rot.y();
-                z = rot.z();
+                x           = rot.x();
+                y           = rot.y();
+                z           = rot.z();
                 return { x, y, z };
             },
-            "GetRotationQuat", [](TransformComponent& self)
+            "GetRotationQuat",
+            [](TransformComponent& self)
                 -> std::tuple<float, float, float, float> {
-                float x, y, z, w;
+                float      x, y, z, w;
                 Quaternion quat = self.GetWorldRotationQuaternion();
-                x = quat.x();
-                y = quat.y();
-                z = quat.z();
-                w = quat.w();
+                x               = quat.x();
+                y               = quat.y();
+                z               = quat.z();
+                w               = quat.w();
                 return { x, y, z, w };
             });
-    }
-);
+    });
 
 } // namespace Syngine

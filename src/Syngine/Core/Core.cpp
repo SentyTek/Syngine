@@ -35,9 +35,9 @@
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Graphics/Rendering/RenderCore.h>
 #include <Syngine/Physics/Physics.h>
-#include <Syngine/ECS/GameObject.h>
-#include <Syngine/ECS/AllComponents.h>
-#include <Syngine/ECS/Component.h>
+#include <Syngine/GameObjects/GameObject.h>
+#include <Syngine/GameObjects/AllComponents.h>
+#include <Syngine/GameObjects/Component.h>
 #include <Syngine/Utils/FsUtils.h>
 #include <Syngine/Utils/Version.h>
 #include <Syngine/Utils/Profiler.h>

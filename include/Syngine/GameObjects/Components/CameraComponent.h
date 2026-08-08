@@ -7,7 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Component.h"
+#include "Syngine/GameObjects/Component.h"
 #include "Syngine/Math/Math.hpp"
 #include "Syngine/Math/Matrix4x4.hpp"
 #include "Syngine/Graphics/Rendering/Renderer.h"

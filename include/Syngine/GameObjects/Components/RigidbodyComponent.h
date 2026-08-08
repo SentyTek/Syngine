@@ -7,7 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Component.h"
+#include "Syngine/GameObjects/Component.h"
 #include "Syngine/Physics/Physics.h"
 
 #include "Syngine/Math/Math.hpp"
@@ -54,9 +54,11 @@ enum class ForceMode {
 
 struct CompoundShapePart {
     PhysicsShapes shape; //* The shape of the part
-    Math::Vector3 shapeParameters = Math::Vector3(1.0f); //* Parameters for the shape, e.g., radius for sphere, half extents for box
-    Math::Vector3      position; //* Local position offset
-    Math::Quaternion   rotation; //* Local rotation quaternion
+    Math::Vector3 shapeParameters =
+        Math::Vector3(1.0f);   //* Parameters for the shape, e.g., radius for
+                               //sphere, half extents for box
+    Math::Vector3    position; //* Local position offset
+    Math::Quaternion rotation; //* Local rotation quaternion
 };
 
 /// @brief Struct to hold parameters for the RigidbodyComponent.
@@ -66,25 +68,30 @@ struct CompoundShapePart {
 /// @since v0.0.1
 struct RigidbodyParameters {
     PhysicsShapes shape = PhysicsShapes::BOX; //* The shape of the rigidbody
-    float         mass = 0.0f;  //* Mass of the rigidbody. If 0 (which it is by default), Jolt will calculate it based on the shape.
-    float         friction = 0.5f; //* Friction coefficient
+    float mass = 0.0f; //* Mass of the rigidbody. If 0 (which it is by default),
+                       //Jolt will calculate it based on the shape.
+    float         friction    = 0.5f; //* Friction coefficient
     float         restitution = 0.5f; //* Restitution coefficient (bounciness)
-    Math::Vector3 shapeParameters = Math::Vector3(1.0f); //* Additional parameters for the shape, e.g., radius for sphere, half extents for box
-    JPH::EMotionType motionType = JPH::EMotionType::Dynamic; //* Motion type of the rigidbody
+    Math::Vector3 shapeParameters =
+        Math::Vector3(1.0f); //* Additional parameters for the shape, e.g.,
+                             //radius for sphere, half extents for box
+    JPH::EMotionType motionType =
+        JPH::EMotionType::Dynamic; //* Motion type of the rigidbody
     JPH::ObjectLayer layer = Syngine::Layers::MOVING; //* Layer of the rigidbody
-    std::vector<CompoundShapePart> compoundParts = {}; //* Parts for compound shape
+    std::vector<CompoundShapePart>
+        compoundParts = {}; //* Parts for compound shape
 };
 
-
 /// @brief Syngine Rigidbody Component The RigidbodyComponent is used to
-/// represent a physics body in the game world. It holds the BodyID and the shape of
-/// the physics body from Jolt, among other properties.
+/// represent a physics body in the game world. It holds the BodyID and the
+/// shape of the physics body from Jolt, among other properties.
 /// @section RigidbodyComponent
 /// @nameoverride RigidbodyComponent
 /// @since v0.0.1
 class RigidbodyComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::ComponentTypeID componentType = SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type
+    static constexpr Syngine::ComponentTypeID componentType =
+        SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type
 
     /// @brief Constructor for the RigidbodyComponent class
     /// @param owner Pointer to the GameObject that owns this component
@@ -118,18 +125,20 @@ class RigidbodyComponent : public Syngine::Component {
 
     /// @brief Initialize the RigidbodyComponent
     /// @param params Rigidbody parameters to initialize the component
-    /// @note This should only be called when the component is added to a GameObject
+    /// @note This should only be called when the component is added to a
+    /// GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
     void Init(Syngine::RigidbodyParameters params);
 
-    /// @brief Retry deferred initialization when dependencies (like Transform) become available.
+    /// @brief Retry deferred initialization when dependencies (like Transform)
+    /// become available.
     /// @threadsafety not-safe
     /// @since v0.0.1
     void RetryInitIfPending();
 
-    /// @brief Push the current TransformComponent world pose into the physics body.
-    /// Useful after runtime re-parenting or prefab child attachment.
+    /// @brief Push the current TransformComponent world pose into the physics
+    /// body. Useful after runtime re-parenting or prefab child attachment.
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SyncBodyToTransform();
@@ -146,7 +155,7 @@ class RigidbodyComponent : public Syngine::Component {
     /// destroyed
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void Destroy(); //TODO: Move this to RAII in the destructor
+    void Destroy(); // TODO: Move this to RAII in the destructor
 
     /// @brief Get the BodyID of the physics body
     /// @return The ID of the physics body
@@ -211,7 +220,8 @@ class RigidbodyComponent : public Syngine::Component {
 
     /// @brief Add a force to the rigidbody
     /// @param force The force to add (vec3)
-    /// @param mode The mode of force application. See ForceMode enum for details.
+    /// @param mode The mode of force application. See ForceMode enum for
+    /// details.
     /// @threadsafety not-safe
     /// @note Force values for visible movement may be higher than expected.
     /// @threadsafety not-safe
@@ -227,7 +237,7 @@ class RigidbodyComponent : public Syngine::Component {
     /// @since v0.0.1
     void AddForceAtPosition(const Math::Vector3 force,
                             const Math::Vector3 position,
-                            ForceMode    mode = ForceMode::FORCE);
+                            ForceMode           mode = ForceMode::FORCE);
 
     /// @brief Add a torque to the rigidbody
     /// @param torque The torque to add (vec3)
@@ -237,20 +247,23 @@ class RigidbodyComponent : public Syngine::Component {
     /// @note Torque values for visible rotation may be higher than expected.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void AddTorque(const Math::Vector3 torque, ForceMode mode = ForceMode::FORCE);
+    void AddTorque(const Math::Vector3 torque,
+                   ForceMode           mode = ForceMode::FORCE);
 
   private:
-        TransformComponent*   transform = nullptr; // Reference to the transform component
-        Syngine::Phys* physicsManager = nullptr;   // Reference to the physics manager
-        JPH::BodyID bodyID;                        // ID of the physics body
-        PhysicsShapes shape; // Shape of the physics body
-        float         mass = 0.0f; // Mass of the physics body
-        float         friction = 0.5f; // Friction of the physics body
-        float restitution = 0.5f; // Restitution of the physics body, default to 0.5
-        Math::Vector3 shapeParameters; // Parameters for the shape, e.g., radius
-                                       // for sphere, half extents for box
-        RigidbodyParameters pendingParams{}; // Parameters for deferred initialization
-        bool initPending = false; // Flag to indicate if initialization is pending
-        bool initComplete = false; // Flag to indicate if initialization is complete
+    TransformComponent* transform =
+        nullptr; // Reference to the transform component
+    Syngine::Phys* physicsManager = nullptr; // Reference to the physics manager
+    JPH::BodyID    bodyID;                   // ID of the physics body
+    PhysicsShapes  shape;                    // Shape of the physics body
+    float          mass     = 0.0f;          // Mass of the physics body
+    float          friction = 0.5f;          // Friction of the physics body
+    float restitution = 0.5f; // Restitution of the physics body, default to 0.5
+    Math::Vector3 shapeParameters; // Parameters for the shape, e.g., radius
+                                   // for sphere, half extents for box
+    RigidbodyParameters
+         pendingParams{};      // Parameters for deferred initialization
+    bool initPending  = false; // Flag to indicate if initialization is pending
+    bool initComplete = false; // Flag to indicate if initialization is complete
 };
 } // namespace Syngine
