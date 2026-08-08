@@ -90,6 +90,7 @@ Here is a list of the built-in uniform providers registered by the renderer. The
 | `Renderer.sceneDepth` | `SAMPLER` | `DRAW` | The scene depth buffer. |
 | `Renderer.SSAO.Params` | `VEC4` | `FRAME` | SSAO quality and falloff parameters. |
 | `Renderer.SSAO.Resolution` | `VEC4` | `FRAME` | SSAO buffer resolution and inverse resolution values. |
+| `Renderer.SSAOBlur.Params` | `VEC4` | `FRAME` | SSAO blur quality and resolution parameters. |
 | `Billboard.Position` | `VEC4` | `DRAW` | Billboard world position and size. |
 | `Billboard.Mode` | `VEC4` | `DRAW` | Billboard rotation and mode flags. |
 | `Billboard.Lighting` | `VEC4` | `DRAW` | Billboard lighting and shadow-receive flags. |

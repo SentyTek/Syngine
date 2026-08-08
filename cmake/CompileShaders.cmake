@@ -111,30 +111,6 @@ function(compile_all_shaders)
         "${ARG_SOURCE_DIRECTORY}/*${resolved_fragment_suffix}"
     )
 
-    # Collect all .bgsl files so meta.xml is regenerated when shader sources change.
-    file(GLOB_RECURSE ALL_BGSL_FILES
-        RELATIVE "${ARG_SOURCE_DIRECTORY}"
-        "${ARG_SOURCE_DIRECTORY}/*.bgsl"
-    )
-
-    set(meta_generation_deps ${tool_deps})
-    foreach(shader_src_rel ${ALL_BGSL_FILES})
-        list(APPEND meta_generation_deps "${ARG_SOURCE_DIRECTORY}/${shader_src_rel}")
-    endforeach()
-
-    # --- Generate the meta.xml file for the directory ---
-    set(meta_output_path "${ARG_OUTPUT_DIRECTORY}/meta.xml")
-    set(meta_output_path_rel "meta.xml")
-    add_custom_command(
-        OUTPUT "${meta_output_path}"
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIRECTORY}"
-        COMMAND $<TARGET_FILE:syntools> sm "${ARG_SOURCE_DIRECTORY}" "--output=${ARG_OUTPUT_DIRECTORY}"
-        DEPENDS ${meta_generation_deps}
-        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-        COMMENT "Generating shader metadata for directory: ${ARG_SOURCE_DIRECTORY}"
-        VERBATIM
-    )
-
     set(compiled_shader_list_accumulator "")
     set(bundle_group_ids "")
     foreach(frag_shader_relative_path ${ALL_FRAG_FILES})
@@ -187,9 +163,24 @@ function(compile_all_shaders)
         set(output_vert_file_rel "${output_base_name}.vert.bin")
         set(output_frag_file_rel "${output_base_name}.frag.bin")
 
+        # syntools resolves shader pairs relative to --src-dir, so nested shaders
+        # must include their directory prefix (e.g. test/bob).
+        set(shader_source_key "${shader_base_name}")
+        if(shader_dir_relative)
+            set(shader_source_key "${shader_dir_relative}/${shader_base_name}")
+        endif()
+
         # --- Build syntools command ---
-        set(syntools_cmd $<TARGET_FILE:syntools> shader "${shader_base_name}" "s" "${output_path_final}" "--compiler=$<TARGET_FILE:shaderc>" "--src-ext=.bgsl")
+        set(syntools_cmd $<TARGET_FILE:syntools> shader "${shader_source_key}" "s" "${output_path_final}" "--compiler=$<TARGET_FILE:shaderc>" "--src-ext=.bgsl")
         set(syntools_cmd ${syntools_cmd} "--src-dir=${ARG_SOURCE_DIRECTORY}")
+        if(EXISTS "${potential_varying_path}")
+            # syntools prefixes varying paths with "<src-dir>/varying/", so compute
+            # a relative path from that anchor back to the shader-local varying file.
+            file(RELATIVE_PATH varying_rel_path "${ARG_SOURCE_DIRECTORY}/varying" "${potential_varying_path}")
+            string(REPLACE "\\" "/" varying_rel_path "${varying_rel_path}")
+            string(REGEX REPLACE "\\.bgsl$" "" varying_rel_no_ext "${varying_rel_path}")
+            set(syntools_cmd ${syntools_cmd} "--varying=${varying_rel_no_ext}")
+        endif()
         if(ARG_BGFX_SRC_INCLUDE_DIRS)
             set(syntools_cmd ${syntools_cmd} "--include=${ARG_BGFX_SRC_INCLUDE_DIRS}")
         endif()
@@ -201,7 +192,7 @@ function(compile_all_shaders)
             COMMAND ${syntools_cmd}
             DEPENDS ${vert_shader_path} ${ARG_SOURCE_DIRECTORY}/${frag_shader_relative_path} ${tool_deps}
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-            COMMENT "Compiling shader pair: ${shader_base_name}"
+            COMMENT "Compiling shader pair: ${shader_source_key}"
             VERBATIM
         )
 
@@ -227,14 +218,22 @@ function(compile_all_shaders)
                 set(bundle_group_name_${bundle_group_id} "${bundle_group_name}")
                 list(APPEND bundle_group_ids ${bundle_group_id})
             endif()
-            list(APPEND bundle_group_files_${bundle_group_id} ${output_vert_file_rel} ${output_frag_file_rel})
-            list(APPEND bundle_group_depends_${bundle_group_id} ${output_vert_file} ${output_frag_file} ${meta_output_path})
+
+            # For top-level grouping, store paths relative to each group root
+            # so pack input arguments remain local file paths.
+            set(bundle_file_base_name "${output_base_name}")
+            if(ARG_BUNDLE_BY_TOP_LEVEL_DIR AND NOT ARG_SINGLE_BUNDLE_NAME)
+                if(ARG_ROOT_OUTPUT_SUBDIR AND bundle_group_name STREQUAL "${ARG_ROOT_OUTPUT_SUBDIR}")
+                    string(REGEX REPLACE "^${ARG_ROOT_OUTPUT_SUBDIR}/" "" bundle_file_base_name "${bundle_file_base_name}")
+                else()
+                    string(REGEX REPLACE "^${bundle_group_name}/" "" bundle_file_base_name "${bundle_file_base_name}")
+                endif()
+            endif()
+
+            list(APPEND bundle_group_files_${bundle_group_id} ${bundle_file_base_name}.vert.bin ${bundle_file_base_name}.frag.bin)
+            list(APPEND bundle_group_depends_${bundle_group_id} ${output_vert_file} ${output_frag_file})
         endif()
     endforeach()
-
-    if(compiled_shader_list_accumulator)
-        list(APPEND compiled_shader_list_accumulator ${meta_output_path})
-    endif()
 
     # Build one or more .spk bundles from the compiled shader outputs.
     set(generated_bundle_files "")
@@ -242,16 +241,60 @@ function(compile_all_shaders)
         set(bundle_group_name "${bundle_group_name_${bundle_group_id}}")
         set(bundle_group_files "${bundle_group_files_${bundle_group_id}}")
         set(bundle_group_depends "${bundle_group_depends_${bundle_group_id}}")
+        set(bundle_source_directory "${ARG_OUTPUT_DIRECTORY}")
+
+        # Generate metadata per bundle group so nested shader bundles keep
+        # their meta.xml beside their compiled shader bins.
+        set(meta_source_directory "${ARG_SOURCE_DIRECTORY}")
+        set(meta_output_directory "${ARG_OUTPUT_DIRECTORY}")
+        set(meta_output_rel "meta.xml")
+
+        if(ARG_BUNDLE_BY_TOP_LEVEL_DIR AND NOT ARG_SINGLE_BUNDLE_NAME)
+            if(ARG_ROOT_OUTPUT_SUBDIR AND bundle_group_name STREQUAL "${ARG_ROOT_OUTPUT_SUBDIR}")
+                set(meta_source_directory "${ARG_SOURCE_DIRECTORY}")
+            else()
+                set(meta_source_directory "${ARG_SOURCE_DIRECTORY}/${bundle_group_name}")
+            endif()
+            set(meta_output_directory "${ARG_OUTPUT_DIRECTORY}/${bundle_group_name}")
+            set(meta_output_rel "meta.xml")
+            set(bundle_source_directory "${meta_output_directory}")
+        endif()
+
+        set(meta_output_path "${meta_output_directory}/meta.xml")
+
+        file(GLOB_RECURSE GROUP_BGSL_FILES
+            RELATIVE "${meta_source_directory}"
+            "${meta_source_directory}/*.bgsl"
+        )
+        set(meta_generation_deps ${tool_deps})
+        foreach(shader_src_rel ${GROUP_BGSL_FILES})
+            list(APPEND meta_generation_deps "${meta_source_directory}/${shader_src_rel}")
+        endforeach()
+
+        add_custom_command(
+            OUTPUT "${meta_output_path}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${meta_output_directory}"
+            COMMAND $<TARGET_FILE:syntools> sm "${meta_source_directory}" "--output=${meta_output_directory}"
+            DEPENDS ${meta_generation_deps}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Generating shader metadata for directory: ${meta_source_directory}"
+            VERBATIM
+        )
 
         # Include metadata once per bundle; duplicate paths can make bundle validation fail.
-        list(APPEND bundle_group_files ${meta_output_path_rel})
+        list(APPEND bundle_group_files ${meta_output_rel})
+        list(APPEND bundle_group_depends ${meta_output_path})
         list(REMOVE_DUPLICATES bundle_group_files)
         list(REMOVE_DUPLICATES bundle_group_depends)
+
+        if(compiled_shader_list_accumulator)
+            list(APPEND compiled_shader_list_accumulator ${meta_output_path})
+        endif()
 
         create_file_bundle(
             BUNDLE_NAME "${bundle_group_name}"
             OUTPUT_DIRECTORY "${ARG_BUNDLE_OUTPUT_DIRECTORY}"
-            SOURCE_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
+            SOURCE_DIRECTORY "${bundle_source_directory}"
             INPUT_FILES ${bundle_group_files}
             DEPENDS ${bundle_group_depends}
             BUNDLE_FILE_OUTPUT_VAR generated_bundle_file
