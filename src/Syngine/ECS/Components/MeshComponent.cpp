@@ -10,7 +10,8 @@
 #include "Syngine/ECS/ComponentRegistry.h"
 #include "Syngine/ECS/Components/TransformComponent.h"
 #include "Syngine/Math/Vector3.hpp"
-#include "Syngine/Utils/ModelLoader.h"
+#include "Syngine/Graphics/Resources/ModelLoader.h"
+#include "Syngine/Math/Vector4.hpp"
 #include "Syngine/Utils/FsUtils.h"
 #include "Syngine/ECS/Components/MeshComponent.h"
 #include "Syngine/ECS/GameObject.h"
@@ -28,47 +29,49 @@
 
 namespace Syngine {
 
-// This constructor does nothing. It is used for creating an empty MeshComponent that can be initialized later.
+// This constructor does nothing. It is used for creating an empty MeshComponent
+// that can be initialized later.
 MeshComponent::MeshComponent(GameObject* owner) {
-    this->meshData = Syngine::MeshData();
-    this->m_owner  = owner;
-    this->m_bundlePath = "";
+    this->modelData     = Syngine::ModelData();
+    this->m_owner       = owner;
+    this->m_bundlePath  = "";
     this->m_texturePath = "";
 }
 
 MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& path,
                              bool               loadTextures) {
-    this->meshData = Syngine::MeshData();
-    this->m_owner  = owner;
-    this->m_bundlePath = "meshes/meshes.spk";
+    this->modelData     = Syngine::ModelData();
+    this->m_owner       = owner;
+    this->m_bundlePath  = "meshes/meshes.spk";
     this->m_texturePath = path;
-    this->Init(this->m_bundlePath, path, loadTextures);
+    this->Init(this->m_bundlePath, this->m_texturePath, loadTextures);
 }
 
 MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& bundlePath,
                              const std::string& texturePath,
                              bool               loadTextures) {
-    this->meshData = Syngine::MeshData();
-    this->m_owner  = owner;
-    this->m_bundlePath = bundlePath;
+    this->modelData     = Syngine::ModelData();
+    this->m_owner       = owner;
+    this->m_bundlePath  = bundlePath;
     this->m_texturePath = texturePath;
     this->Init(bundlePath, texturePath, loadTextures);
 }
 
 MeshComponent::MeshComponent(const MeshComponent& other) {
-    this->meshData = other.meshData; // Shallow copy, deep copy may be needed
-    this->m_owner  = other.m_owner;
-    this->m_bundlePath = other.m_bundlePath;
+    this->modelData = other.modelData; // Shallow copy, deep copy may be needed
+    this->m_owner   = other.m_owner;
+    this->m_bundlePath  = other.m_bundlePath;
     this->m_texturePath = other.m_texturePath;
 }
 
 MeshComponent& MeshComponent::operator=(const MeshComponent& other) {
     if (this != &other) {
-        this->meshData = other.meshData; // Shallow copy, deep copy may be needed
-        this->m_owner  = other.m_owner;
-        this->m_bundlePath = other.m_bundlePath;
+        this->modelData =
+            other.modelData; // Shallow copy, deep copy may be needed
+        this->m_owner       = other.m_owner;
+        this->m_bundlePath  = other.m_bundlePath;
         this->m_texturePath = other.m_texturePath;
     }
     return *this;
@@ -85,10 +88,10 @@ Syngine::ComponentTypeID MeshComponent::GetComponentType() {
 
 Serializer::DataNode MeshComponent::Serialize() const {
     Serializer::DataNode node;
-    node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
+    node / "type"   = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
     node / "bundle" = m_bundlePath;
-    node / "path" = m_texturePath;
-    //TODO: mats will need to be serialized at some point
+    node / "path"   = m_texturePath;
+    // TODO: mats will need to be serialized at some point
     return node;
 }
 
@@ -105,20 +108,24 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     // Get the data stream from the bundle
     std::string resolvedBundlePath =
         Syngine::Internal::ResolvePath(bundlePath.c_str());
-    scl::stream meshStream = Serializer::_ReadFromBundle(resolvedBundlePath, texturePath);
+    scl::stream meshStream =
+        Serializer::_ReadFromBundle(resolvedBundlePath, texturePath);
     if (meshStream.size() == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                              "Failed to load mesh from bundle %s with texture %s",
-                              resolvedBundlePath.c_str(),
-                              texturePath.c_str());
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR,
+            false,
+            "Failed to load mesh from bundle %s with texture %s",
+            resolvedBundlePath.c_str(),
+            texturePath.c_str());
         return false; // Error loading mesh stream
     }
 
     // Load the mesh data from the bundle
     AssimpLoader loader;
     if (!loader._LoadModel(
-            this->meshData, &meshStream, texturePath, loadTextures)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
+            this->modelData, &meshStream, texturePath, loadTextures)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
                               "Failed to load mesh from %s",
                               texturePath.c_str());
         return false; // Error loading mesh
@@ -126,9 +133,11 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
 
     // For hot reloading the bundle will update, not textures specifically.
     try {
-        meshData.lastWriteTime = std::filesystem::last_write_time(resolvedBundlePath);
+        this->modelData.lastWriteTime =
+            std::filesystem::last_write_time(resolvedBundlePath);
     } catch (const std::filesystem::filesystem_error& e) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN, true,
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                              true,
                               "Failed to get last write time for %s: %s",
                               resolvedBundlePath.c_str(),
                               e.what()); // e.what() lol what a name
@@ -139,61 +148,56 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
 
 bool MeshComponent::UnloadMesh() {
     // Unload the mesh data
-    if (bgfx::isValid(this->meshData.vbh)) {
-        bgfx::destroy(this->meshData.vbh);
-        this->meshData.vbh = BGFX_INVALID_HANDLE;
+    if (bgfx::isValid(this->modelData.vbh)) {
+        bgfx::destroy(this->modelData.vbh);
+        this->modelData.vbh = BGFX_INVALID_HANDLE;
     }
-    if (bgfx::isValid(this->meshData.ibh)) {
-        bgfx::destroy(this->meshData.ibh);
-        this->meshData.ibh = BGFX_INVALID_HANDLE;
+    if (bgfx::isValid(this->modelData.ibh)) {
+        bgfx::destroy(this->modelData.ibh);
+        this->modelData.ibh = BGFX_INVALID_HANDLE;
     }
-    for (auto& mat : this->meshData.materials) {
-        if (bgfx::isValid(mat.albedo)) {
-            bgfx::destroy(mat.albedo);
-            mat.albedo = BGFX_INVALID_HANDLE;
-        }
-        if (bgfx::isValid(mat.normalMap)) {
-            bgfx::destroy(mat.normalMap);
-            mat.normalMap = BGFX_INVALID_HANDLE;
-        }
-        if (bgfx::isValid(mat.heightMap)) {
-            bgfx::destroy(mat.heightMap);
-            mat.heightMap = BGFX_INVALID_HANDLE;
-        }
+    for (auto& mat : this->modelData.materials) {
+        mat.Destroy();
     }
-    this->meshData.materials.clear();
+    this->modelData.materials.clear();
     return true; // Success
 }
 
 bool MeshComponent::ReloadMesh() {
     // Get the data stream from the bundle
     std::string resolvedBundlePath =
-    Syngine::Internal::ResolvePath(this->m_bundlePath.c_str());
-    scl::stream meshStream = Serializer::_ReadFromBundle(resolvedBundlePath, this->m_texturePath);
+        Syngine::Internal::ResolvePath(this->m_bundlePath.c_str());
+    scl::stream meshStream =
+        Serializer::_ReadFromBundle(resolvedBundlePath, this->m_texturePath);
     if (meshStream.size() == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR,
+            false,
             "Failed to load mesh from bundle %s with texture %s",
             resolvedBundlePath.c_str(),
             this->m_texturePath.c_str());
-            return false; // Error loading mesh stream
-        }
+        return false; // Error loading mesh stream
+    }
 
     // Reload the mesh data from the bundle
     AssimpLoader loader;
-    if (!loader._ReloadModel(this->meshData,
+    if (!loader._ReloadModel(this->modelData,
                              &meshStream,
                              this->m_texturePath,
-                             this->meshData.id)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
+                             this->modelData.id)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
                               "Failed to reload mesh from %s",
                               _MakeRelativeToRoot(this->m_texturePath).c_str());
         return false; // Error reloading mesh
     }
 
     try {
-        this->meshData.lastWriteTime = std::filesystem::last_write_time(this->m_texturePath);
+        this->modelData.lastWriteTime =
+            std::filesystem::last_write_time(this->m_texturePath);
     } catch (const std::filesystem::filesystem_error& e) {
-        Syngine::Logger::LogF(Syngine::LogLevel::WARN, true,
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                              true,
                               "Failed to get last write time for %s: %s",
                               this->m_texturePath.c_str(),
                               e.what());
@@ -202,90 +206,71 @@ bool MeshComponent::ReloadMesh() {
 }
 
 uint8_t MeshComponent::GetSubmeshCount() const {
-    const size_t count = this->meshData.subMeshes.size();
+    const size_t count = this->modelData.subMeshes.size();
     return static_cast<uint8_t>(count > UINT8_MAX ? UINT8_MAX : count);
 }
 
 uint8_t MeshComponent::GetSubmeshMaterialIndex(uint8_t submeshIndex) const {
-    if (submeshIndex >= this->meshData.subMeshes.size()) {
+    if (submeshIndex >= this->modelData.subMeshes.size()) {
         const int maxIndex =
-            this->meshData.subMeshes.empty()
+            this->modelData.subMeshes.empty()
                 ? -1
-                : static_cast<int>(this->meshData.subMeshes.size() - 1);
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
+                : static_cast<int>(this->modelData.subMeshes.size() - 1);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
                               "Submesh index %d out of bounds (max %d)",
                               submeshIndex,
                               maxIndex);
         return 0; // Return default material index on error
     }
-    return this->meshData.subMeshes[submeshIndex].materialIndex;
+    return this->modelData.subMeshes[submeshIndex].materialIndex;
 }
 
-bool MeshComponent::SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materialIndex) {
-    if (submeshIndex >= this->meshData.subMeshes.size()) {
+bool MeshComponent::SetSubmeshMaterialIndex(uint8_t submeshIndex,
+                                            uint8_t materialIndex) {
+    if (submeshIndex >= this->modelData.subMeshes.size()) {
         const int maxIndex =
-            this->meshData.subMeshes.empty()
+            this->modelData.subMeshes.empty()
                 ? -1
-                : static_cast<int>(this->meshData.subMeshes.size() - 1);
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
+                : static_cast<int>(this->modelData.subMeshes.size() - 1);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
                               "Submesh index %d out of bounds (max %d)",
                               submeshIndex,
                               maxIndex);
         return false; // Error: submesh index out of bounds
     }
-    if (materialIndex >= this->meshData.materials.size()) {
+    if (materialIndex >= this->modelData.materials.size()) {
         const int maxIndex =
-            this->meshData.materials.empty()
+            this->modelData.materials.empty()
                 ? -1
-                : static_cast<int>(this->meshData.materials.size() - 1);
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
+                : static_cast<int>(this->modelData.materials.size() - 1);
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
                               "Material index %d out of bounds (max %d)",
                               materialIndex,
                               maxIndex);
         return false; // Error: material index out of bounds
     }
-    this->meshData.subMeshes[submeshIndex].materialIndex = materialIndex;
+    this->modelData.subMeshes[submeshIndex].materialIndex = materialIndex;
     return true; // Success
 }
 
-Math::Vector2 MeshComponent::GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const {
-    if (materialIndex >= this->meshData.numMaterials) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                              "Material index %d out of bounds (max %d)",
-                              materialIndex, this->meshData.numMaterials - 1);
-        return Math::Vector2(1.0f); // Error: material index out of bounds
-    }
-    if (textureType > 2) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                              "Texture type %d out of bounds (max 2)",
-                              textureType);
-        return Math::Vector2(1.0f); // Error: invalid texture type
-    }
-    return Math::Vector2(
-        this->meshData.materials[materialIndex].uvScale[textureType * 2],
-        this->meshData.materials[materialIndex].uvScale[textureType * 2 + 1]);
+MaterialInstance* MeshComponent::GetMaterialInstance(uint8_t submeshIndex) {
+    if (submeshIndex >= modelData.subMeshes.size()) return nullptr;
+    const uint8_t materialIndex =
+        modelData.subMeshes[submeshIndex].materialIndex;
+    if (materialIndex >= modelData.materials.size()) return nullptr;
+    return &modelData.materials[materialIndex];
 }
 
-bool MeshComponent::SetMaterialUVScale(uint8_t materialIndex,
-                                       uint8_t textureType,
-                                       Vector2 uvScale) {
-    if (materialIndex >= this->meshData.numMaterials) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                              "Material index %d out of bounds (max %d)",
-                              materialIndex, this->meshData.numMaterials - 1);
-        return false; // Error: material index out of bounds
-    }
-    if (textureType > 2) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                              "Texture type %d out of bounds (max 2)",
-                              textureType);
-        return false; // Error: invalid texture type
-    }
-    this->meshData.materials[materialIndex].uvScale.set(textureType * 2,
-                                                        uvScale.x());
-    this->meshData.materials[materialIndex].uvScale.set(textureType * 2 + 1,
-                                                        uvScale.y());
-    return true; // Success
+const MaterialInstance*
+MeshComponent::GetMaterialInstance(uint8_t submeshIndex) const {
+    if (submeshIndex >= modelData.subMeshes.size()) return nullptr;
+    const uint8_t materialIndex =
+        modelData.subMeshes[submeshIndex].materialIndex;
+    if (materialIndex >= modelData.materials.size()) return nullptr;
+    return &modelData.materials[materialIndex];
 }
 
 float MeshComponent::GetObjectUVScaleOverride() const {
@@ -298,53 +283,55 @@ void MeshComponent::SetObjectUVScaleOverride(float uvScaleOverride) {
 
 bool MeshComponent::UploadMesh(std::vector<float>    vertices,
                                std::vector<uint32_t> indices,
-                               std::vector<uint8_t>  baseColor) {
-    Syngine::MeshData meshData;
-    int vertexSize = baseColor.empty() ? 12 : 8; // if no baseColor provided, expect vertex colors
+                               Math::Vector4         baseColor) {
+    Syngine::ModelData modelData;
+    bool useVertexColors = (baseColor == Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f));
+    int  vertexSize      = useVertexColors
+                               ? 12
+                               : 8; // if no baseColor provided, expect vertex colors
 
     Syngine::SubMesh subMesh;
-    subMesh.indexStart = 0;
-    subMesh.indexCount = static_cast<uint32_t>(indices.size());
+    subMesh.indexStart    = 0;
+    subMesh.indexCount    = static_cast<uint32_t>(indices.size());
     subMesh.materialIndex = 0;
-    meshData.subMeshes.push_back(subMesh);
-    meshData.numSubMeshes = 1;
+    modelData.subMeshes.push_back(subMesh);
+    modelData.numSubMeshes = 1;
 
     // set vertex data
-    meshData.vertices.resize(static_cast<uint32_t>(vertices.size() / vertexSize));
+    modelData.vertices.resize(
+        static_cast<uint32_t>(vertices.size() / vertexSize));
 
     // build vertices, apply baseColor if provided
-    if (!baseColor.empty()) {
-        if (baseColor.size() == 3) {
-            baseColor.push_back(255); // add alpha if missing
-        }
+    if (!useVertexColors) {
         // apply base color to all vertices
-        std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
+        std::vector<Vertex>::iterator vertexIt = modelData.vertices.begin();
         for (size_t i = 0; i < vertices.size(); i += 8) {
             Vertex vertex;
             vertex.pos = Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
             vertex.normal =
                 Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
-            vertex.uv0    = Vector2(vertices[i + 6], vertices[i + 7]);
-            vertex.color  = Vector4(static_cast<float>(baseColor[0]) / 255.0f,
-                                    static_cast<float>(baseColor[1]) / 255.0f,
-                                    static_cast<float>(baseColor[2]) / 255.0f,
-                                    static_cast<float>(baseColor[3]) / 255.0f);
-            *vertexIt++   = vertex;
+            vertex.uv0   = Vector2(vertices[i + 6], vertices[i + 7]);
+            vertex.color = baseColor;
+            *vertexIt++  = vertex;
         }
     } else {
-        std::vector<Vertex>::iterator vertexIt = meshData.vertices.begin();
+        std::vector<Vertex>::iterator vertexIt = modelData.vertices.begin();
         for (size_t i = 0; i < vertices.size(); i += 12) {
             Vertex vertex;
             vertex.pos = Vector3(vertices[i], vertices[i + 1], vertices[i + 2]);
-            vertex.normal = Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
-            vertex.uv0 = Vector2(vertices[i + 6], vertices[i + 7]);
-            vertex.color = Vector4(vertices[i + 8], vertices[i + 9], vertices[i + 10], vertices[i + 11]);
-            *vertexIt++ = vertex;
+            vertex.normal =
+                Vector3(vertices[i + 3], vertices[i + 4], vertices[i + 5]);
+            vertex.uv0   = Vector2(vertices[i + 6], vertices[i + 7]);
+            vertex.color = Vector4(vertices[i + 8],
+                                   vertices[i + 9],
+                                   vertices[i + 10],
+                                   vertices[i + 11]);
+            *vertexIt++  = vertex;
         }
     }
-    meshData.indices = indices;
+    modelData.indices = indices;
 
-    //create bgfx vertex layout
+    // create bgfx vertex layout
     bgfx::VertexLayout layout;
     layout.begin()
         .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
@@ -356,107 +343,144 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
         .end(); // stride = 72 bytes
 
     // create buffers
-    const bgfx::Memory* mem = bgfx::alloc(static_cast<uint32_t>(meshData.vertices.size() * sizeof(Vertex)));
-    memcpy(mem->data, meshData.vertices.data(), static_cast<uint32_t>(meshData.vertices.size() * sizeof(Vertex)));
-    bgfx::VertexBufferHandle vbh =
-    bgfx::createVertexBuffer(mem, layout);
+    const bgfx::Memory* mem = bgfx::alloc(
+        static_cast<uint32_t>(modelData.vertices.size() * sizeof(Vertex)));
+    memcpy(mem->data,
+           modelData.vertices.data(),
+           static_cast<uint32_t>(modelData.vertices.size() * sizeof(Vertex)));
+    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
 
-    mem = bgfx::alloc(static_cast<uint32_t>(meshData.indices.size()) * sizeof(uint32_t));
-    memcpy(mem->data, meshData.indices.data(), static_cast<uint32_t>(meshData.indices.size()) * sizeof(uint32_t));
+    mem = bgfx::alloc(static_cast<uint32_t>(modelData.indices.size()) *
+                      sizeof(uint32_t));
+    memcpy(mem->data,
+           modelData.indices.data(),
+           static_cast<uint32_t>(modelData.indices.size()) * sizeof(uint32_t));
     bgfx::IndexBufferHandle ibh =
         bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
     // Add dummy material
-    Material mat;
-    mat.baseColor = Math::Vector4(1.0f);
-    mat.useVertexColor = true;
-    meshData.materials.push_back(mat);
+    MaterialInstance mat =
+        MaterialManager::GetDefaultMaterialPBR().CreateInstance();
+    mat.Set("u_baseColor", baseColor.data(), sizeof(Math::Vector4));
+
+    if (useVertexColors) {
+        Math::Vector4 mp = mat.Get<Math::Vector4>("u_materialParams1");
+        mp.setW(1.0f); // Enable VERTEX color usage
+        mat.Set("u_materialParams1", mp.data(), sizeof(Math::Vector4));
+    }
+
+    Math::Vector4 mp = mat.Get<Math::Vector4>("u_materialParams2");
+    mp.setY(1.0f); // Enable normal map usage
+    mat.Set("u_materialParams2", mp.data(), sizeof(Math::Vector4));
+
+    modelData.materials.push_back(mat);
 
     // checks
     if (!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true, "Failed to create vertex/index buffer");
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              true,
+                              "Failed to create vertex/index buffer");
         return false;
     }
 
+    // create aabb
+    Math::Vector3 min(FLT_MAX, FLT_MAX, FLT_MAX);
+    Math::Vector3 max(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    for (const auto& vertex : modelData.vertices) {
+        min.setX(std::min(min.x(), vertex.pos.x()));
+        min.setY(std::min(min.y(), vertex.pos.y()));
+        min.setZ(std::min(min.z(), vertex.pos.z()));
+
+        max.setX(std::max(max.x(), vertex.pos.x()));
+        max.setY(std::max(max.y(), vertex.pos.y()));
+        max.setZ(std::max(max.z(), vertex.pos.z()));
+    }
+    modelData.localMin = min;
+    modelData.localMax = max;
+    m_aabb.min         = min;
+    m_aabb.max         = max;
+
     // assign to meshData
-    meshData.valid     = true;
-    this->meshData = meshData;
-    this->meshData.vbh = vbh;
-    this->meshData.ibh = ibh;
+    modelData.valid     = true;
+    this->modelData     = modelData;
+    this->modelData.vbh = vbh;
+    this->modelData.ibh = ibh;
     return true;
 }
 
-MeshAABB& MeshComponent::GetAABB() {
-    uint64_t currentTransformVersion = 0;
-    if (this->m_owner && this->m_owner->HasComponent(SYN_COMPONENT_TRANSFORM)) {
-        TransformComponent* transform = this->m_owner->GetComponent<TransformComponent>();
+const MeshAABB& MeshComponent::GetAABB() const {
+    SYN_PROFILE_FUNCTION();
+
+    TransformComponent* transform               = nullptr;
+    uint64_t            currentTransformVersion = 0;
+
+    transform = this->m_owner->GetComponent<TransformComponent>();
+    if (transform) {
         currentTransformVersion = transform->GetVersion();
     }
 
+    // Fast Cache Return
     if (!m_aabbDirty && m_cachedTransformVersion == currentTransformVersion) {
         return m_aabb;
     }
 
-    MeshAABB& boundingBox = m_aabb;
-
-    if (this->meshData.vertices.empty()) {
-        return boundingBox; // Return default AABB if no vertices
+    if (this->modelData.subMeshes.empty()) {
+        m_aabbDirty              = false;
+        m_cachedTransformVersion = currentTransformVersion;
+        return m_aabb; // Return default empty AABB
     }
 
-    // Compute local min/max
-    Math::Vector3 min(FLT_MAX);
-    Math::Vector3 max(-FLT_MAX);
-    min = this->meshData.vertices[0].pos;
-    max = this->meshData.vertices[0].pos;
-    for (const auto& vertex : this->meshData.vertices) {
-        for (int i = 0; i < 3; ++i) {
-            min = min.min(vertex.pos);
-            max = max.max(vertex.pos);
-        }
+    // Get local AABB
+    Math::Vector3 localMin(this->modelData.localMin);
+    Math::Vector3 localMax(this->modelData.localMax);
+
+    Math::Vector3 localCenter  = (localMin + localMax) * 0.5f;
+    Math::Vector3 localExtents = (localMax - localMin) * 0.5f;
+
+    // If no transform component, return local AABB straight up
+    if (!transform) {
+        m_aabb.min         = localMin;
+        m_aabb.max         = localMax;
+        m_aabb.center      = localCenter;
+        m_aabb.halfExtents = localExtents;
+
+        m_aabbDirty              = false;
+        m_cachedTransformVersion = currentTransformVersion;
+        return m_aabb;
     }
 
-    MeshAABB result;
-    // If transform exists, transform all 8 corners
-    if (this->m_owner && this->m_owner->HasComponent(SYN_COMPONENT_TRANSFORM)) {
-        TransformComponent* transform = this->m_owner->GetComponent<TransformComponent>();
-        Mat4 modelMatrix = transform->GetModelMatrix();
+    // Fast World AABB Transformation via Basis Vectors (Jim Arvo's Method)
+    // Avoids transforming 8 individual corners or touching vertex memory.
+    const Mat4& M = transform->GetModelMatrix();
 
-        Vec3 corners[8] = {
-            Vec3(min.x(), min.y(), min.z()),
-            Vec3(max.x(), min.y(), min.z()),
-            Vec3(min.x(), max.y(), min.z()),
-            Vec3(max.x(), max.y(), min.z()),
-            Vec3(min.x(), min.y(), max.z()),
-            Vec3(max.x(), min.y(), max.z()),
-            Vec3(min.x(), max.y(), max.z()),
-            Vec3(max.x(), max.y(), max.z())
-        };
+    // World position from matrix translation column/row
+    Math::Vector3 worldCenter = Math::Vector3(M.m(3, 0), M.m(3, 1), M.m(3, 2));
+    Math::Vector3 worldExtents(0.0f);
 
-        Vector3 tmin(FLT_MAX);
-        Vector3 tmax(-FLT_MAX);
-        for (int c = 0; c < 8; ++c) {
-            Math::Vector4 t = Math::Vector4(corners[c][0], corners[c][1], corners[c][2], 1.0f) * modelMatrix;
-            tmin = tmin.min(t.xyz());
-            tmax = tmax.max(t.xyz());
+    for (int i = 0; i < 3; ++i) {
+        // Transform center: center_world.i += localCenter.x * M[0][i] +
+        // localCenter.y * M[1][i] + localCenter.z * M[2][i]
+        worldCenter.set(i,
+                        worldCenter[i] + (localCenter[0] * M.m(0, i) +
+                                          localCenter[1] * M.m(1, i) +
+                                          localCenter[2] * M.m(2, i)));
+        // Transform extents using absolute values of the transform matrix basis
+        float extentI = 0.0f;
+        for (int j = 0; j < 3; ++j) {
+            extentI += std::abs(M.m(j, i)) * localExtents[j];
         }
-        for (int i = 0; i < 3; ++i) {
-            result.min.set(i, tmin[i]);
-            result.max.set(i, tmax[i]);
-            result.center.set(i, (tmin[i] + tmax[i]) / 2.0f);
-            result.halfExtents.set(i, (tmax[i] - tmin[i]) / 2.0f);
-        }
-    } else { // No transform, use local min/max
-        for (int i = 0; i < 3; ++i) {
-            result.min.set(i, min[i]);
-            result.max.set(i, max[i]);
-            result.center.set(i, (min[i] + max[i]) / 2.0f);
-            result.halfExtents.set(i, (max[i] - min[i]) / 2.0f);
-        }
+        worldExtents.set(i, extentI);
     }
 
-    m_aabbDirty = false;
+    // Store final world AABB
+    m_aabb.center      = worldCenter;
+    m_aabb.halfExtents = worldExtents;
+    m_aabb.min         = worldCenter - worldExtents;
+    m_aabb.max         = worldCenter + worldExtents;
+
+    m_aabbDirty              = false;
     m_cachedTransformVersion = currentTransformVersion;
-    m_aabb = result;
+
     return m_aabb;
 }
 
@@ -465,18 +489,19 @@ static Syngine::ComponentRegistrar s_meshRegistrar(
     // ParseXML: XML element -> DataNode
     [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {
         Serializer::DataNode node;
-        node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
+        node / "type" =
+            static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
         for (const auto& attr : elem->attributes()) {
-            scl::string key = attr->tag();
+            scl::string key   = attr->tag();
             scl::string value = attr->data();
             if (key == "path") {
                 std::string svalue = std::string(value.cstr());
-                node / "path" = svalue;
+                node / "path"      = svalue;
             } else if (key == "hasTextures") {
                 node / "hasTextures" = (value == "true");
             } else if (key == "bundle") {
                 std::string svalue = std::string(value.cstr());
-                node / "bundle" = svalue;
+                node / "bundle"    = svalue;
             }
         }
         return node;
@@ -485,19 +510,23 @@ static Syngine::ComponentRegistrar s_meshRegistrar(
     // Instantiate: DataNode -> Component instance
     [](Syngine::GameObject* owner, const Serializer::DataNode& data)
         -> std::unique_ptr<Syngine::Component> {
-        std::string path = data.Has("path") ? data["path"].As<std::string>() : "";
-        std::string bundlePath = data.Has("bundle") ? data["bundle"].As<std::string>() : "meshes/meshes.spk";
-        bool hasTextures = data.Has("hasTextures") ? data["hasTextures"].As<bool>() : false;
-        auto meshComp = std::make_unique<MeshComponent>(owner, bundlePath, path, hasTextures);
+        std::string path =
+            data.Has("path") ? data["path"].As<std::string>() : "";
+        std::string bundlePath = data.Has("bundle")
+                                     ? data["bundle"].As<std::string>()
+                                     : "meshes/meshes.spk";
+        bool        hasTextures =
+            data.Has("hasTextures") ? data["hasTextures"].As<bool>() : false;
+        auto meshComp = std::make_unique<MeshComponent>(
+            owner, bundlePath, path, hasTextures);
         return meshComp;
     },
 
     [](sol::state& lua) {
         lua.new_usertype<MeshComponent>("MeshComponent"
-            // Methods
-            // (none worth exposing to Lua yet)
+                                        // Methods
+                                        // (none worth exposing to Lua yet)
         );
-    }
-);
+    });
 
 } // namespace Syngine

@@ -2,9 +2,12 @@ $input v_texcoord0, v_worldPos
 #include <bgfx_shader.sh>
 #include <shadow.bgsl>
 
+// @Sampler name="s_albedo" stage="0"
 SAMPLER2D(s_albedo, 0);
 
+// @EngineUniform freq="draw" src="Renderer.SunDirection"
 uniform vec4 u_lightDir;
+// @EngineUniform freq="draw" src="Billboard.Lighting"
 uniform vec4 u_billboard_lighting; // x: receiveSunLight (bool), y = receiveShadows (bool)
 
 void main() {

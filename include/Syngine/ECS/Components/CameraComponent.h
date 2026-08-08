@@ -10,7 +10,7 @@
 #include "Syngine/ECS/Component.h"
 #include "Syngine/Math/Math.hpp"
 #include "Syngine/Math/Matrix4x4.hpp"
-#include "bx/math.h"
+#include "Syngine/Graphics/Rendering/Renderer.h"
 
 namespace Syngine {
 
@@ -18,18 +18,22 @@ namespace Syngine {
 /// @section CameraComponent
 /// @since v0.0.1
 struct Camera {
-    Math::Vector3 eye = {0.0f, 0.0f, -5.0f}; //* Camera position in world space
-    Math::Vector3 target = {0.0f, 0.0f, 0.0f}; //* Camera target position
-    Math::Vector3 up = {0.0f, 1.0f, 0.0f}; //* Camera up vector
-    float fov = 70.0f; //* Field of view in degrees
-    float nearPlane = 0.1f; //* Near clipping plane
-    float farPlane = 100.0f; //* Far clipping plane
-    Math::Matrix4x4 view; //* View matrix
-    Math::Matrix4x4 proj; //* Projection matrix
+    Math::Vector3   eye       = { 0.0f,
+                                  0.0f,
+                                  -5.0f }; //* Camera position in world space
+    Math::Vector3   target    = { 0.0f, 0.0f, 0.0f }; //* Camera target position
+    Math::Vector3   up        = { 0.0f, 1.0f, 0.0f }; //* Camera up vector
+    float           fov       = 70.0f;  //* Field of view in degrees
+    float           nearPlane = 0.1f;   //* Near clipping plane
+    float           farPlane  = 100.0f; //* Far clipping plane
+    Math::Matrix4x4 view;               //* View matrix
+    Math::Matrix4x4 proj;               //* Projection matrix
 
-    float yaw = 0.0f; //* Yaw angle in radians
+    float yaw   = 0.0f; //* Yaw angle in radians
     float pitch = 0.0f; //* Pitch angle in radians
-    float roll = 0.0f; //* Roll angle in radians
+    float roll  = 0.0f; //* Roll angle in radians
+    float screenFocalLength =
+        0.0f; //* Focal length for screen-space calculations
 };
 
 /// @brief CameraComponent class for managing camera functionality in a game
@@ -39,7 +43,8 @@ struct Camera {
 /// @since v0.0.1
 class CameraComponent : public Syngine::Component {
   public:
-    static constexpr Syngine::ComponentTypeID componentType = Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
+    static constexpr Syngine::ComponentTypeID componentType =
+        Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
 
     /// @brief Constructor for the CameraComponent class
     /// @param owner Pointer to the GameObject that owns this component
@@ -72,7 +77,8 @@ class CameraComponent : public Syngine::Component {
     Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the camera component
-    /// @note This should only be called when the component is added to a GameObject
+    /// @note This should only be called when the component is added to a
+    /// GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
     void Init() override {} // No specific initialization needed
@@ -137,9 +143,7 @@ class CameraComponent : public Syngine::Component {
     /// @note The angles are used to calculate the camera's orientation
     /// @threadsafety not-safe
     /// @since v0.0.1
-    void SetAngles(Math::Vector2 angles) {
-        SetAngles(angles.x(), angles.y());
-    }
+    void SetAngles(Math::Vector2 angles) { SetAngles(angles.x(), angles.y()); }
 
     /// @brief Get the camera angles
     /// @return Vector2 containing yaw and pitch angles in radians
@@ -155,6 +159,10 @@ class CameraComponent : public Syngine::Component {
     /// @since v0.0.1
     Syngine::Camera GetCamera() const;
 
+    Math::Mat4 GetViewProjMatrix() const {
+        return GetCamera().proj * GetCamera().view;
+    }
+
   private:
     GameObject* m_owner; // Reference to the owner game object
     Camera      camera;  // Camera data
@@ -163,8 +171,9 @@ class CameraComponent : public Syngine::Component {
     /// @since v0.0.1
     /// @internal
     struct Plane {
-        Math::Vector3 normal = Math::Vector3(0.f, 1.f, 0.f); //* Normal vector of the plane
-        float distance  = 0.f;               //* Distance from origin
+        Math::Vector3 normal =
+            Math::Vector3(0.f, 1.f, 0.f); //* Normal vector of the plane
+        float distance = 0.f;             //* Distance from origin
     };
 
     /// @brief Structure representing a frustum for view culling
@@ -175,20 +184,24 @@ class CameraComponent : public Syngine::Component {
         Plane bottom; //* Bottom plane
         Plane left;   //* Left plane
         Plane right;  //* Right plane
-        Plane n;   //* Near plane
-        Plane f;    //* Far plane
+        Plane n;      //* Near plane
+        Plane f;      //* Far plane
     };
 
     static void _normalizePlane(CameraComponent::Plane& plane);
 
     Frustum _extractFrustum();
 
-    bool _aabbInsidePlane(const Plane&    plane,
+    bool _aabbInsidePlane(const Plane&         plane,
                           const Math::Vector3& min,
                           const Math::Vector3& max);
-    bool _aabbInsideFrustum(const Frustum&  frustum,
+    bool _aabbInsideFrustum(const Frustum&       frustum,
                             const Math::Vector3& min,
                             const Math::Vector3& max);
+
+    float _setScreenFocalLength() {
+        return 0.5f * Renderer::height * this->camera.proj.m(1, 1);
+    }
 
     friend class RenderCore;
 }; // class CameraComponent

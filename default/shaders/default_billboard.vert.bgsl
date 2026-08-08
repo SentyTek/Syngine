@@ -2,8 +2,11 @@ $input a_position, a_texcoord0
 $output v_texcoord0, v_worldPos
 #include <bgfx_shader.sh>
 
+// @EngineUniform freq="draw" src="Billboard.Position"
 uniform vec4 u_default_billboard;      // xyz = center, w = size
+// @EngineUniform freq="draw" src="Billboard.Mode"
 uniform vec4 u_default_billboard_mode; // xyz = rot (fixed), w = mode
+// @EngineUniform freq="draw" src="Camera.Position"
 uniform vec4 u_cameraPos;
 
 // Helper functions for manual vector rotation

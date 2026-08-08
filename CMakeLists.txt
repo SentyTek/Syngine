@@ -40,14 +40,15 @@ add_library(Syngine STATIC
     src/Syngine/Core/LuaManager.cpp
 
     # Graphics
-    src/Syngine/Graphics/Renderer.cpp
+    src/Syngine/Graphics/Rendering/Renderer.cpp
+    src/Syngine/Graphics/Rendering/RenderCore.cpp
+    src/Syngine/Graphics/Rendering/DebugRenderer.cpp
+    src/Syngine/Graphics/Resources/TextureHelpers.cpp
+    src/Syngine/Graphics/Resources/ShaderManager.cpp
+    src/Syngine/Graphics/Resources/ModelLoader.cpp
     src/Syngine/Graphics/Windowing.cpp
-    src/Syngine/Graphics/DebugRenderer.cpp
-    src/Syngine/Graphics/TextureHelpers.cpp
-    src/Syngine/Graphics/RenderCore.cpp
 
     # Utils
-    src/Syngine/Utils/ModelLoader.cpp
     src/Syngine/Utils/FsUtils.cpp
     src/Syngine/Utils/Profiler.cpp
     src/Syngine/Utils/Serializer.cpp
@@ -56,7 +57,7 @@ add_library(Syngine STATIC
     # Physics
     src/Syngine/Physics/Physics.cpp
 
-    # ECS
+    # ACS
     src/Syngine/ECS/GameObject.cpp
     src/Syngine/ECS/Components/MeshComponent.cpp
     src/Syngine/ECS/Components/TransformComponent.cpp
@@ -66,6 +67,7 @@ add_library(Syngine STATIC
     src/Syngine/ECS/Components/ZoneComponent.cpp
     src/Syngine/ECS/Components/BillboardComponent.cpp
     src/Syngine/ECS/ComponentRegistry.cpp
+    src/Syngine/Graphics/Resources/MaterialManager.cpp
 )
 
 set_target_properties(Syngine PROPERTIES FOLDER "Engine")
@@ -84,7 +86,7 @@ target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
     target_sources(Syngine PRIVATE
-        src/Syngine/Graphics/MetalBridge.mm
+        src/Syngine/Graphics/Rendering/MetalBridge.mm
     )
 endif()
 

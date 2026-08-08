@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/Utils/ModelLoader.h)
+[See source](./../../include/Syngine/Graphics/Resources/ModelLoader.h)
 
 AssimpLoader class for loading 3D models using Assimp @section ModelLoader
 
@@ -19,9 +19,8 @@ AssimpLoader class for loading 3D models using Assimp @section ModelLoader
 ### Enums and Structs: 
 
 - [Vertex](#syngine-vertex)
-- [Material](#syngine-material)
 - [SubMesh](#syngine-submesh)
-- [MeshData](#syngine-meshdata)
+- [ModelData](#syngine-modeldata)
 
 ### Functions: 
 
@@ -32,7 +31,6 @@ AssimpLoader class for loading 3D models using Assimp @section ModelLoader
 - [_ReloadModel()](#assimploader-_reloadmodel)
 - [processScene()](#assimploader-processscene)
 - [_ProcessMaterial()](#assimploader-_processmaterial)
-- [_CreateDefaultMaterial()](#assimploader-_createdefaultmaterial)
 
 ---
 <a id="syngine-vertex"></a>
@@ -54,31 +52,6 @@ struct Vertex
 | `Math::Vector2` | `uv1` | Secondary texture coordinates (for detail maps) |
 | `Math::Vector4` | `color` | Vertex color (RGBA) |
 | `Math::Vector4` | `tangent` | Tangent vector at the vertex (for normal mapping) |
-**This function has been available since:** v0.0.1
-
----
-<a id="syngine-material"></a>
-
-#### **`Syngine::Material()`**
-
- Material structure for mesh data
-
-Signature:
-```cpp
-struct Material
-```
-**Members:**
-| Type | Name | Description |
-| --- | --- | --- | 
-| `std::string` | `name` | Name of the material |
-| `bgfx::TextureHandle` | `albedo` | Albedo texture handle |
-| `BGFX_INVALID_HANDLE` | `Normal` | map texture handle |
-| `BGFX_INVALID_HANDLE` | `Height` | map texture handle |
-| `float` | `heightScale` | Matches blender displacement |
-| `float` | `mixFactor` | Mix between detail and macro maps |
-| `float` | `ambient` | Ambient floor |
-| `bool` | `useVertexColor` | Whether to use vertex color or base color |
-| `Math::Vector4` | `baseColor` | RGBA base color |
 **This function has been available since:** v0.0.1
 
 ---
@@ -104,30 +77,32 @@ struct SubMesh
 **This function has been available since:** v0.0.1
 
 ---
-<a id="syngine-meshdata"></a>
+<a id="syngine-modeldata"></a>
 
-#### **`Syngine::MeshData()`**
+#### **`Syngine::ModelData()`**
 
- MeshData structure for storing mesh information
+ ModelData structure for storing mesh information
 
 Signature:
 ```cpp
-struct MeshData
+struct ModelData
 ```
 **Members:**
 | Type | Name | Description |
 | --- | --- | --- | 
 | `std::vector<Vertex>` | `vertices` | List of vertices in the mesh |
 | `std::vector<uint32_t>` | `indices` | List of indices for indexed drawing |
-| `std::vector<Material>` | `materials` | List of materials used by the mesh |
-| `uint8_t` | `numMaterials` | Number of materials used by the mesh |
 | `std::vector<SubMesh>` | `subMeshes` | List of submeshes in the mesh |
+| `materials` | `Per-mesh` | material instances used by the mesh |
 | `uint8_t` | `numSubMeshes` | Number of submeshes in the mesh |
+| `uint8_t` | `numMaterials` | Number of materials used by the mesh |
 | `bgfx::VertexBufferHandle` | `vbh` | Handle to the vertex buffer on the GPU |
 | `bgfx::IndexBufferHandle` | `ibh` | Handle to the index buffer on the GPU |
 | `int` | `id` | Unique ID for the mesh (for hot reloading and editor purposes) |
 | `bool` | `valid` | Whether the mesh data is valid and can be rendered |
 | `lastWriteTime` | `Last` | write time of the mesh file (for hot reloading) |
+| `localMin` | `Minimum` | corner of the local axis-aligned bounding box |
+| `localMax` | `Maximum` | corner of the local axis-aligned bounding box |
 **This function has been available since:** v0.0.1
 
 ---
@@ -162,9 +137,9 @@ Signature:
 
 Signature:
 ```cpp
- static std::vector<MeshData>& _GetMeshes();
+ static std::vector<ModelData>& _GetMeshes();
 ```
-**Returns:** std::vector<MeshData>& A reference to the vector of all loaded meshes
+**Returns:** std::vector<ModelData>& A reference to the vector of all loaded models
 
 **Thread Safety:** read-only
 
@@ -181,12 +156,12 @@ Signature:
 
 Signature:
 ```cpp
- static MeshData* _GetMeshById(int id);
+ static ModelData* _GetMeshById(int id);
 ```
 **Parameters:**
 - `id`: ID of the mesh to get
 
-**Returns:** MeshData* Pointer to the mesh with the given ID, nullptr if not found
+**Returns:** ModelData* Pointer to the mesh with the given ID, nullptr if not found
 
 **Thread Safety:** read-only
 
@@ -203,10 +178,10 @@ Signature:
 
 Signature:
 ```cpp
- bool _LoadModel(MeshData& out, scl::stream* meshStream, const std::string& assetPath, bool loadTextures) override;
+ bool _LoadModel(ModelData& out, scl::stream* meshStream, const std::string& assetPath, bool loadTextures) override;
 ```
 **Parameters:**
-- `out`: MeshData to fill with the loaded model
+- `out`: ModelData to fill with the loaded model
 - `meshStream`: Stream containing the model data
 - `loadTextures`: Whether to load textures for the model
 
@@ -229,10 +204,10 @@ Signature:
 
 Signature:
 ```cpp
- bool _ReloadModel(MeshData& out, scl::stream* stream, const std::string& assetPath, int id) override;
+ bool _ReloadModel(ModelData& out, scl::stream* stream, const std::string& assetPath, int id) override;
 ```
 **Parameters:**
-- `out`: MeshData to fill with the reloaded model
+- `out`: ModelData to fill with the reloaded model
 - `id`: ID of the model to reload
 
 **Returns:** true if the model was reloaded successfully, false otherwise
@@ -248,13 +223,12 @@ Signature:
 
 Signature:
 ```cpp
- static bool processScene(MeshData& out, const aiScene* scene, scl::stream* meshStream, bool loadTextures);
+ static bool processScene(ModelData& out, const aiScene* scene, scl::stream* meshStream, bool loadTextures = true);
 ```
 **Parameters:**
-- `out`: MeshData to fill with the processed data
+- `out`: ModelData to fill with the processed data
 - `scene`: Assimp scene to process
 - `meshStream`: Stream containing the model data (for resolving relative texture paths)
-- `loadTextures`: Whether to load textures for the model
 
 **Returns:** true if the scene was processed successfully, false otherwise
 
@@ -273,7 +247,7 @@ Signature:
 
 Signature:
 ```cpp
- static Material _ProcessMaterial(aiMaterial* aiMat, const aiScene* scene, scl::stream* meshStream, bool loadTextures);
+ static MaterialInstance _ProcessMaterial(aiMaterial* aiMat, const aiScene* scene, scl::stream* meshStream, bool loadTextures = true);
 ```
 **Parameters:**
 - `aiMat`: Assimp material to process
@@ -281,25 +255,6 @@ Signature:
 - `loadTextures`: Whether to load textures for the material
 
 **Returns:** Material structure filled with the processed material data
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
-<a id="assimploader-_createdefaultmaterial"></a>
-
-#### **`AssimpLoader::_CreateDefaultMaterial()`**
-
- Creates a default material with no textures
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- static Material _CreateDefaultMaterial();
-```
-**Returns:** Material structure filled with default material data
 
 **Thread Safety:** not-safe
 

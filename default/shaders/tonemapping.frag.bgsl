@@ -1,7 +1,9 @@
 $input v_texcoord0
 #include <bgfx_shader.sh>
 
+// @Sampler name="s_sceneColor" stage="0" src="Renderer.sceneColor"
 SAMPLER2D(s_sceneColor, 0); // RGBA16F
+// @Sampler name="s_ssao" stage="1" src="Renderer.ssaoTex"
 SAMPLER2D(s_ssao, 1);       // R8
 
 void main() {

@@ -2,11 +2,17 @@ $input v_worldViewRay
 #include <bgfx_shader.sh>
 #include "common.bgsl"
 
+// @EngineUniform freq="draw" src="Renderer.SunDirection"
 uniform vec4 u_lightDir;
+// @EngineUniform freq="draw" src="Renderer.SkyColorZenith"
 uniform vec4 u_skyColorZenith; // Zenith sky color during the day
+// @EngineUniform freq="draw" src="Renderer.SkyColorMidnight"
 uniform vec4 u_skyColorMidnight; // Zenith sky color at night
+// @EngineUniform freq="draw" src="Renderer.SunColor"
 uniform vec4 u_sunColor; // Sunlight color
+// @EngineUniform freq="draw" src="Camera.Position"
 uniform vec4 u_cameraPos; // Guess
+// @EngineUniform freq="frame" src="Engine.FrameCount"
 uniform vec4 u_time; // Guess
 
 // Top 10 hashes of all time

@@ -267,7 +267,7 @@ Signature:
 
 Signature:
 ```cpp
- BodyID _CreateMeshBody(RVec3Arg position, QuatArg rotation, const MeshData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f), const float mass = 0.f);
+ BodyID _CreateMeshBody(RVec3Arg position, QuatArg rotation, const ModelData& meshData, EMotionType motionType, ObjectLayer layer, const JPH::Vec3& scale = JPH::Vec3(1.0f, 1.0f, 1.0f), const float mass = 0.f);
 ```
 **Parameters:**
 - `position`: Position of the mesh

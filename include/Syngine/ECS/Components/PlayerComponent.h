@@ -7,18 +7,17 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/Graphics/Renderer.h"
-#include "Syngine/Physics/Physics.h"
+#include <Syngine/ECS/Component.h>
+#include <Syngine/ECS/GameObject.h>
+#include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/Physics/Physics.h>
+#include <Syngine/Utils/Serializer.h>
 
-#include "SDL3/SDL_video.h"
-#include "SDL3/SDL_events.h"
-#include "Syngine/Utils/Serializer.h"
-#include "bx/math.h"
-
-#include "Jolt/Jolt.h"
-#include "Jolt/Physics/Character/Character.h"
+#include <bx/math.h>
+#include <SDL3/SDL_video.h>
+#include <SDL3/SDL_events.h>
+#include <Jolt/Jolt.h>
+#include <Jolt/Physics/Character/Character.h>
 
 namespace Syngine {
 // Forward declaration of TransformComponent

@@ -6,14 +6,14 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Graphics/Renderer.h"
-#include "Syngine/Graphics/DebugRenderer.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
+#include "./DebugRenderer.h"
+#include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/ECS/Components/CameraComponent.h>
+#include <Syngine/Math/Matrix4x4.hpp>
+#include <Syngine/Math/Vector4.hpp>
 
-#include "Jolt/Physics/Collision/Shape/Shape.h"
-#include "Syngine/Math/Matrix4x4.hpp"
-#include "Syngine/Math/Vector4.hpp"
-#include "bgfx/defines.h"
+#include <Jolt/Physics/Collision/Shape/Shape.h>
+#include <bgfx/defines.h>
 
 namespace Syngine {
 

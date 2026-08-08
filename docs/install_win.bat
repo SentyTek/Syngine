@@ -57,9 +57,7 @@ echo if^(MSVC^)
 echo     set^(CMAKE_WIN32_EXECUTABLE ON^)
 echo.
 echo     # Use static runtime on MSVC. Several libraries we use require this.
-echo     # Please don't change this.
 echo     # Also set CMAKE_MSVC_RUNTIME_LIBRARY. Sub-projects might still query this variable.
-echo     # This is a really ugly fix
 echo     set^(CMAKE_MSVC_RUNTIME_LIBRARY
 echo         "MultiThreaded$<$<CONFIG:Debug>:Debug>"^)
 echo endif^(^)
@@ -197,7 +195,7 @@ echo     }
 echo.
 echo     // Cleanup
 echo     Syngine::Registry::Clear^(^);
-echo     Renderer::RemoveAllPrograms^(^);
+echo     ShaderManager::UnloadAllShaders^(^);
 echo     Syngine::Logger::Shutdown^(^);
 echo     return 0;
 echo }

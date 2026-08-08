@@ -6,32 +6,30 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Core/Core.h"
-#include "Syngine/Core/Logger.h"
-#include "Syngine/ECS/ComponentRegistry.h"
-#include "Syngine/Graphics/Windowing.h"
-#include "Syngine/ECS/Components/PlayerComponent.h"
-#include "Syngine/ECS/Components/CameraComponent.h"
-#include "Syngine/ECS/Components/TransformComponent.h"
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/Physics/Physics.h"
-#include "Syngine/Graphics/Renderer.h"
+#include <Syngine/ECS/Components/PlayerComponent.h>
+#include <Syngine/Core/Core.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/ECS/ComponentRegistry.h>
+#include <Syngine/Graphics/Windowing.h>
+#include <Syngine/ECS/Components/CameraComponent.h>
+#include <Syngine/ECS/Components/TransformComponent.h>
+#include <Syngine/ECS/Component.h>
+#include <Syngine/ECS/GameObject.h>
+#include <Syngine/Physics/Physics.h>
+#include <Syngine/Graphics/Rendering/Renderer.h>
 
-#include "SDL3/SDL_mouse.h"
-#include "SDL3/SDL_scancode.h"
-#include "SDL3/SDL_video.h"
-#include "SDL3/SDL_events.h"
-#include "SDL3/SDL_keycode.h"
+#include <SDL3/SDL_mouse.h>
+#include <SDL3/SDL_scancode.h>
+#include <SDL3/SDL_video.h>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_keycode.h>
 
-#include "Jolt/Math/Vec3.h"
-#include "Jolt/Math/Real.h"
-#include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
-#include "Jolt/Physics/Character/Character.h"
-#include "Jolt/Physics/EActivation.h"
-#include "Jolt/Physics/Body/BodyInterface.h"
-
-#include "bx/math.h"
+#include <Jolt/Math/Vec3.h>
+#include <Jolt/Math/Real.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Character/Character.h>
+#include <Jolt/Physics/EActivation.h>
+#include <Jolt/Physics/Body/BodyInterface.h>
 
 #include <cmath>
 #include <string>

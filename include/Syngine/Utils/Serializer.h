@@ -307,23 +307,28 @@ class Serializer {
     /// return it as a stream
     /// @param bundlePath The path to the bundle file
     /// @param assetPath The path to the asset within the bundle
+    /// @param pack Optional Packager instance to use for reading the bundle, in which case bundlePath is ignored
     /// @return A stream containing the asset data, or an empty stream if there
     /// was an error
     /// @since v0.0.1
     /// @internal
-    static inline scl::stream _ReadFromBundle(const std::string& bundlePath,
-                                       const std::string& assetPath) {
+    static inline scl::stream
+    _ReadFromBundle(const std::string&  bundlePath,
+                    const std::string&  assetPath,
+                    scl::pack::Packager& pack = *(new scl::pack::Packager())) {
         try {
-            scl::pack::Packager pack;
-            scl::path           resolvedBundlePath =
-                Internal::ResolvePath(bundlePath.c_str()).c_str();
-            if (!resolvedBundlePath.exists()) {
-                Logger::LogF(LogLevel::ERR, true, "Bundle file not found: %s", bundlePath.c_str());
-                return scl::stream();
-            }
-            if (!pack.open(resolvedBundlePath)) {
-                Logger::LogF(LogLevel::ERR, true, "Failed to open bundle: %s", bundlePath.c_str());
-                return scl::stream();
+            // Check if the packager is already open; if not, open the bundle file
+            if (pack.index().empty()) {
+                scl::path resolvedBundlePath =
+                    Internal::ResolvePath(bundlePath.c_str()).c_str();
+                if (!resolvedBundlePath.exists()) {
+                    Logger::LogF(LogLevel::ERR, true, "Bundle file not found: %s", bundlePath.c_str());
+                    return scl::stream();
+                }
+                if (!pack.open(resolvedBundlePath)) {
+                    Logger::LogF(LogLevel::ERR, true, "Failed to open bundle: %s", bundlePath.c_str());
+                    return scl::stream();
+                }
             }
 
             // miniscl bug workaround:

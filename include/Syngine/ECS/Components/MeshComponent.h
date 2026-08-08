@@ -7,11 +7,11 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/ECS/Component.h"
-#include "Syngine/ECS/GameObject.h"
-#include "Syngine/Utils/ModelLoader.h"
-#include "Syngine/Utils/Serializer.h"
-#include "Syngine/Math/Vector3.hpp"
+#include <Syngine/ECS/Component.h>
+#include <Syngine/ECS/GameObject.h>
+#include <Syngine/Graphics/Resources/ModelLoader.h>
+#include <Syngine/Utils/Serializer.h>
+#include <Syngine/Math/Math.hpp>
 
 #include <string>
 
@@ -20,9 +20,9 @@ namespace Syngine {
 /// @brief Structure representing an axis-aligned bounding box (AABB)
 /// @since v0.0.1
 struct MeshAABB {
-    Math::Vector3 min = Math::Vector3(); //* Minimum corner of the AABB
-    Math::Vector3 max = Math::Vector3(); //* Maximum corner of the AABB
-    Math::Vector3 center = Math::Vector3(); //* Center of the AABB
+    Math::Vector3 min         = Math::Vector3(); //* Minimum corner of the AABB
+    Math::Vector3 max         = Math::Vector3(); //* Maximum corner of the AABB
+    Math::Vector3 center      = Math::Vector3(); //* Center of the AABB
     Math::Vector3 halfExtents = Math::Vector3(); //* Half extents of
 };
 
@@ -109,7 +109,7 @@ class MeshComponent : public Syngine::Component {
     /// @param bundlePath Path to the shader bundle containing the mesh
     /// @param texturePath Path to the mesh within the bundle
     /// @param loadTextures Whether to load textures for the model
-    /// @return 0 on success, non-zero code on failure
+    /// @return true on success, false on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
     bool LoadMesh(const std::string& bundlePath,
@@ -117,14 +117,14 @@ class MeshComponent : public Syngine::Component {
                   bool               loadTextures = true);
 
     /// @brief Reload the mesh from the file
-    /// @return 0 on success, non-zero on failure
+    /// @return true on success, false on failure
     /// @note Mostly used for reloading the mesh after changes in the model file
     /// @threadsafety not-safe
     /// @since v0.0.1
     bool ReloadMesh();
 
     /// @brief Unload the mesh
-    /// @return 0 on success, non-zero on failure
+    /// @return true on success, false on failure
     /// @note This is called when the component is removed or the GameObject is
     /// destroyed
     /// @threadsafety not-safe
@@ -137,8 +137,8 @@ class MeshComponent : public Syngine::Component {
     /// @threadsafety read-only
     /// @since v0.0.1
     bool IsMeshLoaded() const {
-        return bgfx::isValid(this->meshData.vbh) &&
-               bgfx::isValid(this->meshData.ibh);
+        return bgfx::isValid(this->modelData.vbh) &&
+               bgfx::isValid(this->modelData.ibh);
     }
 
     /// @brief Upload mesh data directly
@@ -154,17 +154,18 @@ class MeshComponent : public Syngine::Component {
     /// @return true on success, false on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
-    bool UploadMesh(std::vector<float>    vertices,
-                    std::vector<uint32_t> indices,
-                    std::vector<uint8_t>  baseColor = {});
+    bool
+    UploadMesh(std::vector<float>    vertices,
+               std::vector<uint32_t> indices,
+               Math::Vector4 baseColor = Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f));
 
-    MeshData meshData; //* Mesh data for the GameObject
+    ModelData modelData; //* Mesh data for the GameObject
 
     /// @brief Get the axis-aligned bounding box (AABB) of the mesh
     /// @return Reference to the MeshAABB structure
     /// @threadsafety read-only
     /// @since v0.0.1
-    MeshAABB& GetAABB();
+    const MeshAABB& GetAABB() const;
 
     /// @brief Get the submesh count
     /// @return Number of submeshes in the mesh
@@ -174,7 +175,8 @@ class MeshComponent : public Syngine::Component {
 
     /// @brief Get material index for a specific submesh
     /// @param submeshIndex Index of the submesh to query
-    /// @return Material index for the specified submesh, or 255 if invalid index
+    /// @return Material index for the specified submesh, or 255 if invalid
+    /// index
     /// @threadsafety read-only
     /// @since v0.0.1
     uint8_t GetSubmeshMaterialIndex(uint8_t submeshIndex) const;
@@ -182,29 +184,17 @@ class MeshComponent : public Syngine::Component {
     /// @brief Assign a material to a specific submesh
     /// @param submeshIndex Index of the submesh to assign the material to
     /// @param materialIndex Index of the material to assign to the submesh
-    /// @return true if the assignment was successful, false if the submesh index is invalid
+    /// @return true if the assignment was successful, false if the submesh
+    /// index is invalid
     /// @threadsafety not-safe
     /// @since v0.0.1
     bool SetSubmeshMaterialIndex(uint8_t submeshIndex, uint8_t materialIndex);
 
-    /// @brief Get UV scale for specific texture type and material
-    /// @param materialIndex Index of the material to query
-    /// @param textureType Type of the texture (0 = albedo, 1 = normal, 2 = height)
-    /// @return UV scale for the specified material and texture type
-    /// @threadsafety read-only
-    /// @since v0.0.1
-    Math::Vector2 GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
-
-    /// @brief Set UV scale for specific texture type and material
-    /// @param materialIndex Index of the material to modify
-    /// @param textureType Type of the texture (0 = albedo, 1 = normal, 2 = height)
-    /// @param uvScale UV scale to set for the specified material and texture type
-    /// @return true if the UV scale was successfully set, false if the material index is invalid
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    bool SetMaterialUVScale(uint8_t materialIndex,
-                            uint8_t textureType,
-                            Math::Vector2 uvScale);
+    /// @brief Get the mutable material instance assigned to a submesh.
+    /// @return The instance, or nullptr when the submesh/material index is
+    /// invalid.
+    MaterialInstance*       GetMaterialInstance(uint8_t submeshIndex);
+    const MaterialInstance* GetMaterialInstance(uint8_t submeshIndex) const;
 
     /// @brief Gets the UV scale override for the whole object
     /// @return UV scale override for the whole object. 1.0f by default.
@@ -224,8 +214,9 @@ class MeshComponent : public Syngine::Component {
         true; //* Whether the AABB needs to be recalculated
     mutable uint64_t m_cachedTransformVersion =
         0; //* Cached version of the transform when AABB was last calculated
-    float m_objectUVScaleOverride = 1.0f; //* UV scale override for the whole object
-    std::string m_bundlePath; //* Path to the shader bundle containing the mesh
+    float m_objectUVScaleOverride =
+        1.0f;                  //* UV scale override for the whole object
+    std::string m_bundlePath;  //* Path to the shader bundle containing the mesh
     std::string m_texturePath; //* Path to the mesh within the bundle
 
     friend class Core;
