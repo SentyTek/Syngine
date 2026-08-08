@@ -51,10 +51,20 @@ We have several pages of documentation available. Note the API reference is auto
 
 #### Graphics
 
-- [Renderer](api/renderer_doc.md)
 - [Windowing](api/windowing_doc.md)
+
+#### Graphics/Rendering
+
+- [Renderer](api/renderer_doc.md)
+- [Renderpacket](api/renderpacket_doc.md)
 - [Internal] [DebugRenderer](api/debugrenderer_doc.md)
-- [Internal] [Shaders](api/shaders_doc.md)
+
+#### Graphics/Resources
+
+- [Materialmanager](api/materialmanager_doc.md)
+- [Modelloader](api/modelloader_doc.md)
+- [Shadermanager](api/shadermanager_doc.md)
+- [Uniformregistry](api/uniformregistry_doc.md)
 - [Internal] [Texturehelpers](api/texturehelpers_doc.md)
 
 #### Math
@@ -73,7 +83,6 @@ We have several pages of documentation available. Note the API reference is auto
 
 #### Utils
 
-- [Modelloader](api/modelloader_doc.md)
 - [Profiler](api/profiler_doc.md)
 - [Serializer](api/serializer_doc.md)
 - [Internal] [Fsutils](api/fsutils_doc.md)

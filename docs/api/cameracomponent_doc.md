@@ -13,7 +13,6 @@ CameraComponent class for managing camera functionality in a game object @sectio
 ---
 ## Goto: 
 
-- [Member Variables](#member-variables)
 
 ## Additional Functions: 
 
@@ -59,7 +58,6 @@ struct Camera
 **Members:**
 | Type | Name | Description |
 | --- | --- | --- | 
-| `Math::Vector3` | `eye` | Camera position in world space |
 | `Math::Vector3` | `target` | Camera target position |
 | `Math::Vector3` | `up` | Camera up vector |
 | `float` | `fov` | Field of view in degrees |
@@ -374,7 +372,6 @@ Signature:
 **Members:**
 | Type | Name | Description |
 | --- | --- | --- | 
-| `Math::Vector3` | `normal` | Normal vector of the plane |
 | `float` | `distance` | Distance from origin |
 **This function has been available since:** v0.0.1
 
@@ -402,10 +399,4 @@ Signature:
 | `Plane` | `f` | Far plane |
 **This function has been available since:** v0.0.1
 
----
-## Member Variables
-
-| Type | Name | Description |
-| --- | --- | --- | 
-| `constexpr` | `Syngine` | Camera component type |
 ---

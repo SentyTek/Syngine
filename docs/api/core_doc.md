@@ -230,11 +230,11 @@ Signature:
 
 #### **`Core::Render()`**
 
- Render the application
+ Render the application to the screen
 
 Signature:
 ```cpp
- bool Render(CameraComponent* camera);
+ bool Render();
 ```
 **Returns:** True if the render was successful, false otherwise
 
@@ -394,7 +394,7 @@ Signature:
 | `std::unique_ptr<Renderer>` | `renderer` | Pointer to the render system |
 | `std::unique_ptr<ModelLoader>` | `synModels` | Pointer to the model loader |
 | `std::unique_ptr<Phys>` | `physicsManager` | Pointer to the physics manager |
-| `std::unique_ptr<ZoneManager>` | `zoneManager` | Pointer to the zone manager |
+| `zoneManager` | `Pointer` | to the zone manager |
 | `std::unique_ptr<LuaManager>` | `luaState` | Pointer to the Lua state |
 | `DebugModes` | `debug` | Debug modes flags |
 **This function has been available since:** v0.0.1

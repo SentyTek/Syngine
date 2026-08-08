@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../src/Syngine/Graphics/DebugRenderer.h)
+[See source](./../../src/Syngine/Graphics/Rendering/DebugRenderer.h)
 
 Internal class to manage batches of debug triangles. Not all functions are implemented or documented. @section DebugRenderer
 

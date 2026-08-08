@@ -32,13 +32,13 @@ Syngine Billboard Component. The BillboardComponent is used to represent a 2D mo
 - [Serialize()](#billboardcomponent-serialize)
 - [Init()](#billboardcomponent-init)
 - [Update()](#billboardcomponent-update)
-- [_GetTexture()](#billboardcomponent-_gettexture)
 - [SetRotX()](#billboardcomponent-setrotx)
 - [SetRotY()](#billboardcomponent-setroty)
 - [SetRotZ()](#billboardcomponent-setrotz)
 - [SetRot()](#billboardcomponent-setrot)
 - [GetRot()](#billboardcomponent-getrot)
 - [GetMode()](#billboardcomponent-getmode)
+- [GetMaterialInstance()](#billboardcomponent-getmaterialinstance)
 - [GetMinBounds()](#billboardcomponent-getminbounds)
 - [GetMaxBounds()](#billboardcomponent-getmaxbounds)
 
@@ -173,25 +173,6 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-<a id="billboardcomponent-_gettexture"></a>
-
-#### **`myBillboard._GetTexture()`**
-
- Get the texture handle of the billboard
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- bgfx::TextureHandle _GetTexture() const;
-```
-**Returns:** bgfx::TextureHandle The texture handle
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
 <a id="billboardcomponent-setrotx"></a>
 
 #### **`myBillboard.SetRotX()`**
@@ -274,6 +255,17 @@ Signature:
 **Returns:** BillboardMode The billboard rendering mode
 
 ---
+<a id="billboardcomponent-getmaterialinstance"></a>
+
+#### **`myBillboard.GetMaterialInstance()`**
+
+ Get this billboard's mutable material instance.
+
+Signature:
+```cpp
+ MaterialInstance& GetMaterialInstance();
+```
+---
 <a id="billboardcomponent-getminbounds"></a>
 
 #### **`myBillboard.GetMinBounds()`**
@@ -304,9 +296,8 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `BillboardMode` | `m_mode` | Billboard rendering mode |
 | `std::string` | `m_texturePath` | Path to the billboard texture |
-| `std::string` | `m_bundlePath` | Path to the shader bundle containing the billboard texture |
+| `std::string` | `m_bundlePath` | Path to the shader bundle containing the |
 | `Vector3` | `m_rot` | Rotation around X, Y, Z axes in radians |
 | `float` | `size` | Size of the billboard |
 | `bool` | `receiveShadows` | Whether the billboard receives shadows |

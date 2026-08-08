@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../src/Syngine/Graphics/TextureHelpers.h)
+[See source](./../../src/Syngine/Graphics/Resources/TextureHelpers.h)
 
 ---
 ## Goto: 

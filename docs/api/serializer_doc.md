@@ -471,11 +471,12 @@ Signature:
 
 Signature:
 ```cpp
- static inline scl::stream _ReadFromBundle(const std::string& bundlePath, const std::string& assetPath);
+ static inline scl::stream _ReadFromBundle(const std::string& bundlePath, const std::string& assetPath, scl::pack::Packager& pack = *(new scl::pack::Packager()));
 ```
 **Parameters:**
 - `bundlePath`: The path to the bundle file
 - `assetPath`: The path to the asset within the bundle
+- `pack`: Optional Packager instance to use for reading the bundle, in which case bundlePath is ignored
 
 **Returns:** A stream containing the asset data, or an empty stream if there was an error
 

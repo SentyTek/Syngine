@@ -42,8 +42,7 @@ Component for rendering 3D mesh models. Supports loading 3D asset files and uplo
 - [GetSubmeshCount()](#meshcomponent-getsubmeshcount)
 - [GetSubmeshMaterialIndex()](#meshcomponent-getsubmeshmaterialindex)
 - [SetSubmeshMaterialIndex()](#meshcomponent-setsubmeshmaterialindex)
-- [GetMaterialUVScale()](#meshcomponent-getmaterialuvscale)
-- [SetMaterialUVScale()](#meshcomponent-setmaterialuvscale)
+- [GetMaterialInstance()](#meshcomponent-getmaterialinstance)
 - [GetObjectUVScaleOverride()](#meshcomponent-getobjectuvscaleoverride)
 - [SetObjectUVScaleOverride()](#meshcomponent-setobjectuvscaleoverride)
 
@@ -211,7 +210,7 @@ Signature:
 - `texturePath`: Path to the mesh within the bundle
 - `loadTextures`: Whether to load textures for the model
 
-**Returns:** 0 on success, non-zero code on failure
+**Returns:** true on success, false on failure
 
 **Thread Safety:** not-safe
 
@@ -230,7 +229,7 @@ Signature:
 ```cpp
  bool ReloadMesh();
 ```
-**Returns:** 0 on success, non-zero on failure
+**Returns:** true on success, false on failure
 
 **Thread Safety:** not-safe
 
@@ -251,7 +250,7 @@ Signature:
 ```cpp
  bool UnloadMesh();
 ```
-**Returns:** 0 on success, non-zero on failure
+**Returns:** true on success, false on failure
 
 **Thread Safety:** not-safe
 
@@ -283,7 +282,7 @@ Signature:
 
 Signature:
 ```cpp
- bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices, std::vector<uint8_t> baseColor = {});
+ bool UploadMesh(std::vector<float> vertices, std::vector<uint32_t> indices, Math::Vector4 baseColor = Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f));
 ```
 **Parameters:**
 - `vertices`: Vector of vertex data. Expected format per vertex: [pos.x, pos.y, pos.z, normal.x, normal.y, normal.z, uv0.u, uv0.v, color.r, color.g, color.b, color.a] However, if you provide a baseColor, do NOT include color data in the vertices.
@@ -305,7 +304,7 @@ Signature:
 
 Signature:
 ```cpp
- MeshAABB& GetAABB();
+ const MeshAABB& GetAABB() const;
 ```
 **Returns:** Reference to the MeshAABB structure
 
@@ -372,47 +371,17 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-<a id="meshcomponent-getmaterialuvscale"></a>
+<a id="meshcomponent-getmaterialinstance"></a>
 
-#### **`MeshComponent::GetMaterialUVScale()`**
+#### **`MeshComponent::GetMaterialInstance()`**
 
- Get UV scale for specific texture type and material
-
-Signature:
-```cpp
- Math::Vector2 GetMaterialUVScale(uint8_t materialIndex, uint8_t textureType) const;
-```
-**Parameters:**
-- `materialIndex`: Index of the material to query
-- `textureType`: Type of the texture (0 = albedo, 1 = normal, 2 = height)
-
-**Returns:** UV scale for the specified material and texture type
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-<a id="meshcomponent-setmaterialuvscale"></a>
-
-#### **`MeshComponent::SetMaterialUVScale()`**
-
- Set UV scale for specific texture type and material
+ Get the mutable material instance assigned to a submesh.
 
 Signature:
 ```cpp
- bool SetMaterialUVScale(uint8_t materialIndex, uint8_t textureType, Math::Vector2 uvScale);
+ MaterialInstance* GetMaterialInstance(uint8_t submeshIndex);
 ```
-**Parameters:**
-- `materialIndex`: Index of the material to modify
-- `textureType`: Type of the texture (0 = albedo, 1 = normal, 2 = height)
-- `uvScale`: UV scale to set for the specified material and texture type
-
-**Returns:** true if the UV scale was successfully set, false if the material index is invalid
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
+**Returns:** The instance, or nullptr when the submesh/material index is invalid.
 
 ---
 <a id="meshcomponent-getobjectuvscaleoverride"></a>
@@ -457,9 +426,8 @@ Signature:
 | `bool` | `receiveShadows` | Whether the mesh receives shadows |
 | `bool` | `castShadows` | Whether the mesh casts shadows |
 | `bool` | `receiveSunLight` | Whether the mesh receives sunlight |
-| `MeshData` | `meshData` | Mesh data for the GameObject |
+| `ModelData` | `modelData` | Mesh data for the GameObject |
 | `mutable` | `MeshAABB` | Axis-aligned bounding box of the mesh |
-| `float` | `m_objectUVScaleOverride` | UV scale override for the whole object |
 | `std::string` | `m_bundlePath` | Path to the shader bundle containing the mesh |
 | `std::string` | `m_texturePath` | Path to the mesh within the bundle |
 ---
