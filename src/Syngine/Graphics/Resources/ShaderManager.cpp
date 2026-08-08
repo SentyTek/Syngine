@@ -617,8 +617,8 @@ bool ShaderManager::ReloadShader(size_t shaderId) {
 
     // Build replacement shader first just in case it fails, so we don't lose
     // the old one
-    auto replacement =
-        _BuildShader(oldShader.bundlePath, oldShader.shaderName, oldShader.m_viewId);
+    auto replacement = _BuildShader(
+        oldShader.bundlePath, oldShader.shaderName, oldShader.m_viewId);
     if (!replacement) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,

@@ -101,7 +101,7 @@ SDL_Window*    RenderCore::win = nullptr;
 
 DebugRender* RenderCore::m_drender                         = nullptr;
 bool         RenderCore::m_isFirstFrame                    = true;
-float RenderCore::m_cascadeSizes[RenderCore::NUM_CASCADES] = { 10, 40, 0, 0 };
+float RenderCore::m_cascadeSizes[RenderCore::NUM_CASCADES] = { 20, 40, 0, 0 };
 float RenderCore::m_cascadeTexelSizes[RenderCore::NUM_CASCADES] = {
     0, 0, 0, 0
 };
@@ -436,10 +436,9 @@ bool RenderCore::_CreateSceneBuffers() {
             SHADOW_MAP_SIZE * 2,
             false,
             1,
-            bgfx::TextureFormat::D16,
+            bgfx::TextureFormat::D32,
             BGFX_TEXTURE_RT | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                BGFX_SAMPLER_U_CLAMP |
-                BGFX_SAMPLER_V_CLAMP); // I wish I knew what the flags meant.
+                BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP);
 
         if (!bgfx::isValid(m_buffers.shadowDepth)) {
             Syngine::Logger::Error("Failed to create shadow depth texture");
@@ -763,19 +762,17 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
     const MeshAABB& aabb = meshComp->GetAABB();
 
     // 1. CHEAPEST CHECK FIRST: Size relative to cascade
-    // Eliminate small details before touching any vector math
     float maxExtent =
         std::max(aabb.halfExtents[0],
                  std::max(aabb.halfExtents[1], aabb.halfExtents[2])) *
         2.0f;
 
-    float cascadeThreshold = m_cascadeSizes[cascade] * 0.015f;
+    float cascadeThreshold = m_cascadeSizes[cascade] * 0.01f;
     if (maxExtent < cascadeThreshold) {
         return true; // Cull small objects immediately
     }
 
-    // 2. EXPENSIVE CHECK SECOND: Distances (Use squared distances to avoid
-    // sqrt!)
+    // 2. EXPENSIVE CHECK SECOND: Distances
     const Math::Vector3& camPos    = camera->GetPosition();
     float                camDistSq = camPos.distanceSquared(aabb.center);
     if (camDistSq < 400.0f)
@@ -852,8 +849,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
                   if (a.shader != b.shader) {
                       return std::less<Shader*>{}(a.shader, b.shader);
                   }
-                  return std::less<MaterialInstance*>{}(a.material,
-                                                        b.material);
+                  return std::less<MaterialInstance*>{}(a.material, b.material);
               });
 
     // Include billboards too
@@ -1152,30 +1148,40 @@ void RenderCore::_DrawBillboard(const Shader*    program,
 void RenderCore::_DrawSSAO(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     if (!m_config.useSSAO) return;
+    uint64_t samplerFlags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+                            BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
-    _SetFrameUniforms(program);
-    _SetViewUniforms(program);
     if (program->m_program.idx == m_ssaoProgram->m_program.idx) {
+        _SetFrameUniforms(program);
+        _SetViewUniforms(program);
         bgfx::setViewName(VIEW_AO, "SSAO Main");
         bgfx::setViewFrameBuffer(VIEW_AO, m_buffers.ssaoFB);
-        bgfx::setTexture(0, m_ssao_depthTex, m_buffers.sceneDepth);
-        bgfx::setTexture(1, m_ssao_normalTex, m_buffers.sceneNormal);
+        bgfx::setTexture(
+            0, m_ssao_depthTex, m_buffers.sceneDepth, samplerFlags);
+        bgfx::setTexture(
+            1, m_ssao_normalTex, m_buffers.sceneNormal, samplerFlags);
 
         _ScreenSpaceQuad(VIEW_AO, program);
     } else {
         for (int i = 0; i < 2; ++i) {
+            _SetFrameUniforms(program, &i);
+            _SetViewUniforms(program);
             if (i == 0) { // Horizontal blur
                 bgfx::setViewName(ViewID(VIEW_AO + 1), "SSAO Blur H");
                 bgfx::setViewFrameBuffer(VIEW_AO + 1, m_buffers.ssaoBlurHFB);
-                bgfx::setTexture(0, m_ssaob_ssaoTex, m_buffers.ssaoTex);
+                bgfx::setTexture(
+                    0, m_ssaob_ssaoTex, m_buffers.ssaoTex, samplerFlags);
             } else { // Vertical blur
                 bgfx::setViewName(ViewID(VIEW_AO + 2), "SSAO Blur V");
                 bgfx::setViewFrameBuffer(VIEW_AO + 2, m_buffers.ssaoBlurVFB);
-                bgfx::setTexture(0, m_ssaob_ssaoTex, m_buffers.ssaoBlurH);
+                bgfx::setTexture(
+                    0, m_ssaob_ssaoTex, m_buffers.ssaoBlurH, samplerFlags);
             }
 
-            bgfx::setTexture(1, m_ssao_depthTex, m_buffers.sceneDepth);
-            bgfx::setTexture(2, m_ssao_normalTex, m_buffers.sceneNormal);
+            bgfx::setTexture(
+                1, m_ssao_depthTex, m_buffers.sceneDepth, samplerFlags);
+            bgfx::setTexture(
+                2, m_ssao_normalTex, m_buffers.sceneNormal, samplerFlags);
             _ScreenSpaceQuad(ViewID(VIEW_AO + i + 1), program);
         }
     }
@@ -1382,19 +1388,17 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
 
 // MARK: Uniform Uploading
 
-void RenderCore::_SetFrameUniforms(const Shader* shader) {
+void RenderCore::_SetFrameUniforms(const Shader* shader, const void* ctx) {
     SYN_PROFILE_FUNCTION();
     for (const auto& uniform : shader->m_frameUniforms) {
-        bgfx::setUniform(
-            uniform.handle, uniform.getter(nullptr), uniform.count);
+        bgfx::setUniform(uniform.handle, uniform.getter(ctx), uniform.count);
     }
 }
 
-void RenderCore::_SetViewUniforms(const Shader* shader) {
+void RenderCore::_SetViewUniforms(const Shader* shader, const void* ctx) {
     SYN_PROFILE_FUNCTION();
     for (const auto& uniform : shader->m_viewUniforms) {
-        bgfx::setUniform(
-            uniform.handle, uniform.getter(nullptr), uniform.count);
+        bgfx::setUniform(uniform.handle, uniform.getter(ctx), uniform.count);
     }
 }
 

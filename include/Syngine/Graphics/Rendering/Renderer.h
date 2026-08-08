@@ -177,14 +177,16 @@ class Renderer {
         Math::Mat4 cameraViewProjection;
         Math::Vec4 cameraPosition;
         Math::Vec4 sunDirection;
-        Math::Vec4 skyColorZenith = Math::Vec4(0.529f, 0.808f, 0.922f, 1.0f);
+        Math::Vec4 skyColorZenith   = Math::Vec4(0.529f, 0.808f, 0.922f, 1.0f);
         Math::Vec4 skyColorMidnight = Math::Vec4(0.05f, 0.05f, 0.1f, 1.0f);
-        Math::Vec4 sunColor = Math::Vec4(1.0f, 0.956f, 0.839f, 1.0f);
-        Math::Vec4 horizonColor = Math::Vec4(0.8f, 0.5f, 0.3f, 1.0f);
+        Math::Vec4 sunColor         = Math::Vec4(1.0f, 0.956f, 0.839f, 1.0f);
+        Math::Vec4 horizonColor     = Math::Vec4(0.8f, 0.5f, 0.3f, 1.0f);
         Math::Vec4 shadowParams;
         Math::Mat4 normalMatrix;
-        Math::Vec4 ssaoParams;
+        Math::Vec4 ssaoParams = Math::Vec4(
+            1.0f, 0.1f, 3.0f, 0.0f); // see RegisterBuiltinUniformProviders.inl
         Math::Vec4 ssaoResolution;
+        Math::Vec4 ssaoBlurParams;
         Math::Vec4 billboardPosition;
         Math::Vec4 billboardMode;
         Math::Vec4 billboardLighting;

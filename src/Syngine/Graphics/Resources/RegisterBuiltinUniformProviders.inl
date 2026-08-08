@@ -33,7 +33,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 Renderer::m_uniformProviderData.frameCount = {
                     static_cast<float>(Core::m_frameCounter.frameCount),
                     0.0f,
@@ -52,7 +52,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::MAT4,
             UniformFrequency::VIEW,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 auto* camera = Renderer::GetActiveCamera();
                 if (!camera) {
                     return nullptr;
@@ -70,7 +70,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 auto* camera = Renderer::GetActiveCamera();
                 if (!camera) {
                     return nullptr;
@@ -90,7 +90,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 const Math::Vector3 dir = Renderer::GetSunDirection();
                 Renderer::m_uniformProviderData.sunDirection =
                     Math::Vec4(dir, 0.0f);
@@ -109,7 +109,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 return Renderer::m_uniformProviderData.skyColorZenith.data();
             } });
     UniformRegistry::RegisterProvider(
@@ -118,7 +118,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 return Renderer::m_uniformProviderData.skyColorMidnight.data();
             } });
     UniformRegistry::RegisterProvider(
@@ -127,7 +127,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 return Renderer::m_uniformProviderData.sunColor.data();
             } });
     UniformRegistry::RegisterProvider(
@@ -136,7 +136,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 return Renderer::m_uniformProviderData.horizonColor.data();
             } });
 
@@ -146,7 +146,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
         UniformDataProvider{ UniformType::MAT4,
                              UniformFrequency::FRAME,
                              4,
-                             [](const void* rawPacket) -> const void* {
+                             [](const void* ctx) -> const void* {
                                  return RenderCore::m_csmLightViewProj.data();
                              } });
     UniformRegistry::RegisterProvider(
@@ -154,7 +154,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
         UniformDataProvider{ UniformType::VEC4,
                              UniformFrequency::FRAME,
                              1,
-                             [](const void* rawPacket) -> const void* {
+                             [](const void* ctx) -> const void* {
                                  return RenderCore::m_csmCascadeSplits.data();
                              } });
     UniformRegistry::RegisterProvider(
@@ -163,7 +163,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 Renderer::m_uniformProviderData.shadowParams = {
                     bgfx::getCaps()->homogeneousDepth ? 1.0f : 0.0f,
                     1.0f / (float)(RenderCore::m_config.shadowMapSize),
@@ -239,10 +239,13 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
-                Renderer::m_uniformProviderData.ssaoParams = {
-                    0.5f, 0.1f, 1.0f, static_cast<float>(Renderer::width / 2.0f)
-                };
+            [](const void* ctx) -> const void* {
+                /*
+                 * x = radius
+                 * y = bias
+                 * z = intensity
+                 * w = unused
+                 */
                 return Renderer::m_uniformProviderData.ssaoParams.data();
             } });
     UniformRegistry::RegisterProvider(
@@ -251,7 +254,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::FRAME,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 Renderer::m_uniformProviderData.ssaoResolution = {
                     static_cast<float>(Renderer::width),
                     static_cast<float>(Renderer::height),
@@ -259,6 +262,29 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                     1.0f / static_cast<float>(Renderer::height)
                 };
                 return Renderer::m_uniformProviderData.ssaoResolution.data();
+            } });
+    UniformRegistry::RegisterProvider(
+        "Renderer.SSAOBlur.Params",
+        UniformDataProvider{
+            UniformType::VEC4,
+            UniformFrequency::FRAME,
+            1,
+            [](const void* ctx) -> const void* {
+                const auto& direction =
+                    UniformRegistry::GetContext<const int>(ctx);
+                /*
+                 * x = blur radius
+                 * y = blur direction (0 = horizontal, 1 = vertical)
+                 * z = half resolution width
+                 * w = half resolution height
+                 */
+                Renderer::m_uniformProviderData.ssaoBlurParams = {
+                    4.0f,
+                    static_cast<float>(direction),
+                    Renderer::width / 2.0f,
+                    Renderer::height / 2.0f
+                };
+                return Renderer::m_uniformProviderData.ssaoBlurParams.data();
             } });
 
     // Billboard uniforms
@@ -268,10 +294,10 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::DRAW,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 const auto& packet =
                     UniformRegistry::GetContext<const Renderer::RenderPacket>(
-                        rawPacket);
+                        ctx);
                 auto* billboard = packet.go->GetComponent<BillboardComponent>();
 
                 thread_local Math::Vec4 data;
@@ -293,10 +319,10 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::DRAW,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 const auto& packet =
                     UniformRegistry::GetContext<const Renderer::RenderPacket>(
-                        rawPacket);
+                        ctx);
                 auto* billboard = packet.go->GetComponent<BillboardComponent>();
 
                 thread_local Math::Vec4 data;
@@ -316,10 +342,10 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformType::VEC4,
             UniformFrequency::DRAW,
             1,
-            [](const void* rawPacket) -> const void* {
+            [](const void* ctx) -> const void* {
                 const auto& packet =
                     UniformRegistry::GetContext<const Renderer::RenderPacket>(
-                        rawPacket);
+                        ctx);
                 auto* billboard = packet.go->GetComponent<BillboardComponent>();
 
                 thread_local Math::Vec4 data;

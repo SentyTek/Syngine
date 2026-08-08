@@ -117,8 +117,10 @@ class RenderCore {
 
     static void _ScreenSpaceQuad(ViewID view, const Shader* program);
 
-    static void _SetFrameUniforms(const Shader* shader);
-    static void _SetViewUniforms(const Shader* shader);
+    static void _SetFrameUniforms(const Shader* shader,
+                                  const void*   ctx = nullptr);
+    static void _SetViewUniforms(const Shader* shader,
+                                 const void*   ctx = nullptr);
     static void _SetObjectUniforms(const Shader*                 shader,
                                    const Renderer::RenderPacket& packet);
     static void _SetMaterialUniforms(const Shader*                 shader,

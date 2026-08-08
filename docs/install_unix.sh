@@ -58,9 +58,7 @@ if(MSVC)
     set(CMAKE_WIN32_EXECUTABLE ON)
 
     # Use static runtime on MSVC. Several libraries we use require this.
-    # Please don't change this.
     # Also set CMAKE_MSVC_RUNTIME_LIBRARY. Sub-projects might still query this variable.
-    # This is a really ugly fix
     set(CMAKE_MSVC_RUNTIME_LIBRARY
         "MultiThreaded\$\<\$<CONFIG:Debug\>:Debug\>")
 endif()
