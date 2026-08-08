@@ -31,7 +31,7 @@ struct MeshAABB {
 /// @section MeshComponent
 /// @nameoverride MeshComponent
 /// @since v0.0.1
-class MeshComponent : public Syngine::Component {
+class MeshComponent : public Syngine::IComponent {
   public:
     bool receiveShadows  = true; //* Whether the mesh receives shadows
     bool castShadows     = true; //* Whether the mesh casts shadows
@@ -78,7 +78,7 @@ class MeshComponent : public Syngine::Component {
 
     /// @brief Clone the MeshComponent
     /// @return A unique pointer to the cloned MeshComponent
-    std::unique_ptr<Component> Clone() const override {
+    std::unique_ptr<IComponent> Clone() const override {
         return std::make_unique<MeshComponent>(*this);
     }
 

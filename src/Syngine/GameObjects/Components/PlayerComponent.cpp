@@ -561,7 +561,7 @@ static Syngine::ComponentRegistrar s_playerRegistrar(
 
     // Instantiate
     [](GameObject*                 owner,
-       const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+       const Serializer::DataNode& data) -> std::unique_ptr<IComponent> {
         auto playerComp = std::make_unique<PlayerComponent>(owner, nullptr);
         playerComp->moveSpeed       = data["moveSpeed"].As<float>(5.0f);
         playerComp->sprintMult      = data["sprintMult"].As<float>(1.5f);

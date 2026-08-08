@@ -550,7 +550,7 @@ static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
 
     // Instantiate
     [](GameObject* owner, const Serializer::DataNode& data)
-        -> std::unique_ptr<Syngine::Component> {
+        -> std::unique_ptr<Syngine::IComponent> {
         RigidbodyParameters params;
         params.mass        = data["mass"].As(1.0f);
         params.friction    = data["friction"].As(0.5f);

@@ -305,7 +305,7 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
 
     // Instantiate
     [](GameObject*                 owner,
-       const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+       const Serializer::DataNode& data) -> std::unique_ptr<IComponent> {
         std::vector<float> pos =
             data["position"].As<std::vector<float>>({ 0.0f, 0.0f, 0.0f });
         std::vector<float> rot =

@@ -151,7 +151,7 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
 
     // Instantiate: DataNode -> Component instance
     [](GameObject*                 owner,
-       const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+       const Serializer::DataNode& data) -> std::unique_ptr<IComponent> {
         float         size = data.Has("size") ? data["size"].As<float>() : 1.0f;
         BillboardMode mode = BillboardMode::CAMERA_ALIGNED;
         if (data.Has("mode")) {

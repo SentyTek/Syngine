@@ -14,7 +14,6 @@ namespace Syngine {
 // Forward declaration
 class GameObject;
 
-
 using ComponentTypeID = uint64_t;
 
 /// @brief An enum of built-in component types.
@@ -42,11 +41,11 @@ enum DefaultComponents : ComponentTypeID {
     SYN_COMPONENT_COUNT         = 20  //* Total number of component types
 };
 
-/// @brief Syngine::Component is the base class for all components that can be
+/// @brief Syngine::IComponent is the base class for all components that can be
 /// attached to GameObject to inherit from. They are used to add functionality
 /// to GameObjects, such as mesh, transform, physics, AI, PlayerController, etc.
 /// @section Component
-class Component {
+class IComponent {
   public:
     /// @brief Get the type of the component, used for identifying the component
     /// type
@@ -56,7 +55,7 @@ class Component {
     /// @brief Clone the component, used for copying components when duplicating
     /// GameObjects or when copying components from one GameObject to another
     /// @return A unique pointer to the cloned component
-    virtual std::unique_ptr<Component> Clone() const = 0;
+    virtual std::unique_ptr<IComponent> Clone() const = 0;
 
     /// @brief Serialize the component to a data node
     /// @return A pointer to the serialized data node representing the
@@ -79,10 +78,11 @@ class Component {
     } // Optional function called after physics update, for components that need
       // it
 
-    virtual ~Component() = default;
+    virtual ~IComponent() = default;
 
-    bool isEnabled = true; //* Whether the component is enabled or not
-    GameObject* m_owner = nullptr; //* The owner of the component, the GameObject it is attached to
+    bool        isEnabled = true;    //* Whether the component is enabled or not
+    GameObject* m_owner   = nullptr; //* The owner of the component, the
+                                     // GameObject it is attached to
 };
 
 }; // namespace Syngine

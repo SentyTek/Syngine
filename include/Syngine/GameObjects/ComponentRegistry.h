@@ -32,7 +32,7 @@ class ComponentRegistry {
   public:
     using ParseXmlFn =
         std::function<Serializer::DataNode(const scl::xml::XmlElem*)>;
-    using InstantiateFn = std::function<std::unique_ptr<Component>(
+    using InstantiateFn = std::function<std::unique_ptr<IComponent>(
         GameObject*, const Serializer::DataNode&)>;
     using RegisterLuaFn = std::function<void(sol::state&)>;
 
@@ -51,7 +51,7 @@ class ComponentRegistry {
     /// [](const scl::xml::XmlElem* elem) -> Serializer::DataNode {},
     /// // Instantiate: DataNode -> Component instance
     /// [](GameObject* owner, const Serializer::DataNode& data) ->
-    /// std::unique_ptr<Syngine::Component> {}
+    /// std::unique_ptr<Syngine::IComponent> {}
     /// );
     /// @since v0.0.1
     static void Register(Syngine::ComponentTypeID type,
@@ -74,7 +74,7 @@ class ComponentRegistry {
     /// @param data The DataNode containing the component's data
     /// @return A unique pointer to the new component instance, or nullptr if
     /// the type is not registered
-    static std::unique_ptr<Component>
+    static std::unique_ptr<IComponent>
     Instantiate(Syngine::ComponentTypeID    type,
                 GameObject*                 owner,
                 const Serializer::DataNode& data);

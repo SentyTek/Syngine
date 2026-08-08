@@ -47,7 +47,7 @@ ComponentRegistry::ParseXml(Syngine::ComponentTypeID type,
     return it->second.parseXml(elem);
 }
 
-std::unique_ptr<Component>
+std::unique_ptr<IComponent>
 ComponentRegistry::Instantiate(Syngine::ComponentTypeID    type,
                                GameObject*                 owner,
                                const Serializer::DataNode& data) {

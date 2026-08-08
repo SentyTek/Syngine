@@ -273,7 +273,7 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
 
     // Instantiate
     [](GameObject*                 owner,
-       const Serializer::DataNode& data) -> std::unique_ptr<Component> {
+       const Serializer::DataNode& data) -> std::unique_ptr<IComponent> {
         ZoneShape shape = static_cast<ZoneShape>(data["shape"].As<int>(0));
         std::vector<float> pos =
             data["position"].As<std::vector<float>>({ 0.0f, 0.0f, 0.0f });

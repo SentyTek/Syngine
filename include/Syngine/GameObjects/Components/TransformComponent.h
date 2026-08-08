@@ -21,7 +21,7 @@ using namespace Syngine::Math;
 /// @section TransformComponent
 /// @nameoverride TransformComponent
 /// @since v0.0.1
-class TransformComponent : public Syngine::Component {
+class TransformComponent : public Syngine::IComponent {
     // local TRS
     Vector3    m_position; //* Position of the transform
     Quaternion m_rotation; //* Rotation of the transform (Quaternion)
@@ -64,7 +64,7 @@ class TransformComponent : public Syngine::Component {
 
     /// @brief Clone the TransformComponent
     /// @return A unique pointer to the cloned TransformComponent
-    std::unique_ptr<Component> Clone() const override {
+    std::unique_ptr<IComponent> Clone() const override {
         return std::make_unique<TransformComponent>(*this);
     }
 

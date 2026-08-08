@@ -249,7 +249,7 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
 
     // Instantiate
     [](Syngine::GameObject* owner, const Serializer::DataNode& data)
-        -> std::unique_ptr<Syngine::Component> {
+        -> std::unique_ptr<Syngine::IComponent> {
         auto comp = std::make_unique<CameraComponent>(owner);
         if (data.Has("eye")) {
             const std::vector<float>& eyeArr =

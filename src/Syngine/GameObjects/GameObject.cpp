@@ -43,8 +43,8 @@ GameObject::GameObject(const Serializer::DataNode& data) {
         const auto& componentsNode = data["components"];
         for (const auto& [typeStr, data] :
              componentsNode.As<Serializer::DataNode::NodeMap>()) {
-            Syngine::ComponentTypeID   typeId = std::stoull(typeStr);
-            std::unique_ptr<Component> comp =
+            Syngine::ComponentTypeID    typeId = std::stoull(typeStr);
+            std::unique_ptr<IComponent> comp =
                 ComponentRegistry::Instantiate(typeId, this, data);
             if (comp) {
                 this->components[typeId] = std::move(comp);
@@ -164,7 +164,7 @@ bool GameObject::HasComponent(Syngine::ComponentTypeID type) {
     return false;
 }
 
-Component* GameObject::GetComponent(Syngine::ComponentTypeID type) const {
+IComponent* GameObject::GetComponent(Syngine::ComponentTypeID type) const {
     auto it = this->components.find(type);
     if (it == this->components.end()) {
         return nullptr; // Component not found

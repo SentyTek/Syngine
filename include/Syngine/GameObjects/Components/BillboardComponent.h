@@ -10,6 +10,8 @@
 #include <Syngine/GameObjects/Component.h>
 #include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/Graphics/Resources/MaterialManager.h>
+#include <Syngine/Math/Math.hpp>
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 
 #include <bgfx/bgfx.h>
 
@@ -33,7 +35,7 @@ enum class BillboardMode {
 /// @nameoverride BillboardComponent
 /// @classprefix myBillboard.
 /// @since v0.0.1
-class BillboardComponent : public Syngine::Component {
+class BillboardComponent : public Syngine::IComponent {
 
     BillboardMode m_mode =
         BillboardMode::CAMERA_ALIGNED; //* Billboard rendering mode
@@ -49,7 +51,8 @@ class BillboardComponent : public Syngine::Component {
 
     GameObject* m_owner; // Reference to the owner game object
 
-    Vector3 m_rot = Vector3(); //* Rotation around X, Y, Z axes in radians
+    Math::Vector3 m_rot =
+        Math::Vector3(); //* Rotation around X, Y, Z axes in radians
 
     bgfx::TextureHandle     _GetTexture() const { return this->m_texture; }
     MaterialInstance&       _GetMaterial() { return this->m_material; }
@@ -103,8 +106,8 @@ class BillboardComponent : public Syngine::Component {
 
     /// @brief Get the type of this component
     /// @return The component type as an enum value
-    ComponentTypeID            GetComponentType() override;
-    std::unique_ptr<Component> Clone() const override {
+    ComponentTypeID             GetComponentType() override;
+    std::unique_ptr<IComponent> Clone() const override {
         return std::make_unique<BillboardComponent>(*this);
     }
 
@@ -143,12 +146,12 @@ class BillboardComponent : public Syngine::Component {
     /// @brief Set rotation around X, Y, Z axes
     /// @param rot The rotation vector containing rotation around X, Y, Z axes
     /// in radians
-    void SetRot(const Vector3& rot) { this->m_rot = rot; }
+    void SetRot(const Math::Vector3& rot) { this->m_rot = rot; }
 
     /// @brief Get rotation around X, Y, Z axes
-    /// @return Vector3 The rotation vector containing rotation around X, Y, Z
-    /// axes in radians
-    Vector3 GetRot() const { return this->m_rot; }
+    /// @return Math::Vector3 The rotation vector containing rotation around X,
+    /// Y, Z axes in radians
+    Math::Vector3 GetRot() const { return this->m_rot; }
 
     /// @brief Get the billboard mode
     /// @return BillboardMode The billboard rendering mode
@@ -160,18 +163,18 @@ class BillboardComponent : public Syngine::Component {
 
     /// @brief Get the min bounds of the billboard's bounding box
     /// @return Vector3 The minimum corner of the bounding box
-    inline Vector3 GetMinBounds() const {
+    inline Math::Vector3 GetMinBounds() const {
         auto* t = this->m_owner->GetComponent<TransformComponent>();
-        if (!t) return Vector3();
-        Vector3 pos = t->GetWorldPosition();
-        return Vector3(pos.x() - this->size * 0.5f,
-                       pos.y() - this->size * 0.5f,
-                       pos.z() - this->size * 0.5f);
+        if (!t) return Math::Vector3();
+        Math::Vector3 pos = t->GetWorldPosition();
+        return Math::Vector3(pos.x() - this->size * 0.5f,
+                             pos.y() - this->size * 0.5f,
+                             pos.z() - this->size * 0.5f);
     }
 
     /// @brief Get the max bounds of the billboard's bounding box
     /// @return Vector3 The maximum corner of the bounding box
-    inline Vector3 GetMaxBounds() const {
+    inline Math::Vector3 GetMaxBounds() const {
         auto* t = this->m_owner->GetComponent<TransformComponent>();
         if (!t) return Vector3();
         Vector3 pos = t->GetWorldPosition();

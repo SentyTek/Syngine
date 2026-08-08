@@ -7,10 +7,9 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/GameObjects/Component.h"
-#include "Syngine/Math/Math.hpp"
-#include "Syngine/Math/Matrix4x4.hpp"
-#include "Syngine/Graphics/Rendering/Renderer.h"
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/Math/Math.hpp>
+#include <Syngine/Graphics/Rendering/Renderer.h>
 
 namespace Syngine {
 
@@ -41,7 +40,7 @@ struct Camera {
 /// @section CameraComponent
 /// @nameoverride CameraComponent
 /// @since v0.0.1
-class CameraComponent : public Syngine::Component {
+class CameraComponent : public Syngine::IComponent {
   public:
     static constexpr Syngine::ComponentTypeID componentType =
         Syngine::SYN_COMPONENT_CAMERA; //* Camera component type
@@ -67,7 +66,7 @@ class CameraComponent : public Syngine::Component {
     /// @brief Clone the CameraComponent
     /// @return A unique pointer to the cloned CameraComponent
 
-    std::unique_ptr<Component> Clone() const override {
+    std::unique_ptr<IComponent> Clone() const override {
         return std::make_unique<CameraComponent>(*this);
     }
 

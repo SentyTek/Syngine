@@ -33,7 +33,7 @@ enum class ZoneShape : uint8_t {
 /// @section ZoneComponent
 /// @nameoverride ZoneComponent
 /// @since v0.0.1
-class ZoneComponent : public Syngine::Component {
+class ZoneComponent : public Syngine::IComponent {
     Math::Vector3 m_size =
         Math::Vector3(1.0f); //* Size of the zone (whd for box, r for sphere)
     Math::Vector3 m_pos =
@@ -49,8 +49,9 @@ class ZoneComponent : public Syngine::Component {
     bool m_oneShot = false; //* Whether the zone is a one-shot zone
     std::vector<GameObject*>
         m_objectsIn; //* Objects that are currently in the zone
-    std::vector<GameObject*> m_triggeredObjects; //* Objects that have triggered
-                                                 //the zone (for one-shot zones)
+    std::vector<GameObject*>
+        m_triggeredObjects; //* Objects that have triggered
+                            // the zone (for one-shot zones)
 
     std::vector<std::string> m_tags; //* Tags of the zone
 
@@ -78,7 +79,7 @@ class ZoneComponent : public Syngine::Component {
 
     /// @brief Clone the ZoneComponent
     /// @return A unique pointer to the cloned ZoneComponent
-    std::unique_ptr<Component> Clone() const override {
+    std::unique_ptr<IComponent> Clone() const override {
         return std::make_unique<ZoneComponent>(*this);
     }
 

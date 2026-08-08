@@ -509,7 +509,7 @@ static Syngine::ComponentRegistrar s_meshRegistrar(
 
     // Instantiate: DataNode -> Component instance
     [](Syngine::GameObject* owner, const Serializer::DataNode& data)
-        -> std::unique_ptr<Syngine::Component> {
+        -> std::unique_ptr<Syngine::IComponent> {
         std::string path =
             data.Has("path") ? data["path"].As<std::string>() : "";
         std::string bundlePath = data.Has("bundle")

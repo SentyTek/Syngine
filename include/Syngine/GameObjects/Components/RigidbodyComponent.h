@@ -56,7 +56,7 @@ struct CompoundShapePart {
     PhysicsShapes shape; //* The shape of the part
     Math::Vector3 shapeParameters =
         Math::Vector3(1.0f);   //* Parameters for the shape, e.g., radius for
-                               //sphere, half extents for box
+                               // sphere, half extents for box
     Math::Vector3    position; //* Local position offset
     Math::Quaternion rotation; //* Local rotation quaternion
 };
@@ -69,12 +69,12 @@ struct CompoundShapePart {
 struct RigidbodyParameters {
     PhysicsShapes shape = PhysicsShapes::BOX; //* The shape of the rigidbody
     float mass = 0.0f; //* Mass of the rigidbody. If 0 (which it is by default),
-                       //Jolt will calculate it based on the shape.
+                       // Jolt will calculate it based on the shape.
     float         friction    = 0.5f; //* Friction coefficient
     float         restitution = 0.5f; //* Restitution coefficient (bounciness)
     Math::Vector3 shapeParameters =
         Math::Vector3(1.0f); //* Additional parameters for the shape, e.g.,
-                             //radius for sphere, half extents for box
+                             // radius for sphere, half extents for box
     JPH::EMotionType motionType =
         JPH::EMotionType::Dynamic; //* Motion type of the rigidbody
     JPH::ObjectLayer layer = Syngine::Layers::MOVING; //* Layer of the rigidbody
@@ -88,7 +88,7 @@ struct RigidbodyParameters {
 /// @section RigidbodyComponent
 /// @nameoverride RigidbodyComponent
 /// @since v0.0.1
-class RigidbodyComponent : public Syngine::Component {
+class RigidbodyComponent : public Syngine::IComponent {
   public:
     static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_RIGIDBODY; //* Rigidbody component type
@@ -114,7 +114,7 @@ class RigidbodyComponent : public Syngine::Component {
 
     /// @brief Clone the RigidbodyComponent
     /// @return A unique pointer to the cloned RigidbodyComponent
-    std::unique_ptr<Component> Clone() const override {
+    std::unique_ptr<IComponent> Clone() const override {
         return std::make_unique<RigidbodyComponent>(*this);
     }
 

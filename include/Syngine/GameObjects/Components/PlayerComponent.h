@@ -47,7 +47,7 @@ enum class PlayerState {
 /// @section PlayerComponent
 /// @nameoverride PlayerComponent
 /// @since v0.0.1
-class PlayerComponent : public Syngine::Component {
+class PlayerComponent : public Syngine::IComponent {
   public:
     static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_PLAYER; //* Player component type
@@ -74,7 +74,7 @@ class PlayerComponent : public Syngine::Component {
 
     /// @brief Clone the PlayerComponent
     /// @return A unique pointer to the cloned PlayerComponent
-    std::unique_ptr<Component> Clone() const override {
+    std::unique_ptr<IComponent> Clone() const override {
         return std::make_unique<PlayerComponent>(*this);
     }
 
@@ -198,7 +198,7 @@ class PlayerComponent : public Syngine::Component {
     float m_targetMoveSpeed = 1.0f;
     float m_eyeHeight =
         m_targetEyeHeight; //* Current eye height, used for smooth
-                           //crouching/standing transitions
+                           // crouching/standing transitions
     float m_realMoveSpeed = 1.0f;
 
     float m_currentPitch = 0.0f;
@@ -212,8 +212,8 @@ class PlayerComponent : public Syngine::Component {
     // m_newVelocity stays as a JPH vec because it interacts directly with Jolt.
     // I feel it more natural to keep it as a Jolt type rather than converting
     // back and forth to a Syngine type.
-    Vector3   m_moveDirection;
-    JPH::Vec3 m_newVelocity = {
+    Math::Vector3 m_moveDirection;
+    JPH::Vec3     m_newVelocity = {
         0.0f, 0.0f, 0.0f
     }; // New velocity to be applied to the character
 

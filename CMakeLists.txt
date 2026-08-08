@@ -67,7 +67,6 @@ add_library(Syngine STATIC
     src/Syngine/GameObjects/Components/ZoneComponent.cpp
     src/Syngine/GameObjects/Components/BillboardComponent.cpp
     src/Syngine/GameObjects/ComponentRegistry.cpp
-    src/Syngine/Graphics/Resources/MaterialManager.cpp
 )
 
 set_target_properties(Syngine PROPERTIES FOLDER "Engine")

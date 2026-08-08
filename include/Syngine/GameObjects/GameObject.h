@@ -14,9 +14,7 @@
 #include <vector>
 
 #include "Syngine/Core/Registry.h"
-#include "Syngine/Core/LuaManager.h"
 #include "Syngine/GameObjects/Component.h"
-#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
@@ -144,7 +142,7 @@ class GameObject {
     /// @return Pointer to the component if it exists, nullptr otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    Component* GetComponent(Syngine::ComponentTypeID type) const;
+    IComponent* GetComponent(Syngine::ComponentTypeID type) const;
 
     /// @brief Get a component of the specified type
     /// @tparam T Type of the component to get
@@ -165,7 +163,7 @@ class GameObject {
     /// @return Const reference to the components map
     /// @threadsafety safe
     /// @since v0.0.1
-    const std::map<ComponentTypeID, std::unique_ptr<Component>>&
+    const std::map<ComponentTypeID, std::unique_ptr<IComponent>>&
     GetComponents() const {
         return components;
     }
@@ -211,7 +209,7 @@ class GameObject {
   private:
     long id; // Unique ID for the GameObject
 
-    std::map<Syngine::ComponentTypeID, std::unique_ptr<Syngine::Component>>
+    std::map<Syngine::ComponentTypeID, std::unique_ptr<Syngine::IComponent>>
         components; // Map of components attached to the GameObject
 
     bool isActive = true; // Whether the GameObject is active or not
