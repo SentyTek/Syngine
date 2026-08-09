@@ -3,7 +3,7 @@
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -19,26 +19,28 @@ using ComponentTypeID = uint64_t;
 /// @brief An enum of built-in component types.
 /// @section Component
 enum DefaultComponents : ComponentTypeID {
-    SYN_COMPONENT_MESH          = 1,  //* 3D mesh or model
-    SYN_COMPONENT_TRANSFORM     = 2,  //* Position, rotation, scale
-    SYN_COMPONENT_AI            = 3,  //* AI logic/behavior
-    SYN_COMPONENT_PLAYER        = 4,  //* Player controller
-    SYN_COMPONENT_CAMERA        = 5,  //* Camera logic
-    SYN_COMPONENT_LIGHT         = 6,  //* Lighting
-    SYN_COMPONENT_AUDIO_EMIT    = 7,  //* Audio source
-    SYN_COMPONENT_AUDIO_LISTEN  = 8,  //* Audio listener
-    SYN_COMPONENT_PARTICLE      = 9,  //* Particle system
-    SYN_COMPONENT_UI            = 10, //* UI elements
-    SYN_COMPONENT_SCRIPT        = 11, //* Custom scripting
-    SYN_COMPONENT_ANIMATION     = 12, //* Animation controller
-    SYN_COMPONENT_RIGIDBODY     = 13, //* Physics rigidbody
-    SYN_COMPONENT_PHYSICS_MOTOR = 14, //* Physics motor/actuator
-    SYN_COMPONENT_PHYSICS_CLOTH = 15, //* Cloth simulation
-    SYN_COMPONENT_PHYSICS_JOINT = 16, //* Physics joint/constraint
-    SYN_COMPONENT_TERRAIN       = 17, //* Terrain
-    SYN_COMPONENT_ZONE          = 18, //* Trigger zone or area
-    SYN_COMPONENT_BILLBOARD     = 19, //* Billboard component
-    SYN_COMPONENT_COUNT         = 20  //* Total number of component types
+    SYN_COMPONENT_MESH              = 1,  //* 3D mesh or model
+    SYN_COMPONENT_TRANSFORM         = 2,  //* Position, rotation, scale
+    SYN_COMPONENT_AI                = 3,  //* AI logic/behavior
+    SYN_COMPONENT_PLAYER            = 4,  //* Player controller
+    SYN_COMPONENT_CAMERA            = 5,  //* Camera logic
+    SYN_COMPONENT_LIGHT_POINT       = 6,  //* Point light source
+    SYN_COMPONENT_LIGHT_DIRECTIONAL = 7,  //* Sun light source
+    SYN_COMPONENT_LIGHT_SPOT        = 8,  //* Spot light source
+    SYN_COMPONENT_AUDIO_EMIT        = 9,  //* Audio source
+    SYN_COMPONENT_AUDIO_LISTEN      = 10, //* Audio listener
+    SYN_COMPONENT_PARTICLE          = 11, //* Particle system
+    SYN_COMPONENT_UI                = 12, //* UI elements
+    SYN_COMPONENT_SCRIPT            = 13, //* Custom scripting
+    SYN_COMPONENT_ANIMATION         = 14, //* Animation controller
+    SYN_COMPONENT_RIGIDBODY         = 15, //* Physics rigidbody
+    SYN_COMPONENT_PHYSICS_MOTOR     = 16, //* Physics motor/actuator
+    SYN_COMPONENT_PHYSICS_CLOTH     = 17, //* Cloth simulation
+    SYN_COMPONENT_PHYSICS_JOINT     = 18, //* Physics joint/constraint
+    SYN_COMPONENT_TERRAIN           = 19, //* Terrain
+    SYN_COMPONENT_ZONE              = 20, //* Trigger zone or area
+    SYN_COMPONENT_BILLBOARD         = 21, //* Billboard component
+    SYN_COMPONENT_COUNT             = 22  //* Total number of component types
 };
 
 /// @brief Syngine::IComponent is the base class for all components that can be
@@ -103,7 +105,7 @@ class IComponent {
                                        // GameObject it is attached to
     friend class GameObject;
     friend class Renderer;
-    friend class RenderCore;
+    friend class RenderDirector;
 };
 
 }; // namespace Syngine

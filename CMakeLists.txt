@@ -33,15 +33,17 @@ add_library(Syngine STATIC
     # Core
     src/Syngine/Core/Entry.cpp
     src/Syngine/Core/Core.cpp
-    src/Syngine/Core/Registry.cpp
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
-    src/Syngine/Core/ZoneManager.cpp
     src/Syngine/Core/LuaManager.cpp
+
+    #Scene
+    src/Syngine/Scene/ZoneSystem.cpp
+    src/Syngine/Scene/GameObjectRegistry.cpp
 
     # Graphics
     src/Syngine/Graphics/Rendering/Renderer.cpp
-    src/Syngine/Graphics/Rendering/RenderCore.cpp
+    src/Syngine/Graphics/Rendering/RenderDirector.cpp
     src/Syngine/Graphics/Rendering/DebugRenderer.cpp
     src/Syngine/Graphics/Resources/TextureHelpers.cpp
     src/Syngine/Graphics/Resources/ShaderManager.cpp
@@ -58,8 +60,9 @@ add_library(Syngine STATIC
     # Physics
     src/Syngine/Physics/Physics.cpp
 
-    # ACS
+    # GameObject system
     src/Syngine/GameObjects/GameObject.cpp
+    src/Syngine/GameObjects/ComponentRegistry.cpp
     src/Syngine/GameObjects/Components/MeshComponent.cpp
     src/Syngine/GameObjects/Components/TransformComponent.cpp
     src/Syngine/GameObjects/Components/RigidbodyComponent.cpp
@@ -68,7 +71,6 @@ add_library(Syngine STATIC
     src/Syngine/GameObjects/Components/ZoneComponent.cpp
     src/Syngine/GameObjects/Components/BillboardComponent.cpp
     src/Syngine/GameObjects/Components/SunComponent.cpp
-    src/Syngine/GameObjects/ComponentRegistry.cpp
 )
 
 set_target_properties(Syngine PROPERTIES FOLDER "Engine")

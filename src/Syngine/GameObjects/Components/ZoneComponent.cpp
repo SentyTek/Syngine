@@ -3,12 +3,12 @@
 // │ Created 2025-10-03                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/GameObjects/Components/ZoneComponent.h"
 #include "Syngine/Core/LuaManager.h"
-#include "Syngine/Core/Registry.h"
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include "Syngine/GameObjects/Component.h"
 #include "Syngine/GameObjects/ComponentRegistry.h"
 #include "Syngine/GameObjects/Components/TransformComponent.h"
@@ -213,7 +213,7 @@ bool ZoneComponent::IsInZone(const GameObject* object) const {
 std::vector<GameObject*> ZoneComponent::GetObjectsInZone() const {
     std::vector<GameObject*> objectsInZone;
 
-    for (const auto& pair : Registry::GetAllGameObjects()) {
+    for (const auto& pair : GameObjectRegistry::GetAllGameObjects()) {
         GameObject* obj = pair.second;
         if (IsInZone(obj)) {
             objectsInZone.push_back(obj);
@@ -227,7 +227,7 @@ std::vector<GameObject*>
 ZoneComponent::GetObjectsInZoneByTag(const std::string& tag) const {
     std::vector<GameObject*> objectsInZone;
 
-    for (const auto& pair : Registry::GetAllGameObjects()) {
+    for (const auto& pair : GameObjectRegistry::GetAllGameObjects()) {
         GameObject* obj = pair.second;
         if (IsInZone(obj) && obj->HasTag(tag)) {
             objectsInZone.push_back(obj);

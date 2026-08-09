@@ -3,7 +3,7 @@
 // │ Created 2025-07-28                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #ifndef SynInput_h
@@ -86,8 +86,7 @@ struct KeyShortcut {
     /// @brief Create a ``KeyShortcut`` with no modifiers
     /// @param key The key to bind
     /// @since 0.0.1
-    KeyShortcut(std::variant<Keycode, Scancode> key)
-        : key(key), modifiers() {}
+    KeyShortcut(std::variant<Keycode, Scancode> key) : key(key), modifiers() {}
 
     /// @brief Create a ``KeyShortcut`` with the given modifiers
     /// @param key The key to bind
@@ -195,8 +194,7 @@ struct KeySequence {
         switch (subType(this->nextIndex)) {
         case KeybindType::KEYCODE: return std::get<Keycode>(nextKey);
         case KeybindType::SCANCODE: return std::get<Scancode>(nextKey);
-        case KeybindType::SHORTCUT:
-            return std::get<KeyShortcut>(nextKey);
+        case KeybindType::SHORTCUT: return std::get<KeyShortcut>(nextKey);
         default:
             if (bound.empty()) Logger::Error("KeySequence cannot be empty");
             Logger::Fatal("KeySequence::subType() failed");
@@ -210,9 +208,7 @@ struct KeySequence {
     /// @note You probably shouldn't call this unless you really need to, and it
     /// might be removed
     /// @since 0.0.1
-    void increment() {
-        this->nextIndex = (nextIndex + 1) % bound.size();
-    }
+    void increment() { this->nextIndex = (nextIndex + 1) % bound.size(); }
 
     /// @brief Gets the reset state of the sequence
     /// @returns `true` if the sequence was complete or reset (if the next index
@@ -437,10 +433,10 @@ class InputAction {
     /// not unique
     /// @since 0.0.1
     static InputAction* RegisterAction(const std::string& identifier,
-                               const std::string& name,
-                               const std::string& category,
-                               KeyBinding         binding,
-                               Callbacks          callbacks);
+                                       const std::string& name,
+                                       const std::string& category,
+                                       KeyBinding         binding,
+                                       Callbacks          callbacks);
 
     /// @brief Unregister all actions created through RegisterAction whose
     /// identifiers start with a given prefix.
@@ -531,7 +527,8 @@ class InputAction {
 
 /// @brief Converts an identifier to a ``Scancode``
 /// @param code The string to convert from
-/// @returns The scancode if it succeeded, or ``Scancode::_UNKNOWN`` if it failed
+/// @returns The scancode if it succeeded, or ``Scancode::_UNKNOWN`` if it
+/// failed
 /// @since 0.0.1
 Scancode StringToScancode(const std::string& code);
 

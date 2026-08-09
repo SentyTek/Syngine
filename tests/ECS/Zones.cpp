@@ -3,7 +3,7 @@
 // │ Created 2026-06-17                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -25,8 +25,9 @@ TEST_CASE("Test creating a zone and triggering callbacks", "[ECS][Zones]") {
     // Create a zone
     const Math::Vector3 pos;
     const Math::Vector3 size(5.0f);
-    auto* zonego = new GameObject("TestZone");
-    auto* testZone = zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size, true);
+    auto*               zonego = new GameObject("TestZone");
+    auto*               testZone =
+        zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size, true);
 
     bool entered = false;
     bool exited  = false;
@@ -42,7 +43,7 @@ TEST_CASE("Test creating a zone and triggering callbacks", "[ECS][Zones]") {
     };
 
     // Create an object that will enter and exit the zone
-    auto* objgo = new GameObject("TestObject");
+    auto* objgo     = new GameObject("TestObject");
     auto* transform = objgo->AddComponent<TransformComponent>();
     transform->SetPosition(SVec3(10.0f, 0.0f, 0.0f));
 
@@ -50,7 +51,10 @@ TEST_CASE("Test creating a zone and triggering callbacks", "[ECS][Zones]") {
     engine.SetSimulationState(true);
     for (int i = 0; i < framesToSimulate; ++i) {
         // Move the object towards the zone
-        float newX = 10.0f - (i + 1) * (20.0f / framesToSimulate); // Move from 10 to -10 over the frames
+        float newX =
+            10.0f -
+            (i + 1) * (20.0f /
+                       framesToSimulate); // Move from 10 to -10 over the frames
         transform->SetPosition(SVec3(newX, 0.0f, 0.0f));
 
         // Update the engine to process the zone triggers
@@ -73,8 +77,9 @@ TEST_CASE("Test querying objects in a zone", "[ECS][Zones]") {
     // Create a zone
     const SVec3 pos;
     const SVec3 size(5.0f);
-    auto* zonego = new GameObject("TestZone");
-    auto* testZone = zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
+    auto*       zonego = new GameObject("TestZone");
+    auto*       testZone =
+        zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
 
     // Create objects inside and outside the zone
     auto* insideObj1 = new GameObject("InsideObject1");
@@ -85,7 +90,7 @@ TEST_CASE("Test querying objects in a zone", "[ECS][Zones]") {
     auto* transform2 = insideObj2->AddComponent<TransformComponent>();
     auto* transform3 = outsideObj->AddComponent<TransformComponent>();
 
-    transform1->SetPosition(SVec3(1.0f, 0.0f, 0.0f)); // Inside
+    transform1->SetPosition(SVec3(1.0f, 0.0f, 0.0f));  // Inside
     transform2->SetPosition(SVec3(-1.0f, 0.0f, 0.0f)); // Inside
     transform3->SetPosition(SVec3(10.0f, 0.0f, 0.0f)); // Outside
 
@@ -97,8 +102,10 @@ TEST_CASE("Test querying objects in a zone", "[ECS][Zones]") {
     auto objectsInZone = testZone->GetObjectsInZone();
 
     REQUIRE(objectsInZone.size() == 2);
-    REQUIRE((objectsInZone[0]->name == "InsideObject1" || objectsInZone[1]->name == "InsideObject1"));
-    REQUIRE((objectsInZone[0]->name == "InsideObject2" || objectsInZone[1]->name == "InsideObject2"));
+    REQUIRE((objectsInZone[0]->name == "InsideObject1" ||
+             objectsInZone[1]->name == "InsideObject1"));
+    REQUIRE((objectsInZone[0]->name == "InsideObject2" ||
+             objectsInZone[1]->name == "InsideObject2"));
 
     // Clean up
     delete zonego;
@@ -113,8 +120,9 @@ TEST_CASE("Test zone tags", "[ECS][Zones]") {
     // Create a zone
     const Math::Vector3 pos;
     const Math::Vector3 size(5.0f);
-    auto* zonego = new GameObject("TestZone");
-    auto* testZone = zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
+    auto*               zonego = new GameObject("TestZone");
+    auto*               testZone =
+        zonego->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
 
     // Add tags to the zone
     testZone->AddTag("Danger");

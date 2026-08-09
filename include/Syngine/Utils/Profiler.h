@@ -3,7 +3,7 @@
 // │ Created 2026-01-04                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -22,26 +22,46 @@
 // Create dummy definitions to avoid build errors when the profiler is disabled
 namespace Syngine {
 struct SpanEvent {
-    const char* name; //* 8 byte pointer to name string
-    uint32_t    threadID; //* Thread ID
-    uint64_t    timestamp; //* Timestamp in microseconds
-    uint8_t     type; //* 0 = start, 1 = end
-    uint8_t     depth; //* Depth in call stack
+    const char* name;        //* 8 byte pointer to name string
+    uint32_t    threadID;    //* Thread ID
+    uint64_t    timestamp;   //* Timestamp in microseconds
+    uint8_t     type;        //* 0 = start, 1 = end
+    uint8_t     depth;       //* Depth in call stack
     uint8_t     padding[10]; //* 32 byte alignment
 };
 class Profiler {
-  public:  class ProfilerScope {
-      public: inline ProfilerScope(const char* name) {}
-  };
-  public: class ProfilerUI {
-      public: static void Render() {}
-      public: static void SaveCapture(const std::string& path) {}
-  };
-  public: static void PushEvent(const char* name, int type) {}
-  public: static void Reset() {}
-  public: static const std::vector<SpanEvent>& GetThreadData() { static std::vector<SpanEvent> dummy; return dummy; }
-  public: static int StartTimer(const char* name) { return 0; }
-  public: static void EndTimer(int) {}
+  public:
+    class ProfilerScope {
+      public:
+        inline ProfilerScope(const char* name) {}
+    };
+
+  public:
+    class ProfilerUI {
+      public:
+        static void Render() {}
+
+      public:
+        static void SaveCapture(const std::string& path) {}
+    };
+
+  public:
+    static void PushEvent(const char* name, int type) {}
+
+  public:
+    static void Reset() {}
+
+  public:
+    static const std::vector<SpanEvent>& GetThreadData() {
+        static std::vector<SpanEvent> dummy;
+        return dummy;
+    }
+
+  public:
+    static int StartTimer(const char* name) { return 0; }
+
+  public:
+    static void EndTimer(int) {}
 };
 }; // namespace Syngine
 
@@ -58,11 +78,11 @@ namespace Syngine {
 /// time.
 /// @section Profiler
 struct SpanEvent {
-    const char* name; //* 8 byte pointer to name string
-    uint32_t    threadID; //* Thread ID
-    uint64_t    timestamp; //* Timestamp in microseconds
-    uint8_t     type; //* 0 = start, 1 = end
-    uint8_t     depth; //* Depth in call stack
+    const char* name;        //* 8 byte pointer to name string
+    uint32_t    threadID;    //* Thread ID
+    uint64_t    timestamp;   //* Timestamp in microseconds
+    uint8_t     type;        //* 0 = start, 1 = end
+    uint8_t     depth;       //* Depth in call stack
     uint8_t     padding[10]; //* 32 byte alignment
 };
 
@@ -71,7 +91,7 @@ struct SpanEvent {
 struct TimerEvent {
     SpanEvent startEvent; //* Start event
     SpanEvent endEvent;   //* End event
-    uint64_t GetDuration() const {
+    uint64_t  GetDuration() const {
         return endEvent.timestamp - startEvent.timestamp;
     }
 };
@@ -83,11 +103,14 @@ struct TimerEvent {
 class Profiler {
     // Thread-local storage for profiler events to avoid contention
     static thread_local std::vector<SpanEvent> m_threadData; //* List of events
-    static thread_local std::vector<SpanEvent> m_lastFrameData; //* Last frame's events
-    static thread_local std::vector<const char*> m_nameStack; //* Call stack names
+    static thread_local std::vector<SpanEvent>
+        m_lastFrameData; //* Last frame's events
+    static thread_local std::vector<const char*>
+                                m_nameStack;    //* Call stack names
     static thread_local uint8_t m_currentDepth; //* Call stack depth
 
-    static std::vector<TimerEvent> m_timers; //* Paired start/end events for StartTimer/EndTimer
+    static std::vector<TimerEvent>
+               m_timers; //* Paired start/end events for StartTimer/EndTimer
     static int m_nextTimerID; //* Next timer ID
 
     /// @brief Event types for profiling
@@ -95,10 +118,11 @@ class Profiler {
     /// @since v0.0.1
     enum class EventType : uint8_t {
         EVENT_START = 0, //* Start.
-        EVENT_END = 1 //* End.
+        EVENT_END   = 1  //* End.
     };
 
-    friend class RenderCore;
+    friend class RenderDirector;
+
   public:
     class ProfilerScope {
       public:

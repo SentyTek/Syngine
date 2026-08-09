@@ -1,15 +1,14 @@
-// ╒═════════════════════════ Registry.h ═╕
+// ╒═══════════════ GameObjectRegistry.h ═╕
 // │ Syngine                              │
 // │ Created 2025-07-24                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
 #include "Syngine/GameObjects/Component.h"
 #include <unordered_map>
-#include <string>
 #include <vector>
 
 namespace Syngine {
@@ -18,7 +17,7 @@ class GameObject;
 
 /// @brief Registry class to manage GameObjects. Owns all GameObjects, stores
 /// indexed sublists of GameObjects for fast lookups
-class Registry {
+class GameObjectRegistry {
   public:
     /// @brief Add a GameObject to the registry.
     /// @param GameObject The GameObject to add.

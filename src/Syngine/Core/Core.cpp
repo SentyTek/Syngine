@@ -3,7 +3,7 @@
 // │ Created 2025-04-22                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include "SDL3/SDL_video.h"
@@ -28,12 +28,12 @@
 
 #include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
-#include <Syngine/Core/Registry.h>
 #include <Syngine/Core/Input.h>
-#include <Syngine/Core/ZoneManager.h>
+#include <Syngine/Scene/GameObjectRegistry.h>
+#include <Syngine/Scene/ZoneSystem.h>
 #include <Syngine/Graphics/Windowing.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
-#include <Syngine/Graphics/Rendering/RenderCore.h>
+#include <Syngine/Graphics/Rendering/RenderDirector.h>
 #include <Syngine/Physics/Physics.h>
 #include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/GameObjects/AllComponents.h>
@@ -87,7 +87,7 @@ Core::~Core() {
     // Destroy all game objects first. This ensures components (like Billboards,
     // Meshes) release their BGFX resources (textures, buffers) before we shut
     // down the renderer.
-    Syngine::Registry::Clear();
+    Syngine::GameObjectRegistry::Clear();
 
     if (m_context) {
         Serializer::_SaveCoreSettings(m_context->config.gameName);
@@ -96,10 +96,10 @@ Core::~Core() {
             m_context->luaState.reset();
         }
         if (m_context->synModels) {
-            // Don't call _UnloadAllMeshes() here because Registry::Clear() has
-            // already done it for us. Doing it again causes a
-            // BGFX assertion errors due to double-freeing. Please don't have
-            // orphaned meshes.
+            // Don't call _UnloadAllMeshes() here because
+            // GameObjectRegistry::Clear() has already done it for us. Doing it
+            // again causes a BGFX assertion errors due to double-freeing.
+            // Please don't have orphaned meshes.
             m_context->synModels.reset();
         }
         if (m_context->renderer) {
@@ -188,9 +188,9 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
             m_context->physicsManager = nullptr;
         }
 
-        m_context->zoneManager = std::make_unique<ZoneManager>();
-        if (!m_context->zoneManager) {
-            Logger::Error("Failed to create ZoneManager. Check the log for "
+        m_context->ZoneSystem = std::make_unique<ZoneSystem>();
+        if (!m_context->ZoneSystem) {
+            Logger::Error("Failed to create ZoneSystem. Check the log for "
                           "more details.");
         }
 
@@ -360,7 +360,7 @@ bool Core::HandleEvents() {
                 break; // No change in size
             }
 
-            RenderCore::SetResolutionFlag(w, h);
+            RenderDirector::SetResolutionFlag(w, h);
             break;
         }
         }
@@ -369,8 +369,8 @@ bool Core::HandleEvents() {
         InputAction::_HandleEvent(event);
 
         if (m_internal.simulate) {
-            auto players =
-                Registry::GetGameObjectsWithComponent(SYN_COMPONENT_PLAYER);
+            auto players = GameObjectRegistry::GetGameObjectsWithComponent(
+                SYN_COMPONENT_PLAYER);
             for (auto go : players) {
                 if (!go || !go->IsActive()) continue;
                 PlayerComponent* pc = go->GetComponent<PlayerComponent>();
@@ -413,7 +413,7 @@ bool Core::Update() {
 
     // Run component updates every frame so camera and visual state are not
     // locked to the fixed physics tick rate.
-    auto& allGameObjects = Registry::GetAllGameObjects();
+    auto& allGameObjects = GameObjectRegistry::GetAllGameObjects();
     {
         SYN_PROFILE_SCOPE("Component Updates")
         for (auto& [id, go] : allGameObjects) {
@@ -440,7 +440,7 @@ bool Core::Update() {
             }
 
             // Update zones
-            m_context->zoneManager->_UpdateZones();
+            m_context->ZoneSystem->_UpdateZones();
         }
 
         // Tick Lua scripts
@@ -457,7 +457,7 @@ bool Core::Update() {
         // simulation state
         m_frameCounter.Update(fixedDeltaTime,
                               m_internal.simulate,
-                              Registry::GetGameObjectCount());
+                              GameObjectRegistry::GetGameObjectCount());
     }
 
     // Run one post-physics sync per frame so render/camera-facing state tracks
@@ -486,17 +486,19 @@ bool Core::Render() {
         m_frameCounter.frameDisplay++;
 
         m_context->renderer->_RenderFrame(m_context->debug);
-        m_frameCounts.drawnObjects.debug   = RenderCore::m_drawnCounts.debug;
-        m_frameCounts.drawnObjects.sky     = RenderCore::m_drawnCounts.sky;
-        m_frameCounts.drawnObjects.forward = RenderCore::m_drawnCounts.forward;
-        m_frameCounts.drawnObjects.shadows = RenderCore::m_drawnCounts.shadows;
+        m_frameCounts.drawnObjects.debug = RenderDirector::m_drawnCounts.debug;
+        m_frameCounts.drawnObjects.sky   = RenderDirector::m_drawnCounts.sky;
+        m_frameCounts.drawnObjects.forward =
+            RenderDirector::m_drawnCounts.forward;
+        m_frameCounts.drawnObjects.shadows =
+            RenderDirector::m_drawnCounts.shadows;
         m_frameCounts.drawnObjects.billboard =
-            RenderCore::m_drawnCounts.billboard;
-        m_frameCounts.drawnObjects.ui = RenderCore::m_drawnCounts.ui;
+            RenderDirector::m_drawnCounts.billboard;
+        m_frameCounts.drawnObjects.ui = RenderDirector::m_drawnCounts.ui;
         m_frameCounts.drawnObjects.culledFrustum =
-            RenderCore::m_drawnCounts.culledFrustum;
+            RenderDirector::m_drawnCounts.culledFrustum;
         m_frameCounts.drawnObjects.culledSize =
-            RenderCore::m_drawnCounts.culledSize;
+            RenderDirector::m_drawnCounts.culledSize;
     }
     return true;
 }
@@ -634,7 +636,8 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
 }
 
 void Core::_ReloadChangedAssets() {
-    for (auto& go : Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
+    for (auto& go :
+         GameObjectRegistry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
         MeshComponent* mc = go->GetComponent<MeshComponent>();
         if (!mc) continue;
         ModelData& mesh = mc->modelData;
@@ -698,8 +701,8 @@ void Core::_HandleKeyEvent(const SDL_Event& event) {
         }
         case SDLK_F5: {
             // Reload changed assets
-            for (auto& go :
-                 Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH)) {
+            for (auto& go : GameObjectRegistry::GetGameObjectsWithComponent(
+                     SYN_COMPONENT_MESH)) {
                 MeshComponent* mc = go->GetComponent<MeshComponent>();
                 if (!mc) continue;
                 ModelData& mesh = mc->modelData;

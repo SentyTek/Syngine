@@ -3,7 +3,7 @@
 // │ Created 2026-06-16                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -24,7 +24,7 @@ using namespace Catch::Matchers;
 TEST_CASE("Generic box rigidbody", "[Physics]") {
     SYN_STARTENGINE;
 
-    auto* go = CreateRigidbodyObject();
+    auto* go  = CreateRigidbodyObject();
     auto* rbc = go->GetComponent<RigidbodyComponent>();
 
     REQUIRE(rbc != nullptr);
@@ -48,22 +48,21 @@ TEST_CASE("Compound shape rigidbody", "[Physics]") {
 
     CompoundShapePart spherePart = {
         .shape           = PhysicsShapes::SPHERE,
-        .shapeParameters = { 0.5f }, // radius
+        .shapeParameters = { 0.5f },              // radius
         .position        = SVec3(1.5f, 0.f, 0.f), // offset from box
-        .rotation        = SQuat() // identity
+        .rotation        = SQuat()                // identity
     };
     parts.push_back(spherePart);
 
-    RigidbodyParameters params = {
-        .shape           = PhysicsShapes::COMPOUND,
-        .mass            = 2.0f,
-        .friction        = 0.6f,
-        .restitution     = 0.05f,
-        .shapeParameters = SVec3(), // Not used for compound
-        .motionType      = JPH::EMotionType::Dynamic,
-        .layer           = Layers::MOVING,
-        .compoundParts   = parts
-    };
+    RigidbodyParameters params = { .shape       = PhysicsShapes::COMPOUND,
+                                   .mass        = 2.0f,
+                                   .friction    = 0.6f,
+                                   .restitution = 0.05f,
+                                   .shapeParameters =
+                                       SVec3(), // Not used for compound
+                                   .motionType    = JPH::EMotionType::Dynamic,
+                                   .layer         = Layers::MOVING,
+                                   .compoundParts = parts };
 
     SYN_STARTENGINE;
     GameObject* obj = new GameObject("test_compound");

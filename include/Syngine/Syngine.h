@@ -3,15 +3,16 @@
 // │ Created 2025-08-11                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
 #include <Syngine/Math/Math.hpp>
 #include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
-#include <Syngine/Core/Registry.h>
 #include <Syngine/Core/Input.h>
+
+#include <Syngine/Scene/GameObjectRegistry.h>
 
 #include <Syngine/GameObjects/AllComponents.h>
 #include <Syngine/GameObjects/Component.h>

@@ -3,7 +3,7 @@
 // │ Created 2026-03-12                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/GameObjects/GameObject.h"

@@ -1,28 +1,28 @@
-// ╒═══════════════════════ RenderCore.h ═╕
+// ╒═══════════════════ RenderDirector.h ═╕
 // │ Syngine                              │
 // │ Created 2026-01-02                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/Graphics/Resources/ShaderManager.h"
-#include "Syngine/Graphics/Resources/UniformRegistry.h"
 #include <Syngine/GameObjects/Components/CameraComponent.h>
+#include <Syngine/Graphics/Resources/UniformRegistry.h>
+#include <Syngine/Graphics/Resources/ShaderManager.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/GameObjects/AllComponents.h>
 #include <Syngine/Math/Matrix4x4.hpp>
 
+#include <bgfx/bgfx.h>
+
 #include <cstdint>
 #include <array>
-
-#include <bgfx/bgfx.h>
 #include <vector>
 
 namespace Syngine {
 
-class RenderCore {
+class RenderDirector {
   public:
     /// @brief Render a single frame. Calls several internal rendering
     /// functions.
@@ -32,26 +32,40 @@ class RenderCore {
     /// @internal
     static bool _RenderFrame(CameraComponent* camera, DebugModes debug);
 
-    /// @brief Initialize the RenderCore system
+    /// @brief Initialize the RenderDirector system
     /// @param config Renderer configuration options
     /// @return true on success, false on failure
     /// @internal
     static bool _Initialize(const RendererConfig& config);
 
-    /// @brief Shutdown the RenderCore system
+    /// @brief Shutdown the RenderDirector system
     /// @internal
     static void _Shutdown();
 
-    /// @brief Set the resolution of the renderer
-    /// @param width Width in pixels
-    /// @param height Height in pixels
-    /// @internal
+    static bool _SetVsync();
     static bool _SetResolution(int width, int height);
 
+    /// @brief Request a resolution change for the next frame
+    /// @param reqW Requested width in pixels
+    /// @param reqH Requested height in pixels
+    /// @internal
+    /// @since v0.0.2
     static void SetResolutionFlag(int reqW, int reqH) {
         m_changeResolutionThisFrame = true;
         m_requestedWidth            = reqW;
         m_requestedHeight           = reqH;
+    }
+
+    /// @brief Sets the Vsync status for the application
+    /// @param enabled Whether to enable or disable Vsync
+    /// @return true on success, false on failure
+    /// @note Will take into effect on the next frame.
+    /// @internal
+    /// @since v0.0.2
+    static void SetVsyncFlag(bool enabled) {
+        if (enabled == m_config.vsync) return; // No change needed
+        m_config.vsync         = enabled;
+        m_changeVsyncThisFrame = true;
     }
 
   private:
@@ -59,6 +73,7 @@ class RenderCore {
     static constexpr uint8_t  NUM_CASCADES    = 4;
 
     static bool m_changeResolutionThisFrame;
+    static bool m_changeVsyncThisFrame;
     static int  m_requestedWidth;
     static int  m_requestedHeight;
 

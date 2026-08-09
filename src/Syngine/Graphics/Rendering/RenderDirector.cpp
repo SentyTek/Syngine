@@ -1,15 +1,15 @@
-// ╒═════════════════════ RenderCore.cpp ═╕
+// ╒═════════════════ RenderDirector.cpp ═╕
 // │ Syngine                              │
 // │ Created 2026-01-02                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
-#include <Syngine/Core/ZoneManager.h>
-#include <Syngine/Graphics/Rendering/RenderCore.h>
+#include <Syngine/Scene/ZoneSystem.h>
+#include <Syngine/Graphics/Rendering/RenderDirector.h>
 #include "Syngine/GameObjects/Components/BillboardComponent.h"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
 #include "Syngine/Graphics/Resources/UniformRegistry.h"
@@ -71,7 +71,7 @@ _CreateSolidRGBA8Texture(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 } // namespace
 
 // I present to you an unholy abomination of static member definitions
-RenderCore::RenderCoreBuffers RenderCore::m_buffers = {
+RenderDirector::RenderCoreBuffers RenderDirector::m_buffers = {
     .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
     .sceneColor =
         BGFX_INVALID_HANDLE, //* Color texture for scene rendering (RGBA16F)
@@ -92,44 +92,47 @@ RenderCore::RenderCoreBuffers RenderCore::m_buffers = {
     .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
 };
 
-bool RenderCore::m_changeResolutionThisFrame = false;
-int  RenderCore::m_requestedWidth            = 0;
-int  RenderCore::m_requestedHeight           = 0;
+bool RenderDirector::m_changeVsyncThisFrame      = false;
+bool RenderDirector::m_changeResolutionThisFrame = false;
+int  RenderDirector::m_requestedWidth            = 0;
+int  RenderDirector::m_requestedHeight           = 0;
 
-RendererConfig RenderCore::m_config;
-SDL_Window*    RenderCore::win = nullptr;
+RendererConfig RenderDirector::m_config;
+SDL_Window*    RenderDirector::win = nullptr;
 
-DebugRender* RenderCore::m_drender                         = nullptr;
-bool         RenderCore::m_isFirstFrame                    = true;
-float RenderCore::m_cascadeSizes[RenderCore::NUM_CASCADES] = { 20, 40, 0, 0 };
-float RenderCore::m_cascadeTexelSizes[RenderCore::NUM_CASCADES] = {
+DebugRender* RenderDirector::m_drender      = nullptr;
+bool         RenderDirector::m_isFirstFrame = true;
+float        RenderDirector::m_cascadeSizes[RenderDirector::NUM_CASCADES] = {
+    20, 40, 0, 0
+};
+float RenderDirector::m_cascadeTexelSizes[RenderDirector::NUM_CASCADES] = {
     0, 0, 0, 0
 };
 
-bgfx::VertexBufferHandle RenderCore::dummyVbh       = BGFX_INVALID_HANDLE;
-bgfx::VertexBufferHandle RenderCore::m_billboardVbh = BGFX_INVALID_HANDLE;
-bgfx::IndexBufferHandle  RenderCore::m_billboardIbh = BGFX_INVALID_HANDLE;
-bgfx::VertexBufferHandle RenderCore::m_fsQuadVbh    = BGFX_INVALID_HANDLE;
+bgfx::VertexBufferHandle RenderDirector::dummyVbh       = BGFX_INVALID_HANDLE;
+bgfx::VertexBufferHandle RenderDirector::m_billboardVbh = BGFX_INVALID_HANDLE;
+bgfx::IndexBufferHandle  RenderDirector::m_billboardIbh = BGFX_INVALID_HANDLE;
+bgfx::VertexBufferHandle RenderDirector::m_fsQuadVbh    = BGFX_INVALID_HANDLE;
 
-Shader*             RenderCore::m_ssaoProgram      = nullptr;
-bgfx::UniformHandle RenderCore::m_defaultShadowMap = BGFX_INVALID_HANDLE;
-bgfx::UniformHandle RenderCore::m_ssao_depthTex    = BGFX_INVALID_HANDLE;
-bgfx::UniformHandle RenderCore::m_ssao_normalTex   = BGFX_INVALID_HANDLE;
-bgfx::UniformHandle RenderCore::m_ssaob_ssaoTex    = BGFX_INVALID_HANDLE;
-bgfx::UniformHandle RenderCore::m_tonemap_sceneTex = BGFX_INVALID_HANDLE;
-bgfx::UniformHandle RenderCore::m_tonemap_ssaoTex  = BGFX_INVALID_HANDLE;
+Shader*             RenderDirector::m_ssaoProgram      = nullptr;
+bgfx::UniformHandle RenderDirector::m_defaultShadowMap = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderDirector::m_ssao_depthTex    = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderDirector::m_ssao_normalTex   = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderDirector::m_ssaob_ssaoTex    = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderDirector::m_tonemap_sceneTex = BGFX_INVALID_HANDLE;
+bgfx::UniformHandle RenderDirector::m_tonemap_ssaoTex  = BGFX_INVALID_HANDLE;
 
-RenderCore::DrawnObjectCount RenderCore::m_drawnCounts;
-float                        RenderCore::m_maxSmallObjDistance =
+RenderDirector::DrawnObjectCount RenderDirector::m_drawnCounts;
+float                            RenderDirector::m_maxSmallObjDistance =
     50.0f; //* Small objects get culled beyond this distance
 
-std::vector<Renderer::RenderPacket> RenderCore::m_renderPackets;
-std::vector<Renderer::RenderPacket> RenderCore::m_billboardRenderPackets;
-std::array<Math::Matrix4x4, RenderCore::NUM_CASCADES>
-           RenderCore::m_csmLightViewProj;
-Math::Vec4 RenderCore::m_csmCascadeSplits;
+std::vector<Renderer::RenderPacket> RenderDirector::m_renderPackets;
+std::vector<Renderer::RenderPacket> RenderDirector::m_billboardRenderPackets;
+std::array<Math::Matrix4x4, RenderDirector::NUM_CASCADES>
+           RenderDirector::m_csmLightViewProj;
+Math::Vec4 RenderDirector::m_csmCascadeSplits;
 
-bool RenderCore::_Initialize(const RendererConfig& config) {
+bool RenderDirector::_Initialize(const RendererConfig& config) {
     m_config = config;
     if (m_config.loadFromFile) {
         auto videoSettings = Serializer::_LoadCoreSettingsCategory<
@@ -379,7 +382,7 @@ bool RenderCore::_Initialize(const RendererConfig& config) {
     return true;
 }
 
-void RenderCore::_Shutdown() {
+void RenderDirector::_Shutdown() {
     // Destroy billboard buffers
     if (bgfx::isValid(m_billboardVbh)) {
         bgfx::destroy(m_billboardVbh);
@@ -426,7 +429,7 @@ void RenderCore::_Shutdown() {
     bgfx::shutdown();
 }
 
-bool RenderCore::_CreateSceneBuffers() {
+bool RenderDirector::_CreateSceneBuffers() {
     // If shadows are enabled, initialize shadow mapping resources
     if (m_config.useShadows) {
         m_buffers.shadowDepth = bgfx::createTexture2D(
@@ -526,7 +529,7 @@ bool RenderCore::_CreateSceneBuffers() {
     return true;
 }
 
-bool RenderCore::_SetResolution(int width, int height) {
+bool RenderDirector::_SetResolution(int width, int height) {
     if (width <= 0 || height <= 0) {
         Syngine::Logger::LogF(LogLevel::WARN,
                               true,
@@ -579,11 +582,23 @@ bool RenderCore::_SetResolution(int width, int height) {
     return true;
 }
 
+bool RenderDirector::_SetVsync() {
+    Serializer::m_coreSettings.video.vSync = m_config.vsync;
+
+    bgfx::reset(uint32_t(Renderer::width),
+                uint32_t(Renderer::height),
+                m_config.vsync ? BGFX_RESET_VSYNC : BGFX_RESET_NONE);
+    bgfx::setViewRect(
+        0, 0, 0, uint16_t(Renderer::width), uint16_t(Renderer::height));
+
+    return true;
+}
+
 /*
 --- Drawing helpers ---
 */
 
-void RenderCore::_CalculateCascadeMatrices(
+void RenderDirector::_CalculateCascadeMatrices(
     CameraComponent*                           camera,
     std::array<Math::Matrix4x4, NUM_CASCADES>& outLightView,
     std::array<Math::Matrix4x4, NUM_CASCADES>& outLightProj,
@@ -660,7 +675,7 @@ void RenderCore::_CalculateCascadeMatrices(
 }
 
 CameraComponent::Frustum
-RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
+RenderDirector::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     CameraComponent::Frustum                  cascadeFrustum;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
@@ -701,9 +716,9 @@ RenderCore::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
     return cascadeFrustum;
 }
 
-float RenderCore::_CalculateScreenSize(const MeshAABB& aabb,
-                                       const Camera&   camera,
-                                       float           distance) {
+float RenderDirector::_CalculateScreenSize(const MeshAABB& aabb,
+                                           const Camera&   camera,
+                                           float           distance) {
     SYN_PROFILE_FUNCTION();
     if (distance <= 0.01f) return 1000.0f;
 
@@ -721,7 +736,8 @@ float RenderCore::_CalculateScreenSize(const MeshAABB& aabb,
     return projectedSize;
 }
 
-bool RenderCore::_ShouldCullBySize(GameObject* go, CameraComponent* camera) {
+bool RenderDirector::_ShouldCullBySize(GameObject*      go,
+                                       CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     auto* meshComp = go->GetComponent<MeshComponent>();
     if (!meshComp || !meshComp->IsEnabled()) return false;
@@ -750,9 +766,9 @@ bool RenderCore::_ShouldCullBySize(GameObject* go, CameraComponent* camera) {
     return false;
 }
 
-bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
-                                         CameraComponent* camera,
-                                         uint8_t          cascade) {
+bool RenderDirector::_ShouldCullBySizeShadow(GameObject*      go,
+                                             CameraComponent* camera,
+                                             uint8_t          cascade) {
     SYN_PROFILE_FUNCTION();
     auto* meshComp = go->GetComponent<MeshComponent>();
     if (!meshComp || !meshComp->IsEnabled()) return false;
@@ -785,13 +801,13 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
     return false; // Otherwise, don't cull by size for shadows
 }
 
-void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
+void RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     m_renderPackets.clear();
     m_billboardRenderPackets.clear();
 
     // Iterate registry
-    const auto& gameObjects = Registry::GetRenderableObjects();
+    const auto& gameObjects = GameObjectRegistry::GetRenderableObjects();
     m_renderPackets.reserve(gameObjects.size());
     for (auto& go : gameObjects) {
         if (!go || !go->IsActive()) continue;
@@ -851,8 +867,8 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
               });
 
     // Include billboards too
-    auto billboardGameObjects =
-        Registry::GetGameObjectsWithComponent(SYN_COMPONENT_BILLBOARD);
+    auto billboardGameObjects = GameObjectRegistry::GetGameObjectsWithComponent(
+        SYN_COMPONENT_BILLBOARD);
     m_billboardRenderPackets.reserve(billboardGameObjects.size());
     for (auto& go : billboardGameObjects) {
         if (!go || !go->IsActive()) continue;
@@ -895,7 +911,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
     }
 }
 
-void RenderCore::_ScreenSpaceQuad(ViewID view, const Shader* program) {
+void RenderDirector::_ScreenSpaceQuad(ViewID view, const Shader* program) {
     bgfx::setState(BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
                    BGFX_STATE_CULL_CW);
 
@@ -908,7 +924,8 @@ void RenderCore::_ScreenSpaceQuad(ViewID view, const Shader* program) {
 --- Drawing functions ---
 */
 
-void RenderCore::_DrawShadows(const Shader* program, CameraComponent* camera) {
+void RenderDirector::_DrawShadows(const Shader*    program,
+                                  CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     const uint64_t renderState =
         BGFX_STATE_DEFAULT &
@@ -925,7 +942,7 @@ void RenderCore::_DrawShadows(const Shader* program, CameraComponent* camera) {
         }
     }
 
-    const auto& gameObjects = Registry::GetRenderableObjects();
+    const auto& gameObjects = GameObjectRegistry::GetRenderableObjects();
 
     for (uint8_t cascade = 0; cascade < NUM_CASCADES; ++cascade) {
         auto cascadeFrustum = _GetCascadeFrustum(cascade, camera);
@@ -974,8 +991,8 @@ void RenderCore::_DrawShadows(const Shader* program, CameraComponent* camera) {
     }
 }
 
-void RenderCore::_DrawSky(const Shader*          program,
-                          const CameraComponent* camera) {
+void RenderDirector::_DrawSky(const Shader*          program,
+                              const CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program->m_viewId, "Sky");
     bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
@@ -990,7 +1007,8 @@ void RenderCore::_DrawSky(const Shader*          program,
     bgfx::submit(program->m_viewId, program->m_program);
 }
 
-void RenderCore::_DrawForward(const Shader* program, CameraComponent* camera) {
+void RenderDirector::_DrawForward(const Shader*    program,
+                                  CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program->m_viewId, "Forward");
     bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
@@ -1020,9 +1038,9 @@ void RenderCore::_DrawForward(const Shader* program, CameraComponent* camera) {
     }
 }
 
-void RenderCore::_DrawDebug(const Shader*    program,
-                            CameraComponent* camera,
-                            DebugModes       debug) {
+void RenderDirector::_DrawDebug(const Shader*    program,
+                                CameraComponent* camera,
+                                DebugModes       debug) {
     SYN_PROFILE_FUNCTION();
 
     bgfx::setViewName(program->m_viewId, "Debug");
@@ -1034,7 +1052,7 @@ void RenderCore::_DrawDebug(const Shader*    program,
 
         SYN_PROFILE_SCOPE("Draw Zones");
         for (std::vector<ZoneComponent*> zones =
-                 Core::_GetContext()->zoneManager->GetZones();
+                 Core::_GetContext()->ZoneSystem->GetZones();
              auto zone : zones) {
             if (!zone || !zone->IsEnabled()) continue;
             switch (zone->GetShape()) {
@@ -1064,14 +1082,15 @@ void RenderCore::_DrawDebug(const Shader*    program,
     if (debug.DrawBoundingBoxes && m_drender) {
         SYN_PROFILE_SCOPE("Draw AABBs");
         std::vector<GameObject*> meshObjects =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH);
+            GameObjectRegistry::GetGameObjectsWithComponent(SYN_COMPONENT_MESH);
         for (auto go : meshObjects) {
             MeshAABB aabb = go->GetComponent<MeshComponent>()->GetAABB();
             m_drender->DrawBox(aabb.min, aabb.max, JPH::Color::sGreen);
         }
 
         std::vector<GameObject*> billboards =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_BILLBOARD);
+            GameObjectRegistry::GetGameObjectsWithComponent(
+                SYN_COMPONENT_BILLBOARD);
         for (auto go : billboards) {
             BillboardComponent* comp = go->GetComponent<BillboardComponent>();
             if (!comp) continue;
@@ -1087,7 +1106,7 @@ void RenderCore::_DrawDebug(const Shader*    program,
     // lines, zone bounds, and AABBs) in a single pass.
     // TODO: Rework this to draw camera frustums as gizmos instead of
     // hardcoded
-    GameObject* p = Registry::GetGameObjectByName("player");
+    GameObject* p = GameObjectRegistry::GetGameObjectByName("player");
     if (p && Core::IsPhysicsEnabled()) {
         CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
         if (!playerCamera) {
@@ -1109,8 +1128,8 @@ void RenderCore::_DrawDebug(const Shader*    program,
     }
 }
 
-void RenderCore::_DrawBillboard(const Shader*    program,
-                                CameraComponent* camera) {
+void RenderDirector::_DrawBillboard(const Shader*    program,
+                                    CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program->m_viewId, "Billboards");
     bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
@@ -1136,7 +1155,7 @@ void RenderCore::_DrawBillboard(const Shader*    program,
     }
 }
 
-void RenderCore::_DrawSSAO(const Shader* program) {
+void RenderDirector::_DrawSSAO(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     if (!m_config.useSSAO) return;
     uint64_t samplerFlags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
@@ -1178,7 +1197,7 @@ void RenderCore::_DrawSSAO(const Shader* program) {
     }
 }
 
-void RenderCore::_DrawPostProcess(const Shader* program) {
+void RenderDirector::_DrawPostProcess(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program->m_viewId, "PostProcess");
     bgfx::setViewFrameBuffer(VIEW_POSTPROCESS,
@@ -1188,7 +1207,7 @@ void RenderCore::_DrawPostProcess(const Shader* program) {
     _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
 }
 
-void RenderCore::_DrawDbgBillboard(Shader* program) {
+void RenderDirector::_DrawDbgBillboard(Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_BILL_DBG, "Gizmos");
     bgfx::setViewFrameBuffer(VIEW_BILL_DBG, m_buffers.sceneFB);
@@ -1201,7 +1220,7 @@ void RenderCore::_DrawDbgBillboard(Shader* program) {
     _SetViewUniforms(program);
 
     // Draw all gizmos
-    std::vector<GameObject*> gizmos = Registry::GetGizmos();
+    std::vector<GameObject*> gizmos = GameObjectRegistry::GetGizmos();
 
     // Build render packets for gizmos and draw them
     std::vector<Renderer::RenderPacket> packets;
@@ -1239,7 +1258,7 @@ void RenderCore::_DrawDbgBillboard(Shader* program) {
     }
 }
 
-void RenderCore::_DrawUIDebug(CameraComponent* camera) {
+void RenderDirector::_DrawUIDebug(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_UI_DEBUG, "UI Debug");
     bgfx::setDebug(BGFX_DEBUG_TEXT);
@@ -1256,7 +1275,7 @@ void RenderCore::_DrawUIDebug(CameraComponent* camera) {
         1, maxRows - 1, 0x0C, "FOR INTERNAL USE ONLY - NOT FOR PUBLIC RELEASE");
 }
 
-bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
+bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     // Prepare camera and light information
     if (!camera) {
@@ -1379,22 +1398,22 @@ bool RenderCore::_PrepareRenderViews(CameraComponent* camera) {
 
 // MARK: Uniform Uploading
 
-void RenderCore::_SetFrameUniforms(const Shader* shader, const void* ctx) {
+void RenderDirector::_SetFrameUniforms(const Shader* shader, const void* ctx) {
     SYN_PROFILE_FUNCTION();
     for (const auto& uniform : shader->m_frameUniforms) {
         bgfx::setUniform(uniform.handle, uniform.getter(ctx), uniform.count);
     }
 }
 
-void RenderCore::_SetViewUniforms(const Shader* shader, const void* ctx) {
+void RenderDirector::_SetViewUniforms(const Shader* shader, const void* ctx) {
     SYN_PROFILE_FUNCTION();
     for (const auto& uniform : shader->m_viewUniforms) {
         bgfx::setUniform(uniform.handle, uniform.getter(ctx), uniform.count);
     }
 }
 
-void RenderCore::_SetObjectUniforms(const Shader*                 shader,
-                                    const Renderer::RenderPacket& packet) {
+void RenderDirector::_SetObjectUniforms(const Shader*                 shader,
+                                        const Renderer::RenderPacket& packet) {
     SYN_PROFILE_FUNCTION();
     for (const auto& uniform : shader->m_drawUniforms) {
         bgfx::setUniform(
@@ -1402,9 +1421,9 @@ void RenderCore::_SetObjectUniforms(const Shader*                 shader,
     }
 }
 
-void RenderCore::_SetMaterialUniforms(const Shader*                 shader,
-                                      const Renderer::RenderPacket& packet,
-                                      uint32_t                      flags) {
+void RenderDirector::_SetMaterialUniforms(const Shader*                 shader,
+                                          const Renderer::RenderPacket& packet,
+                                          uint32_t                      flags) {
     SYN_PROFILE_FUNCTION();
 
     // Bind material paramters
@@ -1450,7 +1469,7 @@ void RenderCore::_SetMaterialUniforms(const Shader*                 shader,
 
 // MARK: Main Render Loop
 
-bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
+bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     SYN_PROFILE_FUNCTION();
     if (m_isFirstFrame) {
         m_isFirstFrame = false;
@@ -1467,6 +1486,14 @@ bool RenderCore::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     if (m_changeResolutionThisFrame) {
         m_changeResolutionThisFrame = false;
         if (!_SetResolution(m_requestedWidth, m_requestedHeight)) {
+            Renderer::_UpdateDrawID();
+            return false;
+        }
+    }
+
+    if (m_changeVsyncThisFrame) {
+        m_changeVsyncThisFrame = false;
+        if (!_SetVsync()) {
             Renderer::_UpdateDrawID();
             return false;
         }

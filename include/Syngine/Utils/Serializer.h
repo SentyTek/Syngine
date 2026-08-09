@@ -3,7 +3,7 @@
 // │ Created 2026-01-26                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -19,13 +19,15 @@
 
 #include "../../lib/miniscl.hpp"
 #include "Syngine/Math/Math.hpp"
+#include "Syngine/Math/Quaternion.hpp"
 
 #define SYNINT_PREFAB_VERSION "1.0"
 #define SYNINT_SCENE_VERSION "1.0"
 #define SYNINT_CORESETTINGS_VERSION "1.0"
 
 namespace Syngine {
-    class GameObject; // Forward declaration to avoid circular dependency with GameObject.h
+class GameObject; // Forward declaration to avoid circular dependency with
+                  // GameObject.h
 namespace Internal {
 std::string
 ResolvePath(const char* path); // Had issues with FsUtils so added this as a
@@ -37,38 +39,41 @@ ResolvePath(const char* path); // Had issues with FsUtils so added this as a
 /// @since v0.0.1
 class Serializer {
   public:
-    // Helper types for serialization
-    struct Float3 { float x, y, z; };
-    struct Float4 { float x, y, z, w; };
-    struct Mat3   { float data[9]; };
-    struct Mat4   { float data[16]; };
-
     /// @brief A flexible data node that can represent various data types
     /// and hierarchical structures (like JSON or XML).
     /// @since v0.0.1
     class DataNode {
       public:
-        using NodeMap = std::unordered_map<std::string, DataNode>;
+        using NodeMap   = std::unordered_map<std::string, DataNode>;
         using NodeArray = std::vector<DataNode>;
 
       private:
         // Internal data representation
         // std::monostate represents a null/empty state
-        std::variant<std::monostate, int, uint64_t, float, bool, std::string, NodeMap, NodeArray> m_data;
+        std::variant<std::monostate,
+                     int,
+                     uint64_t,
+                     float,
+                     bool,
+                     std::string,
+                     NodeMap,
+                     NodeArray>
+            m_data;
 
-        friend class Serializer; // Allow Serializer to access private members for serialization
+        friend class Serializer; // Allow Serializer to access private members
+                                 // for serialization
       public:
         /// @brief The type of data stored in the DataNode
         /// @since v0.0.1
         enum class Type {
-            Null,    //* No data
-            Integer, //* Integer number
+            Null,            //* No data
+            Integer,         //* Integer number
             UnsignedInteger, //* Unsigned integer number
-            Float,   //* Floating-point number
-            Boolean, //* Boolean value
-            String,  //* String value
-            Object,  //* Key-value map
-            Array    //* Ordered list (float4, mat3, component, etc.)
+            Float,           //* Floating-point number
+            Boolean,         //* Boolean value
+            String,          //* String value
+            Object,          //* Key-value map
+            Array            //* Ordered list (float4, mat3, component, etc.)
         };
 
         /// @brief Checks if the DataNode contains a key (for Object type nodes)
@@ -87,8 +92,8 @@ class Serializer {
                 m_data = NodeMap{};
             }
             auto& map = std::get<NodeMap>(m_data);
-            return map[key]; // This will default-construct a new DataNode if key
-                            // doesn't exist
+            return map[key]; // This will default-construct a new DataNode if
+                             // key doesn't exist
         }
 
         const DataNode& operator[](const std::string& key) const {
@@ -114,8 +119,8 @@ class Serializer {
             return *this;
         }
 
-        /// @brief Assignment operator to set a value directly (int, uint64_t, float,
-        /// bool, string, etc.)
+        /// @brief Assignment operator to set a value directly (int, uint64_t,
+        /// float, bool, string, etc.)
         /// @tparam T The type of the value to set (int, uint64_t, float, bool,
         /// std::string, etc.)
         /// @param value The value to set
@@ -123,7 +128,8 @@ class Serializer {
         /// @since v0.0.1
         template <typename T> DataNode& operator=(const T& value);
 
-        /// @brief Assignment operator for C-style string literals to set a string value
+        /// @brief Assignment operator for C-style string literals to set a
+        /// string value
         /// @param value The C-style string literal to set
         /// @return Reference to this DataNode
         /// @since v0.0.1
@@ -139,17 +145,21 @@ class Serializer {
         /// @since v0.0.1
         DataNode& operator/(const std::string& value) { return (*this)[value]; }
 
-        bool operator!() const { return std::holds_alternative<std::monostate>(m_data); }
+        bool operator!() const {
+            return std::holds_alternative<std::monostate>(m_data);
+        }
 
         /// @brief Converts the DataNode to a specific type
-        /// @tparam T The type to convert to (int, float, bool, std::string, etc.)
+        /// @tparam T The type to convert to (int, float, bool, std::string,
+        /// etc.)
         /// @param defaultValue The default value to return if conversion fails
         /// @return The converted value or the default value
         /// @since v0.0.1
         template <typename T> T As(const T& defaultValue = T()) const;
 
         /// @brief Sets the value of the DataNode
-        /// @tparam T The type of the value to set (int, float, bool, std::string, etc.)
+        /// @tparam T The type of the value to set (int, float, bool,
+        /// std::string, etc.)
         /// @param value The value to set
         /// @since v0.0.1
         template <typename T> void Set(const T& value);
@@ -195,7 +205,7 @@ class Serializer {
         void Append(DataNode& node);
 
         NodeMap::const_iterator begin() const; // Iterator for Object type nodes
-        NodeMap::const_iterator end() const;  // Iterator for Object type nodes
+        NodeMap::const_iterator end() const;   // Iterator for Object type nodes
 
         /// @brief Gets all keys in the Object type DataNode. For iteration.
         /// @return Vector of keys as strings
@@ -208,14 +218,15 @@ class Serializer {
     /// @since v0.0.1
     struct CoreSettings {
         struct Video {
-            int width = 1920; //* Default 1080p
-            int height = 1080; //* Default 1080p
-            bool     fullscreen = false; //* Windowed by default
-            float    brightness = 1.0f;  //* Normal brightness
-            bool     vSync      = true;  //* V-Sync enabled by default
-            bool     useShadows = true;  //* Shadows enabled by default
-            int      shadowDist = 500;   //* Shadow draw distance
-            bool     useSSAO    = true;  //* SSAO enabled by default
+            int width      = 1920; //* Default 1080p
+            int height     = 1080; //* Default 1080p
+            int windowMode = 0; //* 0 = bordered, 1 = borderless fullscreen, 2 =
+                                // exclusive fullscreen
+            float    brightness = 1.0f; //* Normal brightness
+            bool     vSync      = true; //* V-Sync enabled by default
+            bool     useShadows = true; //* Shadows enabled by default
+            int      shadowDist = 500;  //* Shadow draw distance
+            bool     useSSAO    = true; //* SSAO enabled by default
             DataNode customSettings; //* Custom video settings as DataNode tree
         } video;
 
@@ -223,81 +234,104 @@ class Serializer {
         /// @since v0.0.1
         struct Audio {
             float masterVolume = 1.0f; //* Master volume (0.0 to 1.0)
-            float channels[8] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f}; //* Volume for 8 audio channels
+            float channels[8]  = {
+                1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f
+            }; //* Volume for 8 audio channels
         } audio;
 
         /// @brief Control settings like mouse sensitivity and key bindings
         /// @since v0.0.1
         struct Controls {
-            float mouseSensitivity = 1.0f; //* Normal sensitivity
-            bool  invertY          = false; //* Y-axis not inverted by default
+            float    mouseSensitivity = 1.0f; //* Normal sensitivity
+            bool     invertY = false;         //* Y-axis not inverted by default
             DataNode binds; //* Key bindings as a map of action -> key
 
             DataNode Serialize() const; //* Helper to serialize control settings
-            void Deserialize(const DataNode& node); //* Helper to deserialize control settings
+            void Deserialize(const DataNode& node); //* Helper to deserialize
+                                                    // control settings
         } controls;
 
         DataNode customSettings; //* For game-specific settings as DataNode tree
 
         DataNode Serialize() const; //* Helper to serialize core settings
-        void Deserialize(const DataNode& node); //* Helper to deserialize core settings
+        void     Deserialize(
+                const DataNode& node); //* Helper to deserialize core settings
 
-        static bool SaveToFile(const std::string& path, const CoreSettings& settings); //* Save settings to file
-        static CoreSettings LoadFromFile(const std::string& path); //* Load settings from file
+        static bool
+        SaveToFile(const std::string&  path,
+                   const CoreSettings& settings); //* Save settings to file
+        static CoreSettings
+        LoadFromFile(const std::string& path); //* Load settings from file
     };
 
-    /// @brief Represents a prefab/asset - a reusable GameObject template with all its components
+    /// @brief Represents a prefab/asset - a reusable GameObject template with
+    /// all its components
     /// @since v0.0.1
     struct Prefab {
-        std::string name; //* Human-readable name of the prefab
-        std::string guid; //* Unique identifier for the prefab
+        std::string name;               //* Human-readable name of the prefab
+        std::string guid;               //* Unique identifier for the prefab
         DataNode    rootGameObjectData; //* Serialized GameObject tree (with all
-                                    // children and components)
+                                        // children and components)
         GameObject* rootGameObject =
             nullptr; //* Pointer to the deserialized root GameObject (not
-                     //serialized, used at runtime)
+                     // serialized, used at runtime)
 
         bool isValid =
             false; //* Indicates if the prefab was successfully loaded/created
 
         Prefab(GameObject*
                    root); // Construct prefab from a GameObject (serializes it)
-        Prefab(const std::string& path); // Construct prefab by loading from file
+        Prefab(
+            const std::string& path); // Construct prefab by loading from file
 
-        bool SaveToFile(const std::string& path); //* Save prefab to file
+        bool   SaveToFile(const std::string& path);   //* Save prefab to file
         Prefab LoadFromFile(const std::string& path); //* Load prefab from file
 
-        private:
-          Prefab();
-          void WriteGameObject(const DataNode& node, scl::xml::XmlDocument& doc, scl::xml::XmlElem* parent) const; //* Helper to serialize prefab
-          DataNode& Deserialize(const scl::xml::XmlElem* elem, DataNode& outNode); //* Helper to deserialize prefab
+      private:
+        Prefab();
+        void WriteGameObject(
+            const DataNode&        node,
+            scl::xml::XmlDocument& doc,
+            scl::xml::XmlElem*     parent) const; //* Helper to serialize prefab
+        DataNode&
+        Deserialize(const scl::xml::XmlElem* elem,
+                    DataNode& outNode); //* Helper to deserialize prefab
     };
 
-    /// @brief Represents a complete game scene with all GameObjects and scene settings
+    /// @brief Represents a complete game scene with all GameObjects and scene
+    /// settings
     /// @since v0.0.1
     struct Scene {
-        std::string name; //* Human-readable name of the scene
-        std::string guid; //* Unique identifier for the scene
-        DataNode gameObjects; //* Array of root GameObjects in the scene
-        DataNode sceneSettings; //* Scene-specific settings (lighting, fog, skybox, etc.)
+        std::string name;          //* Human-readable name of the scene
+        std::string guid;          //* Unique identifier for the scene
+        DataNode    gameObjects;   //* Array of root GameObjects in the scene
+        DataNode    sceneSettings; //* Scene-specific settings (lighting, fog,
+                                   // skybox, etc.)
 
-        DataNode Serialize() const; //* Helper to serialize scene
+        DataNode Serialize() const;             //* Helper to serialize scene
         void Deserialize(const DataNode& node); //* Helper to deserialize scene
 
-        static bool SaveToFile(const std::string& path, const Scene& scene); //* Save scene to file
-        static Scene LoadFromFile(const std::string& path); //* Load scene from file
+        static bool SaveToFile(const std::string& path,
+                               const Scene&       scene); //* Save scene to file
+        static Scene
+        LoadFromFile(const std::string& path); //* Load scene from file
     };
 
     /// @brief Represents a complete game save file
     /// @since v0.0.1
     struct SaveData {
-        DataNode state; //* Serialized game state (player data, world state, etc. Game sets this up)
+        DataNode state; //* Serialized game state (player data, world state,
+                        // etc. Game sets this up)
 
         DataNode Serialize() const; //* Helper to serialize save data
-        void Deserialize(const DataNode& node); //* Helper to deserialize save data
+        void
+        Deserialize(const DataNode& node); //* Helper to deserialize save data
 
-        static bool SaveToFile(const std::string& path, const SaveData& saveData); //* Save save data to file
-        static SaveData LoadFromFile(const std::string& path); //* Load save data from file
+        static bool
+        SaveToFile(const std::string& path,
+                   const SaveData&    saveData); //* Save save data to file
+        static SaveData
+        LoadFromFile(const std::string& path); //* Load save data from file
     };
 
     // The theory behind this is that we open the bundle, extract the asset as a
@@ -307,36 +341,46 @@ class Serializer {
     /// return it as a stream
     /// @param bundlePath The path to the bundle file
     /// @param assetPath The path to the asset within the bundle
-    /// @param pack Optional Packager instance to use for reading the bundle, in which case bundlePath is ignored
+    /// @param pack Optional Packager instance to use for reading the bundle, in
+    /// which case bundlePath is ignored
     /// @return A stream containing the asset data, or an empty stream if there
     /// was an error
     /// @since v0.0.1
     /// @internal
     static inline scl::stream
-    _ReadFromBundle(const std::string&  bundlePath,
-                    const std::string&  assetPath,
+    _ReadFromBundle(const std::string&   bundlePath,
+                    const std::string&   assetPath,
                     scl::pack::Packager& pack = *(new scl::pack::Packager())) {
         try {
-            // Check if the packager is already open; if not, open the bundle file
+            // Check if the packager is already open; if not, open the bundle
+            // file
             if (pack.index().empty()) {
                 scl::path resolvedBundlePath =
                     Internal::ResolvePath(bundlePath.c_str()).c_str();
                 if (!resolvedBundlePath.exists()) {
-                    Logger::LogF(LogLevel::ERR, true, "Bundle file not found: %s", bundlePath.c_str());
+                    Logger::LogF(LogLevel::ERR,
+                                 true,
+                                 "Bundle file not found: %s",
+                                 bundlePath.c_str());
                     return scl::stream();
                 }
                 if (!pack.open(resolvedBundlePath)) {
-                    Logger::LogF(LogLevel::ERR, true, "Failed to open bundle: %s", bundlePath.c_str());
+                    Logger::LogF(LogLevel::ERR,
+                                 true,
+                                 "Failed to open bundle: %s",
+                                 bundlePath.c_str());
                     return scl::stream();
                 }
             }
 
             // miniscl bug workaround:
-            // Calling openFile() for a missing asset creates an "active" index with
-            // a null stream; Packager::close()/destructor later dereferences it.
+            // Calling openFile() for a missing asset creates an "active" index
+            // with a null stream; Packager::close()/destructor later
+            // dereferences it.
             const auto& index = pack.index();
             if (index.find(assetPath.c_str()) == index.end()) {
-                Logger::LogF(LogLevel::ERR, true,
+                Logger::LogF(LogLevel::ERR,
+                             true,
                              "Asset not found in bundle index: %s",
                              assetPath.c_str());
                 pack.close();
@@ -357,14 +401,15 @@ class Serializer {
 
             wts->waitable().wait();
             scl::stream ms;
-            size_t dataSize = wts->stream()->size();
+            size_t      dataSize = wts->stream()->size();
             ms.write(wts->stream()->data(), dataSize);
             ms.seek(scl::StreamPos::start, 0);
 
             pack.close();
             return ms;
         } catch (const std::exception& e) {
-            Logger::LogF(LogLevel::ERR, true, "Error reading from bundle: %s", e.what());
+            Logger::LogF(
+                LogLevel::ERR, true, "Error reading from bundle: %s", e.what());
             return scl::stream();
         }
     }
@@ -379,16 +424,17 @@ class Serializer {
         // See _ParseStringArray for explanation of CSV parsing logic
         std::vector<float> floats;
         size_t             end = value.ffi(",");
-        #pragma warning(push)
-        #pragma warning(disable: 4244) // Suppress conversion warning from __int64 to uint
-        #pragma warning(disable: 4267) // Suppress conversion warning from size_t to uint
+// Suppress conversion warning from __int64 to uint and from size_t to uint
+#pragma warning(push)
+#pragma warning(disable : 4244)
+#pragma warning(disable : 4267)
         while (end != std::string::npos) {
             floats.push_back(std::stof(value.substr(0, end).cstr()));
             value = value.substr(end + 1);
             end   = value.ffi(",");
         }
         floats.push_back(std::stof(value.cstr()));
-        #pragma warning(pop)
+#pragma warning(pop)
         return floats;
     }
 
@@ -402,22 +448,24 @@ class Serializer {
         // See _ParseStringArray for explanation of CSV parsing logic
         std::vector<int> ints;
         size_t           end = value.ffi(",");
-        #pragma warning(push)
-        #pragma warning(disable: 4267) // Suppress conversion warning from size_t to uint
+        // Suppress conversion warning from size_t to uint
+#pragma warning(push)
+#pragma warning(disable : 4267)
         while (end != std::string::npos) {
             ints.push_back(std::stoi(value.substr(0, end).cstr()));
             value = value.substr(end + 1);
             end   = value.ffi(",");
         }
         ints.push_back(std::stoi(value.cstr()));
-        #pragma warning(pop)
+#pragma warning(pop)
         return ints;
     }
 
     /// @brief Internal helper to parse string arrays
-    /// @param value The string value to parse (expected format: "str1,str2,str3")
-    /// @return A vector of strings with the parsed values, or an empty vector if
-    /// parsing fails
+    /// @param value The string value to parse (expected format:
+    /// "str1,str2,str3")
+    /// @return A vector of strings with the parsed values, or an empty vector
+    /// if parsing fails
     /// @since v0.0.1
     /// @internal
     static inline std::vector<std::string>
@@ -425,15 +473,18 @@ class Serializer {
         // tags are CSV in XML, convert back to array
         std::vector<std::string> tags;
         long long                end = value.ffi(","); // Find first comma
-        #pragma warning(push)
-        #pragma warning(disable: 4244) // Suppress conversion warning from __int64 to uint
+        // Suppress conversion warning from __int64 to uint
+#pragma warning(push)
+#pragma warning(disable : 4244)
         while (end != std::string::npos) {
-            tags.push_back(value.substr(0, end).cstr()); // Extract substring up to comma as a tag
+            tags.push_back(
+                value.substr(0, end)
+                    .cstr()); // Extract substring up to comma as a tag
             value = value.substr(end + 1); // Remove parsed part from string
             end   = value.ffi(","); // Find next comma in remaining string
         }
         tags.push_back(value.cstr()); // Last tag after final comma
-        #pragma warning(pop)
+#pragma warning(pop)
         return tags;
     }
 
@@ -462,7 +513,7 @@ class Serializer {
     template <typename T> static T* _LoadCoreSettingsCategory();
 
     friend class Core;
-    friend class RenderCore;
+    friend class RenderDirector;
     friend class Window;
 };
 
@@ -470,13 +521,13 @@ class Serializer {
 // MARK: As<>() conversions
 
 template <>
-inline std::vector<float>
-Serializer::DataNode::As<std::vector<float>>(const std::vector<float>& defaultValue) const {
+inline std::vector<float> Serializer::DataNode::As<std::vector<float>>(
+    const std::vector<float>& defaultValue) const {
     if (!std::holds_alternative<NodeArray>(m_data)) {
         return defaultValue;
     }
 
-    const auto& arr = std::get<NodeArray>(m_data);
+    const auto&        arr = std::get<NodeArray>(m_data);
     std::vector<float> out;
     out.reserve(arr.size());
     for (const auto& elem : arr) {
@@ -486,13 +537,13 @@ Serializer::DataNode::As<std::vector<float>>(const std::vector<float>& defaultVa
 }
 
 template <>
-inline std::vector<int>
-Serializer::DataNode::As<std::vector<int>>(const std::vector<int>& defaultValue) const {
+inline std::vector<int> Serializer::DataNode::As<std::vector<int>>(
+    const std::vector<int>& defaultValue) const {
     if (!std::holds_alternative<NodeArray>(m_data)) {
         return defaultValue;
     }
 
-    const auto& arr = std::get<NodeArray>(m_data);
+    const auto&      arr = std::get<NodeArray>(m_data);
     std::vector<int> out;
     out.reserve(arr.size());
     for (const auto& elem : arr) {
@@ -503,12 +554,13 @@ Serializer::DataNode::As<std::vector<int>>(const std::vector<int>& defaultValue)
 
 template <>
 inline std::vector<std::string>
-Serializer::DataNode::As<std::vector<std::string>>(const std::vector<std::string>& defaultValue) const {
+Serializer::DataNode::As<std::vector<std::string>>(
+    const std::vector<std::string>& defaultValue) const {
     if (!std::holds_alternative<NodeArray>(m_data)) {
         return defaultValue;
     }
 
-    const auto& arr = std::get<NodeArray>(m_data);
+    const auto&              arr = std::get<NodeArray>(m_data);
     std::vector<std::string> out;
     out.reserve(arr.size());
     for (const auto& elem : arr) {
@@ -578,44 +630,49 @@ inline T Serializer::DataNode::As(const T& defaultValue) const {
 }
 
 // MARK: Set() and operator=() for setting values in DataNode
-template <typename T>
-inline void Serializer::DataNode::Set(const T& value) {
+template <typename T> inline void Serializer::DataNode::Set(const T& value) {
     m_data = value;
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<int>(const int& value) {
-    m_data = value;
-    return *this;
-}
-
-template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<float>(const float& value) {
+inline Serializer::DataNode&
+    Serializer::DataNode::operator= <int>(const int& value) {
     m_data = value;
     return *this;
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<bool>(const bool& value) {
+inline Serializer::DataNode&
+    Serializer::DataNode::operator= <float>(const float& value) {
     m_data = value;
     return *this;
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<std::string>(const std::string& value) {
+inline Serializer::DataNode&
+    Serializer::DataNode::operator= <bool>(const bool& value) {
     m_data = value;
     return *this;
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<const char*>(const char* const& value) {
+inline Serializer::DataNode&
+    Serializer::DataNode::operator= <std::string>(const std::string& value) {
+    m_data = value;
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode&
+    Serializer::DataNode::operator= <const char*>(const char* const& value) {
     m_data = std::string(value);
     return *this;
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<float>>(const std::vector<float>& value) {
-    m_data = NodeArray{};
+inline Serializer::DataNode& Serializer::DataNode::operator=
+    <std::vector<float>>(const std::vector<float>& value) {
+    m_data    = NodeArray{};
     auto& arr = std::get<NodeArray>(m_data);
     for (const auto& elem : value) {
         arr.emplace_back().Set(elem);
@@ -624,8 +681,9 @@ inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<float>>
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<int>>(const std::vector<int>& value) {
-    m_data = NodeArray{};
+inline Serializer::DataNode& Serializer::DataNode::operator=
+    <std::vector<int>>(const std::vector<int>& value) {
+    m_data    = NodeArray{};
     auto& arr = std::get<NodeArray>(m_data);
     for (const auto& elem : value) {
         arr.emplace_back().Set(elem);
@@ -663,6 +721,7 @@ inline Serializer::DataNode& Serializer::DataNode::operator=
     arr.emplace_back().Set(value.x());
     arr.emplace_back().Set(value.y());
     arr.emplace_back().Set(value.z());
+    arr.emplace_back().Set(value.w());
     return *this;
 }
 
@@ -686,8 +745,7 @@ inline Serializer::DataNode& Serializer::DataNode::operator=(const T& value) {
 }
 
 // CoreSettings things
-template <typename T>
-inline T* Serializer::_LoadCoreSettingsCategory() {
+template <typename T> inline T* Serializer::_LoadCoreSettingsCategory() {
     if constexpr (std::is_same_v<T, CoreSettings::Video>) {
         return &m_coreSettings.video;
     } else if constexpr (std::is_same_v<T, CoreSettings::Audio>) {

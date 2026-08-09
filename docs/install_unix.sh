@@ -190,7 +190,7 @@ int AppMain(int argc, char* argv[]) {
     }
 
     // Cleanup
-    Syngine::Registry::Clear();
+    Syngine::GameObjectRegistry::Clear();
     ShaderManager::UnloadAllShaders();
     Syngine::Logger::Shutdown();
     return 0;

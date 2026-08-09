@@ -3,7 +3,7 @@
 // │ Created 2025-05-06                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -61,8 +61,10 @@ struct RendererConfig {
         false; //* (only if DebugModes.Enabled == true) Pseudo camera is a
                // separate camera that all rendering will use, but the main
                // camera will still be the one drawn to the screen
-    bool useSSAO      = true; //* Whether to enable SSAO
+    bool useSSAO      = true; //* Whether to enable SSAO (default: true)
     int shadowMapSize = 2048; //* Size of the shadow map texture (default: 2048)
+    int maxDirectionalShadowCasters =
+        1; //* Maximum number of directional light shadow casters (default: 1)
 };
 
 /// @brief Renderer class to manage rendering and shader programs
@@ -235,13 +237,13 @@ class Renderer {
     /// @internal
     void _RenderGizmos(CameraComponent* camera);
 
-    // Wrapper to call RenderCore's _RenderFrame
+    // Wrapper to call RenderDirector's _RenderFrame
     static void _RenderFrame(DebugModes debug);
     static void _UpdateDrawID();
     static void _RegisterBuiltinUniformProviders();
 
     friend class Core;
-    friend class RenderCore;
+    friend class RenderDirector;
 };
 
 } // namespace Syngine

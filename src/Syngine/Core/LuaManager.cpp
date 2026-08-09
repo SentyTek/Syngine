@@ -3,7 +3,7 @@
 // │ Created 2026-04-13                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/LuaManager.h"
@@ -558,7 +558,7 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
         delete obj;
     };
     scene["getGameObject"] = [](std::string name, sol::this_state ts) {
-        GameObject* obj = Registry::GetGameObjectByName(name);
+        GameObject* obj = GameObjectRegistry::GetGameObjectByName(name);
         if (obj) {
             sol::state_view lua(ts);
             return sol::make_object(lua, obj);

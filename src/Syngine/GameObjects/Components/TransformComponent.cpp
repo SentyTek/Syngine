@@ -3,7 +3,7 @@
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/GameObjects/Components/TransformComponent.h"
@@ -47,11 +47,10 @@ TransformComponent::operator=(const TransformComponent& other) {
 
 Serializer::DataNode TransformComponent::Serialize() const {
     Serializer::DataNode transformNode;
-    Serializer::Float3   pos{ m_position.x(), m_position.y(), m_position.z() };
-    Serializer::Float4   rot{
-        m_rotation.x(), m_rotation.y(), m_rotation.z(), m_rotation.w()
-    };
-    Serializer::Float3 scale{ m_scale.x(), m_scale.y(), m_scale.z() };
+    Math::Vector3        pos(m_position.x(), m_position.y(), m_position.z());
+    Math::Quaternion     rot(
+        m_rotation.x(), m_rotation.y(), m_rotation.z(), m_rotation.w());
+    Math::Vector3 scale(m_scale.x(), m_scale.y(), m_scale.z());
 
     transformNode / "type" =
         static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_TRANSFORM);

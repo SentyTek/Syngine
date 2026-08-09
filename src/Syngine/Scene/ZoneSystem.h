@@ -1,9 +1,9 @@
-// ╒══════════════════════ ZoneManager.h ═╕
+// ╒═══════════════════════ ZoneSystem.h ═╕
 // │ Syngine                              │
 // │ Created 2025-10-02                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -12,11 +12,12 @@
 #include <vector>
 
 namespace Syngine {
-/// @brief ZoneManager is responsible for managing all ZoneComponents in the
-/// game.
-/// @section ZoneManager
+/// @brief ZoneSystem is responsible for tracking all ZoneComponents in the
+/// game, checking for GameObjects entering or exiting zones, and triggering
+/// events as necessary.
+/// @section ZoneSystem
 /// @internal
-class ZoneManager {
+class ZoneSystem {
     static std::vector<ZoneComponent*>
         m_zones; //* List of all zones in the game
   public:

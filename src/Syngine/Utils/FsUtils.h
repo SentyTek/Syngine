@@ -3,7 +3,7 @@
 // │ Created 2025-07-18                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 #pragma once
 
@@ -32,8 +32,7 @@ std::filesystem::path _GetAppDataPath(const std::string& appName);
 /// @return The full path to the resource file, adjusted for the platform
 /// @since v0.0.1
 /// @internal
-static inline std::string _ResolveOSPath(const char* path)
-{
+static inline std::string _ResolveOSPath(const char* path) {
 #ifdef __APPLE__
     // SDL_GetBasePath() returns ".../Contents/MacOS/"
     const char* base = SDL_GetBasePath();
@@ -46,15 +45,16 @@ static inline std::string _ResolveOSPath(const char* path)
 
     // swap "MacOS/" -> "Resources/"
     size_t pos = p.find("MacOS/");
-    if (pos != std::string::npos)
-    {
+    if (pos != std::string::npos) {
         p.replace(pos, 6, "Resources");
     }
-    // Only add "rom/" prefix if it's not already there, to allow for absolute paths in the bundle
+    // Only add "rom/" prefix if it's not already there, to allow for absolute
+    // paths in the bundle
     if (p.find("rom/") == std::string::npos) {
         p += "rom/" + std::string(path); // e.g. "shaders/vs_simple.sc.bin"
     } else {
-        p += path; // If "rom/" is already in the base path, just append the relative path
+        p += path; // If "rom/" is already in the base path, just append the
+                   // relative path
     }
     return p;
 #else
@@ -63,7 +63,8 @@ static inline std::string _ResolveOSPath(const char* path)
         return path;
     }
 
-    // Only add "rom/" prefix if it's not already there, to allow for absolute paths in the game directory
+    // Only add "rom/" prefix if it's not already there, to allow for absolute
+    // paths in the game directory
     std::string p(path);
     if (p.find("rom/") == std::string::npos) {
         p = "rom/" + p; // e.g. "shaders/vs_simple.sc.bin"
@@ -94,10 +95,12 @@ inline bool _CheckRequiredFolders(bool headless) {
     for (const char* folder : requiredFolders) {
         std::string fullPath = Syngine::_ResolveOSPath(folder);
         if (!SDL_GetPathInfo(fullPath.c_str(), nullptr)) {
-            Syngine::Logger::LogF(Syngine::LogLevel::FATAL, false,
-                                 "Required folder '%s' does not exist in game dir: %s",
-                                 folder,
-                                 fullPath.c_str());
+            Syngine::Logger::LogF(
+                Syngine::LogLevel::FATAL,
+                false,
+                "Required folder '%s' does not exist in game dir: %s",
+                folder,
+                fullPath.c_str());
             return false;
         }
     }
@@ -112,11 +115,13 @@ inline bool _CheckRequiredFolders(bool headless) {
 /// @return The path relative to the root of the game directory
 /// @since v0.0.1
 static inline std::string _MakeRelativeToRoot(std::string path) {
-    std::string gameDir = Syngine::_ResolveOSPath("").substr(0, Syngine::_ResolveOSPath("").find_last_of("/\\") + 1);
+    std::string gameDir = Syngine::_ResolveOSPath("").substr(
+        0, Syngine::_ResolveOSPath("").find_last_of("/\\") + 1);
     if (path.find(gameDir) == 0) {
         return path.substr(gameDir.length());
     }
-    return path; // If the path doesn't start with the game directory, return it unchanged
+    return path; // If the path doesn't start with the game directory, return it
+                 // unchanged
 }
 
 /// @brief Check if a file exists at the given path, taking into account

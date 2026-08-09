@@ -3,7 +3,7 @@
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -13,7 +13,7 @@
 #include <map>
 #include <vector>
 
-#include "Syngine/Core/Registry.h"
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include "Syngine/GameObjects/Component.h"
 #include "Syngine/Utils/Serializer.h"
 
@@ -235,7 +235,7 @@ T* GameObject::AddComponent(Args&&... args) {
     T* raw = component.get();
 
     components[type] = std::move(component);
-    Syngine::Registry::_NotifyComponentAdded(this, type);
+    Syngine::GameObjectRegistry::_NotifyComponentAdded(this, type);
     return raw;
 }
 

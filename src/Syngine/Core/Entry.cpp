@@ -3,7 +3,7 @@
 // │ Created 2025-09-25                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 // Entry points for the program
@@ -39,7 +39,7 @@ int WINAPI WinMain(HINSTANCE hInstance,
                    LPSTR     lpCmd,
                    int       nShowCmd) {
     // Convert command line to argc/argv
-    int argc;
+    int     argc;
     LPWSTR* argvW = CommandLineToArgvW(GetCommandLineW(), &argc);
     if (!argvW) {
         return -1;
@@ -47,9 +47,11 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
     char** argv = new char*[argc];
     for (int i = 0; i < argc; ++i) {
-        int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, nullptr, 0, nullptr, nullptr);
+        int len = WideCharToMultiByte(
+            CP_UTF8, 0, argvW[i], -1, nullptr, 0, nullptr, nullptr);
         argv[i] = new char[len];
-        WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, argv[i], len, nullptr, nullptr);
+        WideCharToMultiByte(
+            CP_UTF8, 0, argvW[i], -1, argv[i], len, nullptr, nullptr);
     }
 
     for (int i = 0; i < argc; ++i) {
@@ -66,7 +68,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
     try {
         result = AppMain(argc, argv);
     } catch (const std::exception& e) {
-        Syngine::Logger::Fatal(std::string("Unhandled exception in WinMain: ") + e.what());
+        Syngine::Logger::Fatal(std::string("Unhandled exception in WinMain: ") +
+                               e.what());
         result = -1;
     } catch (...) {
         Syngine::Logger::Fatal("Unhandled non-std exception in WinMain");
@@ -93,7 +96,8 @@ int main(int argc, char* argv[]) {
     try {
         result = AppMain(argc, argv);
     } catch (const std::exception& e) {
-        Syngine::Logger::Fatal(std::string("Unhandled exception in main: ") + e.what());
+        Syngine::Logger::Fatal(std::string("Unhandled exception in main: ") +
+                               e.what());
         result = -1;
     } catch (...) {
         Syngine::Logger::Fatal("Unhandled non-std exception in main");

@@ -3,7 +3,7 @@
 // │ Created 2025-04-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <Syngine/Graphics/Rendering/Renderer.h>
@@ -11,7 +11,7 @@
 #include <Syngine/Core/Logger.h>
 #include <Syngine/GameObjects/AllComponents.h>
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
-#include <Syngine/Graphics/Rendering/RenderCore.h>
+#include <Syngine/Graphics/Rendering/RenderDirector.h>
 #include <Syngine/Graphics/Resources/ShaderManager.h>
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
 #include <Syngine/Graphics/Resources/RegisterBuiltinUniformProviders.inl>
@@ -78,13 +78,13 @@ Renderer::~Renderer() {
     }
     m_gizmoRegistry.clear();
 
-    RenderCore::_Shutdown(); // Destroys RenderCore buffers/textures/VBs and
-                             // calls bgfx::shutdown()
+    RenderDirector::_Shutdown(); // Destroys RenderDirector buffers/textures/VBs
+                                 // and calls bgfx::shutdown()
 }
 
 bool Renderer::_CreateRenderer(const RendererConfig& config) {
     _RegisterBuiltinUniformProviders();
-    RenderCore::_Initialize(config);
+    RenderDirector::_Initialize(config);
 
     // Initial sun direction in degrees (yaw, pitch, roll)
     // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive
@@ -134,7 +134,7 @@ void Renderer::SetSunDirection(const Math::Vector3& lightDir) {
 }
 
 void Renderer::_RenderFrame(DebugModes debug) {
-    RenderCore::_RenderFrame(m_camera, debug);
+    RenderDirector::_RenderFrame(m_camera, debug);
 }
 
 void Renderer::_UpdateDrawID() { currentDrawId++; }

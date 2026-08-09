@@ -3,7 +3,7 @@
 // │ Created 2026-06-16                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -50,7 +50,8 @@ TEST_CASE("GameObject serialization round-trip", "[Serializer]") {
     REQUIRE_THAT(deserializedTransform->GetPosition().z(),
                  WithinAbs(3.0f, FLOAT_MARGIN));
 
-    SVec3 localRotationEuler = deserializedTransform->GetRotationEuler().toDegs();
+    SVec3 localRotationEuler =
+        deserializedTransform->GetRotationEuler().toDegs();
     REQUIRE_THAT(localRotationEuler.x(), WithinAbs(45.0f, FLOAT_MARGIN));
     REQUIRE_THAT(localRotationEuler.y(), WithinAbs(80.0f, FLOAT_MARGIN));
     REQUIRE_THAT(localRotationEuler.z(), WithinAbs(0.0f, FLOAT_MARGIN));
@@ -112,14 +113,16 @@ TEST_CASE("GameObject serialization with children", "[Serializer]") {
 }
 
 TEST_CASE("Saving and loading a GameObject tree from disk", "[Serializer]") {
-    // Pretty much the same as the first test, but we save to disk and load from disk
+    // Pretty much the same as the first test, but we save to disk and load from
+    // disk
     auto* go = new GameObject("DiskTestObject", "default", "disk_tag");
     go->AddTag("disk_tag_2");
     auto* t = go->AddComponent<TransformComponent>();
     t->SetPosition(SVec3(4.0f, 5.0f, 6.0f));
 
     auto* child = new GameObject("ChildOfDiskTestObject");
-    child->AddComponent<TransformComponent>()->SetPosition(SVec3(1.0f, 2.0f, 3.0f));
+    child->AddComponent<TransformComponent>()->SetPosition(
+        SVec3(1.0f, 2.0f, 3.0f));
     go->AddChild(child);
 
     // Serialize to file
@@ -150,7 +153,8 @@ TEST_CASE("Saving and loading a GameObject tree from disk", "[Serializer]") {
     REQUIRE(loadedGo->GetChildren().size() == 1);
     auto* loadedChild = loadedGo->GetChildren().front();
     REQUIRE(loadedChild->name == "ChildOfDiskTestObject");
-    auto* loadedChildTransform = loadedChild->GetComponent<TransformComponent>();
+    auto* loadedChildTransform =
+        loadedChild->GetComponent<TransformComponent>();
     REQUIRE(loadedChildTransform != nullptr);
     REQUIRE_THAT(loadedChildTransform->GetPosition().x(),
                  WithinAbs(1.0f, FLOAT_MARGIN));

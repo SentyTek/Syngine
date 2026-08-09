@@ -3,10 +3,10 @@
 // │ Created 2025-05-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Core/Registry.h"
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include "Syngine/Core/LuaManager.h"
 #include "Syngine/GameObjects/Component.h"
 #include "Syngine/GameObjects/Components/RigidbodyComponent.h"
@@ -26,7 +26,7 @@ GameObject::GameObject(std::string name,
     this->id    = -1;
     this->gizmo = "none";
 
-    Registry::AddGameObject(this);
+    GameObjectRegistry::AddGameObject(this);
 }
 
 GameObject::GameObject(const Serializer::DataNode& data) {
@@ -48,12 +48,12 @@ GameObject::GameObject(const Serializer::DataNode& data) {
                 ComponentRegistry::Instantiate(typeId, this, data);
             if (comp) {
                 this->components[typeId] = std::move(comp);
-                Registry::_NotifyComponentAdded(this, typeId);
+                GameObjectRegistry::_NotifyComponentAdded(this, typeId);
             }
         }
     }
 
-    Registry::AddGameObject(this);
+    GameObjectRegistry::AddGameObject(this);
 
     // Children.
     if (data.Has("children")) {
@@ -82,14 +82,14 @@ GameObject::GameObject(const GameObject& other) {
 
     // Register the new GameObject
     // This should ensure it can be categorized properly
-    Registry::AddGameObject(this);
+    GameObjectRegistry::AddGameObject(this);
 }
 
 GameObject& GameObject::operator=(const GameObject& other) {
     if (this == &other) return *this; // Self-assignment check
 
     // Unregister the current GameObject
-    Registry::RemoveGameObject(this);
+    GameObjectRegistry::RemoveGameObject(this);
 
     this->name     = other.name;
     this->type     = other.type;
@@ -106,18 +106,18 @@ GameObject& GameObject::operator=(const GameObject& other) {
         // Use the AddComponent method to ensure proper registration
         this->components[type]          = comp->Clone();
         this->components[type]->m_owner = this;
-        Registry::_NotifyComponentAdded(this, type);
+        GameObjectRegistry::_NotifyComponentAdded(this, type);
     }
 
     // Register the new GameObject
     // This should ensure it can be categorized properly
-    Registry::AddGameObject(this);
+    GameObjectRegistry::AddGameObject(this);
 
     return *this;
 }
 
 GameObject::~GameObject() {
-    Registry::RemoveGameObject(this);
+    GameObjectRegistry::RemoveGameObject(this);
     Syngine::LuaManager::_UnregisterLuaOwnedObject(this);
 }
 
@@ -153,7 +153,7 @@ bool GameObject::RemoveComponent(Syngine::ComponentTypeID type) {
     }
 
     this->components.erase(it);
-    Registry::_NotifyComponentRemoved(this, type);
+    GameObjectRegistry::_NotifyComponentRemoved(this, type);
     return true;
 }
 

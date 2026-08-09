@@ -3,7 +3,7 @@
 // │ Created 2025-06-10                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -201,7 +201,7 @@ class CameraComponent : public Syngine::IComponent {
         return 0.5f * Renderer::height * this->camera.proj.m(1, 1);
     }
 
-    friend class RenderCore;
+    friend class RenderDirector;
 }; // class CameraComponent
 
 } // namespace Syngine

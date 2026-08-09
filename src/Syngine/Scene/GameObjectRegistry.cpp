@@ -1,31 +1,31 @@
-// ╒═══════════════════════ Registry.cpp ═╕
+// ╒═════════════ GameObjectRegistry.cpp ═╕
 // │ Syngine                              │
 // │ Created 2025-07-24                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Core/Core.h"
-#include "Syngine/Core/Registry.h"
-#include "Syngine/Core/ZoneManager.h"
-#include "Syngine/GameObjects/Component.h"
-#include "Syngine/GameObjects/GameObject.h"
-#include "Syngine/GameObjects/Components/RigidbodyComponent.h"
-
-#include <string>
+#include <Syngine/Scene/GameObjectRegistry.h>
+#include <Syngine/Core/Core.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/GameObjects/GameObject.h>
+#include <Syngine/GameObjects/Components/RigidbodyComponent.h>
+#include <Syngine/GameObjects/Components/ZoneComponent.h>
+#include <Syngine/GameObjects/Components/TransformComponent.h>
+#include <Syngine/Scene/ZoneSystem.h>
 
 namespace Syngine {
 
 // Static member initialization
-std::unordered_map<int, GameObject*> Registry::m_AllObjects;
-std::vector<GameObject*>             Registry::m_PhysicsObjects;
-std::vector<GameObject*>             Registry::m_RenderableObjects;
-std::vector<GameObject*>             Registry::m_ScriptedObjects;
-std::vector<GameObject*>             Registry::m_Gizmos;
+std::unordered_map<int, GameObject*> GameObjectRegistry::m_AllObjects;
+std::vector<GameObject*>             GameObjectRegistry::m_PhysicsObjects;
+std::vector<GameObject*>             GameObjectRegistry::m_RenderableObjects;
+std::vector<GameObject*>             GameObjectRegistry::m_ScriptedObjects;
+std::vector<GameObject*>             GameObjectRegistry::m_Gizmos;
 
 // Add/remove functions
-int Registry::AddGameObject(GameObject* gameObject) noexcept {
+int GameObjectRegistry::AddGameObject(GameObject* gameObject) noexcept {
     if (!gameObject) {
         return -1; // Invalid GameObject
     }
@@ -56,7 +56,7 @@ int Registry::AddGameObject(GameObject* gameObject) noexcept {
     return id;
 }
 
-int Registry::RemoveGameObject(GameObject* gameObject) noexcept {
+int GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
     if (!gameObject || gameObject->name.empty()) {
         return 1; // GameObject not found
     }
@@ -76,8 +76,8 @@ int Registry::RemoveGameObject(GameObject* gameObject) noexcept {
     if (gameObject->HasComponent(Syngine::SYN_COMPONENT_ZONE)) {
         auto* zoneComp = gameObject->GetComponent<ZoneComponent>();
         if (zoneComp) {
-            // Unregister the zone from the ZoneManager
-            Core::_GetContext()->zoneManager->_UnregisterZone(zoneComp);
+            // Unregister the zone from the ZoneSystem
+            Core::_GetContext()->ZoneSystem->_UnregisterZone(zoneComp);
         }
     }
 
@@ -91,7 +91,7 @@ int Registry::RemoveGameObject(GameObject* gameObject) noexcept {
     return 0; // Success
 }
 
-void Registry::Clear() noexcept {
+void GameObjectRegistry::Clear() noexcept {
     // Collect all objects into a temporary vector to avoid iterator
     // invalidation during deletion
     std::vector<GameObject*> objectsToDelete;
@@ -116,7 +116,7 @@ void Registry::Clear() noexcept {
     }
 }
 
-int Registry::RemoveGameObjectById(int id) noexcept {
+int GameObjectRegistry::RemoveGameObjectById(int id) noexcept {
     auto it = m_AllObjects.find(id);
     if (it == m_AllObjects.end()) {
         return 1; // GameObject not found
@@ -128,7 +128,7 @@ int Registry::RemoveGameObjectById(int id) noexcept {
 
 // Getters
 GameObject*
-Registry::GetGameObjectByName(const std::string_view& name) noexcept {
+GameObjectRegistry::GetGameObjectByName(const std::string_view& name) noexcept {
     // Iterate through all GameObjects to find the first match by name
     for (const auto& pair : m_AllObjects) {
         if (pair.second->name == name) {
@@ -138,8 +138,8 @@ Registry::GetGameObjectByName(const std::string_view& name) noexcept {
     return nullptr; // Not found
 }
 
-std::vector<GameObject*>
-Registry::GetGameObjectsByType(const std::string_view& type) noexcept {
+std::vector<GameObject*> GameObjectRegistry::GetGameObjectsByType(
+    const std::string_view& type) noexcept {
     std::vector<GameObject*> result;
     for (const auto& pair : m_AllObjects) {
         if (pair.second->type == type) {
@@ -149,7 +149,7 @@ Registry::GetGameObjectsByType(const std::string_view& type) noexcept {
     return result; // Return all GameObjects of the specified type
 }
 
-GameObject* Registry::GetGameObjectById(int id) noexcept {
+GameObject* GameObjectRegistry::GetGameObjectById(int id) noexcept {
     auto it = m_AllObjects.find(id);
     if (it != m_AllObjects.end()) {
         return it->second; // Return the GameObject with the given ID
@@ -157,8 +157,8 @@ GameObject* Registry::GetGameObjectById(int id) noexcept {
     return nullptr; // Not found
 }
 
-std::vector<GameObject*>
-Registry::GetGameObjectsWithComponent(Syngine::ComponentTypeID type) noexcept {
+std::vector<GameObject*> GameObjectRegistry::GetGameObjectsWithComponent(
+    Syngine::ComponentTypeID type) noexcept {
     std::vector<GameObject*> result;
     for (const auto& pair : m_AllObjects) {
         if (pair.second->HasComponent(type)) {
@@ -169,8 +169,8 @@ Registry::GetGameObjectsWithComponent(Syngine::ComponentTypeID type) noexcept {
 }
 
 // Internal notifications
-void Registry::_NotifyComponentAdded(GameObject*              gameobject,
-                                     Syngine::ComponentTypeID type) noexcept {
+void GameObjectRegistry::_NotifyComponentAdded(
+    GameObject* gameobject, Syngine::ComponentTypeID type) noexcept {
     if (!gameobject) return;
 
     switch (type) {
@@ -220,15 +220,15 @@ void Registry::_NotifyComponentAdded(GameObject*              gameobject,
         }
         break;
     case Syngine::SYN_COMPONENT_ZONE:
-        Core::_GetContext()->zoneManager->_RegisterZone(
+        Core::_GetContext()->ZoneSystem->_RegisterZone(
             gameobject->GetComponent<ZoneComponent>());
         break;
     default: break; // No action for other component types
     }
 }
 
-void Registry::_NotifyComponentRemoved(GameObject*              gameobject,
-                                       Syngine::ComponentTypeID type) noexcept {
+void GameObjectRegistry::_NotifyComponentRemoved(
+    GameObject* gameobject, Syngine::ComponentTypeID type) noexcept {
     if (!gameobject) return;
 
     auto removeFrom = [&](std::vector<GameObject*>& vec) {
@@ -248,7 +248,7 @@ void Registry::_NotifyComponentRemoved(GameObject*              gameobject,
     case Syngine::SYN_COMPONENT_SCRIPT: removeFrom(m_ScriptedObjects); break;
     case Syngine::SYN_COMPONENT_CAMERA: removeFrom(m_Gizmos); break;
     case Syngine::SYN_COMPONENT_ZONE:
-        Core::_GetContext()->zoneManager->_UnregisterZone(
+        Core::_GetContext()->ZoneSystem->_UnregisterZone(
             gameobject->GetComponent<ZoneComponent>());
         break;
     default: break; // No action for other component types

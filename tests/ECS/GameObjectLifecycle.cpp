@@ -3,7 +3,7 @@
 // │ Created 2026-06-12                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <algorithm>
@@ -25,10 +25,10 @@ using namespace Catch::Matchers;
 // copying components on GameObjects. Also tests that the Registry correctly
 // reflects component membership in its queries.
 TEST_CASE("ECS component lifecycle", "[ECS]") {
-    const auto baselineCount = Registry::GetGameObjectCount();
+    const auto baselineCount = GameObjectRegistry::GetGameObjectCount();
 
     auto* go = new GameObject("LifecycleObject", "default", "spawned");
-    REQUIRE(Registry::GetGameObjectCount() == baselineCount + 1);
+    REQUIRE(GameObjectRegistry::GetGameObjectCount() == baselineCount + 1);
 
     auto* transform = go->AddComponent<TransformComponent>();
     REQUIRE(transform != nullptr);
@@ -52,7 +52,7 @@ TEST_CASE("ECS component lifecycle", "[ECS]") {
 // components are properly cloned and that the new GameObject has its own copies
 // of components rather than sharing them with the original.
 TEST_CASE("ECS registry queries reflect component membership", "[ECS]") {
-    const auto baselineCount = Registry::GetGameObjectCount();
+    const auto baselineCount = GameObjectRegistry::GetGameObjectCount();
 
     {
         auto* transformObject = new GameObject("TransformObject", "npc", "ai");
@@ -61,19 +61,20 @@ TEST_CASE("ECS registry queries reflect component membership", "[ECS]") {
         auto* transform = transformObject->AddComponent<TransformComponent>();
         REQUIRE(transform != nullptr);
 
-        REQUIRE(Registry::GetGameObjectByName("TransformObject") ==
+        REQUIRE(GameObjectRegistry::GetGameObjectByName("TransformObject") ==
                 transformObject);
-        REQUIRE(Registry::GetGameObjectById(transformObject->GetID()) ==
-                transformObject);
+        REQUIRE(GameObjectRegistry::GetGameObjectById(
+                    transformObject->GetID()) == transformObject);
 
-        const auto byType = Registry::GetGameObjectsByType("npc");
+        const auto byType = GameObjectRegistry::GetGameObjectsByType("npc");
         REQUIRE(std::find(byType.begin(), byType.end(), transformObject) !=
                 byType.end());
         REQUIRE(std::find(byType.begin(), byType.end(), plainObject) !=
                 byType.end());
 
         const auto withTransform =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_TRANSFORM);
+            GameObjectRegistry::GetGameObjectsWithComponent(
+                SYN_COMPONENT_TRANSFORM);
         REQUIRE(std::find(withTransform.begin(),
                           withTransform.end(),
                           transformObject) != withTransform.end());
@@ -84,7 +85,7 @@ TEST_CASE("ECS registry queries reflect component membership", "[ECS]") {
         delete plainObject;
     }
 
-    REQUIRE(Registry::GetGameObjectCount() == baselineCount);
+    REQUIRE(GameObjectRegistry::GetGameObjectCount() == baselineCount);
 }
 
 // Tests for copy construction and copy assignment of GameObjects, ensuring that
@@ -116,10 +117,13 @@ TEST_CASE("ECS copy construction clones components", "[ECS]") {
     REQUIRE(copyTransform->m_owner == &copy);
 
     Math::Vector3 originalPosition = originalTransform->GetPosition();
-    Math::Vector3 copyPosition = copyTransform->GetPosition();
-    REQUIRE_THAT(copyPosition.x(), WithinAbs(originalPosition.x(), FLOAT_MARGIN));
-    REQUIRE_THAT(copyPosition.y(), WithinAbs(originalPosition.y(), FLOAT_MARGIN));
-    REQUIRE_THAT(copyPosition.z(), WithinAbs(originalPosition.z(), FLOAT_MARGIN));
+    Math::Vector3 copyPosition     = copyTransform->GetPosition();
+    REQUIRE_THAT(copyPosition.x(),
+                 WithinAbs(originalPosition.x(), FLOAT_MARGIN));
+    REQUIRE_THAT(copyPosition.y(),
+                 WithinAbs(originalPosition.y(), FLOAT_MARGIN));
+    REQUIRE_THAT(copyPosition.z(),
+                 WithinAbs(originalPosition.z(), FLOAT_MARGIN));
 
     copyTransform->SetPosition(Vector3(9.0f, 8.0f, 7.0f));
     REQUIRE_THAT(originalTransform->GetPosition().x(),
@@ -275,8 +279,7 @@ TEST_CASE("ECS inactive GameObjects do not update components", "[ECS]") {
 
     // Check that the RB GO has not moved from its initial position
     auto* rbTransform = rbGO->GetComponent<TransformComponent>();
-    REQUIRE_THAT(rbTransform->GetPosition().y(),
-                 WithinAbs(0.0f, FLOAT_MARGIN));
+    REQUIRE_THAT(rbTransform->GetPosition().y(), WithinAbs(0.0f, FLOAT_MARGIN));
     REQUIRE_THAT(transform->GetPosition().y(), WithinAbs(54.0f, FLOAT_MARGIN));
 
     // Clean up

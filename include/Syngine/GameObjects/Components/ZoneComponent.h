@@ -3,7 +3,7 @@
 // │ Created 2025-10-02                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -62,7 +62,7 @@ class ZoneComponent : public Syngine::IComponent {
     /// @internal
     GameObject* _GetOwner() const;
 
-    friend class ZoneManager;
+    friend class ZoneSystem;
 
   public:
     static constexpr Syngine::ComponentTypeID componentType =

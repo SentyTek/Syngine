@@ -3,7 +3,7 @@
 // │ Created 2025-12-16                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -56,8 +56,8 @@ class BillboardComponent : public Syngine::IComponent {
     MaterialInstance&       _GetMaterial() { return this->m_material; }
     const MaterialInstance& _GetMaterial() const { return this->m_material; }
 
-    friend class RenderCore; // RenderCore needs access to private members for
-                             // rendering
+    friend class RenderDirector; // RenderDirector needs access to private
+                                 // members for rendering
   public:
     float size            = 1.0f; //* Size of the billboard
     bool  receiveShadows  = true; //* Whether the billboard receives shadows

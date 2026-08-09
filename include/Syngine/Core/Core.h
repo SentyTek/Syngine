@@ -3,12 +3,12 @@
 // │ Created 2025-04-22                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
 
-#include <Syngine/Core/Registry.h>
+#include <Syngine/Scene/GameObjectRegistry.h>
 #include <Syngine/Core/LuaManager.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/GameObjects/Component.h>
@@ -26,7 +26,7 @@
 
 namespace Syngine {
 // Forward declare
-class ZoneManager;
+class ZoneSystem;
 class Window;
 // class LuaManager;
 
@@ -219,10 +219,9 @@ class Core {
         std::unique_ptr<Renderer>    renderer;  //* Pointer to the render system
         std::unique_ptr<ModelLoader> synModels; //* Pointer to the model loader
         std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
-        std::unique_ptr<ZoneManager>
-                                    zoneManager; //* Pointer to the zone manager
-        std::unique_ptr<LuaManager> luaState;    //* Pointer to the Lua state
-        DebugModes                  debug;       //* Debug modes flags
+        std::unique_ptr<ZoneSystem> ZoneSystem; //* Pointer to the zone manager
+        std::unique_ptr<LuaManager> luaState;   //* Pointer to the Lua state
+        DebugModes                  debug;      //* Debug modes flags
     };
 
     /// @brief Get the global App instance
@@ -318,11 +317,11 @@ class Core {
     void _HandleKeyEvent(const SDL_Event& event);
 
     friend class Renderer;
-    friend class RenderCore;
+    friend class RenderDirector;
     friend class GameObject;
     friend class RigidbodyComponent;
     friend class PlayerComponent;
-    friend class Registry;
+    friend class GameObjectRegistry;
     friend class Serializer;
     friend class Window;
     friend class Phys;
