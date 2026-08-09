@@ -49,8 +49,6 @@ class BillboardComponent : public Syngine::IComponent {
     MaterialInstance
         m_material; //* Material instance used for rendering the billboard
 
-    GameObject* m_owner; // Reference to the owner game object
-
     Math::Vector3 m_rot =
         Math::Vector3(); //* Rotation around X, Y, Z axes in radians
 

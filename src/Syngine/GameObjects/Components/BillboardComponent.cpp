@@ -6,6 +6,7 @@
 // | Licensed under the MIT License       |
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/GameObjects/Component.h"
 #include <Syngine/GameObjects/Components/BillboardComponent.h>
 #include <Syngine/GameObjects/ComponentRegistry.h>
 #include <Syngine/GameObjects/GameObject.h>
@@ -23,7 +24,8 @@ BillboardComponent::BillboardComponent(GameObject*   owner,
     : m_material(
           MaterialManager::CreateMaterial(
               "billboard_material", ShaderManager::Get("default_billboard"))
-              .CreateInstance()) {
+              .CreateInstance()),
+      Syngine::IComponent(owner) {
     this->m_owner       = owner;
     this->size          = size;
     this->m_mode        = mode;
@@ -40,7 +42,8 @@ BillboardComponent::BillboardComponent(GameObject*   owner,
     : m_material(
           MaterialManager::CreateMaterial(
               "billboard_material", ShaderManager::Get("default_billboard"))
-              .CreateInstance()) {
+              .CreateInstance()),
+      Syngine::IComponent(owner) {
     this->m_owner       = owner;
     this->size          = size;
     this->m_mode        = mode;
@@ -50,7 +53,7 @@ BillboardComponent::BillboardComponent(GameObject*   owner,
 }
 
 BillboardComponent::BillboardComponent(const BillboardComponent& other)
-    : m_material(other.m_material) {
+    : m_material(other.m_material), Syngine::IComponent(other.m_owner) {
     this->m_owner       = other.m_owner;
     this->size          = other.size;
     this->m_mode        = other.m_mode;

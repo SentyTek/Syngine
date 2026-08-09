@@ -40,20 +40,19 @@ float CapsuleCenterOffset(float height) { return height * 0.5f; }
 } // namespace
 
 PlayerComponent::PlayerComponent(GameObject*               owner,
-                                 Syngine::CameraComponent* camera) {
+                                 Syngine::CameraComponent* camera)
+    : IComponent(owner) {
     if (!Core::IsPhysicsEnabled()) return;
-
-    this->m_owner = owner;
     this->Init(camera);
 }
 
 // I don't like this.
 // I do not like it one bit.
 // I do not like it, Sam-I-Am.
-PlayerComponent::PlayerComponent(const PlayerComponent& other) {
+PlayerComponent::PlayerComponent(const PlayerComponent& other)
+    : IComponent(other.m_owner) {
     if (!Core::IsPhysicsEnabled()) return;
 
-    this->m_owner           = other.m_owner;
     this->m_camera          = other.m_camera;
     this->m_window          = other.m_window;
     this->m_physicsManager  = other.m_physicsManager;

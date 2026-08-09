@@ -724,7 +724,7 @@ float RenderCore::_CalculateScreenSize(const MeshAABB& aabb,
 bool RenderCore::_ShouldCullBySize(GameObject* go, CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
     auto* meshComp = go->GetComponent<MeshComponent>();
-    if (!meshComp || !meshComp->isEnabled) return false;
+    if (!meshComp || !meshComp->IsEnabled()) return false;
 
     const MeshAABB&      aabb   = meshComp->GetAABB();
     const Math::Vector3& camPos = camera->GetPosition();
@@ -755,7 +755,7 @@ bool RenderCore::_ShouldCullBySizeShadow(GameObject*      go,
                                          uint8_t          cascade) {
     SYN_PROFILE_FUNCTION();
     auto* meshComp = go->GetComponent<MeshComponent>();
-    if (!meshComp || !meshComp->isEnabled) return false;
+    if (!meshComp || !meshComp->IsEnabled()) return false;
 
     const MeshAABB& aabb = meshComp->GetAABB();
 
@@ -797,7 +797,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
         if (!go || !go->IsActive()) continue;
 
         auto meshComp = go->GetComponent<MeshComponent>();
-        if (!meshComp->isEnabled) continue;
+        if (!meshComp || !meshComp->IsEnabled()) continue;
 
         MeshAABB      aabb = meshComp->GetAABB();
         Math::Vector3 min  = aabb.min;
@@ -858,7 +858,7 @@ void RenderCore::_CollectRenderPackets(CameraComponent* camera) {
         if (!go || !go->IsActive()) continue;
 
         auto billboardComp = go->GetComponent<BillboardComponent>();
-        if (!billboardComp || !billboardComp->isEnabled) continue;
+        if (!billboardComp || !billboardComp->IsEnabled()) continue;
 
         // Since we can't use _ShouldCullBySize for billboards (they don't have
         // mesh data), we do a simple distance check here and skip if they're
@@ -938,7 +938,7 @@ void RenderCore::_DrawShadows(const Shader* program, CameraComponent* camera) {
             auto* meshComp = gameObject->GetComponent<MeshComponent>();
             const ModelData& modelData = meshComp->modelData;
 
-            if (!modelData.valid || !meshComp->isEnabled ||
+            if (!modelData.valid || !meshComp->IsEnabled() ||
                 !meshComp->castShadows)
                 continue;
 
@@ -1036,7 +1036,7 @@ void RenderCore::_DrawDebug(const Shader*    program,
         for (std::vector<ZoneComponent*> zones =
                  Core::_GetContext()->zoneManager->GetZones();
              auto zone : zones) {
-            if (!zone || !zone->isEnabled) continue;
+            if (!zone || !zone->IsEnabled()) continue;
             switch (zone->GetShape()) {
             case ZoneShape::BOX: {
                 Vector3 pos  = zone->GetPosition();

@@ -163,8 +163,7 @@ class CameraComponent : public Syngine::IComponent {
     }
 
   private:
-    GameObject* m_owner; // Reference to the owner game object
-    Camera      camera;  // Camera data
+    Camera camera; // Camera data
 
     /// @brief Structure representing a plane in 3D space
     /// @since v0.0.1

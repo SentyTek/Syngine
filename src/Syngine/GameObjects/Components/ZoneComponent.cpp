@@ -26,13 +26,13 @@ ZoneComponent::ZoneComponent(GameObject*          owner,
                              ZoneShape            shape,
                              const Math::Vector3& pos,
                              const Math::Vector3& size,
-                             bool                 oneShot) {
-    this->m_owner = owner;
+                             bool                 oneShot)
+    : IComponent(owner) {
     Init(shape, pos, size, oneShot);
 }
 
-ZoneComponent::ZoneComponent(const ZoneComponent& other) {
-    this->m_owner      = other.m_owner;
+ZoneComponent::ZoneComponent(const ZoneComponent& other)
+    : IComponent(other.m_owner) {
     m_pos              = other.m_pos;
     m_size             = other.m_size;
     m_rot              = other.m_rot;

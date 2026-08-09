@@ -7,8 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include <Syngine/Utils/Serializer.h>
 #include <memory>
-#include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
 // Forward declaration
@@ -78,11 +78,32 @@ class IComponent {
     } // Optional function called after physics update, for components that need
       // it
 
+    inline void SetEnabled(bool enabled) {
+        m_isEnabled = enabled;
+        if (enabled) {
+            OnEnable();
+        } else {
+            OnDisable();
+        }
+    }
+
+    inline bool IsEnabled() const { return m_isEnabled; }
+
+    IComponent(GameObject* owner) : m_owner(owner) {}
+    IComponent(GameObject* owner, bool isEnabled)
+        : m_owner(owner), m_isEnabled(isEnabled) {}
+    IComponent(const IComponent& other)            = default;
+    IComponent& operator=(const IComponent& other) = default;
+
     virtual ~IComponent() = default;
 
-    bool        isEnabled = true;    //* Whether the component is enabled or not
-    GameObject* m_owner   = nullptr; //* The owner of the component, the
-                                     // GameObject it is attached to
+  protected:
+    bool        m_isEnabled = true; //* Whether the component is enabled or not
+    GameObject* m_owner     = nullptr; //* The owner of the component, the
+                                       // GameObject it is attached to
+    friend class GameObject;
+    friend class Renderer;
+    friend class RenderCore;
 };
 
 }; // namespace Syngine

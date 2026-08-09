@@ -400,7 +400,7 @@ bool Core::Update() {
             if (!go || !go->IsActive()) continue;
             const auto& components = go->GetComponents();
             for (const auto& [typeId, component] : components) {
-                if (component && component->isEnabled) {
+                if (component && component->IsEnabled()) {
                     component->Update(deltaTime);
                 }
             }
@@ -448,7 +448,7 @@ bool Core::Update() {
             if (!go || !go->IsActive()) continue;
             const auto& components = go->GetComponents();
             for (const auto& [typeId, component] : components) {
-                if (component && component->isEnabled) {
+                if (component && component->IsEnabled()) {
                     component->PostPhysicsUpdate();
                 }
             }

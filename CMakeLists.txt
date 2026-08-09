@@ -46,6 +46,7 @@ add_library(Syngine STATIC
     src/Syngine/Graphics/Resources/TextureHelpers.cpp
     src/Syngine/Graphics/Resources/ShaderManager.cpp
     src/Syngine/Graphics/Resources/ModelLoader.cpp
+    src/Syngine/Graphics/Resources/MaterialManager.cpp
     src/Syngine/Graphics/Windowing.cpp
 
     # Utils
@@ -66,6 +67,7 @@ add_library(Syngine STATIC
     src/Syngine/GameObjects/Components/CameraComponent.cpp
     src/Syngine/GameObjects/Components/ZoneComponent.cpp
     src/Syngine/GameObjects/Components/BillboardComponent.cpp
+    src/Syngine/GameObjects/Components/SunComponent.cpp
     src/Syngine/GameObjects/ComponentRegistry.cpp
 )
 

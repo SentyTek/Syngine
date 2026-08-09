@@ -36,17 +36,16 @@
 
 namespace Syngine {
 RigidbodyComponent::RigidbodyComponent(GameObject*                  owner,
-                                       Syngine::RigidbodyParameters params) {
+                                       Syngine::RigidbodyParameters params)
+    : IComponent(owner) {
     if (!Core::IsPhysicsEnabled()) return;
-
-    this->m_owner = owner;
     this->Init(params);
 }
 
-RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other) {
+RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other)
+    : IComponent(other.m_owner) {
     if (!Core::IsPhysicsEnabled()) return;
 
-    this->m_owner         = other.m_owner;
     this->physicsManager  = other.physicsManager;
     this->transform       = other.transform;
     this->bodyID          = other.bodyID;

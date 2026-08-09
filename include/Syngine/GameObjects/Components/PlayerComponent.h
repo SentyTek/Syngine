@@ -183,7 +183,6 @@ class PlayerComponent : public Syngine::IComponent {
     float slideFov  = 100.0f; //* Field of view when sliding.
 
   private:
-    GameObject*               m_owner     = nullptr;
     TransformComponent*       m_transform = nullptr;
     Syngine::CameraComponent* m_camera    = nullptr;
     SDL_Window*               m_window    = nullptr;

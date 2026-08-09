@@ -55,7 +55,15 @@ class ZoneComponent : public Syngine::IComponent {
 
     std::vector<std::string> m_tags; //* Tags of the zone
 
-    GameObject* m_owner; // Reference to the owner game object
+    /// @brief Get the owner GameObject of this zone component.
+    /// @return Pointer to the owner GameObject.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    /// @internal
+    GameObject* _GetOwner() const;
+
+    friend class ZoneManager;
+
   public:
     static constexpr Syngine::ComponentTypeID componentType =
         SYN_COMPONENT_ZONE; //* Zone component type
@@ -279,13 +287,6 @@ class ZoneComponent : public Syngine::IComponent {
     /// @since v0.0.1
     std::vector<GameObject*>
     GetObjectsInZoneByTag(const std::string& tag) const;
-
-    /// @brief Get the owner GameObject of this zone component.
-    /// @return Pointer to the owner GameObject.
-    /// @threadsafety read-only
-    /// @since v0.0.1
-    /// @internal
-    GameObject* _GetOwner() const;
 
     std::function<void(GameObject*)>
         OnEnter; //* Function called when an object enters the zone

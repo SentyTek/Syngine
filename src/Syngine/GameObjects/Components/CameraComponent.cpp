@@ -20,8 +20,8 @@
 #include <cmath>
 
 namespace Syngine {
-CameraComponent::CameraComponent(GameObject* owner) {
-    this->m_owner          = owner;
+CameraComponent::CameraComponent(GameObject* owner)
+    : Syngine::IComponent(owner) {
     this->camera           = {};
     this->camera.eye       = Math::Vector3();
     this->camera.target    = Math::Vector3();
@@ -43,9 +43,9 @@ CameraComponent::CameraComponent(GameObject* owner) {
     }
 }
 
-CameraComponent::CameraComponent(const CameraComponent& other) {
-    this->m_owner = other.m_owner;
-    this->camera  = other.camera;
+CameraComponent::CameraComponent(const CameraComponent& other)
+    : Syngine::IComponent(other.m_owner) {
+    this->camera = other.camera;
 
     if (this->m_owner) {
         this->m_owner->gizmo =
@@ -55,8 +55,8 @@ CameraComponent::CameraComponent(const CameraComponent& other) {
 
 CameraComponent& CameraComponent::operator=(const CameraComponent& other) {
     if (this != &other) {
-        this->m_owner = other.m_owner;
-        this->camera  = other.camera;
+        IComponent::m_owner = other.m_owner;
+        this->camera        = other.camera;
 
         if (this->m_owner) {
             this->m_owner->gizmo =

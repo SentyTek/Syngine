@@ -21,15 +21,14 @@
 #include <sol/sol.hpp>
 
 namespace Syngine {
-TransformComponent::TransformComponent(GameObject* owner) {
-    m_position    = Vector3();
-    m_rotation    = Quaternion();
-    m_scale       = Vector3(1.0f);
-    this->m_owner = owner;
+TransformComponent::TransformComponent(GameObject* owner) : IComponent(owner) {
+    m_position = Vector3();
+    m_rotation = Quaternion();
+    m_scale    = Vector3(1.0f);
 }
 
-TransformComponent::TransformComponent(const TransformComponent& other) {
-    this->m_owner    = other.m_owner;
+TransformComponent::TransformComponent(const TransformComponent& other)
+    : IComponent(other.m_owner) {
     this->m_position = other.m_position;
     this->m_rotation = other.m_rotation;
     this->m_scale    = other.m_scale;

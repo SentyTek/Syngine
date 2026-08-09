@@ -31,18 +31,17 @@ namespace Syngine {
 
 // This constructor does nothing. It is used for creating an empty MeshComponent
 // that can be initialized later.
-MeshComponent::MeshComponent(GameObject* owner) {
+MeshComponent::MeshComponent(GameObject* owner) : IComponent(owner) {
     this->modelData     = Syngine::ModelData();
-    this->m_owner       = owner;
     this->m_bundlePath  = "";
     this->m_texturePath = "";
 }
 
 MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& path,
-                             bool               loadTextures) {
+                             bool               loadTextures)
+    : IComponent(owner) {
     this->modelData     = Syngine::ModelData();
-    this->m_owner       = owner;
     this->m_bundlePath  = "meshes/meshes.spk";
     this->m_texturePath = path;
     this->Init(this->m_bundlePath, this->m_texturePath, loadTextures);
@@ -51,26 +50,25 @@ MeshComponent::MeshComponent(GameObject*        owner,
 MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& bundlePath,
                              const std::string& texturePath,
-                             bool               loadTextures) {
+                             bool               loadTextures)
+    : IComponent(owner) {
     this->modelData     = Syngine::ModelData();
-    this->m_owner       = owner;
     this->m_bundlePath  = bundlePath;
     this->m_texturePath = texturePath;
     this->Init(bundlePath, texturePath, loadTextures);
 }
 
-MeshComponent::MeshComponent(const MeshComponent& other) {
+MeshComponent::MeshComponent(const MeshComponent& other)
+    : IComponent(other.m_owner) {
     this->modelData = other.modelData; // Shallow copy, deep copy may be needed
-    this->m_owner   = other.m_owner;
     this->m_bundlePath  = other.m_bundlePath;
     this->m_texturePath = other.m_texturePath;
 }
 
 MeshComponent& MeshComponent::operator=(const MeshComponent& other) {
     if (this != &other) {
-        this->modelData =
-            other.modelData; // Shallow copy, deep copy may be needed
-        this->m_owner       = other.m_owner;
+        IComponent::m_owner = other.m_owner;
+        this->modelData     = other.modelData;
         this->m_bundlePath  = other.m_bundlePath;
         this->m_texturePath = other.m_texturePath;
     }
