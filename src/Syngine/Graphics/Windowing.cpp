@@ -15,9 +15,10 @@
 
 namespace Syngine {
 
-std::string Window::m_title = "Syngine Game";
+std::string Window::m_title          = "Syngine Game";
 bool        Window::m_contextCreated = false;
 bool        Window::m_shouldClose    = false;
+int         Window::m_windowMode     = 0; // Default to bordered window
 SDL_Window* Window::m_window         = nullptr;
 
 Window::Window(const EngineConfig& config) {
@@ -34,10 +35,10 @@ Window::Window(const EngineConfig& config) {
     auto* videoSettings = Serializer::_LoadCoreSettingsCategory<
         Serializer::CoreSettings::Video>();
     if (videoSettings) {
-        w = videoSettings->width;
-        h = videoSettings->height;
+        w                                = videoSettings->width;
+        h                                = videoSettings->height;
         Core::_GetConfig()->windowHeight = videoSettings->height;
-        Core::_GetConfig()->windowWidth = videoSettings->width;
+        Core::_GetConfig()->windowWidth  = videoSettings->width;
     }
 
     m_window = SDL_CreateWindow(
@@ -51,7 +52,8 @@ Window::Window(const EngineConfig& config) {
     );
 
     if (!m_window) {
-        Syngine::Logger::LogF(Syngine::LogLevel::FATAL, false,
+        Syngine::Logger::LogF(Syngine::LogLevel::FATAL,
+                              false,
                               "Failed to create SDL window: %s",
                               SDL_GetError());
         SDL_Quit();
@@ -59,11 +61,10 @@ Window::Window(const EngineConfig& config) {
 
     Logger::_SetMainWindow(m_window);
 
-    if (videoSettings->fullscreen) {
-        m_contextCreated = true; // Some platforms require the context to be created before setting fullscreen
-        SetWindowMode(1); // Borderless fullscreen
-        m_contextCreated = false;
-    }
+    m_contextCreated = true; // Some platforms require the context to be created
+                             // before setting fullscreen
+    SetWindowMode(videoSettings->windowMode);
+    m_contextCreated = false;
 
 #if BX_PLATFORM_OSX
     // macOS requires some kind of renderer to be created before Metal can be
@@ -96,7 +97,6 @@ void Window::_SetContextCreated(bool enabled) noexcept {
 }
 SDL_Window* Window::_GetSDLWindow() noexcept { return m_window; }
 
-
 int Window::GetWidth() const noexcept {
     if (m_window) {
         int width;
@@ -128,63 +128,78 @@ void Window::SetTitle(const std::string_view& title) {
     }
 }
 
-void Window::SetVSync(bool enabled) {
-    if (m_window && m_contextCreated) {
-
-    }
-}
-
 void Window::SetWindowMode(int mode) {
     if (m_window && m_contextCreated && mode >= 0 && mode <= 2) {
         switch (mode) {
-            case 0: // Bordered
-                if (!SDL_SetWindowFullscreen(m_window, false)) {
-                    Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                                         "Failed to set windowed mode: %s", SDL_GetError());
-                }
+        case 0: // Bordered
+            if (!SDL_SetWindowFullscreen(m_window, false)) {
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                      false,
+                                      "Failed to set windowed mode: %s",
+                                      SDL_GetError());
+            }
+// Shorten the window by like 10 pixels and drop it down so the title bar
+// actually shows up on Windows
+#if BX_PLATFORM_WINDOWS
+            int width, height;
+            SDL_GetWindowSize(m_window, &width, &height);
+            SDL_SetWindowSize(m_window, width, height - 10);
+            SDL_SetWindowPosition(
+                m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+#endif
+            break;
+        case 1: // Fullscreen Borderless
+            if (!SDL_SetWindowFullscreen(m_window, true)) {
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                      false,
+                                      "Failed to set borderless fullscreen: %s",
+                                      SDL_GetError());
+            }
+            break;
+        case 2: // Exclusive Fullscreen
+        {
+            SDL_DisplayID displayID = SDL_GetDisplayForWindow(m_window);
+            if (!displayID) {
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                      false,
+                                      "Failed to get display for window: %s",
+                                      SDL_GetError());
                 break;
-            case 1: // Fullscreen Borderless
-                if (!SDL_SetWindowFullscreen(m_window, true)) {
-                    Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                                         "Failed to set borderless fullscreen: %s", SDL_GetError());
-                }
+            }
+
+            int               count = 0;
+            SDL_DisplayMode** modes =
+                SDL_GetFullscreenDisplayModes(displayID, &count);
+
+            if (count <= 0 || !modes) {
+                Syngine::Logger::Error("No fullscreen display modes available",
+                                       false);
                 break;
-            case 2: // Exclusive Fullscreen
-                {
-                    SDL_DisplayID displayID = SDL_GetDisplayForWindow(m_window);
-                    if (!displayID) {
-                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                                             "Failed to get display for window: %s", SDL_GetError());
-                        break;
-                    }
+            }
 
-                    int count = 0;
-                    SDL_DisplayMode** modes = SDL_GetFullscreenDisplayModes(displayID, &count);
-
-                    if (count <= 0 || !modes) {
-                        Syngine::Logger::Error("No fullscreen display modes available", false);
-                        break;
-                    }
-
-                    // Set exclusive fullscreen with the first available mode
-                    if (!SDL_SetWindowFullscreen(m_window, true)) {
-                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                                             "Failed to enable fullscreen: %s", SDL_GetError());
-                        SDL_free(modes);
-                        break;
-                    }
-
-                    if (!SDL_SetWindowFullscreenMode(m_window, modes[0])) {
-                        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                                             "Failed to set exclusive fullscreen mode: %s", SDL_GetError());
-                    }
-
-                    SDL_free(modes);
-                }
+            // Set exclusive fullscreen with the first available mode
+            if (!SDL_SetWindowFullscreen(m_window, true)) {
+                Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                      false,
+                                      "Failed to enable fullscreen: %s",
+                                      SDL_GetError());
+                SDL_free(modes);
                 break;
-            default:
-                break;
+            }
+
+            if (!SDL_SetWindowFullscreenMode(m_window, modes[0])) {
+                Syngine::Logger::LogF(
+                    Syngine::LogLevel::ERR,
+                    false,
+                    "Failed to set exclusive fullscreen mode: %s",
+                    SDL_GetError());
+            }
+
+            SDL_free(modes);
+        } break;
+        default: break;
         }
+        m_windowMode = mode;
     }
 }
 
@@ -192,15 +207,17 @@ void Window::SetMouseCursorVisible(bool visible) {
     SDL_SetWindowRelativeMouseMode(m_window, !visible);
 }
 
-void Window::GetMousePosition(float& x, float& y) {
+Math::Vector2 Window::GetMousePosition() {
+    float x, y;
     if (m_window) {
         SDL_GetMouseState(&x, &y);
     }
+    return Math::Vector2(x, y);
 }
 
-void Window::SetMousePosition(float& x, float& y) {
+void Window::SetMousePosition(const Math::Vector2& position) {
     if (m_window) {
-        SDL_WarpMouseInWindow(m_window, x, y);
+        SDL_WarpMouseInWindow(m_window, position.x(), position.y());
     }
 }
 

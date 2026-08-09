@@ -290,6 +290,26 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     "",
                                     KeyBinding(Keycode::F7),
                                     { .onPressed = Core::_ReloadLua });
+
+        InputAction::RegisterAction(
+            "syngine.toggleFullscreen",
+            "Toggles between fullscreen and windowed mode",
+            "",
+            KeyBinding(Keycode::F11),
+            { .onPressed = []() {
+                if (m_context && m_context->window) {
+                    int currentMode = m_context->window->GetWindowMode();
+                    // toggles windowed and borderless fullscreen. i dont like
+                    // exclusive.
+                    if (currentMode == 0) {
+                        m_context->window->SetWindowMode(1);
+                    } else {
+                        m_context->window->SetWindowMode(0);
+                    }
+                    Logger::ToConsole("Put in mode %d",
+                                      m_context->window->GetWindowMode());
+                }
+            } });
     }
 
     Logger::Info("Syngine initialized successfully", false);

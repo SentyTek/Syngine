@@ -517,6 +517,57 @@ Serializer::DataNode::As<std::vector<std::string>>(const std::vector<std::string
     return out;
 }
 
+template <>
+inline Syngine::Math::Quaternion
+Serializer::DataNode::As<Syngine::Math::Quaternion>(
+    const Syngine::Math::Quaternion& defaultValue) const {
+    if (!std::holds_alternative<NodeArray>(m_data)) {
+        return defaultValue;
+    }
+
+    const auto& arr = std::get<NodeArray>(m_data);
+    auto vec4       = arr[0].As<std::vector<float>>({ 0.0f, 0.0f, 0.0f, 1.0f });
+    if (vec4.size() != 4) {
+        return Syngine::Math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
+    }
+
+    return Syngine::Math::Quaternion(vec4[0], vec4[1], vec4[2], vec4[3]);
+}
+
+template <>
+inline Syngine::Math::Vector3 Serializer::DataNode::As<Syngine::Math::Vector3>(
+    const Syngine::Math::Vector3& defaultValue) const {
+    if (!std::holds_alternative<NodeArray>(m_data)) {
+        return defaultValue;
+    }
+
+    const auto& arr = std::get<NodeArray>(m_data);
+    if (arr.size() != 3) {
+        return defaultValue;
+    }
+
+    return Syngine::Math::Vector3(
+        arr[0].As<float>(0.0f), arr[1].As<float>(0.0f), arr[2].As<float>(0.0f));
+}
+
+template <>
+inline Syngine::Math::Vector4 Serializer::DataNode::As<Syngine::Math::Vector4>(
+    const Syngine::Math::Vector4& defaultValue) const {
+    if (!std::holds_alternative<NodeArray>(m_data)) {
+        return defaultValue;
+    }
+
+    const auto& arr = std::get<NodeArray>(m_data);
+    if (arr.size() != 4) {
+        return defaultValue;
+    }
+
+    return Syngine::Math::Vector4(arr[0].As<float>(0.0f),
+                                  arr[1].As<float>(0.0f),
+                                  arr[2].As<float>(0.0f),
+                                  arr[3].As<float>(1.0f));
+}
+
 // Generic template for other types that don't have a specific specialization
 template <typename T>
 inline T Serializer::DataNode::As(const T& defaultValue) const {
@@ -583,8 +634,9 @@ inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<int>>(c
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<std::string>>(const std::vector<std::string>& value) {
-    m_data = NodeArray{};
+inline Serializer::DataNode& Serializer::DataNode::operator=
+    <std::vector<std::string>>(const std::vector<std::string>& value) {
+    m_data    = NodeArray{};
     auto& arr = std::get<NodeArray>(m_data);
     for (const auto& elem : value) {
         arr.emplace_back().Set(elem);
@@ -593,49 +645,9 @@ inline Serializer::DataNode& Serializer::DataNode::operator=<std::vector<std::st
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Float3>(const Serializer::Float3& value) {
-    m_data = NodeArray{};
-    auto& arr = std::get<NodeArray>(m_data);
-    arr.emplace_back().Set(value.x);
-    arr.emplace_back().Set(value.y);
-    arr.emplace_back().Set(value.z);
-    return *this;
-}
-
-template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Float4>(const Serializer::Float4& value) {
-    m_data = NodeArray{};
-    auto& arr = std::get<NodeArray>(m_data);
-    arr.emplace_back().Set(value.x);
-    arr.emplace_back().Set(value.y);
-    arr.emplace_back().Set(value.z);
-    arr.emplace_back().Set(value.w);
-    return *this;
-}
-
-template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Mat3>(const Serializer::Mat3& value) {
-    m_data = NodeArray{};
-    auto& arr = std::get<NodeArray>(m_data);
-    for (int i = 0; i < 9; i++) {
-        arr.emplace_back().Set(value.data[i]);
-    }
-    return *this;
-}
-
-template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<Serializer::Mat4>(const Serializer::Mat4& value) {
-    m_data = NodeArray{};
-    auto& arr = std::get<NodeArray>(m_data);
-    for (int i = 0; i < 16; i++) {
-        arr.emplace_back().Set(value.data[i]);
-    }
-    return *this;
-}
-
-template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<Syngine::Math::Vector3>(const Syngine::Math::Vector3& value) {
-    m_data = NodeArray{};
+inline Serializer::DataNode& Serializer::DataNode::operator=
+    <Syngine::Math::Vector3>(const Syngine::Math::Vector3& value) {
+    m_data    = NodeArray{};
     auto& arr = std::get<NodeArray>(m_data);
     arr.emplace_back().Set(value.x());
     arr.emplace_back().Set(value.y());
@@ -644,8 +656,20 @@ inline Serializer::DataNode& Serializer::DataNode::operator=<Syngine::Math::Vect
 }
 
 template <>
-inline Serializer::DataNode& Serializer::DataNode::operator=<Syngine::Math::Vector4>(const Syngine::Math::Vector4& value) {
-    m_data = NodeArray{};
+inline Serializer::DataNode& Serializer::DataNode::operator=
+    <Syngine::Math::Vector4>(const Syngine::Math::Vector4& value) {
+    m_data    = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    arr.emplace_back().Set(value.x());
+    arr.emplace_back().Set(value.y());
+    arr.emplace_back().Set(value.z());
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=
+    <Syngine::Math::Quaternion>(const Syngine::Math::Quaternion& value) {
+    m_data    = NodeArray{};
     auto& arr = std::get<NodeArray>(m_data);
     arr.emplace_back().Set(value.x());
     arr.emplace_back().Set(value.y());

@@ -167,8 +167,8 @@ Serializer::CoreSettings::LoadFromFile(const std::string& path) {
             settings.video.width = static_cast<int>(attr->data_int());
         } else if (attr->tag() == "height") {
             settings.video.height = static_cast<int>(attr->data_int());
-        } else if (attr->tag() == "fullscreen") {
-            settings.video.fullscreen = attr->data() == "true";
+        } else if (attr->tag() == "windowMode") {
+            settings.video.windowMode = std::stoi(attr->data().cstr());
         } else if (attr->tag() == "brightness") {
             settings.video.brightness = static_cast<float>(attr->data_float());
         } else if (attr->tag() == "vSync") {
@@ -228,8 +228,8 @@ bool Serializer::CoreSettings::SaveToFile(const std::string&  path,
         doc.new_attr("width", std::to_string(settings.video.width)));
     videoElem->add_attr(
         doc.new_attr("height", std::to_string(settings.video.height)));
-    videoElem->add_attr(doc.new_attr(
-        "fullscreen", settings.video.fullscreen ? "true" : "false"));
+    videoElem->add_attr(
+        doc.new_attr("windowMode", std::to_string(settings.video.windowMode)));
     videoElem->add_attr(
         doc.new_attr("brightness", std::to_string(settings.video.brightness)));
     videoElem->add_attr(
