@@ -186,6 +186,45 @@ class Core {
         return DebugModes();
     }
 
+    /// @brief Get the current frame count
+    /// @return Current frame count
+    /// @since v0.0.2
+    static int GetFrameCount() { return m_frameCounter.frameCount; }
+
+    /// @brief Get the estimated FPS (frames per second)
+    /// @return Estimated FPS
+    /// @note This is updated every second and may not be accurate for short
+    /// time intervals.
+    /// @since v0.0.2
+    static float GetFPS() { return m_frameCounter.lastFPS; }
+
+    /// @brief Add a callback function to be called every frame during the
+    /// update phase
+    /// @note The callback function should take an int parameter representing
+    /// the current frame count.
+    /// @param callback Function to be called every frame
+    /// @since v0.0.2
+    static void AddFrameCallback(std::function<void(int)> callback) {
+        m_frameCallbacks.push_back(callback);
+    }
+
+    /// @brief Add a callback function to be called every fixed update just
+    /// after physics updates
+    /// @note The callback function should take a float parameter representing
+    /// the fixed delta time.
+    /// @param callback Function to be called every fixed update
+    /// @since v0.0.2
+    static void AddFixedUpdateCallback(std::function<void(float)> callback) {
+        m_fixedUpdateCallbacks.push_back(callback);
+    }
+
+    /// @brief Clear all registered update and fixed update callbacks
+    /// @since v0.0.2
+    static void ClearUpdateCallbacks() {
+        m_frameCallbacks.clear();
+        m_fixedUpdateCallbacks.clear();
+    }
+
   private:
     struct _internal {
         // Mouse sensitivity
@@ -310,6 +349,10 @@ class Core {
     static bool          m_shouldClose; //* Whether the application should close
     static _internal     m_internal;    //* Internal state struct
     static _FrameCounter m_frameCounter; //* Frame counter for FPS/TPS tracking
+    static std::vector<std::function<void(int)>>
+        m_frameCallbacks; //* List of update callbacks
+    static std::vector<std::function<void(float)>>
+        m_fixedUpdateCallbacks; //* List of update callbacks
 
     /// @brief Handle key events for debug actions
     /// @param event SDL_Event to handle

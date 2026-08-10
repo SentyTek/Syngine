@@ -9,6 +9,8 @@ SAMPLER2D(s_albedo, 0);
 uniform vec4 u_lightDir;
 // @EngineUniform freq="draw" src="Billboard.Lighting"
 uniform vec4 u_billboard_lighting; // x: receiveSunLight (bool), y = receiveShadows (bool)
+// @EngineUniform freq="frame" src="Renderer.SunColor"
+uniform vec4 u_lightColor; // xyz=color w=intensity
 
 void main() {
     // Sample the albedo texture
@@ -42,7 +44,8 @@ void main() {
             lightFactor *= shadowFactor;
         }
 
-        finalColor *= lightFactor;
+        // Apply sun color to the final color
+        finalColor *= u_lightColor.rgb * u_lightColor.w * lightFactor;
     }
 
     gl_FragData[0] = vec4(finalColor, base.a);

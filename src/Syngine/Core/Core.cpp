@@ -58,9 +58,11 @@ Syngine::Core::Context* Syngine::Core::m_context  = nullptr;
 Core::_internal         Syngine::Core::m_internal;
 Core::_FrameCounter     Syngine::Core::m_frameCounter;
 
-float             Syngine::Core::deltaTime     = 0.0f;
-bool              Syngine::Core::m_shouldClose = false;
-Core::FrameCounts Syngine::Core::m_frameCounts;
+float                                   Syngine::Core::deltaTime     = 0.0f;
+bool                                    Syngine::Core::m_shouldClose = false;
+Core::FrameCounts                       Syngine::Core::m_frameCounts;
+std::vector<std::function<void(int)>>   Syngine::Core::m_frameCallbacks;
+std::vector<std::function<void(float)>> Syngine::Core::m_fixedUpdateCallbacks;
 
 Core::Core(const EngineConfig config) {
     if (m_instance) {
@@ -450,6 +452,13 @@ bool Core::Update() {
                 fixedDeltaTime, fixedDeltaTime, m_internal.simulate);
         }
 
+        // Call fixed update callbacks
+        for (auto& callback : m_fixedUpdateCallbacks) {
+            if (callback) {
+                callback(fixedDeltaTime);
+            }
+        }
+
         m_internal.accumulator -= fixedDeltaTime;
         m_frameCounter.physCounter++;
 
@@ -484,6 +493,13 @@ bool Core::Render() {
     if (Renderer::IsReady()) {
         m_frameCounter.frameCount++;
         m_frameCounter.frameDisplay++;
+
+        // Call render callbacks
+        for (auto& callback : m_frameCallbacks) {
+            if (callback) {
+                callback(m_frameCounter.frameCount);
+            }
+        }
 
         m_context->renderer->_RenderFrame(m_context->debug);
         m_frameCounts.drawnObjects.debug = RenderDirector::m_drawnCounts.debug;
