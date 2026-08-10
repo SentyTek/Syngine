@@ -80,17 +80,18 @@ class RenderDirector {
     // Called by _DrawShadows when CSM debug is enabled
     static void
     _CalculateCascadeMatrices(CameraComponent*                camera,
+                              DirectionalLightComponent*      lightSrc,
                               std::array<Math::Matrix4x4, 4>& outLightView,
                               std::array<Math::Matrix4x4, 4>& outLightProj,
                               Math::Vector4&                  outCascadeSplits);
 
-    static constexpr std::array<Syngine::ViewID, 12> _allViews = {
-        Syngine::VIEW_SHADOW,  Syngine::VIEW_SKY,
-        Syngine::VIEW_GBUFFER, Syngine::VIEW_LIGHTING,
-        Syngine::VIEW_FORWARD, Syngine::VIEW_BILLBOARD,
-        Syngine::VIEW_DEBUG,   Syngine::VIEW_BILL_DBG,
-        Syngine::VIEW_AO,      Syngine::VIEW_POSTPROCESS,
-        Syngine::VIEW_UI,      Syngine::VIEW_UI_DEBUG
+    static constexpr std::array<Syngine::ViewID, 11> _allViews = {
+        Syngine::VIEW_SHADOW,      Syngine::VIEW_LIGHT_SHADOWS,
+        Syngine::VIEW_SKY,         Syngine::VIEW_FORWARD,
+        Syngine::VIEW_BILLBOARD,   Syngine::VIEW_DEBUG,
+        Syngine::VIEW_BILL_DBG,    Syngine::VIEW_AO,
+        Syngine::VIEW_POSTPROCESS, Syngine::VIEW_UI,
+        Syngine::VIEW_UI_DEBUG
     };
 
     static bool _CreateSceneBuffers();
@@ -105,8 +106,10 @@ class RenderDirector {
                                                     // for the current frame
 
     static bool _PrepareRenderViews(CameraComponent* camera);
-    static CameraComponent::Frustum _GetCascadeFrustum(uint8_t          cascade,
-                                                       CameraComponent* camera);
+    static CameraComponent::Frustum
+    _GetCascadeFrustum(uint8_t                    cascade,
+                       CameraComponent*           camera,
+                       DirectionalLightComponent* lightSrc);
 
     static void _DrawShadows(const Shader* program, CameraComponent* camera);
     static void _DrawSky(const Shader* program, const CameraComponent* camera);
@@ -126,9 +129,10 @@ class RenderDirector {
                                       const Camera&   camera,
                                       float           distance);
     static bool  _ShouldCullBySize(GameObject* go, CameraComponent* camera);
-    static bool  _ShouldCullBySizeShadow(GameObject*      go,
-                                         CameraComponent* camera,
-                                         uint8_t          cascade);
+    static bool  _ShouldCullBySizeShadow(GameObject*                go,
+                                         CameraComponent*           camera,
+                                         uint8_t                    cascade,
+                                         DirectionalLightComponent* lightSrc);
 
     static void _ScreenSpaceQuad(ViewID view, const Shader* program);
 

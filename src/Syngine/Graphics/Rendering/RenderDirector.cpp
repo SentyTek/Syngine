@@ -13,6 +13,7 @@
 #include "Syngine/GameObjects/Components/BillboardComponent.h"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
 #include "Syngine/Graphics/Resources/UniformRegistry.h"
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Graphics/Rendering/DebugRenderer.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
@@ -456,7 +457,7 @@ bool RenderDirector::_CreateSceneBuffers() {
 
         m_cascadeSizes[2] =
             round(static_cast<float>(m_config.shadowDist) / 3.0f);
-        m_cascadeSizes[3] = static_cast<float>(m_config.shadowDist);
+        m_cascadeSizes[3] = round(static_cast<float>(m_config.shadowDist));
     }
 
     // Create scene textures
@@ -600,10 +601,13 @@ bool RenderDirector::_SetVsync() {
 
 void RenderDirector::_CalculateCascadeMatrices(
     CameraComponent*                           camera,
+    DirectionalLightComponent*                 lightSrc,
     std::array<Math::Matrix4x4, NUM_CASCADES>& outLightView,
     std::array<Math::Matrix4x4, NUM_CASCADES>& outLightProj,
     Math::Vector4&                             outCascadeSplits) {
-    const Math::Vector3 lightDirVec = Renderer::GetSunDirection().normalized();
+
+    const Math::Vector3 lightDirVec =
+        lightSrc->GetDirectionVector().normalized();
 
     const Math::Vector3 target = camera->GetPosition();
     const Math::Vector3 up(0.0f, 1.0f, 0.0f); // Up vector for light view matrix
@@ -675,13 +679,16 @@ void RenderDirector::_CalculateCascadeMatrices(
 }
 
 CameraComponent::Frustum
-RenderDirector::_GetCascadeFrustum(uint8_t cascade, CameraComponent* camera) {
+RenderDirector::_GetCascadeFrustum(uint8_t                    cascade,
+                                   CameraComponent*           camera,
+                                   DirectionalLightComponent* lightSrc) {
     SYN_PROFILE_FUNCTION();
     CameraComponent::Frustum                  cascadeFrustum;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
     std::array<Math::Matrix4x4, NUM_CASCADES> lightProj;
     Math::Vector4                             outCascadeSplits;
-    _CalculateCascadeMatrices(camera, lightView, lightProj, outCascadeSplits);
+    _CalculateCascadeMatrices(
+        camera, lightSrc, lightView, lightProj, outCascadeSplits);
 
     Math::Matrix4x4 cascadeViewProj = lightView[cascade] * lightProj[cascade];
 
@@ -766,9 +773,11 @@ bool RenderDirector::_ShouldCullBySize(GameObject*      go,
     return false;
 }
 
-bool RenderDirector::_ShouldCullBySizeShadow(GameObject*      go,
-                                             CameraComponent* camera,
-                                             uint8_t          cascade) {
+bool RenderDirector::_ShouldCullBySizeShadow(
+    GameObject*                go,
+    CameraComponent*           camera,
+    uint8_t                    cascade,
+    DirectionalLightComponent* lightSrc) {
     SYN_PROFILE_FUNCTION();
     auto* meshComp = go->GetComponent<MeshComponent>();
     if (!meshComp || !meshComp->IsEnabled()) return false;
@@ -792,7 +801,7 @@ bool RenderDirector::_ShouldCullBySizeShadow(GameObject*      go,
     if (camDistSq < 400.0f)
         return false; // Within 20 units of camera? Don't cull
 
-    Math::Vector3 lightDir    = Renderer::GetSunDirection();
+    Math::Vector3 lightDir    = lightSrc->GetDirectionVector().normalized();
     Math::Vector3 lightPos    = camPos + lightDir * 100.0f;
     float         lightDistSq = lightPos.distanceSquared(aabb.center);
     if (lightDistSq < 100.0f)
@@ -931,12 +940,17 @@ void RenderDirector::_DrawShadows(const Shader*    program,
         BGFX_STATE_DEFAULT &
         ~BGFX_STATE_WRITE_RGB; // Don't write color, only depth
 
+    DirectionalLightComponent* lightSrc =
+        GameObjectRegistry::GetFirstActiveDirectionalLight();
+    if (!lightSrc) return;
+
     if (Core::_GetContext()->debug.CSMBounds) {
         if (Renderer::m_pseudoCamera) camera = Renderer::m_pseudoCamera;
         std::array<Math::Matrix4x4, NUM_CASCADES> view;
         std::array<Math::Matrix4x4, NUM_CASCADES> proj;
         Math::Vector4                             outCascadeSplits;
-        _CalculateCascadeMatrices(camera, view, proj, outCascadeSplits);
+        _CalculateCascadeMatrices(
+            camera, lightSrc, view, proj, outCascadeSplits);
         for (int i = 0; i < NUM_CASCADES; ++i) {
             Core::_GetContext()->physicsManager->_DrawFrustum(view[i], proj[i]);
         }
@@ -945,7 +959,7 @@ void RenderDirector::_DrawShadows(const Shader*    program,
     const auto& gameObjects = GameObjectRegistry::GetRenderableObjects();
 
     for (uint8_t cascade = 0; cascade < NUM_CASCADES; ++cascade) {
-        auto cascadeFrustum = _GetCascadeFrustum(cascade, camera);
+        auto cascadeFrustum = _GetCascadeFrustum(cascade, camera, lightSrc);
 
         bgfx::setViewName(program->m_viewId + cascade, "Shadow Cascade");
         bgfx::touch(program->m_viewId + cascade);
@@ -968,7 +982,8 @@ void RenderDirector::_DrawShadows(const Shader*    program,
             }
 
             // Size-based shadow culling from light's perspective
-            if (_ShouldCullBySizeShadow(gameObject, camera, cascade)) {
+            if (_ShouldCullBySizeShadow(
+                    gameObject, camera, cascade, lightSrc)) {
                 m_drawnCounts.culledShadowSize++;
                 continue;
             }
@@ -1247,12 +1262,6 @@ void RenderDirector::_DrawDbgBillboard(Shader* program) {
         bgfx::setTransform(packet.modelMtx.data());
         bgfx::setVertexBuffer(0, m_billboardVbh);
         bgfx::setIndexBuffer(m_billboardIbh);
-        bgfx::setTexture(3,
-                         m_defaultShadowMap,
-                         m_buffers.shadowDepth,
-                         BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
-                             BGFX_SAMPLER_MIP_POINT | BGFX_SAMPLER_U_CLAMP |
-                             BGFX_SAMPLER_V_CLAMP);
         Renderer::_UpdateDrawID();
         bgfx::submit(VIEW_BILL_DBG, program->m_program);
     }
@@ -1292,8 +1301,11 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
     std::array<Math::Matrix4x4, NUM_CASCADES> lightProj;
     if (m_config.useShadows) {
         // Calculate the cascade matrices for shadow mapping and send to GPU
-        Math::Vector4 cascadeSplits;
-        _CalculateCascadeMatrices(camera, lightView, lightProj, cascadeSplits);
+        Math::Vector4              cascadeSplits;
+        DirectionalLightComponent* lightSrc =
+            GameObjectRegistry::GetFirstActiveDirectionalLight();
+        _CalculateCascadeMatrices(
+            camera, lightSrc, lightView, lightProj, cascadeSplits);
         m_csmCascadeSplits = cascadeSplits;
     }
 

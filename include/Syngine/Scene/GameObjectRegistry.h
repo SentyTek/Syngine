@@ -8,6 +8,7 @@
 
 #pragma once
 #include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/Components/DirectionalLightComponent.h"
 #include <unordered_map>
 #include <vector>
 
@@ -151,6 +152,17 @@ class GameObjectRegistry {
     static void _NotifyComponentRemoved(GameObject*              gameobject,
                                         Syngine::ComponentTypeID type) noexcept;
 
+    static DirectionalLightComponent*
+    GetFirstActiveDirectionalLight() noexcept {
+        if (m_DirectionalLights.empty()) return nullptr;
+        for (auto* light : m_DirectionalLights) {
+            if (light && light->IsEnabled()) {
+                return light;
+            }
+        }
+        return nullptr;
+    }
+
   private:
     // Could be worth using unordered_set for faster removals on the sublists.
 
@@ -162,6 +174,9 @@ class GameObjectRegistry {
     static std::vector<GameObject*>
         m_ScriptedObjects; // GameObjects that have a script attached
     static std::vector<GameObject*> m_Gizmos; // GameObjects that are gizmos
+
+    static std::vector<DirectionalLightComponent*>
+        m_DirectionalLights; // Directional lights for the renderer
 };
 
 } // namespace Syngine

@@ -14,4 +14,4 @@
 #include <Syngine/GameObjects/Components/CameraComponent.h>
 #include <Syngine/GameObjects/Components/ZoneComponent.h>
 #include <Syngine/GameObjects/Components/BillboardComponent.h>
-#include <Syngine/GameObjects/Components/SunComponent.h>
+#include <Syngine/GameObjects/Components/DirectionalLightComponent.h>

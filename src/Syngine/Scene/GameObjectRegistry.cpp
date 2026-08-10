@@ -23,6 +23,9 @@ std::vector<GameObject*>             GameObjectRegistry::m_PhysicsObjects;
 std::vector<GameObject*>             GameObjectRegistry::m_RenderableObjects;
 std::vector<GameObject*>             GameObjectRegistry::m_ScriptedObjects;
 std::vector<GameObject*>             GameObjectRegistry::m_Gizmos;
+std::vector<DirectionalLightComponent*>
+    GameObjectRegistry::m_DirectionalLights; // Directional lights for the
+                                             // renderer
 
 // Add/remove functions
 int GameObjectRegistry::AddGameObject(GameObject* gameObject) noexcept {
@@ -87,6 +90,11 @@ int GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
     removeFrom(m_PhysicsObjects);
     removeFrom(m_ScriptedObjects);
     removeFrom(m_Gizmos);
+    m_DirectionalLights.erase(
+        std::remove(m_DirectionalLights.begin(),
+                    m_DirectionalLights.end(),
+                    gameObject->GetComponent<DirectionalLightComponent>()),
+        m_DirectionalLights.end());
 
     return 0; // Success
 }
@@ -222,6 +230,15 @@ void GameObjectRegistry::_NotifyComponentAdded(
     case Syngine::SYN_COMPONENT_ZONE:
         Core::_GetContext()->ZoneSystem->_RegisterZone(
             gameobject->GetComponent<ZoneComponent>());
+        break;
+    case Syngine::SYN_COMPONENT_LIGHT_DIRECTIONAL:
+        if (std::find(m_DirectionalLights.begin(),
+                      m_DirectionalLights.end(),
+                      gameobject->GetComponent<DirectionalLightComponent>()) ==
+            m_DirectionalLights.end()) {
+            m_DirectionalLights.push_back(
+                gameobject->GetComponent<DirectionalLightComponent>());
+        }
         break;
     default: break; // No action for other component types
     }

@@ -86,24 +86,6 @@ bool Renderer::_CreateRenderer(const RendererConfig& config) {
     _RegisterBuiltinUniformProviders();
     RenderDirector::_Initialize(config);
 
-    // Initial sun direction in degrees (yaw, pitch, roll)
-    // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive
-    // = up).
-    const Math::Vector3 initialSunDir(45.0f, 45.0f, 0.0f);
-    float pitch = static_cast<float>(Math::DEG2RAD(initialSunDir.x()));
-    float yaw   = static_cast<float>(Math::DEG2RAD(initialSunDir.y()));
-    float cp    = cosf(pitch);
-    float sp    = sinf(pitch);
-    float cy    = cosf(yaw);
-    float sy    = sinf(yaw);
-
-    // y = +sin(pitch) when pitch is above horizon. (Ensure convention matches
-    // UI)
-    Math::Vector3 dirVec(cy * cp, sp, sy * cp);
-    dirVec = dirVec.normalized();
-
-    SetSunDirection(dirVec);
-
     m_isReady = true;
     Syngine::Logger::Info("Renderer created successfully");
     return true;
@@ -125,12 +107,6 @@ void Renderer::_RegisterGizmo(const std::string& tag) {
                                m_gizmoSize);
 
     m_gizmoRegistry[tag] = gizmo;
-}
-
-Math::Vector3 Renderer::GetSunDirection() { return m_sunDir; }
-
-void Renderer::SetSunDirection(const Math::Vector3& lightDir) {
-    m_sunDir = lightDir.normalized();
 }
 
 void Renderer::_RenderFrame(DebugModes debug) {

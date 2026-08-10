@@ -70,7 +70,7 @@ add_library(Syngine STATIC
     src/Syngine/GameObjects/Components/CameraComponent.cpp
     src/Syngine/GameObjects/Components/ZoneComponent.cpp
     src/Syngine/GameObjects/Components/BillboardComponent.cpp
-    src/Syngine/GameObjects/Components/SunComponent.cpp
+    src/Syngine/GameObjects/Components/DirectionalLightComponent.cpp
 )
 
 set_target_properties(Syngine PROPERTIES FOLDER "Engine")

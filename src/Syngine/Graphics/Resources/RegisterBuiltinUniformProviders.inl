@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include "bgfx/bgfx.h"
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
 #include <Syngine/Core/Core.h>
@@ -91,10 +92,12 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* ctx) -> const void* {
-                const Math::Vector3 dir = Renderer::GetSunDirection();
-                Renderer::m_uniformProviderData.sunDirection =
-                    Math::Vec4(dir, 0.0f);
-                return Renderer::m_uniformProviderData.sunDirection.data();
+                if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
+                    return nullptr;
+                }
+                return GameObjectRegistry::GetFirstActiveDirectionalLight()
+                    ->GetDirectionVector()
+                    .data();
             } });
 
     /* Set default sky colors
@@ -128,7 +131,12 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* ctx) -> const void* {
-                return Renderer::m_uniformProviderData.sunColor.data();
+                if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
+                    return nullptr;
+                }
+                return GameObjectRegistry::GetFirstActiveDirectionalLight()
+                    ->GetColor()
+                    .data();
             } });
     UniformRegistry::RegisterProvider(
         "Renderer.HorizonColor",

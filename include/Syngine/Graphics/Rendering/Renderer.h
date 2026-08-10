@@ -32,18 +32,18 @@ class BillboardComponent; // Forward declaration
 /// @section Renderer
 /// @since v0.0.1
 enum ViewID : bgfx::ViewId {
-    VIEW_SHADOW      = 0,  //* Shadow map rendering
-    VIEW_SKY         = 4,  //* Skybox rendering
-    VIEW_GBUFFER     = 5,  //* G-Buffer rendering for deferred shading
-    VIEW_LIGHTING    = 6,  //* Lighting pass for deferred shading
-    VIEW_FORWARD     = 7,  //* Forward rendering pass for translucent objects
-    VIEW_BILLBOARD   = 8,  //* Billboard rendering
-    VIEW_DEBUG       = 9,  //* Debug rendering pass for debug rendering
-    VIEW_BILL_DBG    = 10, //* Billboard debug rendering
-    VIEW_AO          = 11, //* Ambient occlusion passes (3 passes)
-    VIEW_POSTPROCESS = 14, //* Post-processing effects passes (Max 8 passes)
-    VIEW_UI          = 18, //* UI rendering
-    VIEW_UI_DEBUG    = 19, //* UI debug rendering
+    VIEW_SHADOW = 0, //* Shadow map rendering (4 cascades)
+    VIEW_LIGHT_SHADOWS =
+        4, //* Passes for spot and point light shadows (up to 12 lights)
+    VIEW_SKY         = 76, //* Skybox rendering
+    VIEW_FORWARD     = 77, //* Forward rendering pass for translucent objects
+    VIEW_BILLBOARD   = 78, //* Billboard rendering
+    VIEW_DEBUG       = 79, //* Debug rendering pass for debug rendering
+    VIEW_BILL_DBG    = 90, //* Billboard debug rendering
+    VIEW_AO          = 81, //* Ambient occlusion passes (3 passes)
+    VIEW_POSTPROCESS = 84, //* Post-processing effects passes (Max 8 passes)
+    VIEW_UI          = 92, //* UI rendering
+    VIEW_UI_DEBUG    = 93, //* UI debug rendering
 };
 
 /// @brief To manage renderer configuration
@@ -63,11 +63,9 @@ struct RendererConfig {
                // camera will still be the one drawn to the screen
     bool useSSAO      = true; //* Whether to enable SSAO (default: true)
     int shadowMapSize = 2048; //* Size of the shadow map texture (default: 2048)
-    int maxDirectionalShadowCasters =
-        1; //* Maximum number of directional light shadow casters (default: 1)
 };
 
-/// @brief Renderer class to manage rendering and shader programs
+/// @brief Renderer class
 /// @section Renderer
 /// @since v0.0.1
 class Renderer {
@@ -77,7 +75,7 @@ class Renderer {
     static int width;  //* Width of the game window in pixels
     static int height; //* Height of the game window in pixels
     static uint64_t
-        currentDrawId; //* Current frame number for tracking uniform updates
+        currentDrawId; //* Current draw number for tracking uniform updates
 
     /// @brief Constructor for the Renderer class
     /// @param width Width of the game window in pixels
@@ -95,29 +93,6 @@ class Renderer {
     /// @threadsafety read-only
     /// @since v0.0.1
     static bool IsReady() { return m_isReady; };
-
-    /// @brief Set a uniform variable
-    /// @param id The ID of the uniform variable to set, returned from
-    /// RegisterUniform
-    /// @param data Pointer to the data to set the uniform to
-    /// @param num The number of elements to set (default is 1)
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    static void SetUniform(size_t id, const void* data, uint16_t num = 1);
-
-    /// @brief Get the global sun light direction
-    /// @return A vector3 representing the normalized sun light direction in
-    /// world space
-    /// @threadsafety not-safe
-    static Math::Vector3 GetSunDirection();
-
-    /// @brief Set the global sun light direction
-    /// @param lightDir A Vector3 representing the normalized sun light
-    /// direction in world space
-    /// @note The direction should be normalized and in world space coordinates.
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    static void SetSunDirection(const Math::Vector3& lightDir);
 
     /// @brief Set the default gizmo size
     /// @param size Size of the gizmo
@@ -178,10 +153,8 @@ class Renderer {
         Math::Vec4 frameCount;
         Math::Mat4 cameraViewProjection;
         Math::Vec4 cameraPosition;
-        Math::Vec4 sunDirection;
         Math::Vec4 skyColorZenith   = Math::Vec4(0.529f, 0.808f, 0.922f, 1.0f);
         Math::Vec4 skyColorMidnight = Math::Vec4(0.05f, 0.05f, 0.1f, 1.0f);
-        Math::Vec4 sunColor         = Math::Vec4(1.0f, 0.956f, 0.839f, 1.0f);
         Math::Vec4 horizonColor     = Math::Vec4(0.8f, 0.5f, 0.3f, 1.0f);
         Math::Vec4 shadowParams;
         Math::Mat4 normalMatrix;
