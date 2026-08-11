@@ -1,4 +1,4 @@
-// ╒════════════════════════ Physics.cpp ═╕
+// ╒═════════════════ PhysicsManager.cpp ═╕
 // │ Syngine                              │
 // │ Created 2025-05-21                   │
 // ├──────────────────────────────────────┤
@@ -6,7 +6,7 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include <Syngine/Physics/Physics.h>
+#include <Syngine/Physics/PhysicsManager.h>
 #include <Syngine/Core/Core.h>
 #include <Syngine/Graphics/Rendering/DebugRenderer.h>
 #include <Syngine/Core/Logger.h>

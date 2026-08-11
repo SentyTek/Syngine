@@ -106,6 +106,7 @@ class IComponent {
     friend class GameObject;
     friend class Renderer;
     friend class RenderDirector;
+    friend class GameObjectRegistry;
 };
 
 }; // namespace Syngine

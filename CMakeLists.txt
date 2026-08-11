@@ -58,7 +58,7 @@ add_library(Syngine STATIC
     src/Syngine/Utils/Prefab.cpp
 
     # Physics
-    src/Syngine/Physics/Physics.cpp
+    src/Syngine/Physics/PhysicsManager.cpp
 
     # GameObject system
     src/Syngine/GameObjects/GameObject.cpp

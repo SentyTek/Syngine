@@ -17,7 +17,7 @@
 #include <Syngine/GameObjects/Components/RigidbodyComponent.h>
 #include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/Graphics/Resources/ModelLoader.h>
-#include <Syngine/Physics/Physics.h>
+#include <Syngine/Physics/PhysicsManager.h>
 #include <Syngine/Utils/Profiler.h>
 
 #include <cstdint>

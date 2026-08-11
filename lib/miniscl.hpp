@@ -1703,6 +1703,8 @@ class XmlNode {
 
   template <int step>
   void print_text(stream& stream, const string& t) {
+    if (!t)
+      return;
 #define _printTilNow()                       \
   *p = '\0';                                 \
   stream.write((const scl::string&)s, step); \

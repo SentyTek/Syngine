@@ -16,7 +16,7 @@
 #include "Syngine/GameObjects/GameObject.h"
 #include "Syngine/Math/Quaternion.hpp"
 #include "Syngine/Math/Vector3.hpp"
-#include "Syngine/Physics/Physics.h"
+#include "Syngine/Physics/PhysicsManager.h"
 #include "Syngine/Utils/Serializer.h"
 
 #include "Jolt/Math/Quat.h"

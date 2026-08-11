@@ -10,10 +10,10 @@
 #include "Syngine/Core/Input.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/GameObjects/GameObject.h"
-#include "Syngine/GameObjects/AllComponents.h"
 #include "Syngine/GameObjects/ComponentRegistry.h"
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include "Syngine/Utils/FsUtils.h"
-#include "Syngine/Math/Math.hpp"
+#include "Syngine/GameObjects/AllComponents.h"
 
 #define SOL_ALL_SAFETIES_ON 1
 #include <sol/sol.hpp>
@@ -188,7 +188,7 @@ void _ReplayRegisteredHostBindings() {
 sol::state*              LuaManager::m_luaState     = nullptr;
 bool                     LuaManager::m_initialized  = false;
 bool                     LuaManager::m_allowTicking = true;
-std::vector<GameObject*> LuaManager::m_ownedObjects;
+std::vector<GameObject*> LuaManager::m_luaCreatedObjects;
 LuaManager*              LuaManager::m_instance = nullptr;
 LuaLibs                  LuaManager::m_libs     = LuaLibs::DEFAULT;
 
@@ -532,21 +532,26 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
     scene["createGameObject"] =
         [&lua](std::string                name,
                sol::optional<std::string> shader,
-               sol::optional<std::string> tag) -> sol::object {
+               sol::optional<sol::table>  tag) -> sol::object {
         // Create a new GameObject
-        GameObject* go =
-            new GameObject(name, shader.value_or("default"), tag.value_or(""));
-        m_ownedObjects.push_back(go); // Track ownership for cleanup
-        return sol::make_object(lua, go);
-    };
-    scene["deleteGameObject"] = [](GameObject* obj) {
-        if (!obj) {
-            return;
+        std::vector<std::string> tags;
+        if (tag.has_value()) {
+            sol::table tagTable = tag.value();
+            for (auto& pair : tagTable) {
+                tags.push_back(pair.second.as<std::string>());
+            }
         }
+        GameObject& go = GameObjectRegistry::CreateGameObject(
+            name, shader.value_or("default"), tags);
+        m_luaCreatedObjects.push_back(&go); // Track ownership for cleanup
+        return sol::make_object<GameObject*>(lua, &go);
+    };
+    scene["deleteGameObject"] = [](GameObject& obj) {
+        GameObject* ptr = &obj;
 
-        auto newEnd =
-            std::remove(m_ownedObjects.begin(), m_ownedObjects.end(), obj);
-        if (newEnd == m_ownedObjects.end()) {
+        auto newEnd = std::remove(
+            m_luaCreatedObjects.begin(), m_luaCreatedObjects.end(), ptr);
+        if (newEnd == m_luaCreatedObjects.end()) {
             Logger::Warn(
                 "Lua attempted to delete a GameObject that is not Lua-owned. "
                 "Skipping delete to avoid invalid ownership teardown.",
@@ -554,16 +559,14 @@ void LuaManager::_RegisterEntityBindings(sol::state& lua) {
             return;
         }
 
-        m_ownedObjects.erase(newEnd, m_ownedObjects.end());
-        delete obj;
+        GameObjectRegistry::RemoveGameObject(ptr);
+        Syngine::LuaManager::_UnregisterLuaCreatedObject(ptr);
     };
     scene["getGameObject"] = [](std::string name, sol::this_state ts) {
-        GameObject* obj = GameObjectRegistry::GetGameObjectByName(name);
-        if (obj) {
-            sol::state_view lua(ts);
-            return sol::make_object(lua, obj);
-        }
-        return sol::object(sol::lua_nil);
+        GameObject* obj = const_cast<GameObject*>(
+            GameObjectRegistry::GetGameObjectByName(name));
+        sol::state_view lua(ts);
+        return sol::make_object(lua, obj);
     };
     lua["scene"] = scene;
 }
@@ -972,9 +975,11 @@ void LuaManager::_ReloadLuaState() {
     // _UnregisterLuaOwnedObject() doesn't mutate m_ownedObjects while we are
     // iterating it (iterator invalidation crash).
     std::vector<GameObject*> toDelete;
-    std::swap(toDelete, m_ownedObjects);
+    std::swap(toDelete, m_luaCreatedObjects);
     for (GameObject* obj : toDelete) {
-        if (obj) delete obj;
+        if (obj) {
+            GameObjectRegistry::RemoveGameObject(obj);
+        }
     }
 
     // Clear the result before destroying the Lua state
@@ -1030,14 +1035,14 @@ void LuaManager::_ReloadLuaState() {
     Logger::Log("Lua state reloaded successfully.", LogLevel::INFO, true);
 }
 
-void LuaManager::_UnregisterLuaOwnedObject(GameObject* obj) {
+void LuaManager::_UnregisterLuaCreatedObject(GameObject* obj) {
     if (!obj) {
         return;
     }
-    auto newEnd =
-        std::remove(m_ownedObjects.begin(), m_ownedObjects.end(), obj);
-    if (newEnd != m_ownedObjects.end()) {
-        m_ownedObjects.erase(newEnd, m_ownedObjects.end());
+    auto newEnd = std::remove(
+        m_luaCreatedObjects.begin(), m_luaCreatedObjects.end(), obj);
+    if (newEnd != m_luaCreatedObjects.end()) {
+        m_luaCreatedObjects.erase(newEnd, m_luaCreatedObjects.end());
     }
 }
 

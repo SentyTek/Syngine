@@ -10,7 +10,7 @@
 #include <Syngine/GameObjects/Component.h>
 #include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
-#include <Syngine/Physics/Physics.h>
+#include <Syngine/Physics/PhysicsManager.h>
 #include <Syngine/Utils/Serializer.h>
 
 #include <bx/math.h>

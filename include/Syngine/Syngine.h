@@ -25,7 +25,7 @@
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
 #include <Syngine/Graphics/Windowing.h>
 
-#include <Syngine/Physics/Physics.h>
+#include <Syngine/Physics/PhysicsManager.h>
 
 #include <Syngine/Utils/Helpers.h>
 #include <Syngine/Utils/Profiler.h>

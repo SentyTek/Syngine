@@ -47,9 +47,9 @@ class ZoneComponent : public Syngine::IComponent {
     bool m_active = true; //* Whether the zone is active or not
 
     bool m_oneShot = false; //* Whether the zone is a one-shot zone
-    std::vector<GameObject*>
+    std::vector<const GameObject*>
         m_objectsIn; //* Objects that are currently in the zone
-    std::vector<GameObject*>
+    std::vector<const GameObject*>
         m_triggeredObjects; //* Objects that have triggered
                             // the zone (for one-shot zones)
 
@@ -61,6 +61,37 @@ class ZoneComponent : public Syngine::IComponent {
     /// @since v0.0.1
     /// @internal
     GameObject* _GetOwner() const;
+
+    /// @brief Add an object to the triggered list (for one-shot zones).
+    /// @param object The GameObject to add.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
+    void _AddObject(const GameObject* object);
+
+    /// @brief Check if an object is in the triggered list (for one-shot zones).
+    /// @param object The GameObject to check.
+    /// @return True if the object is in the triggered list, false otherwise.
+    /// Returns false if not a one-shot zone
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    /// @internal
+    bool _HasOneTimeObject(const GameObject* object);
+
+    /// @brief Check if an object is currently inside the zone.
+    /// @param object The GameObject to check.
+    /// @return True if the object is inside the zone, false otherwise.
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    /// @internal
+    bool _IsTrackingObject(const GameObject* object) const;
+
+    /// @brief Remove an object from the triggered list (for one-shot zones).
+    /// @param object The GameObject to remove.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    /// @internal
+    void _RemoveObject(const GameObject* object);
 
     friend class ZoneSystem;
 
@@ -192,37 +223,6 @@ class ZoneComponent : public Syngine::IComponent {
     /// @since v0.0.1
     bool IsOneShot() const;
 
-    /// @brief Add an object to the triggered list (for one-shot zones).
-    /// @param object The GameObject to add.
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    /// @internal
-    void _AddObject(GameObject* object);
-
-    /// @brief Check if an object is in the triggered list (for one-shot zones).
-    /// @param object The GameObject to check.
-    /// @return True if the object is in the triggered list, false otherwise.
-    /// Returns false if not a one-shot zone
-    /// @threadsafety read-only
-    /// @since v0.0.1
-    /// @internal
-    bool _HasOneTimeObject(GameObject* object);
-
-    /// @brief Check if an object is currently inside the zone.
-    /// @param object The GameObject to check.
-    /// @return True if the object is inside the zone, false otherwise.
-    /// @threadsafety read-only
-    /// @since v0.0.1
-    /// @internal
-    bool _IsTrackingObject(GameObject* object) const;
-
-    /// @brief Remove an object from the triggered list (for one-shot zones).
-    /// @param object The GameObject to remove.
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    /// @internal
-    void _RemoveObject(GameObject* object);
-
     /// @brief Add a tag to the zone.
     /// @param tag The tag to add.
     /// @threadsafety not-safe
@@ -288,9 +288,9 @@ class ZoneComponent : public Syngine::IComponent {
     std::vector<GameObject*>
     GetObjectsInZoneByTag(const std::string& tag) const;
 
-    std::function<void(GameObject*)>
+    std::function<void(const GameObject*)>
         OnEnter; //* Function called when an object enters the zone
-    std::function<void(GameObject*)>
+    std::function<void(const GameObject*)>
         OnExit; //* Function called when an object exits the zone
 };
 

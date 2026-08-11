@@ -17,16 +17,14 @@
 
 using namespace Syngine;
 
-GameObject::GameObject(std::string name,
-                       std::string type,
-                       std::string initialTag) {
-    this->name = name;
-    this->type = type;
-    this->tags.push_back(initialTag);
+GameObject::GameObject(std::string              name,
+                       std::string              type,
+                       std::vector<std::string> initialTags) {
+    this->name  = name;
+    this->type  = type;
+    this->tags  = initialTags;
     this->id    = -1;
     this->gizmo = "none";
-
-    GameObjectRegistry::AddGameObject(this);
 }
 
 GameObject::GameObject(const Serializer::DataNode& data) {
@@ -53,8 +51,6 @@ GameObject::GameObject(const Serializer::DataNode& data) {
         }
     }
 
-    GameObjectRegistry::AddGameObject(this);
-
     // Children.
     if (data.Has("children")) {
         const auto& childrenNode = data["children"];
@@ -66,59 +62,9 @@ GameObject::GameObject(const Serializer::DataNode& data) {
     }
 }
 
-GameObject::GameObject(const GameObject& other) {
-    this->name     = other.name;
-    this->type     = other.type;
-    this->gizmo    = other.gizmo;
-    this->tags     = other.tags;
-    this->id       = other.id;
-    this->isActive = other.isActive;
-
-    // Deep copy components
-    for (const auto& [type, comp] : other.components) {
-        this->components[type]          = comp->Clone();
-        this->components[type]->m_owner = this;
-    }
-
-    // Register the new GameObject
-    // This should ensure it can be categorized properly
-    GameObjectRegistry::AddGameObject(this);
-}
-
-GameObject& GameObject::operator=(const GameObject& other) {
-    if (this == &other) return *this; // Self-assignment check
-
-    // Unregister the current GameObject
-    GameObjectRegistry::RemoveGameObject(this);
-
-    this->name     = other.name;
-    this->type     = other.type;
-    this->gizmo    = other.gizmo;
-    this->tags     = other.tags;
-    this->id       = other.id;
-    this->isActive = other.isActive;
-
-    // Clear existing components
-    this->components.clear();
-
-    // Deep copy components
-    for (const auto& [type, comp] : other.components) {
-        // Use the AddComponent method to ensure proper registration
-        this->components[type]          = comp->Clone();
-        this->components[type]->m_owner = this;
-        GameObjectRegistry::_NotifyComponentAdded(this, type);
-    }
-
-    // Register the new GameObject
-    // This should ensure it can be categorized properly
-    GameObjectRegistry::AddGameObject(this);
-
-    return *this;
-}
-
 GameObject::~GameObject() {
-    GameObjectRegistry::RemoveGameObject(this);
-    Syngine::LuaManager::_UnregisterLuaOwnedObject(this);
+    // Delete components
+    this->components.clear();
 }
 
 void GameObject::SetActive(bool active) noexcept { this->isActive = active; }

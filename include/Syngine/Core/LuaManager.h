@@ -77,10 +77,11 @@ class LuaManager {
     /// @brief Unregister a GameObject from Lua ownership tracking (called
     /// automatically on GameObject destruction)
     /// @param obj The GameObject to unregister
-    static void _UnregisterLuaOwnedObject(GameObject* obj);
+    static void _UnregisterLuaCreatedObject(GameObject* obj);
 
     static std::vector<GameObject*>
-        m_ownedObjects; // List of GameObjects owned by Lua (for cleanup)
+        m_luaCreatedObjects; // List of GameObjects created by Lua scripts that
+                             // need to be cleaned up on reload
 
     static LuaManager* m_instance; // Singleton instance of LuaManager
 

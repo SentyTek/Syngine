@@ -26,9 +26,9 @@ void ZoneSystem::_UpdateZones() {
     for (auto* zone : m_zones) {
         if (!zone->IsActive() || !zone->_GetOwner()->IsActive()) continue;
 
-        auto gameObjects = GameObjectRegistry::GetAllGameObjects();
-        for (auto obj : gameObjects) {
-            GameObject* objPtr = obj.second;
+        const auto& gameObjects = GameObjectRegistry::GetAllGameObjects();
+        for (auto& obj : gameObjects) {
+            const GameObject* objPtr = &obj.second;
             if (objPtr == zone->_GetOwner() || !objPtr->IsActive()) continue;
 
             bool inZone = zone->IsInZone(objPtr);

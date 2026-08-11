@@ -38,21 +38,25 @@ class GameObject {
     std::vector<std::string>
         tags; //* Tags for grouping and identifying GameObjects
 
+    GameObject(const GameObject& other)            = delete;
+    GameObject& operator=(const GameObject& other) = delete;
+    GameObject(GameObject&& other)                 = delete;
+    GameObject& operator=(GameObject&& other)      = delete;
+
     /// @brief Constructor for the GameObject class
     /// @param name Name of the GameObject
     /// @param type Type of the GameObject, defaults to "default"
+    /// @internal
     /// @since v0.0.1
-    GameObject(std::string name,
-               std::string type       = "default",
-               std::string initialTag = "");
+    GameObject(std::string              name,
+               std::string              type,
+               std::vector<std::string> initialTags);
 
     /// @brief Construct from a DataNode, used for deserialization
     /// @param data DataNode representing the serialized GameObject
+    /// @internal
     /// @since v0.0.1
     GameObject(const Serializer::DataNode& data);
-
-    GameObject(const GameObject& other);
-    GameObject& operator=(const GameObject& other);
 
     ~GameObject();
 
@@ -66,13 +70,6 @@ class GameObject {
     /// @threadsafety safe
     /// @since v0.0.1
     inline long GetID() noexcept { return this->id; };
-
-    /// @brief Set the ID of the GameObject
-    /// @param id ID of the GameObject
-    /// @threadsafety safe
-    /// @since v0.0.1
-    /// @internal
-    inline void _SetID(long id) noexcept { this->id = id; }
 
     /// @brief Check if the GameObject is active
     /// @return true if the GameObject is active, false otherwise
@@ -213,6 +210,16 @@ class GameObject {
         components; // Map of components attached to the GameObject
 
     bool isActive = true; // Whether the GameObject is active or not
+
+    /// @brief Set the ID of the GameObject
+    /// @param id ID of the GameObject
+    /// @threadsafety safe
+    /// @since v0.0.1
+    /// @internal
+    inline void _SetID(long id) noexcept { this->id = id; }
+
+    friend class GameObjectRegistry; // Allow GameObjectRegistry to access
+                                     // private members
 };
 
 template <typename T> T* GameObject::GetComponent() const {

@@ -6,14 +6,14 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/GameObjects/Components/ZoneComponent.h"
-#include "Syngine/Core/LuaManager.h"
-#include "Syngine/Scene/GameObjectRegistry.h"
-#include "Syngine/GameObjects/Component.h"
-#include "Syngine/GameObjects/ComponentRegistry.h"
-#include "Syngine/GameObjects/Components/TransformComponent.h"
-#include "Syngine/GameObjects/GameObject.h"
-#include "Syngine/Math/Quaternion.hpp"
+#include <Syngine/GameObjects/Components/ZoneComponent.h>
+#include <Syngine/GameObjects/Components/TransformComponent.h>
+#include <Syngine/GameObjects/ComponentRegistry.h>
+#include <Syngine/Scene/GameObjectRegistry.h>
+#include <Syngine/GameObjects/GameObject.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/Math/Quaternion.hpp>
+#include <Syngine/Core/LuaManager.h>
 
 #include <sol/sol.hpp>
 #include <sol/types.hpp>
@@ -114,7 +114,7 @@ bool ZoneComponent::IsActive() const { return m_active; }
 void ZoneComponent::SetActive(bool active) { m_active = active; }
 bool ZoneComponent::IsOneShot() const { return m_oneShot; }
 
-void ZoneComponent::_AddObject(GameObject* object) {
+void ZoneComponent::_AddObject(const GameObject* object) {
     if (object && std::find(m_objectsIn.begin(), m_objectsIn.end(), object) ==
                       m_objectsIn.end()) {
         m_objectsIn.emplace_back(object);
@@ -128,20 +128,20 @@ void ZoneComponent::_AddObject(GameObject* object) {
     }
 }
 
-bool ZoneComponent::_HasOneTimeObject(GameObject* object) {
+bool ZoneComponent::_HasOneTimeObject(const GameObject* object) {
     return m_oneShot && object &&
            (std::find(m_triggeredObjects.begin(),
                       m_triggeredObjects.end(),
                       object) != m_triggeredObjects.end());
 }
 
-bool ZoneComponent::_IsTrackingObject(GameObject* object) const {
+bool ZoneComponent::_IsTrackingObject(const GameObject* object) const {
     return object &&
            (std::find(m_objectsIn.begin(), m_objectsIn.end(), object) !=
             m_objectsIn.end());
 }
 
-void ZoneComponent::_RemoveObject(GameObject* object) {
+void ZoneComponent::_RemoveObject(const GameObject* object) {
     if (object) {
         m_objectsIn.erase(
             std::remove(m_objectsIn.begin(), m_objectsIn.end(), object),
@@ -214,9 +214,9 @@ std::vector<GameObject*> ZoneComponent::GetObjectsInZone() const {
     std::vector<GameObject*> objectsInZone;
 
     for (const auto& pair : GameObjectRegistry::GetAllGameObjects()) {
-        GameObject* obj = pair.second;
+        const GameObject* obj = &pair.second;
         if (IsInZone(obj)) {
-            objectsInZone.push_back(obj);
+            objectsInZone.push_back(const_cast<GameObject*>(obj));
         }
     }
 
@@ -228,9 +228,9 @@ ZoneComponent::GetObjectsInZoneByTag(const std::string& tag) const {
     std::vector<GameObject*> objectsInZone;
 
     for (const auto& pair : GameObjectRegistry::GetAllGameObjects()) {
-        GameObject* obj = pair.second;
+        const GameObject* obj = &pair.second;
         if (IsInZone(obj) && obj->HasTag(tag)) {
-            objectsInZone.push_back(obj);
+            objectsInZone.push_back(const_cast<GameObject*>(obj));
         }
     }
 

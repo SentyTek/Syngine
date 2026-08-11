@@ -8,7 +8,7 @@
 
 #pragma once
 #include "Syngine/GameObjects/Component.h"
-#include "Syngine/Physics/Physics.h"
+#include "Syngine/Physics/PhysicsManager.h"
 
 #include "Syngine/Math/Math.hpp"
 

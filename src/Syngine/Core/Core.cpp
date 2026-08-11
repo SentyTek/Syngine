@@ -34,7 +34,7 @@
 #include <Syngine/Graphics/Windowing.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Graphics/Rendering/RenderDirector.h>
-#include <Syngine/Physics/Physics.h>
+#include <Syngine/Physics/PhysicsManager.h>
 #include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/GameObjects/AllComponents.h>
 #include <Syngine/GameObjects/Component.h>
@@ -419,9 +419,9 @@ bool Core::Update() {
     {
         SYN_PROFILE_SCOPE("Component Updates")
         for (auto& [id, go] : allGameObjects) {
-            if (!go || !go->IsActive()) continue;
-            const auto& components = go->GetComponents();
-            for (const auto& [typeId, component] : components) {
+            if (!go.IsActive()) continue;
+            auto& components = go.GetComponents();
+            for (auto& [typeId, component] : components) {
                 if (component && component->IsEnabled()) {
                     component->Update(deltaTime);
                 }
@@ -474,9 +474,9 @@ bool Core::Update() {
     if (m_internal.simulate) {
         SYN_PROFILE_SCOPE("Post Update")
         for (auto& [id, go] : allGameObjects) {
-            if (!go || !go->IsActive()) continue;
-            const auto& components = go->GetComponents();
-            for (const auto& [typeId, component] : components) {
+            if (!go.IsActive()) continue;
+            auto& components = go.GetComponents();
+            for (auto& [typeId, component] : components) {
                 if (component && component->IsEnabled()) {
                     component->PostPhysicsUpdate();
                 }

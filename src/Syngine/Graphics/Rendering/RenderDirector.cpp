@@ -1121,7 +1121,7 @@ void RenderDirector::_DrawDebug(const Shader*    program,
     // lines, zone bounds, and AABBs) in a single pass.
     // TODO: Rework this to draw camera frustums as gizmos instead of
     // hardcoded
-    GameObject* p = GameObjectRegistry::GetGameObjectByName("player");
+    const GameObject* p = GameObjectRegistry::GetGameObjectByName("player");
     if (p && Core::IsPhysicsEnabled()) {
         CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
         if (!playerCamera) {

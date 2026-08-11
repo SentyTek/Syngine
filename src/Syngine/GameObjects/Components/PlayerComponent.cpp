@@ -15,7 +15,7 @@
 #include <Syngine/GameObjects/Components/TransformComponent.h>
 #include <Syngine/GameObjects/Component.h>
 #include <Syngine/GameObjects/GameObject.h>
-#include <Syngine/Physics/Physics.h>
+#include <Syngine/Physics/PhysicsManager.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 
 #include <SDL3/SDL_mouse.h>

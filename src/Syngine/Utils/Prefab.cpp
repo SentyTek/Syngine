@@ -66,6 +66,7 @@ void Serializer::Prefab::WriteGameObject(const DataNode&        node,
                 std::string valueStr; // Default value required so XML doesn't
                                       // have null attribs
                 const auto& arr = std::get<DataNode::NodeArray>(n.m_data);
+                if (arr.empty()) return std::string("null");
                 for (size_t i = 0; i < arr.size(); ++i) {
                     // Special case for empty string arrays to avoid "null"
                     // values

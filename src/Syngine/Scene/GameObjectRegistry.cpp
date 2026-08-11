@@ -14,59 +14,90 @@
 #include <Syngine/GameObjects/Components/ZoneComponent.h>
 #include <Syngine/GameObjects/Components/TransformComponent.h>
 #include <Syngine/Scene/ZoneSystem.h>
+#include <utility>
 
 namespace Syngine {
 
 // Static member initialization
-std::unordered_map<int, GameObject*> GameObjectRegistry::m_AllObjects;
-std::vector<GameObject*>             GameObjectRegistry::m_PhysicsObjects;
-std::vector<GameObject*>             GameObjectRegistry::m_RenderableObjects;
-std::vector<GameObject*>             GameObjectRegistry::m_ScriptedObjects;
-std::vector<GameObject*>             GameObjectRegistry::m_Gizmos;
+std::unordered_map<int, GameObject> GameObjectRegistry::m_AllObjects;
+std::vector<GameObject*>            GameObjectRegistry::m_PhysicsObjects;
+std::vector<GameObject*>            GameObjectRegistry::m_RenderableObjects;
+std::vector<GameObject*>            GameObjectRegistry::m_ScriptedObjects;
+std::vector<GameObject*>            GameObjectRegistry::m_Gizmos;
+int GameObjectRegistry::nextID = 0; // Next ID to assign to a new GameObject
 std::vector<DirectionalLightComponent*>
     GameObjectRegistry::m_DirectionalLights; // Directional lights for the
                                              // renderer
 
 // Add/remove functions
-int GameObjectRegistry::AddGameObject(GameObject* gameObject) noexcept {
-    if (!gameObject) {
-        return -1; // Invalid GameObject
-    }
+GameObject&
+GameObjectRegistry::CreateGameObject(std::string              name,
+                                     std::string              type,
+                                     std::vector<std::string> tags) noexcept {
+    int id = GameObjectRegistry::nextID++;
 
-    static int nextID = 0;
-    int        id     = nextID++;
+    auto [it, inserted] =
+        m_AllObjects.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(id),
+                             std::forward_as_tuple(name, type, tags));
 
-    // Add to the main map & assign ID
-    m_AllObjects.insert({ id, gameObject });
-    gameObject->_SetID(id);
+    GameObject& gameObject = (it->second);
+    gameObject._SetID(id);
 
     // Update indexed sublists
-    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_MESH) &&
-        gameObject->HasComponent(Syngine::SYN_COMPONENT_TRANSFORM)) {
-        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_MESH);
-        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_TRANSFORM);
+    if (gameObject.HasComponent(Syngine::SYN_COMPONENT_MESH) &&
+        gameObject.HasComponent(Syngine::SYN_COMPONENT_TRANSFORM)) {
+        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_MESH);
+        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_TRANSFORM);
     }
-    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_RIGIDBODY)) {
-        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_RIGIDBODY);
+    if (gameObject.HasComponent(Syngine::SYN_COMPONENT_RIGIDBODY)) {
+        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_RIGIDBODY);
     }
-    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_SCRIPT)) {
-        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_SCRIPT);
+    if (gameObject.HasComponent(Syngine::SYN_COMPONENT_SCRIPT)) {
+        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_SCRIPT);
     }
-    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_CAMERA)) {
-        _NotifyComponentAdded(gameObject, Syngine::SYN_COMPONENT_CAMERA);
+    if (gameObject.HasComponent(Syngine::SYN_COMPONENT_CAMERA)) {
+        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_CAMERA);
     }
 
-    return id;
+    return gameObject;
 }
 
-int GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
-    if (!gameObject || gameObject->name.empty()) {
-        return 1; // GameObject not found
+GameObject&
+GameObjectRegistry::Instantiate(const Serializer::Prefab& prefab) noexcept {
+    auto [it, inserted] =
+        m_AllObjects.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(++nextID),
+                             std::forward_as_tuple(prefab.rootGameObjectData));
+    GameObject& gameObject = (it->second);
+    gameObject._SetID(nextID);
+    return gameObject;
+}
+
+GameObject&
+GameObjectRegistry::CloneGameObject(const GameObject& original) noexcept {
+    GameObject& clone = CreateGameObject(
+        original.name + "_clone", original.type, original.tags);
+    clone.isActive = original.isActive;
+    clone.gizmo    = original.gizmo;
+
+    for (const auto& [type, component] : original.components) {
+        auto clonedComponent     = component->Clone();
+        clonedComponent->m_owner = &clone;
+        clone.components[type]   = std::move(clonedComponent);
+    }
+
+    return clone;
+}
+
+bool GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
+    if (!gameObject) {
+        return false; // Null pointer, cannot remove
     }
 
     auto it = m_AllObjects.find(gameObject->GetID());
     if (it == m_AllObjects.end()) {
-        return 1; // GameObject not found
+        return false; // GameObject not found
     }
 
     // Lambda to remove from indexed sublists. No, I do not like this either
@@ -85,7 +116,6 @@ int GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
     }
 
     // Remove from lists
-    m_AllObjects.erase(it);
     removeFrom(m_RenderableObjects);
     removeFrom(m_PhysicsObjects);
     removeFrom(m_ScriptedObjects);
@@ -95,72 +125,55 @@ int GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
                     m_DirectionalLights.end(),
                     gameObject->GetComponent<DirectionalLightComponent>()),
         m_DirectionalLights.end());
+    m_AllObjects.erase(it);
 
-    return 0; // Success
+    return true;
 }
 
 void GameObjectRegistry::Clear() noexcept {
-    // Collect all objects into a temporary vector to avoid iterator
-    // invalidation during deletion
-    std::vector<GameObject*> objectsToDelete;
-    objectsToDelete.reserve(m_AllObjects.size());
-    for (auto& pair : m_AllObjects) {
-        objectsToDelete.push_back(pair.second);
-    }
-
-    // Clear all internal maps/lists so that when ~GameObject calls
-    // RemoveGameObject, it returns early (object not found) instead of trying
-    // to erase from these containers.
-    m_AllObjects.clear();
-    m_PhysicsObjects.clear();
-    m_RenderableObjects.clear();
-    m_ScriptedObjects.clear();
-    m_Gizmos.clear();
-
-    // Delete the objects (invokes destructors, which cleans up
-    // components/resources)
-    for (GameObject* obj : objectsToDelete) {
-        delete obj;
+    // RemoveGameObject handles removing from lists so we can loop over erasing
+    // the first element until its empty
+    while (!m_AllObjects.empty()) {
+        RemoveGameObject(&m_AllObjects.begin()->second);
     }
 }
 
-int GameObjectRegistry::RemoveGameObjectById(int id) noexcept {
+bool GameObjectRegistry::RemoveGameObjectById(int id) noexcept {
     auto it = m_AllObjects.find(id);
     if (it == m_AllObjects.end()) {
-        return 1; // GameObject not found
+        return false; // GameObject not found
     }
 
-    GameObject* gameObject = it->second;
-    return RemoveGameObject(gameObject);
+    return RemoveGameObject(&it->second);
 }
 
 // Getters
-GameObject*
+const GameObject*
 GameObjectRegistry::GetGameObjectByName(const std::string_view& name) noexcept {
     // Iterate through all GameObjects to find the first match by name
     for (const auto& pair : m_AllObjects) {
-        if (pair.second->name == name) {
-            return pair.second;
+        if (pair.second.name == name) {
+            return &pair.second;
         }
     }
-    return nullptr; // Not found
+    return nullptr; // Return nullptr if not found
 }
 
 std::vector<GameObject*> GameObjectRegistry::GetGameObjectsByType(
     const std::string_view& type) noexcept {
     std::vector<GameObject*> result;
-    for (const auto& pair : m_AllObjects) {
-        if (pair.second->type == type) {
-            result.push_back(pair.second);
+    for (auto& pair : m_AllObjects) {
+        if (pair.second.type == type) {
+            result.push_back(&pair.second);
         }
     }
     return result; // Return all GameObjects of the specified type
 }
 
-GameObject* GameObjectRegistry::GetGameObjectById(int id) noexcept {
+const GameObject* GameObjectRegistry::GetGameObjectById(int id) noexcept {
     auto it = m_AllObjects.find(id);
     if (it != m_AllObjects.end()) {
-        return it->second; // Return the GameObject with the given ID
+        return &it->second; // Return the GameObject with the given ID
     }
     return nullptr; // Not found
 }
@@ -168,9 +181,9 @@ GameObject* GameObjectRegistry::GetGameObjectById(int id) noexcept {
 std::vector<GameObject*> GameObjectRegistry::GetGameObjectsWithComponent(
     Syngine::ComponentTypeID type) noexcept {
     std::vector<GameObject*> result;
-    for (const auto& pair : m_AllObjects) {
-        if (pair.second->HasComponent(type)) {
-            result.push_back(pair.second);
+    for (auto& pair : m_AllObjects) {
+        if (pair.second.HasComponent(type)) {
+            result.push_back(&pair.second);
         }
     }
     return result;
