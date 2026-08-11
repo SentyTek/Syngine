@@ -41,7 +41,8 @@ namespace Syngine {
 
 // I present to you an absurd amount of static member definitions.
 std::string Renderer::m_title;
-bool        Renderer::m_isReady = false;
+bool        Renderer::m_isReady     = false;
+bool        Renderer::m_isRendering = false;
 
 float Renderer::m_gizmoSize = 1.0f;
 std::unordered_map<std::string, Syngine::BillboardComponent*>
@@ -110,7 +111,9 @@ void Renderer::_RegisterGizmo(const std::string& tag) {
 }
 
 void Renderer::_RenderFrame(DebugModes debug) {
+    m_isRendering = true;
     RenderDirector::_RenderFrame(m_camera, debug);
+    m_isRendering = false;
 }
 
 void Renderer::_UpdateDrawID() { currentDrawId++; }

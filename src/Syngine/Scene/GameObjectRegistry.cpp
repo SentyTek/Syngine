@@ -24,6 +24,8 @@ std::vector<GameObject*>            GameObjectRegistry::m_PhysicsObjects;
 std::vector<GameObject*>            GameObjectRegistry::m_RenderableObjects;
 std::vector<GameObject*>            GameObjectRegistry::m_ScriptedObjects;
 std::vector<GameObject*>            GameObjectRegistry::m_Gizmos;
+std::vector<GameObject*>            GameObjectRegistry::m_queueToRemove;
+
 int GameObjectRegistry::nextID = 0; // Next ID to assign to a new GameObject
 std::vector<DirectionalLightComponent*>
     GameObjectRegistry::m_DirectionalLights; // Directional lights for the
@@ -36,41 +38,27 @@ GameObjectRegistry::CreateGameObject(std::string              name,
                                      std::vector<std::string> tags) noexcept {
     int id = GameObjectRegistry::nextID++;
 
-    auto [it, inserted] =
-        m_AllObjects.emplace(std::piecewise_construct,
-                             std::forward_as_tuple(id),
-                             std::forward_as_tuple(name, type, tags));
+    auto [it, inserted] = m_AllObjects.emplace(
+        std::piecewise_construct,
+        std::forward_as_tuple(id),
+        std::forward_as_tuple(
+            std::move(name), std::move(type), std::move(tags)));
 
     GameObject& gameObject = (it->second);
     gameObject._SetID(id);
-
-    // Update indexed sublists
-    if (gameObject.HasComponent(Syngine::SYN_COMPONENT_MESH) &&
-        gameObject.HasComponent(Syngine::SYN_COMPONENT_TRANSFORM)) {
-        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_MESH);
-        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_TRANSFORM);
-    }
-    if (gameObject.HasComponent(Syngine::SYN_COMPONENT_RIGIDBODY)) {
-        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_RIGIDBODY);
-    }
-    if (gameObject.HasComponent(Syngine::SYN_COMPONENT_SCRIPT)) {
-        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_SCRIPT);
-    }
-    if (gameObject.HasComponent(Syngine::SYN_COMPONENT_CAMERA)) {
-        _NotifyComponentAdded(&gameObject, Syngine::SYN_COMPONENT_CAMERA);
-    }
 
     return gameObject;
 }
 
 GameObject&
 GameObjectRegistry::Instantiate(const Serializer::Prefab& prefab) noexcept {
+    int id = GameObjectRegistry::nextID++;
     auto [it, inserted] =
         m_AllObjects.emplace(std::piecewise_construct,
-                             std::forward_as_tuple(++nextID),
+                             std::forward_as_tuple(id),
                              std::forward_as_tuple(prefab.rootGameObjectData));
     GameObject& gameObject = (it->second);
-    gameObject._SetID(nextID);
+    gameObject._SetID(id);
     return gameObject;
 }
 
@@ -90,66 +78,76 @@ GameObjectRegistry::CloneGameObject(const GameObject& original) noexcept {
     return clone;
 }
 
-bool GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
+void GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
     if (!gameObject) {
-        return false; // Null pointer, cannot remove
+        return; // Null pointer, cannot remove
     }
 
     auto it = m_AllObjects.find(gameObject->GetID());
     if (it == m_AllObjects.end()) {
-        return false; // GameObject not found
+        return; // GameObject not found
     }
 
-    // Lambda to remove from indexed sublists. No, I do not like this either
-    auto removeFrom = [&](std::vector<GameObject*>& vec) {
-        vec.erase(std::remove(vec.begin(), vec.end(), gameObject), vec.end());
-    };
+    m_queueToRemove.push_back(
+        gameObject); // Queue for removal at the end of the frame
+}
 
-    // If it has a zone component, clear it from all zones to prevent dangling
-    // pointers in zone tracking
-    if (gameObject->HasComponent(Syngine::SYN_COMPONENT_ZONE)) {
-        auto* zoneComp = gameObject->GetComponent<ZoneComponent>();
-        if (zoneComp) {
-            // Unregister the zone from the ZoneSystem
-            Core::_GetContext()->ZoneSystem->_UnregisterZone(zoneComp);
-        }
+void GameObjectRegistry::RemoveGameObjectById(int id) noexcept {
+    auto it = m_AllObjects.find(id);
+    if (it == m_AllObjects.end()) {
+        return; // GameObject not found
     }
 
-    // Remove from lists
-    removeFrom(m_RenderableObjects);
-    removeFrom(m_PhysicsObjects);
-    removeFrom(m_ScriptedObjects);
-    removeFrom(m_Gizmos);
-    m_DirectionalLights.erase(
-        std::remove(m_DirectionalLights.begin(),
-                    m_DirectionalLights.end(),
-                    gameObject->GetComponent<DirectionalLightComponent>()),
-        m_DirectionalLights.end());
-    m_AllObjects.erase(it);
-
-    return true;
+    m_queueToRemove.push_back(
+        &it->second); // Queue for removal at the end of the frame
 }
 
 void GameObjectRegistry::Clear() noexcept {
-    // RemoveGameObject handles removing from lists so we can loop over erasing
-    // the first element until its empty
-    while (!m_AllObjects.empty()) {
-        RemoveGameObject(&m_AllObjects.begin()->second);
-    }
+    m_RenderableObjects.clear();
+    m_PhysicsObjects.clear();
+    m_ScriptedObjects.clear();
+    m_Gizmos.clear();
+    m_DirectionalLights.clear();
+    m_AllObjects.clear();
+    nextID = 0;
 }
 
-bool GameObjectRegistry::RemoveGameObjectById(int id) noexcept {
-    auto it = m_AllObjects.find(id);
-    if (it == m_AllObjects.end()) {
-        return false; // GameObject not found
-    }
+void GameObjectRegistry::_RemoveQueuedObjects() noexcept {
+    if (m_queueToRemove.empty()) return; // Nothing to remove
+    for (GameObject* obj : m_queueToRemove) {
+        // Lambda to remove from indexed sublists. No, I do not like this either
+        auto removeFrom = [&](std::vector<GameObject*>& vec) {
+            vec.erase(std::remove(vec.begin(), vec.end(), obj), vec.end());
+        };
 
-    return RemoveGameObject(&it->second);
+        // If it has a zone component, clear it from all zones to prevent
+        // dangling pointers in zone tracking
+        if (obj->HasComponent(Syngine::SYN_COMPONENT_ZONE)) {
+            auto* zoneComp = obj->GetComponent<ZoneComponent>();
+            if (zoneComp) {
+                // Unregister the zone from the ZoneSystem
+                Core::_GetContext()->ZoneSystem->_UnregisterZone(zoneComp);
+            }
+        }
+
+        // Remove from lists
+        removeFrom(m_RenderableObjects);
+        removeFrom(m_PhysicsObjects);
+        removeFrom(m_ScriptedObjects);
+        removeFrom(m_Gizmos);
+        m_DirectionalLights.erase(
+            std::remove(m_DirectionalLights.begin(),
+                        m_DirectionalLights.end(),
+                        obj->GetComponent<DirectionalLightComponent>()),
+            m_DirectionalLights.end());
+        m_AllObjects.erase(obj->GetID());
+    }
+    m_queueToRemove.clear(); // Clear the queue after processing
 }
 
 // Getters
 const GameObject*
-GameObjectRegistry::GetGameObjectByName(const std::string_view& name) noexcept {
+GameObjectRegistry::GetGameObjectByName(std::string_view name) noexcept {
     // Iterate through all GameObjects to find the first match by name
     for (const auto& pair : m_AllObjects) {
         if (pair.second.name == name) {
@@ -159,8 +157,8 @@ GameObjectRegistry::GetGameObjectByName(const std::string_view& name) noexcept {
     return nullptr; // Return nullptr if not found
 }
 
-std::vector<GameObject*> GameObjectRegistry::GetGameObjectsByType(
-    const std::string_view& type) noexcept {
+std::vector<GameObject*>
+GameObjectRegistry::GetGameObjectsByType(std::string_view type) noexcept {
     std::vector<GameObject*> result;
     for (auto& pair : m_AllObjects) {
         if (pair.second.type == type) {

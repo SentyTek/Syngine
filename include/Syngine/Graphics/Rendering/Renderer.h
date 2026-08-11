@@ -198,6 +198,8 @@ class Renderer {
     static DebugRender* m_drender; //* Debug renderer instance
 
     static bool
+        m_isRendering; //* Whether the renderer is currently rendering a frame
+    static bool
         m_isFirstFrame; //* Whether this is the first frame being rendered
     static Math::Vector3 m_sunDir; //* Direction of the sun light in world space
 

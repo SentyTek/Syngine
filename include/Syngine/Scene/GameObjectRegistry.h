@@ -51,19 +51,20 @@ class GameObjectRegistry {
     /// @since v0.0.2
     static GameObject& CloneGameObject(const GameObject& original) noexcept;
 
-    /// @brief Remove a GameObject from the registry.
+    /// @brief Remove a GameObject from the registry. Defers until the end of
+    /// the frame.
     /// @param GameObject The GameObject to remove.
     /// @return true if the GameObject was removed, false if it was not found.
     /// @threadsafety safe
     /// @since v0.0.1
-    static bool RemoveGameObject(GameObject* GameObject) noexcept;
+    static void RemoveGameObject(GameObject* GameObject) noexcept;
 
-    /// @brief Remove a GameObject by ID.
+    /// @brief Remove a GameObject by ID. Defers until the end of the frame.
     /// @param id The ID of the GameObject to remove.
     /// @return true if the GameObject was removed, false if it was not found.
     /// @threadsafety safe
     /// @since v0.0.1
-    static bool RemoveGameObjectById(int id) noexcept;
+    static void RemoveGameObjectById(int id) noexcept;
 
     /// @brief Clear all objects
     /// @post All GameObjects are removed from the registry.
@@ -78,7 +79,7 @@ class GameObjectRegistry {
     /// @threadsafety read-only
     /// @since v0.0.1
     static const GameObject*
-    GetGameObjectByName(const std::string_view& name) noexcept;
+    GetGameObjectByName(std::string_view name) noexcept;
 
     /// @brief Get all GameObjects of a specific type, as defined by the `type`
     /// parameter when creating the GameObject.
@@ -87,7 +88,7 @@ class GameObjectRegistry {
     /// @threadsafety read-only
     /// @since v0.0.1
     static std::vector<GameObject*>
-    GetGameObjectsByType(const std::string_view& type) noexcept;
+    GetGameObjectsByType(std::string_view type) noexcept;
 
     /// @brief Get a GameObject by ID.
     /// @param id The ID of the GameObject to find.
@@ -206,9 +207,18 @@ class GameObjectRegistry {
     static std::vector<DirectionalLightComponent*>
         m_DirectionalLights; // Directional lights for the renderer
 
+    static std::vector<GameObject*>
+        m_queueToRemove; // Queue of GameObjects to remove at the end of the
+                         // frame
+
     static int nextID; // Next ID to assign to a new GameObject
 
+    static void
+    _RemoveQueuedObjects() noexcept; // Process the queue of GameObjects to
+                                     // remove at the end of the frame
+
     friend class GameObject;
+    friend class Core;
 };
 
 } // namespace Syngine

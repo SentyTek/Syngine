@@ -6,26 +6,21 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Scene/GameObjectRegistry.h"
-#include "Syngine/Core/LuaManager.h"
-#include "Syngine/GameObjects/Component.h"
-#include "Syngine/GameObjects/Components/RigidbodyComponent.h"
-#include "Syngine/GameObjects/Components/TransformComponent.h"
-#include "Syngine/Utils/Serializer.h"
-#include "Syngine/GameObjects/GameObject.h"
-#include "Syngine/GameObjects/ComponentRegistry.h"
+#include <Syngine/Scene/GameObjectRegistry.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/GameObjects/Components/RigidbodyComponent.h>
+#include <Syngine/GameObjects/Components/TransformComponent.h>
+#include <Syngine/Utils/Serializer.h>
+#include <Syngine/GameObjects/GameObject.h>
+#include <Syngine/GameObjects/ComponentRegistry.h>
 
 using namespace Syngine;
 
 GameObject::GameObject(std::string              name,
                        std::string              type,
-                       std::vector<std::string> initialTags) {
-    this->name  = name;
-    this->type  = type;
-    this->tags  = initialTags;
-    this->id    = -1;
-    this->gizmo = "none";
-}
+                       std::vector<std::string> initialTags)
+    : name(std::move(name)), type(std::move(type)),
+      tags(std::move(initialTags)), id(-1), gizmo("none") {}
 
 GameObject::GameObject(const Serializer::DataNode& data) {
     this->name     = data["name"].As<std::string>();

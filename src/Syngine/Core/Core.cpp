@@ -484,6 +484,10 @@ bool Core::Update() {
         }
     }
 
+    if (!Renderer::m_isRendering) {
+        GameObjectRegistry::_RemoveQueuedObjects();
+    }
+
     return true;
 }
 

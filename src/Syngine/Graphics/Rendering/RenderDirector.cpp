@@ -1304,6 +1304,11 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
         Math::Vector4              cascadeSplits;
         DirectionalLightComponent* lightSrc =
             GameObjectRegistry::GetFirstActiveDirectionalLight();
+        if (!lightSrc) {
+            Syngine::Logger::Warn(
+                "No active directional light found for shadow mapping");
+            return false;
+        }
         _CalculateCascadeMatrices(
             camera, lightSrc, lightView, lightProj, cascadeSplits);
         m_csmCascadeSplits = cascadeSplits;
