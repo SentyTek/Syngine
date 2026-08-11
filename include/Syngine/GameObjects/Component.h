@@ -98,6 +98,10 @@ class IComponent {
     IComponent& operator=(const IComponent& other) = default;
 
     virtual ~IComponent() = default;
+#if defined(SYN_TEST_MODE)
+    // For testing purposes, allow access to the owner GameObject
+    inline GameObject* _GetOwner() const { return m_owner; }
+#endif
 
   protected:
     bool        m_isEnabled = true; //* Whether the component is enabled or not

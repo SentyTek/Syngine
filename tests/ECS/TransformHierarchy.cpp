@@ -21,12 +21,16 @@ using namespace Catch::Matchers;
 // Tests that movement of a parent GameObject propagates correctly to its
 // children
 TEST_CASE("Parent Movement Propagation in children", "[ECS]") {
-    auto* parent = new GameObject("Parent");
-    auto* child  = new GameObject("Child");
+    GameObjectRegistry::Clear();
 
-    auto* parentTransform = parent->AddComponent<TransformComponent>();
-    auto* childTransform  = child->AddComponent<TransformComponent>();
-    child->SetParent(parent);
+    auto& parent = GameObjectRegistry::CreateGameObject(
+        "Parent", "default", std::vector<std::string>{});
+    auto& child = GameObjectRegistry::CreateGameObject(
+        "Child", "default", std::vector<std::string>{});
+
+    auto* parentTransform = parent.AddComponent<TransformComponent>();
+    auto* childTransform  = child.AddComponent<TransformComponent>();
+    child.SetParent(&parent);
 
     REQUIRE(parentTransform != nullptr);
     REQUIRE(childTransform != nullptr);
@@ -35,28 +39,31 @@ TEST_CASE("Parent Movement Propagation in children", "[ECS]") {
     REQUIRE_THAT(childTransform->GetWorldPosition().x(),
                  WithinAbs(10.0f, FLOAT_MARGIN));
 
-    delete parent;
-    delete child;
+    GameObjectRegistry::Clear();
 }
 
 // Tests that local and world getters work for child GameObjects
 TEST_CASE("Local and World Getters in children", "[ECS]") {
     // Logic behind this is if a child is spawned at (0, 5, 0) (parent at
     // origin), and parent is moved down 5 meters, child should be at origin
-    auto* parent = new GameObject("Parent");
-    auto* child  = new GameObject("Child");
+    GameObjectRegistry::Clear();
 
-    auto* parentTransform = parent->AddComponent<TransformComponent>();
-    auto* childTransform  = child->AddComponent<TransformComponent>();
+    auto& parent = GameObjectRegistry::CreateGameObject(
+        "Parent", "default", std::vector<std::string>{});
+    auto& child = GameObjectRegistry::CreateGameObject(
+        "Child", "default", std::vector<std::string>{});
+
+    auto* parentTransform = parent.AddComponent<TransformComponent>();
+    auto* childTransform  = child.AddComponent<TransformComponent>();
     childTransform->SetPosition(SVec3(0.f, 5.f, 0.f));
-    child->SetParent(parent);
+    child.SetParent(&parent);
 
     REQUIRE_THAT(childTransform->GetWorldPosition().y(),
                  WithinAbs(5.0f, FLOAT_MARGIN));
     REQUIRE_THAT(childTransform->GetPosition().y(),
                  WithinAbs(5.0f, FLOAT_MARGIN));
 
-    parent->GetComponent<TransformComponent>()->SetPosition(
+    parent.GetComponent<TransformComponent>()->SetPosition(
         SVec3(0.f, -5.f, 0.f));
 
     REQUIRE_THAT(childTransform->GetWorldPosition().y(),
@@ -64,6 +71,5 @@ TEST_CASE("Local and World Getters in children", "[ECS]") {
     REQUIRE_THAT(childTransform->GetPosition().y(),
                  WithinAbs(5.0f, FLOAT_MARGIN));
 
-    delete parent;
-    delete child;
+    GameObjectRegistry::Clear();
 }

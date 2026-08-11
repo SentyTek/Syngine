@@ -24,14 +24,15 @@ using namespace Catch::Matchers;
 TEST_CASE("Generic box rigidbody", "[Physics]") {
     SYN_STARTENGINE;
 
-    auto* go  = CreateRigidbodyObject();
-    auto* rbc = go->GetComponent<RigidbodyComponent>();
+    GameObject& go  = CreateRigidbodyObject();
+    auto*       rbc = go.GetComponent<RigidbodyComponent>();
 
     REQUIRE(rbc != nullptr);
     REQUIRE_THAT(rbc->GetMass(), WithinAbs(1.0f, FLOAT_MARGIN));
     REQUIRE_THAT(rbc->GetFriction(), WithinAbs(0.5f, FLOAT_MARGIN));
     REQUIRE_THAT(rbc->GetRestitution(), WithinAbs(0.1f, FLOAT_MARGIN));
-    delete go;
+    GameObjectRegistry::RemoveGameObject(&go);
+    engine.Update();
 }
 
 // Compound shape (box + sphere)
@@ -65,13 +66,15 @@ TEST_CASE("Compound shape rigidbody", "[Physics]") {
                                    .compoundParts = parts };
 
     SYN_STARTENGINE;
-    GameObject* obj = new GameObject("test_compound");
-    obj->AddComponent<TransformComponent>();
-    auto* rbc = obj->AddComponent<RigidbodyComponent>(params);
+    GameObject& obj = GameObjectRegistry::CreateGameObject(
+        "test_compound", "default", std::vector<std::string>{});
+    obj.AddComponent<TransformComponent>();
+    auto* rbc = obj.AddComponent<RigidbodyComponent>(params);
 
     REQUIRE(rbc != nullptr);
     REQUIRE_THAT(rbc->GetMass(), WithinAbs(2.0f, FLOAT_MARGIN));
     REQUIRE_THAT(rbc->GetFriction(), WithinAbs(0.6f, FLOAT_MARGIN));
     REQUIRE_THAT(rbc->GetRestitution(), WithinAbs(0.05f, FLOAT_MARGIN));
-    delete obj;
+    GameObjectRegistry::RemoveGameObject(&obj);
+    engine.Update();
 }
