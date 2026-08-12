@@ -25,6 +25,7 @@
 #include <SDL3/SDL_properties.h>
 
 #include "Syngine/GameObjects/Components/CameraComponent.h"
+#include "Syngine/Graphics/Resources/MaterialManager.h"
 #include "Syngine/Graphics/Resources/UniformRegistry.h"
 
 #include <cstdint>
@@ -70,8 +71,9 @@ Renderer::Renderer(int width, int height, const RendererConfig& config) {
 
 Renderer::~Renderer() {
     // Destroy all registered uniforms
-    ShaderManager::UnloadAllShaders();
+    MaterialManager::DestroyAllMaterials();
     UniformRegistry::DestroyAllUniforms();
+    ShaderManager::UnloadAllShaders();
 
     // Clear gizmos
     for (auto& [tag, gizmo] : m_gizmoRegistry) {

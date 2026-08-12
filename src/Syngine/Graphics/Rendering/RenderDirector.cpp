@@ -384,6 +384,32 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
 }
 
 void RenderDirector::_Shutdown() {
+    // Clear packet caches so stale handle values are not reused during
+    // teardown while destroy commands are queued.
+    m_renderPackets.clear();
+    m_billboardRenderPackets.clear();
+
+    // Explicitly detach all view framebuffer bindings before resource
+    // destruction. Views can retain refs to framebuffers/textures.
+    for (ViewID view : _allViews) {
+        bgfx::setViewFrameBuffer(view, BGFX_INVALID_HANDLE);
+        bgfx::touch(view);
+    }
+    for (uint8_t cascade = 0; cascade < NUM_CASCADES; ++cascade) {
+        const bgfx::ViewId cascadeView = ViewID(VIEW_SHADOW + cascade);
+        bgfx::setViewFrameBuffer(cascadeView, BGFX_INVALID_HANDLE);
+        bgfx::touch(cascadeView);
+    }
+
+#ifndef NDEBUG
+    // Shut down debug text to release any backend debug resources.
+    bgfx::setDebug(BGFX_DEBUG_NONE);
+    bgfx::dbgTextClear();
+#endif
+
+    // Submit the detaches above before queueing destroys.
+    bgfx::frame();
+
     // Destroy billboard buffers
     if (bgfx::isValid(m_billboardVbh)) {
         bgfx::destroy(m_billboardVbh);
@@ -401,6 +427,20 @@ void RenderDirector::_Shutdown() {
         bgfx::destroy(m_fsQuadVbh);
         m_fsQuadVbh = BGFX_INVALID_HANDLE;
     }
+
+    // And the fallback textures
+    if (bgfx::isValid(s_fallbackAlbedo)) {
+        bgfx::destroy(s_fallbackAlbedo);
+    }
+    if (bgfx::isValid(s_fallbackNormal)) {
+        bgfx::destroy(s_fallbackNormal);
+    }
+    if (bgfx::isValid(s_fallbackHeight)) {
+        bgfx::destroy(s_fallbackHeight);
+    }
+    s_fallbackAlbedo = BGFX_INVALID_HANDLE;
+    s_fallbackNormal = BGFX_INVALID_HANDLE;
+    s_fallbackHeight = BGFX_INVALID_HANDLE;
 
     // Framebuffers are created with destroyTextures=true, so they own and
     // release attached textures on destroy.
@@ -425,7 +465,14 @@ void RenderDirector::_Shutdown() {
         }
     }
 
+    // Most render targets are framebuffer-owned. Invalidate cached handles
+    // instead of destroying textures a second time.
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
+
+    // bgfx destroy calls are processed asynchronously. Advance a couple frames
+    // so queued destroy commands retire before backend shutdown.
+    bgfx::frame();
+    bgfx::frame();
 
     bgfx::shutdown();
 }
@@ -508,6 +555,27 @@ bool RenderDirector::_CreateSceneBuffers() {
             !bgfx::isValid(m_buffers.ssaoBlurH) ||
             !bgfx::isValid(m_buffers.ssaoBlurFinal)) {
             Syngine::Logger::Error("Failed to create dummy SSAO textures");
+
+            if (bgfx::isValid(m_buffers.ssaoFB)) {
+                bgfx::destroy(m_buffers.ssaoFB);
+                m_buffers.ssaoFB = BGFX_INVALID_HANDLE;
+            }
+            if (bgfx::isValid(m_buffers.ssaoBlurHFB)) {
+                bgfx::destroy(m_buffers.ssaoBlurHFB);
+                m_buffers.ssaoBlurHFB = BGFX_INVALID_HANDLE;
+            }
+            if (bgfx::isValid(m_buffers.ssaoBlurVFB)) {
+                bgfx::destroy(m_buffers.ssaoBlurVFB);
+                m_buffers.ssaoBlurVFB = BGFX_INVALID_HANDLE;
+            }
+
+            m_buffers.ForEachFrameBuffer([](auto& fb) {
+                if (bgfx::isValid(fb)) {
+                    bgfx::destroy(fb);
+                }
+                fb = BGFX_INVALID_HANDLE;
+            });
+
             return false;
         }
     }
@@ -525,6 +593,14 @@ bool RenderDirector::_CreateSceneBuffers() {
         (m_config.useSSAO && !bgfx::isValid(m_buffers.ssaoFB)) ||
         (m_config.useShadows && !bgfx::isValid(m_buffers.shadowFB))) {
         Syngine::Logger::Error("Failed to create scene textures");
+
+        m_buffers.ForEachFrameBuffer([](auto& fb) {
+            if (bgfx::isValid(fb)) {
+                bgfx::destroy(fb);
+            }
+            fb = BGFX_INVALID_HANDLE;
+        });
+
         return false;
     }
     return true;

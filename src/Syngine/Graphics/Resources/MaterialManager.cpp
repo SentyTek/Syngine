@@ -10,8 +10,11 @@
 #include <Syngine/Utils/Serializer.h>
 #include "SDL3/SDL_iostream.h"
 #include "Syngine/Utils/FsUtils.h"
+
+#include "bgfx/bgfx.h"
 #include "bgfx/defines.h"
 
+#include <memory>
 #include <miniscl.hpp>
 
 #define SYNINT_MATERIAL_VERSION "1.0"
@@ -254,6 +257,18 @@ bgfx::TextureHandle MaterialManager::GetFallbackAlbedoTexture() {
 
 bgfx::TextureHandle MaterialManager::GetFallbackNormalTexture() {
     return _CreateFlatNormalTexture();
+}
+
+void MaterialManager::DestroyAllMaterials() {
+    // Loop over and destroy each bgfx texture handle in each material
+    for (auto& mat : m_materials) {
+        for (auto& textureParam : mat->m_textures) {
+            if (bgfx::isValid(textureParam.handle)) {
+                bgfx::destroy(textureParam.handle);
+            }
+        }
+    }
+    m_materials.clear();
 }
 
 } // namespace Syngine

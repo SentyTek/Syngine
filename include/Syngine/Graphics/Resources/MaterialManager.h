@@ -518,6 +518,11 @@ class MaterialManager {
         m_materials.push_back(std::move(mat));
         return *m_materials.back().get();
     };
+
+    /// @brief Destroy all materials
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    static void DestroyAllMaterials();
 };
 
 } // namespace Syngine

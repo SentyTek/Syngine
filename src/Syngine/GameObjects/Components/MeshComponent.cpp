@@ -282,6 +282,13 @@ void MeshComponent::SetObjectUVScaleOverride(float uvScaleOverride) {
 bool MeshComponent::UploadMesh(std::vector<float>    vertices,
                                std::vector<uint32_t> indices,
                                Math::Vector4         baseColor) {
+    if (this->modelData.vertices.size() > 0 || this->modelData.subMeshes.size() > 0) {
+        Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                              false,
+                              "MeshComponent already has mesh data");
+        return false;
+    }
+
     Syngine::ModelData modelData;
     bool useVertexColors = (baseColor == Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f));
     int  vertexSize      = useVertexColors
