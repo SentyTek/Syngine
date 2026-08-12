@@ -100,8 +100,8 @@ class UniformRegistry {
         return BGFX_INVALID_HANDLE;
     }
 
-    friend class ShaderManager; // for shader metadata parsing
-    friend class RenderCore;    // for uniform updates during rendering
+    friend class ShaderManager;  // for shader metadata parsing
+    friend class RenderDirector; // for uniform updates during rendering
   public:
     /// @brief Register a uniform data provider with the registry
     /// @param name Name of the uniform

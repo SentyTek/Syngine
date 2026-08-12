@@ -110,7 +110,7 @@ class Shader {
           m_viewId(viewId) {}
 
     friend class ShaderManager;
-    friend class RenderCore;
+    friend class RenderDirector;
     friend class Material;
 
   public:

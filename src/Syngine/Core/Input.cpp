@@ -3,7 +3,7 @@
 // │ Created 2025-07-29                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include "Syngine/Core/Input.h"
@@ -56,11 +56,12 @@ Syngine::InputAction::~InputAction() {
 
 // MARK: InputAction registration implementation
 
-Syngine::InputAction* Syngine::InputAction::RegisterAction(const std::string&  identifier,
-                                          const std::string&  name,
-                                          const std::string&  category,
-                                          Syngine::KeyBinding binding,
-                                          Callbacks           callbacks) {
+Syngine::InputAction*
+Syngine::InputAction::RegisterAction(const std::string&  identifier,
+                                     const std::string&  name,
+                                     const std::string&  category,
+                                     Syngine::KeyBinding binding,
+                                     Callbacks           callbacks) {
     Syngine::InputAction::_HomelessShelter.emplace_back(
         identifier, name, category, binding, callbacks);
     Syngine::InputAction::_Registry.back() =
@@ -68,8 +69,8 @@ Syngine::InputAction* Syngine::InputAction::RegisterAction(const std::string&  i
     return &_HomelessShelter.back();
 }
 
-size_t Syngine::InputAction::UnregisterActionsByPrefix(
-    const std::string& prefix) {
+size_t
+Syngine::InputAction::UnregisterActionsByPrefix(const std::string& prefix) {
     if (prefix.empty()) {
         return 0;
     }
@@ -100,8 +101,7 @@ bool Syngine::InputAction::stateChanged() {
 
 // MARK: Input event handler private helpers
 
-bool
-Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) const {
+bool Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) const {
     switch (this->subType()) {
     case KeybindType::KEYCODE:
         return _SDLToSyn(event.key) == std::get<Keycode>(this->key) &&
@@ -113,8 +113,7 @@ Syngine::KeyShortcut::_isTriggeredByEvent(SDL_KeyboardEvent event) const {
     }
 }
 
-bool
-Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+bool Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     const auto next = this->next();
     bool       triggered;
 
@@ -140,8 +139,7 @@ Syngine::KeySequence::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     return false;
 }
 
-bool
-Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
+bool Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     switch (this->subType()) {
     case KeybindType::UNBOUND: return false;
     case KeybindType::KEYCODE:
@@ -159,8 +157,7 @@ Syngine::KeyBinding::_isTriggeredByEvent(SDL_KeyboardEvent event) {
     return false;
 }
 
-bool
-Syngine::KeyBinding::_isTriggeredByEvent(SDL_MouseButtonEvent event) {
+bool Syngine::KeyBinding::_isTriggeredByEvent(SDL_MouseButtonEvent event) {
     if (this->subType() == KeybindType::MOUSE_BUTTON) {
         return _SDLToSyn(event.button) == std::get<MouseButton>(this->binding);
     } else {
@@ -257,7 +254,6 @@ std::string Syngine::ScancodeToString(const Scancode& code) {
     return "";
 }
 
-
 Syngine::Keycode Syngine::StringToKeycode(const std::string& key) {
     for (std::pair item : _StringToKeycode) {
         if (item.first == key) {
@@ -267,7 +263,6 @@ Syngine::Keycode Syngine::StringToKeycode(const std::string& key) {
 
     return Keycode::_UNKNOWN;
 }
-
 
 std::string Syngine::KeycodeToString(const Keycode& key) {
     for (std::pair item : _StringToKeycode) {
@@ -281,12 +276,12 @@ std::string Syngine::KeycodeToString(const Keycode& key) {
 
 std::string Syngine::MouseButtonToString(const MouseButton& button) {
     switch (button) {
-        case MouseButton::LEFT: return "left";
-        case MouseButton::RIGHT: return "right";
-        case MouseButton::MIDDLE: return "middle";
-        case MouseButton::FOUR: return "button_4";
-        case MouseButton::FIVE: return "button_5";
-        default: return "";
+    case MouseButton::LEFT: return "left";
+    case MouseButton::RIGHT: return "right";
+    case MouseButton::MIDDLE: return "middle";
+    case MouseButton::FOUR: return "button_4";
+    case MouseButton::FIVE: return "button_5";
+    default: return "";
     }
 }
 
@@ -308,60 +303,44 @@ Syngine::MouseButton Syngine::StringToMouseButton(const std::string& button) {
 std::vector<std::string> Syngine::KeymodToString(const Keymod& keymod) {
     std::vector<std::string> result = std::vector<std::string>();
 
-    if (keymod.contains(Keymod::LEFT_SHIFT))
-        result.push_back("left_shift");
-    if (keymod.contains(Keymod::RIGHT_SHIFT))
-        result.push_back("right_shift");
-    if (keymod.contains(Keymod::LEFT_CONTROL))
-        result.push_back("left_control");
+    if (keymod.contains(Keymod::LEFT_SHIFT)) result.push_back("left_shift");
+    if (keymod.contains(Keymod::RIGHT_SHIFT)) result.push_back("right_shift");
+    if (keymod.contains(Keymod::LEFT_CONTROL)) result.push_back("left_control");
     if (keymod.contains(Keymod::RIGHT_CONTROL))
         result.push_back("right_control");
-    if (keymod.contains(Keymod::LEFT_ALT))
-        result.push_back("left_alt");
-    if (keymod.contains(Keymod::RIGHT_ALT))
-        result.push_back("right_alt");
-    if (keymod.contains(Keymod::LEFT_GUI))
-        result.push_back("left_gui");
-    if (keymod.contains(Keymod::RIGHT_GUI))
-        result.push_back("right_gui");
-    if (keymod.contains(Keymod::CONTROL))
-        result.push_back("control");
-    if (keymod.contains(Keymod::SHIFT))
-        result.push_back("shift");
-    if (keymod.contains(Keymod::ALT))
-        result.push_back("alt");
-    if (keymod.contains(Keymod::GUI))
-        result.push_back("gui");
+    if (keymod.contains(Keymod::LEFT_ALT)) result.push_back("left_alt");
+    if (keymod.contains(Keymod::RIGHT_ALT)) result.push_back("right_alt");
+    if (keymod.contains(Keymod::LEFT_GUI)) result.push_back("left_gui");
+    if (keymod.contains(Keymod::RIGHT_GUI)) result.push_back("right_gui");
+    if (keymod.contains(Keymod::CONTROL)) result.push_back("control");
+    if (keymod.contains(Keymod::SHIFT)) result.push_back("shift");
+    if (keymod.contains(Keymod::ALT)) result.push_back("alt");
+    if (keymod.contains(Keymod::GUI)) result.push_back("gui");
 
     return result;
 }
 
-Syngine::Keymod Syngine::StringToKeymod(const std::vector<std::string>& keymod) {
+Syngine::Keymod
+Syngine::StringToKeymod(const std::vector<std::string>& keymod) {
     Keymod result = Keymod::NONE;
 
     for (const std::string& mod : keymod) {
-        if (mod == "left_shift")
-            result += Keymod::LEFT_SHIFT;
-        if (mod == "right_shift")
-            result += Keymod::RIGHT_SHIFT;
-        if (mod == "left_control")
-            result += Keymod::LEFT_CONTROL;
-        if (mod == "right_control")
-            result += Keymod::RIGHT_CONTROL;
+        if (mod == "left_shift") result += Keymod::LEFT_SHIFT;
+        if (mod == "right_shift") result += Keymod::RIGHT_SHIFT;
+        if (mod == "left_control") result += Keymod::LEFT_CONTROL;
+        if (mod == "right_control") result += Keymod::RIGHT_CONTROL;
         if (mod == "left_alt" || mod == "left_option")
             result += Keymod::LEFT_ALT;
         if (mod == "right_alt" || mod == "right_option")
             result += Keymod::RIGHT_ALT;
         if (mod == "left_gui" || mod == "left_command" || mod == "left_windows")
             result += Keymod::LEFT_GUI;
-        if (mod == "right_gui" || mod == "right_command" || mod == "right_windows")
+        if (mod == "right_gui" || mod == "right_command" ||
+            mod == "right_windows")
             result += Keymod::RIGHT_GUI;
-        if (mod == "control")
-            result += Keymod::CONTROL;
-        if (mod == "shift")
-            result += Keymod::SHIFT;
-        if (mod == "alt" || mod == "option")
-            result += Keymod::ALT;
+        if (mod == "control") result += Keymod::CONTROL;
+        if (mod == "shift") result += Keymod::SHIFT;
+        if (mod == "alt" || mod == "option") result += Keymod::ALT;
         if (mod == "gui" || mod == "command" || mod == "windows")
             result += Keymod::GUI;
     }

@@ -3,7 +3,7 @@
 // │ Created 2026-07-11                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -22,18 +22,38 @@ using namespace Catch::Matchers;
 
 // Only half the require_that are here because i am lazy
 TEST_CASE("Matrix addition", "[Math]") {
-    Mat4 m4a(
-        1.0f, 2.0f, 3.0f, 4.0f,
-        5.0f, 6.0f, 7.0f, 8.0f,
-        9.0f, 10.0f, 11.0f, 12.0f,
-        13.0f, 14.0f, 15.0f, 16.0f
-    );
-    Mat4 m4b(
-        16.0f, 15.0f, 14.0f, 13.0f,
-        12.0f, 11.0f, 10.0f, 9.0f,
-        8.0f, 7.0f, 6.0f, 5.0f,
-        4.0f, 3.0f, 2.0f, 1.0f
-    );
+    Mat4 m4a(1.0f,
+             2.0f,
+             3.0f,
+             4.0f,
+             5.0f,
+             6.0f,
+             7.0f,
+             8.0f,
+             9.0f,
+             10.0f,
+             11.0f,
+             12.0f,
+             13.0f,
+             14.0f,
+             15.0f,
+             16.0f);
+    Mat4 m4b(16.0f,
+             15.0f,
+             14.0f,
+             13.0f,
+             12.0f,
+             11.0f,
+             10.0f,
+             9.0f,
+             8.0f,
+             7.0f,
+             6.0f,
+             5.0f,
+             4.0f,
+             3.0f,
+             2.0f,
+             1.0f);
     Mat4 m4r = m4a + m4b;
     REQUIRE_THAT(m4r.m(0, 0), WithinAbs(17.0f, FLOAT_MARGIN));
     REQUIRE_THAT(m4r.m(0, 1), WithinAbs(17.0f, FLOAT_MARGIN));
@@ -54,18 +74,38 @@ TEST_CASE("Matrix addition", "[Math]") {
 }
 
 TEST_CASE("Matrix multiplication", "[Math]") {
-    Mat4 m4a(
-        1.0f, 2.0f, 3.0f, 4.0f,
-        5.0f, 6.0f, 7.0f, 8.0f,
-        9.0f, 10.0f, 11.0f, 12.0f,
-        13.0f, 14.0f, 15.0f, 16.0f
-    );
-    Mat4 m4b(
-        16.0f, 15.0f, 14.0f, 13.0f,
-        12.0f, 11.0f, 10.0f, 9.0f,
-        8.0f, 7.0f, 6.0f, 5.0f,
-        4.0f, 3.0f, 2.0f, 1.0f
-    );
+    Mat4 m4a(1.0f,
+             2.0f,
+             3.0f,
+             4.0f,
+             5.0f,
+             6.0f,
+             7.0f,
+             8.0f,
+             9.0f,
+             10.0f,
+             11.0f,
+             12.0f,
+             13.0f,
+             14.0f,
+             15.0f,
+             16.0f);
+    Mat4 m4b(16.0f,
+             15.0f,
+             14.0f,
+             13.0f,
+             12.0f,
+             11.0f,
+             10.0f,
+             9.0f,
+             8.0f,
+             7.0f,
+             6.0f,
+             5.0f,
+             4.0f,
+             3.0f,
+             2.0f,
+             1.0f);
     Mat4 m4r = m4a * m4b;
     REQUIRE_THAT(m4r.m(0, 0), WithinAbs(80.0f, FLOAT_MARGIN));
     REQUIRE_THAT(m4r.m(0, 1), WithinAbs(70.0f, FLOAT_MARGIN));
@@ -113,10 +153,12 @@ TEST_CASE("Model Matrix creation", "[Math]") {
 }
 
 TEST_CASE("Matrix Conversion", "[Math]") {
-    SVec3      scale(5.0f);
-    Quaternion rot(SVec3(45, 45, 0).toRads());
-    SVec3      translate(1.0f, 2.0f, 3.0f);
-    Mat4       m4a(scale, rot, translate);
+    SVec3        scale(5.0f);
+    Quaternion   rot(SVec3(45, 45, 0).toRads());
+    SVec3        translate(1.0f, 2.0f, 3.0f);
+    Mat4         m4a(scale, rot, translate);
     const float* elements = m4a.data();
-    REQUIRE_THAT(elements[0], WithinAbs(3.5355f, FLOAT_MARGIN)); // probably all we need to check
+    REQUIRE_THAT(
+        elements[0],
+        WithinAbs(3.5355f, FLOAT_MARGIN)); // probably all we need to check
 }

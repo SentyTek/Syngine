@@ -3,7 +3,7 @@
 // │ Created 2026-01-04                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #ifndef SYN_DEBUG_GRAPHICS
@@ -24,10 +24,12 @@ thread_local std::vector<SpanEvent>   Profiler::m_lastFrameData;
 thread_local uint8_t                  Profiler::m_currentDepth = 0;
 
 std::vector<TimerEvent> Profiler::m_timers;
-int Profiler::m_nextTimerID = 0;
+int                     Profiler::m_nextTimerID = 0;
 
 void Profiler::ProfilerUI::SaveCapture(const std::string& filepath) {
-    std::filesystem::path realPath = Syngine::_GetAppDataPath(Core::_GetContext()->config.gameName) / filepath;
+    std::filesystem::path realPath =
+        Syngine::_GetAppDataPath(Core::_GetContext()->config.gameName) /
+        filepath;
     std::ofstream out(realPath);
     out << "["; // Start JSON array
 
@@ -60,14 +62,14 @@ void Profiler::ProfilerUI::SaveCapture(const std::string& filepath) {
 
 void Profiler::PushEvent(const char* name, EventType type) {
     SpanEvent event;
-    event.name = name;
-    event.threadID = static_cast<uint32_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+    event.name     = name;
+    event.threadID = static_cast<uint32_t>(
+        std::hash<std::thread::id>{}(std::this_thread::get_id()));
     event.timestamp = static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now().time_since_epoch()
-        ).count()
-    );
-    event.type = static_cast<uint8_t>(type);
+            std::chrono::high_resolution_clock::now().time_since_epoch())
+            .count());
+    event.type  = static_cast<uint8_t>(type);
     event.depth = m_currentDepth++;
 
     m_threadData.push_back(event);
@@ -90,14 +92,14 @@ const std::vector<SpanEvent>& Profiler::GetThreadData() { return m_threadData; }
 
 int Profiler::StartTimer(const char* name) {
     SpanEvent startEvent;
-    startEvent.name = name;
-    startEvent.threadID = static_cast<uint32_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+    startEvent.name     = name;
+    startEvent.threadID = static_cast<uint32_t>(
+        std::hash<std::thread::id>{}(std::this_thread::get_id()));
     startEvent.timestamp = static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now().time_since_epoch()
-        ).count()
-    );
-    startEvent.type = static_cast<uint8_t>(EventType::EVENT_START);
+            std::chrono::high_resolution_clock::now().time_since_epoch())
+            .count());
+    startEvent.type  = static_cast<uint8_t>(EventType::EVENT_START);
     startEvent.depth = 0; // Timers are independent of call stack depth
 
     TimerEvent timerEvent;
@@ -114,14 +116,14 @@ void Profiler::EndTimer(int timerID) {
     }
 
     SpanEvent endEvent;
-    endEvent.name = m_timers[timerID].startEvent.name;
-    endEvent.threadID = static_cast<uint32_t>(std::hash<std::thread::id>{}(std::this_thread::get_id()));
+    endEvent.name     = m_timers[timerID].startEvent.name;
+    endEvent.threadID = static_cast<uint32_t>(
+        std::hash<std::thread::id>{}(std::this_thread::get_id()));
     endEvent.timestamp = static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::microseconds>(
-            std::chrono::high_resolution_clock::now().time_since_epoch()
-        ).count()
-    );
-    endEvent.type = static_cast<uint8_t>(EventType::EVENT_END);
+            std::chrono::high_resolution_clock::now().time_since_epoch())
+            .count());
+    endEvent.type  = static_cast<uint8_t>(EventType::EVENT_END);
     endEvent.depth = 0; // Timers are independent of call stack depth
 
     m_timers[timerID].endEvent = endEvent;

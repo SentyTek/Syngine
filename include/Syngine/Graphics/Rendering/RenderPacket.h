@@ -11,7 +11,7 @@
 #include <Syngine/Graphics/Resources/ShaderManager.h>
 #include <Syngine/Graphics/Resources/MaterialManager.h>
 #include <Syngine/Math/Matrix4x4.hpp>
-#include <Syngine/ECS/GameObject.h>
+#include <Syngine/GameObjects/GameObject.h>
 
 #include <bgfx/bgfx.h>
 

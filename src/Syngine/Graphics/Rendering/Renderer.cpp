@@ -3,15 +3,15 @@
 // │ Created 2025-04-20                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
-#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/GameObjects/AllComponents.h>
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
-#include <Syngine/Graphics/Rendering/RenderCore.h>
+#include <Syngine/Graphics/Rendering/RenderDirector.h>
 #include <Syngine/Graphics/Resources/ShaderManager.h>
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
 #include <Syngine/Graphics/Resources/RegisterBuiltinUniformProviders.inl>
@@ -24,7 +24,8 @@
 #include <SDL3/SDL_hints.h>
 #include <SDL3/SDL_properties.h>
 
-#include "Syngine/ECS/Components/CameraComponent.h"
+#include "Syngine/GameObjects/Components/CameraComponent.h"
+#include "Syngine/Graphics/Resources/MaterialManager.h"
 #include "Syngine/Graphics/Resources/UniformRegistry.h"
 
 #include <cstdint>
@@ -41,13 +42,14 @@ namespace Syngine {
 
 // I present to you an absurd amount of static member definitions.
 std::string Renderer::m_title;
-bool        Renderer::m_isReady = false;
+bool        Renderer::m_isReady     = false;
+bool        Renderer::m_isRendering = false;
 
 float Renderer::m_gizmoSize = 1.0f;
 std::unordered_map<std::string, Syngine::BillboardComponent*>
                                          Renderer::m_gizmoRegistry;
 std::vector<Renderer::UniformCacheEntry> Renderer::m_uniformCache;
-Renderer::UniformProviderData Renderer::m_uniformProviderData;
+Renderer::UniformProviderData            Renderer::m_uniformProviderData;
 
 int      Renderer::width         = 0;
 int      Renderer::height        = 0;
@@ -69,8 +71,9 @@ Renderer::Renderer(int width, int height, const RendererConfig& config) {
 
 Renderer::~Renderer() {
     // Destroy all registered uniforms
-    ShaderManager::UnloadAllShaders();
+    MaterialManager::DestroyAllMaterials();
     UniformRegistry::DestroyAllUniforms();
+    ShaderManager::UnloadAllShaders();
 
     // Clear gizmos
     for (auto& [tag, gizmo] : m_gizmoRegistry) {
@@ -78,31 +81,13 @@ Renderer::~Renderer() {
     }
     m_gizmoRegistry.clear();
 
-    RenderCore::_Shutdown(); // Destroys RenderCore buffers/textures/VBs and
-                             // calls bgfx::shutdown()
+    RenderDirector::_Shutdown(); // Destroys RenderDirector buffers/textures/VBs
+                                 // and calls bgfx::shutdown()
 }
 
 bool Renderer::_CreateRenderer(const RendererConfig& config) {
     _RegisterBuiltinUniformProviders();
-    RenderCore::_Initialize(config);
-
-    // Initial sun direction in degrees (yaw, pitch, roll)
-    // Stored as (yaw, pitch, roll) with pitch = degrees above horizon (positive
-    // = up).
-    const Math::Vector3 initialSunDir(45.0f, 45.0f, 0.0f);
-    float pitch = static_cast<float>(Math::DEG2RAD(initialSunDir.x()));
-    float yaw   = static_cast<float>(Math::DEG2RAD(initialSunDir.y()));
-    float cp    = cosf(pitch);
-    float sp    = sinf(pitch);
-    float cy    = cosf(yaw);
-    float sy    = sinf(yaw);
-
-    // y = +sin(pitch) when pitch is above horizon. (Ensure convention matches
-    // UI)
-    Math::Vector3 dirVec(cy * cp, sp, sy * cp);
-    dirVec = dirVec.normalized();
-
-    SetSunDirection(dirVec);
+    RenderDirector::_Initialize(config);
 
     m_isReady = true;
     Syngine::Logger::Info("Renderer created successfully");
@@ -127,14 +112,10 @@ void Renderer::_RegisterGizmo(const std::string& tag) {
     m_gizmoRegistry[tag] = gizmo;
 }
 
-Math::Vector3 Renderer::GetSunDirection() { return m_sunDir; }
-
-void Renderer::SetSunDirection(const Math::Vector3& lightDir) {
-    m_sunDir = lightDir.normalized();
-}
-
 void Renderer::_RenderFrame(DebugModes debug) {
-    RenderCore::_RenderFrame(m_camera, debug);
+    m_isRendering = true;
+    RenderDirector::_RenderFrame(m_camera, debug);
+    m_isRendering = false;
 }
 
 void Renderer::_UpdateDrawID() { currentDrawId++; }

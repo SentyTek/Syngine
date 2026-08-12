@@ -3,7 +3,7 @@
 // │ Created 2026-06-17                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -20,14 +20,13 @@ using namespace Catch::Matchers;
 // and properties to Lua and that they work as expected.
 
 static bool called = false;
-void TestFunction() {
-    called = true;
-}
+void        TestFunction() { called = true; }
 
 TEST_CASE("Test basic Lua function binding", "[Lua]") {
     SYN_STARTENGINE
 
-    LuaManager::AddFunction("testFunction", std::function<void()>(TestFunction));
+    LuaManager::AddFunction("testFunction",
+                            std::function<void()>(TestFunction));
 
     REQUIRE_NOTHROW(LuaManager::SafeScript("testFunction()"));
     REQUIRE(called);
@@ -50,11 +49,12 @@ TEST_CASE("Using Sol2 to create new usertype and binding it to Lua", "[Lua]") {
 
     // Create a simple C++ class to bind
     class MyClass {
-    public:
+      public:
         MyClass(int v) : value(v) {}
-        int GetValue() const { return value; }
+        int  GetValue() const { return value; }
         void SetValue(int v) { value = v; }
-    private:
+
+      private:
         int value;
     };
 

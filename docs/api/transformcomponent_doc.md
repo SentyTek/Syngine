@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/Components/TransformComponent.h)
+[See source](./../../include/Syngine/GameObjects/Components/TransformComponent.h)
 
 Component to handle position, rotation, and scale of a GameObject. @section TransformComponent
 
@@ -80,7 +80,7 @@ Signature:
 
 Signature:
 ```cpp
- std::unique_ptr<Component> Clone() const override;
+ std::unique_ptr<IComponent> Clone() const override;
 ```
 **Returns:** A unique pointer to the cloned TransformComponent
 

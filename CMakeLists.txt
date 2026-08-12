@@ -33,19 +33,22 @@ add_library(Syngine STATIC
     # Core
     src/Syngine/Core/Entry.cpp
     src/Syngine/Core/Core.cpp
-    src/Syngine/Core/Registry.cpp
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
-    src/Syngine/Core/ZoneManager.cpp
     src/Syngine/Core/LuaManager.cpp
+
+    #Scene
+    src/Syngine/Scene/ZoneSystem.cpp
+    src/Syngine/Scene/GameObjectRegistry.cpp
 
     # Graphics
     src/Syngine/Graphics/Rendering/Renderer.cpp
-    src/Syngine/Graphics/Rendering/RenderCore.cpp
+    src/Syngine/Graphics/Rendering/RenderDirector.cpp
     src/Syngine/Graphics/Rendering/DebugRenderer.cpp
     src/Syngine/Graphics/Resources/TextureHelpers.cpp
     src/Syngine/Graphics/Resources/ShaderManager.cpp
     src/Syngine/Graphics/Resources/ModelLoader.cpp
+    src/Syngine/Graphics/Resources/MaterialManager.cpp
     src/Syngine/Graphics/Windowing.cpp
 
     # Utils
@@ -55,19 +58,19 @@ add_library(Syngine STATIC
     src/Syngine/Utils/Prefab.cpp
 
     # Physics
-    src/Syngine/Physics/Physics.cpp
+    src/Syngine/Physics/PhysicsManager.cpp
 
-    # ACS
-    src/Syngine/ECS/GameObject.cpp
-    src/Syngine/ECS/Components/MeshComponent.cpp
-    src/Syngine/ECS/Components/TransformComponent.cpp
-    src/Syngine/ECS/Components/RigidbodyComponent.cpp
-    src/Syngine/ECS/Components/PlayerComponent.cpp
-    src/Syngine/ECS/Components/CameraComponent.cpp
-    src/Syngine/ECS/Components/ZoneComponent.cpp
-    src/Syngine/ECS/Components/BillboardComponent.cpp
-    src/Syngine/ECS/ComponentRegistry.cpp
-    src/Syngine/Graphics/Resources/MaterialManager.cpp
+    # GameObject system
+    src/Syngine/GameObjects/GameObject.cpp
+    src/Syngine/GameObjects/ComponentRegistry.cpp
+    src/Syngine/GameObjects/Components/MeshComponent.cpp
+    src/Syngine/GameObjects/Components/TransformComponent.cpp
+    src/Syngine/GameObjects/Components/RigidbodyComponent.cpp
+    src/Syngine/GameObjects/Components/PlayerComponent.cpp
+    src/Syngine/GameObjects/Components/CameraComponent.cpp
+    src/Syngine/GameObjects/Components/ZoneComponent.cpp
+    src/Syngine/GameObjects/Components/BillboardComponent.cpp
+    src/Syngine/GameObjects/Components/DirectionalLightComponent.cpp
 )
 
 set_target_properties(Syngine PROPERTIES FOLDER "Engine")

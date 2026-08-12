@@ -3,7 +3,7 @@
 // │ Created 2025-07-14                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -83,8 +83,8 @@ class Logger {
         m_mainWindow = window;
     }
 #ifdef _WIN32
-    static LONG
-        WINAPI _WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
+    static LONG WINAPI
+    _WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
 #endif
     static void _Init(
         const std::string&           appname,

@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/Components/CameraComponent.h)
+[See source](./../../include/Syngine/GameObjects/Components/CameraComponent.h)
 
 CameraComponent class for managing camera functionality in a game object @section CameraComponent
 
@@ -118,7 +118,7 @@ Signature:
 
 Signature:
 ```cpp
- std::unique_ptr<Component> Clone() const override;
+ std::unique_ptr<IComponent> Clone() const override;
 ```
 **Returns:** A unique pointer to the cloned CameraComponent
 

@@ -3,7 +3,7 @@
 // │ Created 2025-06-19                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -23,7 +23,7 @@
 #include "bgfx/bgfx.h"
 #include "bx/math.h"
 
-#include "Syngine/Physics/Physics.h"
+#include "Syngine/Physics/PhysicsManager.h"
 #include "Syngine/Math/Math.hpp"
 
 // Forward declarations

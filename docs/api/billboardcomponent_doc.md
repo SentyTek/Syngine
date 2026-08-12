@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/Components/BillboardComponent.h)
+[See source](./../../include/Syngine/GameObjects/Components/BillboardComponent.h)
 
 Syngine Billboard Component. The BillboardComponent is used to represent a 2D model in the 3D game world. @section BillboardComponent
 
@@ -223,7 +223,7 @@ Signature:
 
 Signature:
 ```cpp
- void SetRot(const Vector3& rot);
+ void SetRot(const Math::Vector3& rot);
 ```
 **Parameters:**
 - `rot`: The rotation vector containing rotation around X, Y, Z axes in radians
@@ -237,9 +237,9 @@ Signature:
 
 Signature:
 ```cpp
- Vector3 GetRot() const;
+ Math::Vector3 GetRot() const;
 ```
-**Returns:** Vector3 The rotation vector containing rotation around X, Y, Z axes in radians
+**Returns:** Math::Vector3 The rotation vector containing rotation around X, Y, Z axes in radians
 
 ---
 <a id="billboardcomponent-getmode"></a>
@@ -274,7 +274,7 @@ Signature:
 
 Signature:
 ```cpp
- inline Vector3 GetMinBounds() const;
+ inline Math::Vector3 GetMinBounds() const;
 ```
 **Returns:** Vector3 The minimum corner of the bounding box
 
@@ -287,7 +287,7 @@ Signature:
 
 Signature:
 ```cpp
- inline Vector3 GetMaxBounds() const;
+ inline Math::Vector3 GetMaxBounds() const;
 ```
 **Returns:** Vector3 The maximum corner of the bounding box
 
@@ -298,7 +298,6 @@ Signature:
 | --- | --- | --- | 
 | `std::string` | `m_texturePath` | Path to the billboard texture |
 | `std::string` | `m_bundlePath` | Path to the shader bundle containing the |
-| `Vector3` | `m_rot` | Rotation around X, Y, Z axes in radians |
 | `float` | `size` | Size of the billboard |
 | `bool` | `receiveShadows` | Whether the billboard receives shadows |
 | `bool` | `receiveSunLight` | Whether the billboard receives sunlight |

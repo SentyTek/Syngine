@@ -3,7 +3,7 @@
 // │ Created 2026-04-16                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -44,15 +44,21 @@ static std::string _WideToUtf8(const wchar_t* value) {
         return "Unknown";
     }
 
-    int requiredSize =
-        WideCharToMultiByte(CP_UTF8, 0, value, -1, nullptr, 0, nullptr, nullptr);
+    int requiredSize = WideCharToMultiByte(
+        CP_UTF8, 0, value, -1, nullptr, 0, nullptr, nullptr);
     if (requiredSize <= 1) {
         return "Unknown";
     }
 
     std::string utf8(requiredSize, '\0');
-    if (WideCharToMultiByte(
-            CP_UTF8, 0, value, -1, utf8.data(), requiredSize, nullptr, nullptr) == 0) {
+    if (WideCharToMultiByte(CP_UTF8,
+                            0,
+                            value,
+                            -1,
+                            utf8.data(),
+                            requiredSize,
+                            nullptr,
+                            nullptr) == 0) {
         return "Unknown";
     }
 
@@ -62,8 +68,8 @@ static std::string _WideToUtf8(const wchar_t* value) {
 
 static std::string _GetWindowsGpuName(uint16_t vendorId, uint16_t deviceId) {
     IDXGIFactory1* factory = nullptr;
-    HRESULT        result =
-        CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void**>(&factory));
+    HRESULT        result  = CreateDXGIFactory1(__uuidof(IDXGIFactory1),
+                                        reinterpret_cast<void**>(&factory));
     if (FAILED(result) || !factory) {
         return "Unknown";
     }
@@ -71,14 +77,16 @@ static std::string _GetWindowsGpuName(uint16_t vendorId, uint16_t deviceId) {
     std::string gpuName = "Unknown";
     for (UINT adapterIndex = 0;; ++adapterIndex) {
         IDXGIAdapter1* adapter = nullptr;
-        if (factory->EnumAdapters1(adapterIndex, &adapter) == DXGI_ERROR_NOT_FOUND) {
+        if (factory->EnumAdapters1(adapterIndex, &adapter) ==
+            DXGI_ERROR_NOT_FOUND) {
             break;
         }
 
         DXGI_ADAPTER_DESC1 description = {};
         if (SUCCEEDED(adapter->GetDesc1(&description)) &&
             (description.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) == 0 &&
-            description.VendorId == vendorId && description.DeviceId == deviceId) {
+            description.VendorId == vendorId &&
+            description.DeviceId == deviceId) {
             gpuName = _WideToUtf8(description.Description);
             adapter->Release();
             break;
@@ -98,7 +106,8 @@ static std::string _GetGpuName(const bgfx::Caps* caps) {
     }
 
 #ifdef _WIN32
-    const std::string gpuName = _GetWindowsGpuName(caps->vendorId, caps->deviceId);
+    const std::string gpuName =
+        _GetWindowsGpuName(caps->vendorId, caps->deviceId);
     if (gpuName != "Unknown") {
         return gpuName;
     }
@@ -127,7 +136,7 @@ static std::string _GetCPUName() {
     }
     CPUBrandString[sizeof(CPUBrandString) - 1] =
         '\0'; // Null-terminate the string
-    cpu            = std::string(CPUBrandString);
+    cpu = std::string(CPUBrandString);
     return cpu;
 #elif __APPLE__
     char   cpuBrand[256];

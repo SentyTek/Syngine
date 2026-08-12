@@ -3,7 +3,7 @@
 // │ Created 2026-06-16                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -22,91 +22,105 @@ using namespace Catch::Matchers;
 // are cleaned up
 
 TEST_CASE("Entity deletion removes entity from registry", "[ECS]") {
-    auto* go = new GameObject("TestEntity");
-    go->AddComponent<TransformComponent>();
-    REQUIRE(go->HasComponent(TransformComponent::componentType));
+    SYN_STARTENGINE
+
+    auto& go = GameObjectRegistry::CreateGameObject(
+        "TestEntity", "default", std::vector<std::string>{});
+    go.AddComponent<TransformComponent>();
+    REQUIRE(go.HasComponent(TransformComponent::componentType));
 
     // Testing all the registry functions
-    REQUIRE(Registry::GetGameObjectByName("TestEntity") == go);
-    REQUIRE(Registry::GetGameObjectsByType("default").front() == go);
-    REQUIRE(Registry::GetGameObjectsWithComponent(
-                TransformComponent::componentType).front() == go);
-    REQUIRE(Registry::GetAllGameObjects()[0] == go);
-    REQUIRE(Registry::GetGameObjectCount() == 1);
+    REQUIRE(GameObjectRegistry::GetGameObjectByName("TestEntity") == &go);
+    REQUIRE(GameObjectRegistry::GetGameObjectsByType("default").front() == &go);
+    REQUIRE(GameObjectRegistry::GetGameObjectsWithComponent(
+                TransformComponent::componentType)
+                .front() == &go);
+    REQUIRE(GameObjectRegistry::GetAllGameObjects().size() == 1);
+    REQUIRE(&GameObjectRegistry::GetAllGameObjects().begin()->second == &go);
+    REQUIRE(GameObjectRegistry::GetGameObjectCount() == 1);
 
-    // Delete the entity
-    delete go;
+    GameObjectRegistry::RemoveGameObject(&go);
+    engine.Update();
 
     // The entity should no longer exist in the registry
-    REQUIRE(!Registry::GetGameObjectByName("TestEntity"));
+    REQUIRE(!GameObjectRegistry::GetGameObjectByName("TestEntity"));
 }
 
 TEST_CASE("Vector of GameObjects creation/deletion", "[ECS]") {
-    constexpr int numEntities = 10;
+    SYN_STARTENGINE
+
+    constexpr int            numEntities = 10;
     std::vector<GameObject*> entities;
     for (int i = 0; i < numEntities; ++i) {
-        auto* go = new GameObject("Entity" + std::to_string(i));
-        go->AddComponent<TransformComponent>();
-        entities.push_back(go);
+        auto& go =
+            GameObjectRegistry::CreateGameObject("Entity" + std::to_string(i),
+                                                 "default",
+                                                 std::vector<std::string>{});
+        go.AddComponent<TransformComponent>();
+        entities.push_back(&go);
     }
-    REQUIRE(Registry::GetGameObjectCount() == numEntities);
+    REQUIRE(GameObjectRegistry::GetGameObjectCount() == numEntities);
 
     // Delete all entities
     for (auto* go : entities) {
-        delete go;
+        GameObjectRegistry::RemoveGameObject(go);
     }
-    entities.clear();
+    engine.Update();
 
     // Registry should be empty
-    REQUIRE(Registry::GetGameObjectCount() == 0);
+    REQUIRE(GameObjectRegistry::GetGameObjectCount() == 0);
 }
 
 TEST_CASE("Querying the Registry of various types of GameObjects", "[ECS]") {
-    auto* go1 = new GameObject("Entity1");
-    go1->AddComponent<TransformComponent>();
+    SYN_STARTENGINE
 
-    auto* go2 = new GameObject("Entity2", "notdefault");
-    go2->AddComponent<TransformComponent>();
+    auto& go1 = GameObjectRegistry::CreateGameObject(
+        "Entity1", "default", std::vector<std::string>{});
+    go1.AddComponent<TransformComponent>();
 
-    auto* go3 = new GameObject("Entity3");
-    go3->AddComponent<TransformComponent>();
+    auto& go2 = GameObjectRegistry::CreateGameObject(
+        "Entity2", "notdefault", std::vector<std::string>{});
+    go2.AddComponent<TransformComponent>();
 
-    REQUIRE(Registry::GetGameObjectByName("Entity1") == go1);
-    REQUIRE(Registry::GetGameObjectByName("Entity2") == go2);
-    REQUIRE(Registry::GetGameObjectByName("Entity3") == go3);
+    auto& go3 = GameObjectRegistry::CreateGameObject(
+        "Entity3", "default", std::vector<std::string>{});
+    go3.AddComponent<TransformComponent>();
 
-    REQUIRE(Registry::GetGameObjectsByType("default").size() == 2);
-    REQUIRE(Registry::GetGameObjectsByType("notdefault").size() == 1);
-    REQUIRE(Registry::GetAllGameObjects().size() == 3);
-    REQUIRE(
-        Registry::GetGameObjectsWithComponent(TransformComponent::componentType)
-            .size() == 3);
+    REQUIRE(GameObjectRegistry::GetGameObjectByName("Entity1") == &go1);
+    REQUIRE(GameObjectRegistry::GetGameObjectByName("Entity2") == &go2);
+    REQUIRE(GameObjectRegistry::GetGameObjectByName("Entity3") == &go3);
 
-    const auto defaultGameObjects = Registry::GetGameObjectsByType("default");
+    REQUIRE(GameObjectRegistry::GetGameObjectsByType("default").size() == 2);
+    REQUIRE(GameObjectRegistry::GetGameObjectsByType("notdefault").size() == 1);
+    REQUIRE(GameObjectRegistry::GetAllGameObjects().size() == 3);
+    REQUIRE(GameObjectRegistry::GetGameObjectsWithComponent(
+                TransformComponent::componentType)
+                .size() == 3);
+
+    const auto defaultGameObjects =
+        GameObjectRegistry::GetGameObjectsByType("default");
     REQUIRE(std::find(defaultGameObjects.begin(),
                       defaultGameObjects.end(),
-                      go1) != defaultGameObjects.end());
+                      &go1) != defaultGameObjects.end());
 
     const auto notDefaultGameObjects =
-        Registry::GetGameObjectsByType("notdefault");
+        GameObjectRegistry::GetGameObjectsByType("notdefault");
     REQUIRE(std::find(notDefaultGameObjects.begin(),
                       notDefaultGameObjects.end(),
-                      go2) != notDefaultGameObjects.end());
+                      &go2) != notDefaultGameObjects.end());
 
-    const auto gameObjectsWithTransform = Registry::GetGameObjectsWithComponent(
-        TransformComponent::componentType);
+    const auto gameObjectsWithTransform =
+        GameObjectRegistry::GetGameObjectsWithComponent(
+            TransformComponent::componentType);
     REQUIRE(std::find(gameObjectsWithTransform.begin(),
                       gameObjectsWithTransform.end(),
-                      go1) != gameObjectsWithTransform.end());
+                      &go1) != gameObjectsWithTransform.end());
     REQUIRE(std::find(gameObjectsWithTransform.begin(),
                       gameObjectsWithTransform.end(),
-                      go2) != gameObjectsWithTransform.end());
+                      &go2) != gameObjectsWithTransform.end());
     REQUIRE(std::find(gameObjectsWithTransform.begin(),
                       gameObjectsWithTransform.end(),
-                      go3) != gameObjectsWithTransform.end());
+                      &go3) != gameObjectsWithTransform.end());
 
-    // Clean up
-    delete go1;
-    delete go2;
-    delete go3;
+    GameObjectRegistry::Clear();
 }

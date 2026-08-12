@@ -8,12 +8,13 @@
 
 #pragma once
 
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include "bgfx/bgfx.h"
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
 #include <Syngine/Core/Core.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
-#include <Syngine/Graphics/Rendering/RenderCore.h>
-#include <Syngine/ECS/AllComponents.h>
+#include <Syngine/Graphics/Rendering/RenderDirector.h>
+#include <Syngine/GameObjects/AllComponents.h>
 
 // This file registers built-in uniform providers for the renderer. These
 // providers supply data for commonly used uniforms, such as camera matrices and
@@ -91,10 +92,12 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* ctx) -> const void* {
-                const Math::Vector3 dir = Renderer::GetSunDirection();
-                Renderer::m_uniformProviderData.sunDirection =
-                    Math::Vec4(dir, 0.0f);
-                return Renderer::m_uniformProviderData.sunDirection.data();
+                if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
+                    return nullptr;
+                }
+                return GameObjectRegistry::GetFirstActiveDirectionalLight()
+                    ->GetDirectionVector()
+                    .data();
             } });
 
     /* Set default sky colors
@@ -128,7 +131,12 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* ctx) -> const void* {
-                return Renderer::m_uniformProviderData.sunColor.data();
+                if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
+                    return nullptr;
+                }
+                return GameObjectRegistry::GetFirstActiveDirectionalLight()
+                    ->GetColor()
+                    .data();
             } });
     UniformRegistry::RegisterProvider(
         "Renderer.HorizonColor",
@@ -143,20 +151,22 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
     // Debug uniforms
     UniformRegistry::RegisterProvider(
         "Renderer.Debug.CSMLightViewProj",
-        UniformDataProvider{ UniformType::MAT4,
-                             UniformFrequency::FRAME,
-                             4,
-                             [](const void* ctx) -> const void* {
-                                 return RenderCore::m_csmLightViewProj.data();
-                             } });
+        UniformDataProvider{
+            UniformType::MAT4,
+            UniformFrequency::FRAME,
+            4,
+            [](const void* ctx) -> const void* {
+                return RenderDirector::m_csmLightViewProj.data();
+            } });
     UniformRegistry::RegisterProvider(
         "Renderer.Debug.CSMCascadeSplits",
-        UniformDataProvider{ UniformType::VEC4,
-                             UniformFrequency::FRAME,
-                             1,
-                             [](const void* ctx) -> const void* {
-                                 return RenderCore::m_csmCascadeSplits.data();
-                             } });
+        UniformDataProvider{
+            UniformType::VEC4,
+            UniformFrequency::FRAME,
+            1,
+            [](const void* ctx) -> const void* {
+                return RenderDirector::m_csmCascadeSplits.data();
+            } });
     UniformRegistry::RegisterProvider(
         "Renderer.ShadowParams",
         UniformDataProvider{
@@ -166,7 +176,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             [](const void* ctx) -> const void* {
                 Renderer::m_uniformProviderData.shadowParams = {
                     bgfx::getCaps()->homogeneousDepth ? 1.0f : 0.0f,
-                    1.0f / (float)(RenderCore::m_config.shadowMapSize),
+                    1.0f / (float)(RenderDirector::m_config.shadowMapSize),
                     0.0f,
                     0.0f
                 };
@@ -197,7 +207,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              return &RenderCore::m_buffers.shadowDepth;
+              return &RenderDirector::m_buffers.shadowDepth;
           } });
     UniformRegistry::RegisterProvider(
         "Renderer.ssaoTex",
@@ -205,7 +215,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              return &RenderCore::m_buffers.ssaoTex;
+              return &RenderDirector::m_buffers.ssaoTex;
           } });
     UniformRegistry::RegisterProvider(
         "Renderer.sceneColor",
@@ -213,7 +223,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              return &RenderCore::m_buffers.sceneColor;
+              return &RenderDirector::m_buffers.sceneColor;
           } });
     UniformRegistry::RegisterProvider(
         "Renderer.sceneNormal",
@@ -221,7 +231,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              return &RenderCore::m_buffers.sceneNormal;
+              return &RenderDirector::m_buffers.sceneNormal;
           } });
     UniformRegistry::RegisterProvider(
         "Renderer.sceneDepth",
@@ -229,7 +239,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
           UniformFrequency::DRAW,
           1,
           [](const void* context) -> const void* {
-              return &RenderCore::m_buffers.sceneDepth;
+              return &RenderDirector::m_buffers.sceneDepth;
           } });
 
     // SSAO providers
@@ -352,7 +362,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                 if (billboard) {
                     data = { billboard->receiveSunLight ? 1.0f : 0.0f,
                              (billboard->receiveShadows &&
-                              RenderCore::m_config.useShadows)
+                              RenderDirector::m_config.useShadows)
                                  ? 1.0f
                                  : 0.0f,
                              0.0f,

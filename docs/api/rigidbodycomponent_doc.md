@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/Components/RigidbodyComponent.h)
+[See source](./../../include/Syngine/GameObjects/Components/RigidbodyComponent.h)
 
 Syngine Rigidbody Component The RigidbodyComponent is used to represent a physics body in the game world. It holds the BodyID and the shape of the physics body from Jolt, among other properties. @section RigidbodyComponent
 
@@ -112,13 +112,11 @@ struct RigidbodyParameters
 | Type | Name | Description |
 | --- | --- | --- | 
 | `PhysicsShapes` | `shape` | The shape of the rigidbody |
-| `float` | `mass` | Mass of the rigidbody. If 0 (which it is by default), Jolt will calculate it based on the shape. |
+| `float` | `mass` | Mass of the rigidbody. If 0 (which it is by default), |
 | `float` | `friction` | Friction coefficient |
 | `float` | `restitution` | Restitution coefficient (bounciness) |
-| `Math::Vector3` | `shapeParameters` | Additional parameters for the shape, e.g., radius for sphere, half extents for box |
-| `JPH::EMotionType` | `motionType` | Motion type of the rigidbody |
 | `JPH::ObjectLayer` | `layer` | Layer of the rigidbody |
-| `std::vector<CompoundShapePart>` | `compoundParts` | Parts for compound shape |
+| `compoundParts` | `Parts` | for compound shape |
 **This function has been available since:** v0.0.1
 
 ---
@@ -168,7 +166,7 @@ Signature:
 
 Signature:
 ```cpp
- std::unique_ptr<Component> Clone() const override;
+ std::unique_ptr<IComponent> Clone() const override;
 ```
 **Returns:** A unique pointer to the cloned RigidbodyComponent
 
@@ -266,7 +264,7 @@ Signature:
 
 Signature:
 ```cpp
- void Destroy(); //TODO: Move this to RAII in the destructor
+ void Destroy(); // TODO: Move this to RAII in the destructor
 ```
 **Thread Safety:** not-safe
 
@@ -506,8 +504,6 @@ Signature:
 | Type | Name | Description |
 | --- | --- | --- | 
 | `PhysicsShapes` | `shape` | The shape of the part |
-| `Math::Vector3` | `shapeParameters` | Parameters for the shape, e.g., radius for sphere, half extents for box |
 | `Math::Vector3` | `position` | Local position offset |
 | `Math::Quaternion` | `rotation` | Local rotation quaternion |
-| `constexpr` | `Syngine` | Rigidbody component type |
 ---

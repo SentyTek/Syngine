@@ -3,7 +3,7 @@
 // │ Created 2025-08-05                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
@@ -26,9 +26,9 @@
 
 namespace {
 
-static void _BoxDownsample2x2(const uint8_t* src,
-                              int            srcW,
-                              int            srcH,
+static void _BoxDownsample2x2(const uint8_t*        src,
+                              int                   srcW,
+                              int                   srcH,
                               std::vector<uint8_t>& dst) {
     const int dstW = std::max(1, srcW / 2);
     const int dstH = std::max(1, srcH / 2);
@@ -36,10 +36,10 @@ static void _BoxDownsample2x2(const uint8_t* src,
 
     for (int y = 0; y < dstH; ++y) {
         for (int x = 0; x < dstW; ++x) {
-            int r = 0;
-            int g = 0;
-            int b = 0;
-            int a = 0;
+            int r     = 0;
+            int g     = 0;
+            int b     = 0;
+            int a     = 0;
             int count = 0;
 
             for (int oy = 0; oy < 2; ++oy) {
@@ -60,28 +60,30 @@ static void _BoxDownsample2x2(const uint8_t* src,
             }
 
             const int dstIndex = (y * dstW + x) * 4;
-            dst[dstIndex + 0] = static_cast<uint8_t>(r / count);
-            dst[dstIndex + 1] = static_cast<uint8_t>(g / count);
-            dst[dstIndex + 2] = static_cast<uint8_t>(b / count);
-            dst[dstIndex + 3] = static_cast<uint8_t>(a / count);
+            dst[dstIndex + 0]  = static_cast<uint8_t>(r / count);
+            dst[dstIndex + 1]  = static_cast<uint8_t>(g / count);
+            dst[dstIndex + 2]  = static_cast<uint8_t>(b / count);
+            dst[dstIndex + 3]  = static_cast<uint8_t>(a / count);
         }
     }
 }
 
 } // namespace
 
-bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name) {
-    int w, h, channels;
-    stbi_uc* pixels = stbi_load_from_memory(data, static_cast<int>(size), &w, &h, &channels, 4);
+bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data,
+                                                   size_t         size,
+                                                   const char*    name) {
+    int      w, h, channels;
+    stbi_uc* pixels = stbi_load_from_memory(
+        data, static_cast<int>(size), &w, &h, &channels, 4);
     if (!pixels) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                               false,
-                               "Failed to load embedded texture");
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR, false, "Failed to load embedded texture");
         return BGFX_INVALID_HANDLE;
     }
 
     int mipCount = 1;
-    for (int mipW = w, mipH = h; mipW > 1 || mipH > 1; ) {
+    for (int mipW = w, mipH = h; mipW > 1 || mipH > 1;) {
         mipW = std::max(1, mipW / 2);
         mipH = std::max(1, mipH / 2);
         ++mipCount;
@@ -98,13 +100,13 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
     packedMips.reserve(totalBytes);
 
     std::vector<uint8_t> currentLevel(
-        pixels,
-        pixels + static_cast<size_t>(w) * static_cast<size_t>(h) * 4);
+        pixels, pixels + static_cast<size_t>(w) * static_cast<size_t>(h) * 4);
     int levelW = w;
     int levelH = h;
 
     for (int level = 0; level < mipCount; ++level) {
-        packedMips.insert(packedMips.end(), currentLevel.begin(), currentLevel.end());
+        packedMips.insert(
+            packedMips.end(), currentLevel.begin(), currentLevel.end());
 
         if (level + 1 < mipCount) {
             std::vector<uint8_t> nextLevel;
@@ -117,19 +119,20 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
 
     const bgfx::Memory* mem =
         bgfx::copy(packedMips.data(), static_cast<uint32_t>(packedMips.size()));
-    const bgfx::TextureHandle tex = bgfx::createTexture2D(
-        static_cast<uint16_t>(w),
-        static_cast<uint16_t>(h),
-        mipCount > 1,
-        1,
-        bgfx::TextureFormat::RGBA8,
-        BGFX_TEXTURE_NONE,
-        mem);
+    const bgfx::TextureHandle tex =
+        bgfx::createTexture2D(static_cast<uint16_t>(w),
+                              static_cast<uint16_t>(h),
+                              mipCount > 1,
+                              1,
+                              bgfx::TextureFormat::RGBA8,
+                              BGFX_TEXTURE_NONE,
+                              mem);
 
     stbi_image_free(pixels);
 
     if (!bgfx::isValid(tex)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              true,
                               "Failed to create texture %s (%dx%d)",
                               name ? name : "<memory>",
                               w,
@@ -143,57 +146,69 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data, size_t s
 bgfx::TextureHandle Syngine::LoadTextureFromFile(const char* path) {
     SDL_IOStream* rw = SDL_IOFromFile(path, "rb");
     if (!rw) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, true,
-                               "Failed to open file %s",
-                               path);
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR, true, "Failed to open file %s", path);
         return BGFX_INVALID_HANDLE;
     }
 
-    Sint64 size = SDL_GetIOSize(rw);
+    Sint64               size = SDL_GetIOSize(rw);
     std::vector<uint8_t> data(size);
     SDL_ReadIO(rw, data.data(), size);
     SDL_CloseIO(rw);
 
-    return Syngine::LoadTextureFromMemory(data.data(), static_cast<size_t>(size), path);
+    return Syngine::LoadTextureFromMemory(
+        data.data(), static_cast<size_t>(size), path);
 }
 
-bgfx::TextureHandle Syngine::LoadTextureFromBundle(const std::string& bundlePath, const std::string& textureName) {
+bgfx::TextureHandle
+Syngine::LoadTextureFromBundle(const std::string& bundlePath,
+                               const std::string& textureName) {
     scl::stream ms =
         Syngine::Serializer::_ReadFromBundle(bundlePath, textureName);
     if (ms.size() == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR, false,
-                               "Failed to load texture %s from bundle %s",
-                               textureName.c_str(),
-                               bundlePath.c_str());
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
+                              "Failed to load texture %s from bundle %s",
+                              textureName.c_str(),
+                              bundlePath.c_str());
         return BGFX_INVALID_HANDLE;
     }
     std::vector<uint8_t> data(ms.size());
     ms.read(data.data(), ms.size());
-    return Syngine::LoadTextureFromMemory(data.data(), data.size(), textureName.c_str());
+    return Syngine::LoadTextureFromMemory(
+        data.data(), data.size(), textureName.c_str());
 }
 
 bgfx::TextureHandle Syngine::CreateFlatTexture() {
-    uint8_t data[4] = { 127, 127, 127, 127 }; // white color
-    const bgfx::Memory* mem = bgfx::copy(data, sizeof(data));
-    bgfx::TextureHandle tex = bgfx::createTexture2D(
-        1, 1, false, 1, bgfx::TextureFormat::RGBA8,
+    uint8_t             data[4] = { 127, 127, 127, 127 }; // white color
+    const bgfx::Memory* mem     = bgfx::copy(data, sizeof(data));
+    bgfx::TextureHandle tex     = bgfx::createTexture2D(
+        1,
+        1,
+        false,
+        1,
+        bgfx::TextureFormat::RGBA8,
         BGFX_TEXTURE_NONE | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
-        mem
-    );
+        mem);
     return tex;
 }
 
-bgfx::TextureHandle Syngine::CreateNoiseTexture(uint16_t width, uint16_t height) {
+bgfx::TextureHandle Syngine::CreateNoiseTexture(uint16_t width,
+                                                uint16_t height) {
     std::vector<uint8_t> data(width * height * 4);
     // Random value between 0 and 255 for each channel
     for (size_t i = 0; i < width * height * 4; ++i) {
         data[i] = static_cast<uint8_t>(rand() % 256);
     }
-    const bgfx::Memory* mem = bgfx::copy(data.data(), static_cast<uint32_t>(data.size()));
+    const bgfx::Memory* mem =
+        bgfx::copy(data.data(), static_cast<uint32_t>(data.size()));
     bgfx::TextureHandle tex = bgfx::createTexture2D(
-        width, height, false, 1, bgfx::TextureFormat::RGBA8,
+        width,
+        height,
+        false,
+        1,
+        bgfx::TextureFormat::RGBA8,
         BGFX_TEXTURE_NONE | BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT,
-        mem
-    );
+        mem);
     return tex;
 }

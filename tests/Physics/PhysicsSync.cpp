@@ -3,7 +3,7 @@
 // │ Created 2026-06-16                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -30,13 +30,13 @@ using namespace Catch::Matchers;
 TEST_CASE("Rigidbody and Transform sync", "[Physics]") {
     // This requires a whole engine instance to run the update loop
     SYN_STARTENGINE;
-    auto* go = CreateRigidbodyObject();
+    GameObject& go = CreateRigidbodyObject();
 
     engine.SetSimulationState(true);
     SimulateFrames(engine, 10);
 
-    auto* transform = go->GetComponent<TransformComponent>();
-    auto* rigidbody = go->GetComponent<RigidbodyComponent>();
+    auto* transform = go.GetComponent<TransformComponent>();
+    auto* rigidbody = go.GetComponent<RigidbodyComponent>();
 
     // Get the positions of both the transform and the rigidbody's physics body
     JPH::BodyInterface& bodyInterface =
@@ -46,21 +46,27 @@ TEST_CASE("Rigidbody and Transform sync", "[Physics]") {
 
     Math::Vector3 tpos = transform->GetPosition();
 
-    // Check that the transform's position is approximately equal to the rigidbody's position
+    // Check that the transform's position is approximately equal to the
+    // rigidbody's position
     REQUIRE_THAT(tpos.x(), WithinAbs(rbPos.GetX(), FLOAT_MARGIN));
-    REQUIRE_THAT(tpos.y(), WithinAbs(-0.076166, FLOAT_MARGIN * 10)); // Y position is approximately -0.076166 after running test a bunch of times
+    REQUIRE_THAT(
+        tpos.y(),
+        WithinAbs(-0.076166,
+                  FLOAT_MARGIN * 10)); // Y position is approximately -0.076166
+                                       // after running test a bunch of times
     REQUIRE_THAT(tpos.z(), WithinAbs(rbPos.GetZ(), FLOAT_MARGIN));
 
-
     // Cleanup
-    delete go;
+    GameObjectRegistry::RemoveGameObject(&go);
+    engine.Update();
 }
 
 TEST_CASE("Rigidbody falls onto static floor and settles", "[Physics]") {
     SYN_STARTENGINE;
 
-    auto* floor = new GameObject("Floor", "default");
-    auto* floorTransform = floor->AddComponent<TransformComponent>();
+    GameObject& floor = GameObjectRegistry::CreateGameObject(
+        "Floor", "default", std::vector<std::string>{});
+    auto* floorTransform = floor.AddComponent<TransformComponent>();
     floorTransform->SetPosition(Math::Vector3(0.0f, -1.0f, 0.0f));
 
     RigidbodyParameters floorParams = {
@@ -72,23 +78,22 @@ TEST_CASE("Rigidbody falls onto static floor and settles", "[Physics]") {
         .motionType      = JPH::EMotionType::Static,
         .layer           = Layers::NON_MOVING
     };
-    auto* floorBody = floor->AddComponent<RigidbodyComponent>(floorParams);
+    auto* floorBody = floor.AddComponent<RigidbodyComponent>(floorParams);
     REQUIRE(floorBody != nullptr);
 
-    auto* cube = new GameObject("FallingCube", "default");
-    auto* cubeTransform = cube->AddComponent<TransformComponent>();
+    GameObject& cube = GameObjectRegistry::CreateGameObject(
+        "FallingCube", "default", std::vector<std::string>{});
+    auto* cubeTransform = cube.AddComponent<TransformComponent>();
     cubeTransform->SetPosition(Math::Vector3(0.0f, 5.0f, 0.0f));
 
-    RigidbodyParameters cubeParams = {
-        .shape           = PhysicsShapes::BOX,
-        .mass            = 1.0f,
-        .friction        = 0.5f,
-        .restitution     = 0.0f,
-        .shapeParameters = { 1.0f, 1.0f, 1.0f },
-        .motionType      = JPH::EMotionType::Dynamic,
-        .layer           = Layers::MOVING
-    };
-    auto* cubeBody = cube->AddComponent<RigidbodyComponent>(cubeParams);
+    RigidbodyParameters cubeParams = { .shape           = PhysicsShapes::BOX,
+                                       .mass            = 1.0f,
+                                       .friction        = 0.5f,
+                                       .restitution     = 0.0f,
+                                       .shapeParameters = { 1.0f, 1.0f, 1.0f },
+                                       .motionType = JPH::EMotionType::Dynamic,
+                                       .layer      = Layers::MOVING };
+    auto* cubeBody = cube.AddComponent<RigidbodyComponent>(cubeParams);
     REQUIRE(cubeBody != nullptr);
 
     engine.SetSimulationState(true);
@@ -100,11 +105,16 @@ TEST_CASE("Rigidbody falls onto static floor and settles", "[Physics]") {
         bodyInterface.GetCenterOfMassPosition(cubeBody->_GetBodyID());
     Math::Vector3 tpos = cubeTransform->GetPosition();
 
-    REQUIRE_THAT(static_cast<float>(rbPos.GetY()), WithinAbs(1.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(tpos.x(), WithinAbs(static_cast<float>(rbPos.GetX()), FLOAT_MARGIN));
-    REQUIRE_THAT(tpos.y(), WithinAbs(static_cast<float>(rbPos.GetY()), FLOAT_MARGIN));
-    REQUIRE_THAT(tpos.z(), WithinAbs(static_cast<float>(rbPos.GetZ()), FLOAT_MARGIN));
+    REQUIRE_THAT(static_cast<float>(rbPos.GetY()),
+                 WithinAbs(1.0f, FLOAT_MARGIN));
+    REQUIRE_THAT(tpos.x(),
+                 WithinAbs(static_cast<float>(rbPos.GetX()), FLOAT_MARGIN));
+    REQUIRE_THAT(tpos.y(),
+                 WithinAbs(static_cast<float>(rbPos.GetY()), FLOAT_MARGIN));
+    REQUIRE_THAT(tpos.z(),
+                 WithinAbs(static_cast<float>(rbPos.GetZ()), FLOAT_MARGIN));
 
-    delete cube;
-    delete floor;
+    GameObjectRegistry::RemoveGameObject(&cube);
+    GameObjectRegistry::RemoveGameObject(&floor);
+    engine.Update();
 }

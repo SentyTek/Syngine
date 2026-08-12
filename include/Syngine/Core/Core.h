@@ -3,21 +3,21 @@
 // │ Created 2025-04-22                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
 
-#include <Syngine/Core/Registry.h>
+#include <Syngine/Scene/GameObjectRegistry.h>
 #include <Syngine/Core/LuaManager.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
-#include <Syngine/ECS/Component.h>
-#include <Syngine/ECS/Components/CameraComponent.h>
-#include <Syngine/ECS/Components/PlayerComponent.h>
-#include <Syngine/ECS/Components/RigidbodyComponent.h>
-#include <Syngine/ECS/GameObject.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/GameObjects/Components/CameraComponent.h>
+#include <Syngine/GameObjects/Components/PlayerComponent.h>
+#include <Syngine/GameObjects/Components/RigidbodyComponent.h>
+#include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/Graphics/Resources/ModelLoader.h>
-#include <Syngine/Physics/Physics.h>
+#include <Syngine/Physics/PhysicsManager.h>
 #include <Syngine/Utils/Profiler.h>
 
 #include <cstdint>
@@ -26,7 +26,7 @@
 
 namespace Syngine {
 // Forward declare
-class ZoneManager;
+class ZoneSystem;
 class Window;
 // class LuaManager;
 
@@ -186,6 +186,45 @@ class Core {
         return DebugModes();
     }
 
+    /// @brief Get the current frame count
+    /// @return Current frame count
+    /// @since v0.0.2
+    static int GetFrameCount() { return m_frameCounter.frameCount; }
+
+    /// @brief Get the estimated FPS (frames per second)
+    /// @return Estimated FPS
+    /// @note This is updated every second and may not be accurate for short
+    /// time intervals.
+    /// @since v0.0.2
+    static float GetFPS() { return m_frameCounter.lastFPS; }
+
+    /// @brief Add a callback function to be called every frame during the
+    /// update phase
+    /// @note The callback function should take an int parameter representing
+    /// the current frame count.
+    /// @param callback Function to be called every frame
+    /// @since v0.0.2
+    static void AddFrameCallback(std::function<void(int)> callback) {
+        m_frameCallbacks.push_back(callback);
+    }
+
+    /// @brief Add a callback function to be called every fixed update just
+    /// after physics updates
+    /// @note The callback function should take a float parameter representing
+    /// the fixed delta time.
+    /// @param callback Function to be called every fixed update
+    /// @since v0.0.2
+    static void AddFixedUpdateCallback(std::function<void(float)> callback) {
+        m_fixedUpdateCallbacks.push_back(callback);
+    }
+
+    /// @brief Clear all registered update and fixed update callbacks
+    /// @since v0.0.2
+    static void ClearUpdateCallbacks() {
+        m_frameCallbacks.clear();
+        m_fixedUpdateCallbacks.clear();
+    }
+
   private:
     struct _internal {
         // Mouse sensitivity
@@ -219,10 +258,9 @@ class Core {
         std::unique_ptr<Renderer>    renderer;  //* Pointer to the render system
         std::unique_ptr<ModelLoader> synModels; //* Pointer to the model loader
         std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
-        std::unique_ptr<ZoneManager>
-                                    zoneManager; //* Pointer to the zone manager
-        std::unique_ptr<LuaManager> luaState;    //* Pointer to the Lua state
-        DebugModes                  debug;       //* Debug modes flags
+        std::unique_ptr<ZoneSystem> ZoneSystem; //* Pointer to the zone manager
+        std::unique_ptr<LuaManager> luaState;   //* Pointer to the Lua state
+        DebugModes                  debug;      //* Debug modes flags
     };
 
     /// @brief Get the global App instance
@@ -311,6 +349,10 @@ class Core {
     static bool          m_shouldClose; //* Whether the application should close
     static _internal     m_internal;    //* Internal state struct
     static _FrameCounter m_frameCounter; //* Frame counter for FPS/TPS tracking
+    static std::vector<std::function<void(int)>>
+        m_frameCallbacks; //* List of update callbacks
+    static std::vector<std::function<void(float)>>
+        m_fixedUpdateCallbacks; //* List of update callbacks
 
     /// @brief Handle key events for debug actions
     /// @param event SDL_Event to handle
@@ -318,11 +360,11 @@ class Core {
     void _HandleKeyEvent(const SDL_Event& event);
 
     friend class Renderer;
-    friend class RenderCore;
+    friend class RenderDirector;
     friend class GameObject;
     friend class RigidbodyComponent;
     friend class PlayerComponent;
-    friend class Registry;
+    friend class GameObjectRegistry;
     friend class Serializer;
     friend class Window;
     friend class Phys;

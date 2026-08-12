@@ -4,9 +4,9 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/Component.h)
+[See source](./../../include/Syngine/GameObjects/Component.h)
 
-Syngine::Component is the base class for all components that can be attached to GameObject to inherit from. They are used to add functionality to GameObjects, such as mesh, transform, physics, AI, PlayerController, etc. @section Component
+Syngine::IComponent is the base class for all components that can be attached to GameObject to inherit from. They are used to add functionality to GameObjects, such as mesh, transform, physics, AI, PlayerController, etc. @section Component
 
 ---
 ## Goto: 
@@ -21,9 +21,9 @@ Syngine::Component is the base class for all components that can be attached to 
 
 ### Functions: 
 
-- [GetComponentType()](#component-getcomponenttype)
-- [Clone()](#component-clone)
-- [Serialize()](#component-serialize)
+- [GetComponentType()](#icomponent-getcomponenttype)
+- [Clone()](#icomponent-clone)
+- [Serialize()](#icomponent-serialize)
 
 ---
 <a id="syngine-defaultcomponents"></a>
@@ -44,7 +44,9 @@ enum DefaultComponents : ComponentTypeID
 | `SYN_COMPONENT_AI` | AI logic/behavior |
 | `SYN_COMPONENT_PLAYER` | Player controller |
 | `SYN_COMPONENT_CAMERA` | Camera logic |
-| `SYN_COMPONENT_LIGHT` | Lighting |
+| `SYN_COMPONENT_LIGHT_POINT` | Point light source |
+| `SYN_COMPONENT_LIGHT_DIRECTIONAL` | Sun light source |
+| `SYN_COMPONENT_LIGHT_SPOT` | Spot light source |
 | `SYN_COMPONENT_AUDIO_EMIT` | Audio source |
 | `SYN_COMPONENT_AUDIO_LISTEN` | Audio listener |
 | `SYN_COMPONENT_PARTICLE` | Particle system |
@@ -60,9 +62,9 @@ enum DefaultComponents : ComponentTypeID
 | `SYN_COMPONENT_BILLBOARD` | Billboard component |
 | `SYN_COMPONENT_COUNT` | Total number of component types |
 ---
-<a id="component-getcomponenttype"></a>
+<a id="icomponent-getcomponenttype"></a>
 
-#### **`Component::GetComponentType()`**
+#### **`IComponent::GetComponentType()`**
 
  Get the type of the component, used for identifying the component type
 
@@ -73,22 +75,22 @@ Signature:
 **Returns:** The type of the component, as defined in the Components enum
 
 ---
-<a id="component-clone"></a>
+<a id="icomponent-clone"></a>
 
-#### **`Component::Clone()`**
+#### **`IComponent::Clone()`**
 
  Clone the component, used for copying components when duplicating GameObjects or when copying components from one GameObject to another
 
 Signature:
 ```cpp
- virtual std::unique_ptr<Component> Clone() const = 0;
+ virtual std::unique_ptr<IComponent> Clone() const = 0;
 ```
 **Returns:** A unique pointer to the cloned component
 
 ---
-<a id="component-serialize"></a>
+<a id="icomponent-serialize"></a>
 
-#### **`Component::Serialize()`**
+#### **`IComponent::Serialize()`**
 
  Serialize the component to a data node
 
@@ -103,6 +105,6 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `bool` | `isEnabled` | Whether the component is enabled or not |
-| `GameObject*` | `m_owner` | The owner of the component, the GameObject it is attached to |
+| `bool` | `m_isEnabled` | Whether the component is enabled or not |
+| `GameObject*` | `m_owner` | The owner of the component, the |
 ---

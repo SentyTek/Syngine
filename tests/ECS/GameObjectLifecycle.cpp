@@ -3,15 +3,15 @@
 // │ Created 2026-06-12                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <algorithm>
-#include <memory>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include "../defines.h"
+#include "Syngine/Scene/GameObjectRegistry.h"
 
 #include <Syngine/Syngine.h>
 
@@ -25,101 +25,115 @@ using namespace Catch::Matchers;
 // copying components on GameObjects. Also tests that the Registry correctly
 // reflects component membership in its queries.
 TEST_CASE("ECS component lifecycle", "[ECS]") {
-    const auto baselineCount = Registry::GetGameObjectCount();
+    const auto baselineCount = GameObjectRegistry::GetGameObjectCount();
 
-    auto* go = new GameObject("LifecycleObject", "default", "spawned");
-    REQUIRE(Registry::GetGameObjectCount() == baselineCount + 1);
+    GameObject& go = GameObjectRegistry::CreateGameObject(
+        "LifecycleObject", "default", std::vector<std::string>{ "spawned" });
+    REQUIRE(GameObjectRegistry::GetGameObjectCount() == baselineCount + 1);
 
-    auto* transform = go->AddComponent<TransformComponent>();
+    auto* transform = go.AddComponent<TransformComponent>();
     REQUIRE(transform != nullptr);
-    REQUIRE(go->GetComponentCount() == 1);
-    REQUIRE(go->HasComponent(SYN_COMPONENT_TRANSFORM));
-    REQUIRE(go->GetComponent<TransformComponent>() == transform);
-    REQUIRE(transform->m_owner == go);
+    REQUIRE(go.GetComponentCount() == 1);
+    REQUIRE(go.HasComponent(SYN_COMPONENT_TRANSFORM));
+    REQUIRE(go.GetComponent<TransformComponent>() == transform);
+    REQUIRE(transform->_GetOwner() == &go);
 
-    REQUIRE(go->AddComponent<TransformComponent>() == nullptr);
-    REQUIRE(go->GetComponentCount() == 1);
+    REQUIRE(go.AddComponent<TransformComponent>() == nullptr);
+    REQUIRE(go.GetComponentCount() == 1);
 
-    REQUIRE(go->RemoveComponent(SYN_COMPONENT_TRANSFORM));
-    REQUIRE(!go->HasComponent(SYN_COMPONENT_TRANSFORM));
-    REQUIRE(go->GetComponent<TransformComponent>() == nullptr);
-    REQUIRE(go->GetComponentCount() == 0);
-    REQUIRE(!go->RemoveComponent(SYN_COMPONENT_TRANSFORM));
-    delete go;
+    REQUIRE(go.RemoveComponent(SYN_COMPONENT_TRANSFORM));
+    REQUIRE(!go.HasComponent(SYN_COMPONENT_TRANSFORM));
+    REQUIRE(go.GetComponent<TransformComponent>() == nullptr);
+    REQUIRE(go.GetComponentCount() == 0);
+    REQUIRE(!go.RemoveComponent(SYN_COMPONENT_TRANSFORM));
+    // GameObjectRegistry handles deletion
 }
 
 // Tests for copy construction and copy assignment of GameObjects, ensuring that
 // components are properly cloned and that the new GameObject has its own copies
 // of components rather than sharing them with the original.
 TEST_CASE("ECS registry queries reflect component membership", "[ECS]") {
-    const auto baselineCount = Registry::GetGameObjectCount();
+    SYN_STARTENGINE
+
+    const auto baselineCount = GameObjectRegistry::GetGameObjectCount();
 
     {
-        auto* transformObject = new GameObject("TransformObject", "npc", "ai");
-        auto* plainObject     = new GameObject("PlainObject", "npc", "ai");
+        auto& transformObject = GameObjectRegistry::CreateGameObject(
+            "TransformObject", "npc", std::vector<std::string>{ "ai" });
+        auto& plainObject = GameObjectRegistry::CreateGameObject(
+            "PlainObject", "npc", std::vector<std::string>{ "ai" });
 
-        auto* transform = transformObject->AddComponent<TransformComponent>();
+        auto* transform = transformObject.AddComponent<TransformComponent>();
         REQUIRE(transform != nullptr);
 
-        REQUIRE(Registry::GetGameObjectByName("TransformObject") ==
-                transformObject);
-        REQUIRE(Registry::GetGameObjectById(transformObject->GetID()) ==
-                transformObject);
+        REQUIRE(GameObjectRegistry::GetGameObjectByName("TransformObject") ==
+                &transformObject);
+        REQUIRE(GameObjectRegistry::GetGameObjectById(
+                    transformObject.GetID()) == &transformObject);
 
-        const auto byType = Registry::GetGameObjectsByType("npc");
-        REQUIRE(std::find(byType.begin(), byType.end(), transformObject) !=
+        const auto byType = GameObjectRegistry::GetGameObjectsByType("npc");
+        REQUIRE(std::find(byType.begin(), byType.end(), &transformObject) !=
                 byType.end());
-        REQUIRE(std::find(byType.begin(), byType.end(), plainObject) !=
+        REQUIRE(std::find(byType.begin(), byType.end(), &plainObject) !=
                 byType.end());
 
         const auto withTransform =
-            Registry::GetGameObjectsWithComponent(SYN_COMPONENT_TRANSFORM);
+            GameObjectRegistry::GetGameObjectsWithComponent(
+                SYN_COMPONENT_TRANSFORM);
         REQUIRE(std::find(withTransform.begin(),
                           withTransform.end(),
-                          transformObject) != withTransform.end());
+                          &transformObject) != withTransform.end());
         REQUIRE(std::find(withTransform.begin(),
                           withTransform.end(),
-                          plainObject) == withTransform.end());
-        delete transformObject;
-        delete plainObject;
+                          &plainObject) == withTransform.end());
+
+        GameObjectRegistry::RemoveGameObject(&transformObject);
+        GameObjectRegistry::RemoveGameObject(&plainObject);
+        engine.Update();
     }
 
-    REQUIRE(Registry::GetGameObjectCount() == baselineCount);
+    REQUIRE(GameObjectRegistry::GetGameObjectCount() == baselineCount);
 }
 
 // Tests for copy construction and copy assignment of GameObjects, ensuring that
 // components are properly cloned and that the new GameObject has its own copies
 // of components rather than sharing them with the original.
 TEST_CASE("ECS copy construction clones components", "[ECS]") {
-    auto* original = new GameObject("Original", "default", "root");
-    original->AddTag("gameplay");
-    original->SetActive(false);
+    SYN_STARTENGINE
 
-    auto* originalTransform = original->AddComponent<TransformComponent>();
+    auto& original = GameObjectRegistry::CreateGameObject(
+        "Original", "default", std::vector<std::string>{ "root" });
+    original.AddTag("gameplay");
+    original.SetActive(false);
+
+    auto* originalTransform = original.AddComponent<TransformComponent>();
     REQUIRE(originalTransform != nullptr);
     originalTransform->SetPosition(Syngine::Math::Vec3(4.0f, 5.0f, 6.0f));
 
-    const auto originalId = original->GetID();
+    const auto originalId = original.GetID();
 
-    GameObject copy(*original);
+    GameObject& copy = GameObjectRegistry::CloneGameObject(original);
 
     REQUIRE(copy.GetID() != originalId);
-    REQUIRE(copy.name == original->name);
-    REQUIRE(copy.type == original->type);
-    REQUIRE(copy.GetTags() == original->GetTags());
-    REQUIRE(copy.IsActive() == original->IsActive());
-    REQUIRE(copy.GetComponentCount() == original->GetComponentCount());
+    REQUIRE(copy.name == original.name + "_clone");
+    REQUIRE(copy.type == original.type);
+    REQUIRE(copy.GetTags() == original.GetTags());
+    REQUIRE(copy.IsActive() == original.IsActive());
+    REQUIRE(copy.GetComponentCount() == original.GetComponentCount());
 
     auto* copyTransform = copy.GetComponent<TransformComponent>();
     REQUIRE(copyTransform != nullptr);
     REQUIRE(copyTransform != originalTransform);
-    REQUIRE(copyTransform->m_owner == &copy);
+    REQUIRE(copyTransform->_GetOwner() == &copy);
 
     Math::Vector3 originalPosition = originalTransform->GetPosition();
-    Math::Vector3 copyPosition = copyTransform->GetPosition();
-    REQUIRE_THAT(copyPosition.x(), WithinAbs(originalPosition.x(), FLOAT_MARGIN));
-    REQUIRE_THAT(copyPosition.y(), WithinAbs(originalPosition.y(), FLOAT_MARGIN));
-    REQUIRE_THAT(copyPosition.z(), WithinAbs(originalPosition.z(), FLOAT_MARGIN));
+    Math::Vector3 copyPosition     = copyTransform->GetPosition();
+    REQUIRE_THAT(copyPosition.x(),
+                 WithinAbs(originalPosition.x(), FLOAT_MARGIN));
+    REQUIRE_THAT(copyPosition.y(),
+                 WithinAbs(originalPosition.y(), FLOAT_MARGIN));
+    REQUIRE_THAT(copyPosition.z(),
+                 WithinAbs(originalPosition.z(), FLOAT_MARGIN));
 
     copyTransform->SetPosition(Vector3(9.0f, 8.0f, 7.0f));
     REQUIRE_THAT(originalTransform->GetPosition().x(),
@@ -128,49 +142,18 @@ TEST_CASE("ECS copy construction clones components", "[ECS]") {
                  WithinAbs(5.0f, FLOAT_MARGIN));
     REQUIRE_THAT(originalTransform->GetPosition().z(),
                  WithinAbs(6.0f, FLOAT_MARGIN));
-}
 
-// Tests for copy assignment of GameObjects, ensuring that components are
-// properly cloned and that the new GameObject has its own copies of components
-// rather than sharing them with the original.
-TEST_CASE("ECS copy assignment clones components", "[ECS]") {
-    auto* source = new GameObject("Source", "default", "root");
-    source->AddTag("shared");
-    source->SetActive(false);
-
-    auto* sourceTransform = source->AddComponent<TransformComponent>();
-    REQUIRE(sourceTransform != nullptr);
-    sourceTransform->SetPosition(Vector3(2.0f, 3.0f, 4.0f));
-
-    GameObject target("Target", "default", "temporary");
-    auto* targetTransformBefore = target.AddComponent<TransformComponent>();
-    REQUIRE(targetTransformBefore != nullptr);
-    targetTransformBefore->SetPosition(Vector3(-1.0f, -2.0f, -3.0f));
-
-    target = *source;
-
-    REQUIRE(target.name == source->name);
-    REQUIRE(target.type == source->type);
-    REQUIRE(target.GetTags() == source->GetTags());
-    REQUIRE(target.IsActive() == source->IsActive());
-
-    auto* targetTransform = target.GetComponent<TransformComponent>();
-    REQUIRE(targetTransform != nullptr);
-    REQUIRE(targetTransform != sourceTransform);
-    REQUIRE(targetTransform->m_owner == &target);
-    REQUIRE_THAT(targetTransform->GetPosition().x(),
-                 WithinAbs(2.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(targetTransform->GetPosition().y(),
-                 WithinAbs(3.0f, FLOAT_MARGIN));
-    REQUIRE_THAT(targetTransform->GetPosition().z(),
-                 WithinAbs(4.0f, FLOAT_MARGIN));
+    GameObjectRegistry::RemoveGameObject(&original);
+    GameObjectRegistry::RemoveGameObject(&copy);
+    engine.Update();
 }
 
 // Tests adding and removing tags from GameObjects, as well as setting the
 // active state, and ensuring that the tags and active state are reflected
 // correctly in the GameObject's properties
 TEST_CASE("ECS tags and activation state behave predictably", "[ECS]") {
-    GameObject go("TaggedObject", "default", "player");
+    GameObject& go = GameObjectRegistry::CreateGameObject(
+        "TaggedObject", "default", std::vector<std::string>{ "player" });
 
     REQUIRE(go.IsActive());
     REQUIRE(go.HasTag("player"));
@@ -199,25 +182,27 @@ TEST_CASE("ECS tags and activation state behave predictably", "[ECS]") {
 // setting a parent correctly updates the child and parent GameObjects, and that
 // this relationship is reflected in serialization.
 TEST_CASE("ECS parenting is reflected in serialization", "[ECS]") {
-    auto parent = std::make_unique<GameObject>("Parent", "scene", "root");
-    auto child  = std::make_unique<GameObject>("Child", "scene", "leaf");
+    auto& parent = GameObjectRegistry::CreateGameObject(
+        "Parent", "scene", std::vector<std::string>{ "root" });
+    auto& child = GameObjectRegistry::CreateGameObject(
+        "Child", "scene", std::vector<std::string>{ "leaf" });
 
-    auto* parentTransform = parent->AddComponent<TransformComponent>();
-    auto* childTransform  = child->AddComponent<TransformComponent>();
+    auto* parentTransform = parent.AddComponent<TransformComponent>();
+    auto* childTransform  = child.AddComponent<TransformComponent>();
     REQUIRE(parentTransform != nullptr);
     REQUIRE(childTransform != nullptr);
 
     parentTransform->SetPosition(Math::Vector3(1.0f, 2.0f, 3.0f));
     childTransform->SetPosition(Math::Vector3(4.0f, 5.0f, 6.0f));
 
-    child->SetParent(parent.get());
+    child.SetParent(&parent);
 
-    REQUIRE(child->GetParent() == parent.get());
+    REQUIRE(child.GetParent() == &parent);
     REQUIRE(std::find(parentTransform->GetChildren().begin(),
                       parentTransform->GetChildren().end(),
                       childTransform) != parentTransform->GetChildren().end());
 
-    const auto serialized = parent->Serialize();
+    const auto serialized = parent.Serialize();
 
     REQUIRE(serialized["name"].As<std::string>() == "Parent");
     REQUIRE(serialized["type"].As<std::string>() == "scene");
@@ -230,11 +215,15 @@ TEST_CASE("ECS parenting is reflected in serialization", "[ECS]") {
     REQUIRE(serialized["children"].Size() == 1);
     REQUIRE(serialized["children"].At(0)["name"].As<std::string>() == "Child");
 
-    child->SetParent(nullptr);
-    REQUIRE(child->GetParent() == nullptr);
+    child.SetParent(nullptr);
+    REQUIRE(child.GetParent() == nullptr);
     REQUIRE(std::find(parentTransform->GetChildren().begin(),
                       parentTransform->GetChildren().end(),
                       childTransform) == parentTransform->GetChildren().end());
+}
+
+void entercb(const GameObject* obj) {
+    FAIL("Zone should not be entered when inactive");
 }
 
 // Tests that an inactive GameObject does not have its components updated during
@@ -249,20 +238,20 @@ TEST_CASE("ECS inactive GameObjects do not update components", "[ECS]") {
     // because the zone GO is inactive. We also check that the RB GO does not
     // move because it is inactive.
 
-    auto* zoneGO = new GameObject("ZoneGO", "default");
-    zoneGO->SetActive(false);
+    auto& zoneGO = GameObjectRegistry::CreateGameObject(
+        "ZoneGO", "default", std::vector<std::string>{});
+    zoneGO.SetActive(false);
     const Math::Vector3 pos(0.0f, -5.0f, 0.0f);
     const Math::Vector3 size(3.0f, 3.0f, 3.0f);
-    auto* zone = zoneGO->AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
-    zone->OnEnter = [&](GameObject* obj) {
-        FAIL("Zone should not be entered when inactive");
-    };
+    auto* zone = zoneGO.AddComponent<ZoneComponent>(ZoneShape::BOX, pos, size);
+    zone->OnEnter = entercb;
 
-    auto* rbGO = CreateRigidbodyObject();
-    rbGO->SetActive(false);
+    auto& rbGO = CreateRigidbodyObject();
+    rbGO.SetActive(false);
 
-    auto* transformGO = new GameObject("TransformGO", "default");
-    auto* transform   = transformGO->AddComponent<TransformComponent>();
+    auto& transformGO = GameObjectRegistry::CreateGameObject(
+        "TransformGO", "default", std::vector<std::string>{});
+    auto* transform = transformGO.AddComponent<TransformComponent>();
 
     // Act: Move the transform GO into the zone over several frames and check
     // that the zone is not entered and the RB GO does not move
@@ -274,13 +263,7 @@ TEST_CASE("ECS inactive GameObjects do not update components", "[ECS]") {
     }
 
     // Check that the RB GO has not moved from its initial position
-    auto* rbTransform = rbGO->GetComponent<TransformComponent>();
-    REQUIRE_THAT(rbTransform->GetPosition().y(),
-                 WithinAbs(0.0f, FLOAT_MARGIN));
+    auto* rbTransform = rbGO.GetComponent<TransformComponent>();
+    REQUIRE_THAT(rbTransform->GetPosition().y(), WithinAbs(0.0f, FLOAT_MARGIN));
     REQUIRE_THAT(transform->GetPosition().y(), WithinAbs(54.0f, FLOAT_MARGIN));
-
-    // Clean up
-    delete zoneGO;
-    delete rbGO;
-    delete transformGO;
 }

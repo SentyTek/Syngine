@@ -24,7 +24,7 @@ Manages the Lua state and scripting environment for the engine. @section Lua
 
 ### Functions: 
 
-- [_UnregisterLuaOwnedObject()](#luamanager-_unregisterluaownedobject)
+- [_UnregisterLuaCreatedObject()](#luamanager-_unregisterluacreatedobject)
 - [SafeScript()](#luamanager-safescript)
 - [SafeFile()](#luamanager-safefile)
 - [AddFunction()](#luamanager-addfunction)
@@ -62,15 +62,15 @@ enum class LuaLibs : uint32_t
 **This function has been available since:** v0.0.1
 
 ---
-<a id="luamanager-_unregisterluaownedobject"></a>
+<a id="luamanager-_unregisterluacreatedobject"></a>
 
-#### **`LuaManager::_UnregisterLuaOwnedObject()`**
+#### **`LuaManager::_UnregisterLuaCreatedObject()`**
 
  Unregister a GameObject from Lua ownership tracking (called automatically on GameObject destruction)
 
 Signature:
 ```cpp
- static void _UnregisterLuaOwnedObject(GameObject* obj);
+ static void _UnregisterLuaCreatedObject(GameObject* obj);
 ```
 **Parameters:**
 - `obj`: The GameObject to unregister

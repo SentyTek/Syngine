@@ -3,7 +3,7 @@
 // │ Created 2026-07-11                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -19,7 +19,8 @@ using namespace Catch::Matchers;
 
 // Tests for the Quaternion class in the Syngine Math library
 
-static SVec3 eulerAngles = SVec3(45.0f, 45.0f, 0.0f).toRads();;
+static SVec3 eulerAngles = SVec3(45.0f, 45.0f, 0.0f).toRads();
+;
 
 TEST_CASE("Quaternion operations", "[Math]") {
     // multiplcation
@@ -61,7 +62,8 @@ TEST_CASE("Quaternion operations", "[Math]") {
     REQUIRE_THAT(out.y(), WithinAbs(1.0f, FLOAT_MARGIN));
     REQUIRE_THAT(out.z(), WithinAbs(0.0f, FLOAT_MARGIN));
 
-    // multiplying a normalized quat by its conjugate should yield the identity quaternion
+    // multiplying a normalized quat by its conjugate should yield the identity
+    // quaternion
     SQuat q8 = q1.normalized() * q1.normalized().conjugated();
     REQUIRE_THAT(q8.x(), WithinAbs(0.0f, FLOAT_MARGIN));
     REQUIRE_THAT(q8.y(), WithinAbs(0.0f, FLOAT_MARGIN));

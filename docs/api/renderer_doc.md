@@ -6,7 +6,7 @@
 
 [See source](./../../include/Syngine/Graphics/Rendering/Renderer.h)
 
-Renderer class to manage rendering and shader programs @section Renderer
+Renderer class @section Renderer
 
 **This class has been available since:** v0.0.1. Some of its functions may have been added later, check the function documentation for details.
 
@@ -29,9 +29,6 @@ Renderer class to manage rendering and shader programs @section Renderer
 ### Functions: 
 
 - [IsReady()](#renderer-isready)
-- [SetUniform()](#renderer-setuniform)
-- [GetSunDirection()](#renderer-getsundirection)
-- [SetSunDirection()](#renderer-setsundirection)
 - [SetGizmoSize()](#renderer-setgizmosize)
 - [GetGizmoSize()](#renderer-getgizmosize)
 - [_RegisterGizmo()](#renderer-_registergizmo)
@@ -56,10 +53,9 @@ enum ViewID : bgfx::ViewId
 **Members:**
 | Name | Description |
 | --- | --- | 
-| `VIEW_SHADOW` | Shadow map rendering |
+| `VIEW_SHADOW` | Shadow map rendering (4 cascades) |
+| `4` | Passes for spot and point light shadows (up to 12 lights) |
 | `VIEW_SKY` | Skybox rendering |
-| `VIEW_GBUFFER` | G-Buffer rendering for deferred shading |
-| `VIEW_LIGHTING` | Lighting pass for deferred shading |
 | `VIEW_FORWARD` | Forward rendering pass for translucent objects |
 | `VIEW_BILLBOARD` | Billboard rendering |
 | `VIEW_DEBUG` | Debug rendering pass for debug rendering |
@@ -89,7 +85,7 @@ struct RendererConfig
 | `int` | `shadowDist` | Distance for shadow rendering |
 | `bool` | `vsync` | Whether to enable vertical sync |
 | `false` | `(only` | if DebugModes.Enabled == true) Pseudo camera is a |
-| `bool` | `useSSAO` | Whether to enable SSAO |
+| `bool` | `useSSAO` | Whether to enable SSAO (default: true) |
 | `int` | `shadowMapSize` | Size of the shadow map texture (default: 2048) |
 ---
 <a id="renderer-rendererint-width-int-height-const-rendererconfig-config"></a>
@@ -129,61 +125,6 @@ Signature:
 **Returns:** True if the renderer is ready, false otherwise
 
 **Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-<a id="renderer-setuniform"></a>
-
-#### **`Renderer::SetUniform()`**
-
- Set a uniform variable
-
-Signature:
-```cpp
- static void SetUniform(size_t id, const void* data, uint16_t num = 1);
-```
-**Parameters:**
-- `id`: The ID of the uniform variable to set, returned from RegisterUniform
-- `data`: Pointer to the data to set the uniform to
-- `num`: The number of elements to set (default is 1)
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
-<a id="renderer-getsundirection"></a>
-
-#### **`Renderer::GetSunDirection()`**
-
- Get the global sun light direction
-
-Signature:
-```cpp
- static Math::Vector3 GetSunDirection();
-```
-**Returns:** A vector3 representing the normalized sun light direction in world space
-
-**Thread Safety:** not-safe
-
----
-<a id="renderer-setsundirection"></a>
-
-#### **`Renderer::SetSunDirection()`**
-
- Set the global sun light direction
-
-**Note:** The direction should be normalized and in world space coordinates.
-
-Signature:
-```cpp
- static void SetSunDirection(const Math::Vector3& lightDir);
-```
-**Parameters:**
-- `lightDir`: A Vector3 representing the normalized sun light direction in world space
-
-**Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 

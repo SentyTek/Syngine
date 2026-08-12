@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/GameObject.h)
+[See source](./../../include/Syngine/GameObjects/GameObject.h)
 
 GameObject class representing an entity in the game world, such as a player, enemy, or item. They can have various components attached to them, such as a mesh, physics, AI, etc. @section GameObject
 
@@ -19,13 +19,12 @@ GameObject class representing an entity in the game world, such as a player, ene
 
 ### Constructors: 
 
-- [GameObject(std::string name, std::string type = "default", std::string initialTag = "")](#gameobject-gameobjectstd-string-name-std-string-type-default-std-string-initialtag)
+- [GameObject(std::string name, std::string type, std::vector<std::string> initialTags)](#gameobject-gameobjectstd-string-name-std-string-type-std-vectorstd-string-initialtags)
 - [GameObject(const Serializer::DataNode& data)](#gameobject-gameobjectconst-serializer-datanode-data)
 
 ### Functions: 
 
 - [GetID()](#gameobject-getid)
-- [_SetID()](#gameobject-_setid)
 - [IsActive()](#gameobject-isactive)
 - [SetActive()](#gameobject-setactive)
 - [GetTags()](#gameobject-gettags)
@@ -46,19 +45,22 @@ GameObject class representing an entity in the game world, such as a player, ene
 - [AddChild()](#gameobject-addchild)
 - [RemoveChild()](#gameobject-removechild)
 - [GetChildren()](#gameobject-getchildren)
+- [_SetID()](#gameobject-_setid)
 
 ---
-<a id="gameobject-gameobjectstd-string-name-std-string-type-default-std-string-initialtag"></a>
+<a id="gameobject-gameobjectstd-string-name-std-string-type-std-vectorstd-string-initialtags"></a>
 
 ## Class Constructor
 
-#### **`GameObject(std::string name, std::string type = "default", std::string initialTag = "")`**
+#### **`GameObject(std::string name, std::string type, std::vector<std::string> initialTags)`**
 
  Constructor for the GameObject class
 
+#### This function is internal use only and not intended for public use!
+
 Signature:
 ```cpp
- GameObject(std::string name, std::string type = "default", std::string initialTag = "");
+ GameObject(std::string name, std::string type, std::vector<std::string> initialTags);
 ```
 **Parameters:**
 - `name`: Name of the GameObject
@@ -74,6 +76,8 @@ Signature:
 #### **`GameObject(const Serializer::DataNode& data)`**
 
  Construct from a DataNode, used for deserialization
+
+#### This function is internal use only and not intended for public use!
 
 Signature:
 ```cpp
@@ -96,26 +100,6 @@ Signature:
  inline long GetID() noexcept;
 ```
 **Returns:** ID of the GameObject
-
-**Thread Safety:** safe
-
-**This function has been available since:** v0.0.1
-
----
-<a id="gameobject-_setid"></a>
-
-#### **`GameObject::_SetID()`**
-
- Set the ID of the GameObject
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- inline void _SetID(long id) noexcept;
-```
-**Parameters:**
-- `id`: ID of the GameObject
 
 **Thread Safety:** safe
 
@@ -310,7 +294,7 @@ Signature:
 
 Signature:
 ```cpp
- Component* GetComponent(Syngine::ComponentTypeID type) const;
+ IComponent* GetComponent(Syngine::ComponentTypeID type) const;
 ```
 **Parameters:**
 - `type`: Type of the component to get
@@ -373,7 +357,7 @@ Signature:
 
 Signature:
 ```cpp
- const std::map<ComponentTypeID, std::unique_ptr<Component>>& GetComponents() const;
+ const std::map<ComponentTypeID, std::unique_ptr<IComponent>>& GetComponents() const;
 ```
 **Returns:** Const reference to the components map
 
@@ -487,6 +471,26 @@ Signature:
 **This function has been available since:** v0.0.2
 
 ---
+<a id="gameobject-_setid"></a>
+
+#### **`GameObject::_SetID()`**
+
+ Set the ID of the GameObject
+
+#### This function is internal use only and not intended for public use!
+
+Signature:
+```cpp
+ inline void _SetID(long id) noexcept;
+```
+**Parameters:**
+- `id`: ID of the GameObject
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
 ## Member Variables
 
 | Type | Name | Description |
@@ -494,5 +498,4 @@ Signature:
 | `std::string` | `name` | Name of the GameObject, used for identification and |
 | `std::string` | `type` | Type of the GameObject, used for shaders. |
 | `std::string` | `gizmo` | Gizmo type for rendering in the editor, e.g., |
-| `std::vector<std::string>` | `tags` | Tags for grouping and identifying GameObjects |
 ---

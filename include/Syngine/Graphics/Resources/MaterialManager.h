@@ -61,7 +61,7 @@ class Material {
     std::vector<TextureParameter>
         m_textures; // Textures associated with the material
 
-    friend class RenderCore;
+    friend class RenderDirector;
     friend class MaterialManager;
     friend class MaterialInstance;
 
@@ -173,7 +173,7 @@ class MaterialInstance {
     std::vector<std::optional<MaterialParameter>> m_parameterOverrides;
     std::vector<std::optional<TextureParameter>>  m_textureOverrides;
 
-    friend class RenderCore;
+    friend class RenderDirector;
 
     /// @brief Find a material parameter by name
     /// @param paramName Name of the material parameter
@@ -518,6 +518,11 @@ class MaterialManager {
         m_materials.push_back(std::move(mat));
         return *m_materials.back().get();
     };
+
+    /// @brief Destroy all materials
+    /// @threadsafety not-safe
+    /// @since v0.0.2
+    static void DestroyAllMaterials();
 };
 
 } // namespace Syngine
