@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/Components/PlayerComponent.h)
+[See source](./../../include/Syngine/GameObjects/Components/PlayerComponent.h)
 
 PlayerComponent is responsible for handling player input, movement, and state. It manages the player's position, rotation, and interactions with the game world. @section PlayerComponent
 
@@ -100,7 +100,7 @@ Signature:
 
 Signature:
 ```cpp
- std::unique_ptr<Component> Clone() const override;
+ std::unique_ptr<IComponent> Clone() const override;
 ```
 **Returns:** A unique pointer to the cloned PlayerComponent
 
@@ -278,8 +278,6 @@ Signature:
 
 | Type | Name | Description |
 | --- | --- | --- | 
-| `constexpr` | `Syngine` | Player component type |
-| `float` | `maxPitchAngle` | Max vertical angle for the camera pitch (in degrees). |
 | `float` | `sprintMult` | Multiplier for sprinting speed. |
 | `float` | `crouchSpeed` | Speed when crouching. |
 | `float` | `moveSpeed` | Default movement speed of the player. |
@@ -287,16 +285,8 @@ Signature:
 | `float` | `standHeight` | Height of the player when standing. |
 | `float` | `crouchHeight` | Height of the player when crouching. |
 | `float` | `playerRadius` | Radius of the player collider. |
-| `float` | `slideDecay` | Rate at which sliding speed decays (Meters/second^2). |
-| `float` | `slideSpeedMult` | Multiplier for slide speed based on sprinting speed. |
-| `bool` | `enableMovement` | Whether player movement is enabled (on by default). |
-| `bool` | `enableSliding` | Whether player sliding is enabled (on by default). |
-| `bool` | `enableJumping` | Whether player jumping is enabled (on by default). |
-| `bool` | `enableSprinting` | Whether player sprinting is enabled (on by default). |
-| `bool` | `enableCrouching` | Whether player crouching is enabled (on by default). |
 | `float` | `normalFov` | Normal field of view for the camera. |
 | `float` | `sprintFov` | Field of view when sprinting. |
 | `float` | `crouchFov` | Field of view when crouching. |
 | `float` | `slideFov` | Field of view when sliding. |
-| `float` | `m_eyeHeight` | Current eye height, used for smooth crouching/standing transitions |
 ---

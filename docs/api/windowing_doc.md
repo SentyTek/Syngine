@@ -25,8 +25,8 @@ Manages all of the windowing operations @section Window @internal
 - [GetHeight()](#window-getheight)
 - [GetAspectRatio()](#window-getaspectratio)
 - [SetTitle()](#window-settitle)
-- [SetVSync()](#window-setvsync)
 - [SetWindowMode()](#window-setwindowmode)
+- [GetWindowMode()](#window-getwindowmode)
 - [SetMouseCursorVisible()](#window-setmousecursorvisible)
 - [GetMousePosition()](#window-getmouseposition)
 - [SetMousePosition()](#window-setmouseposition)
@@ -143,36 +143,35 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-<a id="window-setvsync"></a>
-
-#### **`Window::SetVSync()`**
-
- Sets the vertical sync state of the window.
-
-Signature:
-```cpp
- static void SetVSync(bool enabled);
-```
-**Parameters:**
-- `enabled`: True to enable vertical sync, false to disable it.
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
 <a id="window-setwindowmode"></a>
 
 #### **`Window::SetWindowMode()`**
 
- Sets the state of the window (bordered, fullscreen borderless, exclusive fullscreen)
+ Sets the state of the window (bordered, borderless, exclusive fullscreen)
 
 Signature:
 ```cpp
  static void SetWindowMode(int mode);
 ```
 **Parameters:**
-- `mode`: The new window mode. 0 = bordered, 1 = fullscreen borderless, 2 = exclusive fullscreen
+- `mode`: The new window mode. 0 = bordered, 1 = borderless fullscreen, 2 = exclusive fullscreen
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="window-getwindowmode"></a>
+
+#### **`Window::GetWindowMode()`**
+
+ Gets the current window mode.
+
+Signature:
+```cpp
+ static int GetWindowMode();
+```
+**Returns:** The current window mode. 0 = bordered, 1 = borderless fullscreen, 2 = exclusive fullscreen
 
 **Thread Safety:** not-safe
 
@@ -205,11 +204,9 @@ Signature:
 
 Signature:
 ```cpp
- static void GetMousePosition(float& x, float& y);
+ static Math::Vector2 GetMousePosition();
 ```
-**Parameters:**
-- `x`: A float reference to be filled in with the X position of the mouse cursor.
-- `y`: A float reference to be filled in with the Y position of the mouse cursor.
+**Returns:** A Vector2 representing the X and Y position of the mouse cursor.
 
 **Thread Safety:** not-safe
 
@@ -224,11 +221,10 @@ Signature:
 
 Signature:
 ```cpp
- static void SetMousePosition(float& x, float& y);
+ static void SetMousePosition(const Math::Vector2& position);
 ```
 **Parameters:**
-- `x`: A float reference to be filled in with the X position of the mouse cursor.
-- `y`: A float reference to be filled in with the Y position of the mouse cursor.
+- `position`: A Vector2 representing the new X and Y position of the mouse cursor.
 
 **Thread Safety:** not-safe
 

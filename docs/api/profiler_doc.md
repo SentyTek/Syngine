@@ -19,8 +19,8 @@ Profiler utility class for performance profiling. Helpful for debugging potentia
 
 ### Enums and Structs: 
 
-- [SpanEvent](#profiler-spanevent)
-- [TimerEvent](#profiler-timerevent)
+- [SpanEvent](#profilerui-spanevent)
+- [TimerEvent](#profilerui-timerevent)
 - [EventType](#profiler-eventtype)
 
 ### Functions: 
@@ -32,9 +32,9 @@ Profiler utility class for performance profiling. Helpful for debugging potentia
 - [EndTimer()](#profilerui-endtimer)
 
 ---
-<a id="profiler-spanevent"></a>
+<a id="profilerui-spanevent"></a>
 
-#### **`Profiler::SpanEvent()`**
+#### **`ProfilerUI::SpanEvent()`**
 
  Span POD struct for profiling. Contains name, start time, and end time.
 
@@ -52,9 +52,9 @@ struct SpanEvent
 | `uint8_t` | `depth` | Depth in call stack |
 | `uint8_t[10]` | `padding` | 32 byte alignment |
 ---
-<a id="profiler-timerevent"></a>
+<a id="profilerui-timerevent"></a>
 
-#### **`Profiler::TimerEvent()`**
+#### **`ProfilerUI::TimerEvent()`**
 
  Timer event struct for paired start/end events
 
@@ -178,9 +178,6 @@ Signature:
 | `uint8_t` | `depth` | Depth in call stack |
 | `uint8_t` | `padding` | 32 byte alignment |
 | `thread_local` | `std` | List of events |
-| `thread_local` | `std` | Last frame's events |
-| `thread_local` | `std` | Call stack names |
 | `thread_local` | `uint8_t` | Call stack depth |
-| `std::vector<TimerEvent>` | `m_timers` | Paired start/end events for StartTimer/EndTimer |
 | `int` | `m_nextTimerID` | Next timer ID |
 ---

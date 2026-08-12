@@ -30,19 +30,18 @@ We have several pages of documentation available. Note the API reference is auto
 - [Input](api/input_doc.md)
 - [Logger](api/logger_doc.md)
 - [Luamanager](api/luamanager_doc.md)
-- [Registry](api/registry_doc.md)
-- [Internal] [Zonemanager](api/zonemanager_doc.md)
 
-#### ECS
+#### GameObjects
 
 - [Component](api/component_doc.md)
 - [ComponentRegistry](api/componentregistry_doc.md)
 - [GameObject](api/gameobject_doc.md)
 
-#### ECS/Components
+#### GameObjects/Components
 
 - [BillboardComponent](api/billboardcomponent_doc.md)
 - [CameraComponent](api/cameracomponent_doc.md)
+- [DirectionalLightComponent](api/directionallightcomponent_doc.md)
 - [MeshComponent](api/meshcomponent_doc.md)
 - [PlayerComponent](api/playercomponent_doc.md)
 - [RigidbodyComponent](api/rigidbodycomponent_doc.md)
@@ -79,7 +78,12 @@ We have several pages of documentation available. Note the API reference is auto
 
 #### Physics
 
-- [Physics](api/physics_doc.md)
+- [Physicsmanager](api/physicsmanager_doc.md)
+
+#### Scene
+
+- [Gameobjectregistry](api/gameobjectregistry_doc.md)
+- [Internal] [Zonesystem](api/zonesystem_doc.md)
 
 #### Utils
 

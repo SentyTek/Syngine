@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/Components/ZoneComponent.h)
+[See source](./../../include/Syngine/GameObjects/Components/ZoneComponent.h)
 
 ZoneComponent is used to define an area within the game world that can be used to trigger events @section ZoneComponent
 
@@ -27,6 +27,11 @@ ZoneComponent is used to define an area within the game world that can be used t
 
 ### Functions: 
 
+- [_GetOwner()](#zonecomponent-_getowner)
+- [_AddObject()](#zonecomponent-_addobject)
+- [_HasOneTimeObject()](#zonecomponent-_hasonetimeobject)
+- [_IsTrackingObject()](#zonecomponent-_istrackingobject)
+- [_RemoveObject()](#zonecomponent-_removeobject)
 - [Clone()](#zonecomponent-clone)
 - [Serialize()](#zonecomponent-serialize)
 - [GetComponentType()](#zonecomponent-getcomponenttype)
@@ -42,10 +47,6 @@ ZoneComponent is used to define an area within the game world that can be used t
 - [IsActive()](#zonecomponent-isactive)
 - [SetActive()](#zonecomponent-setactive)
 - [IsOneShot()](#zonecomponent-isoneshot)
-- [_AddObject()](#zonecomponent-_addobject)
-- [_HasOneTimeObject()](#zonecomponent-_hasonetimeobject)
-- [_IsTrackingObject()](#zonecomponent-_istrackingobject)
-- [_RemoveObject()](#zonecomponent-_removeobject)
 - [AddTag()](#zonecomponent-addtag)
 - [RemoveTag()](#zonecomponent-removetag)
 - [HasTag()](#zonecomponent-hastag)
@@ -55,7 +56,6 @@ ZoneComponent is used to define an area within the game world that can be used t
 - [IsInZone()](#zonecomponent-isinzone-2)
 - [GetObjectsInZone()](#zonecomponent-getobjectsinzone)
 - [GetObjectsInZoneByTag()](#zonecomponent-getobjectsinzonebytag)
-- [_GetOwner()](#zonecomponent-_getowner)
 
 ---
 <a id="syngine-zoneshape"></a>
@@ -73,6 +73,109 @@ enum class ZoneShape : uint8_t
 | --- | --- | 
 | `BOX` | Axis-aligned box shape (size.x, size.y, size.z are width, |
 | `1` | Sphere shape (size.x is radius, size.y and size.z are ignored) |
+---
+<a id="zonecomponent-_getowner"></a>
+
+#### **`ZoneComponent::_GetOwner()`**
+
+ Get the owner GameObject of this zone component.
+
+#### This function is internal use only and not intended for public use!
+
+Signature:
+```cpp
+ GameObject* _GetOwner() const;
+```
+**Returns:** Pointer to the owner GameObject.
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="zonecomponent-_addobject"></a>
+
+#### **`ZoneComponent::_AddObject()`**
+
+ Add an object to the triggered list (for one-shot zones).
+
+#### This function is internal use only and not intended for public use!
+
+Signature:
+```cpp
+ void _AddObject(const GameObject* object);
+```
+**Parameters:**
+- `object`: The GameObject to add.
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="zonecomponent-_hasonetimeobject"></a>
+
+#### **`ZoneComponent::_HasOneTimeObject()`**
+
+ Check if an object is in the triggered list (for one-shot zones).
+
+#### This function is internal use only and not intended for public use!
+
+Signature:
+```cpp
+ bool _HasOneTimeObject(const GameObject* object);
+```
+**Parameters:**
+- `object`: The GameObject to check.
+
+**Returns:** True if the object is in the triggered list, false otherwise. Returns false if not a one-shot zone
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="zonecomponent-_istrackingobject"></a>
+
+#### **`ZoneComponent::_IsTrackingObject()`**
+
+ Check if an object is currently inside the zone.
+
+#### This function is internal use only and not intended for public use!
+
+Signature:
+```cpp
+ bool _IsTrackingObject(const GameObject* object) const;
+```
+**Parameters:**
+- `object`: The GameObject to check.
+
+**Returns:** True if the object is inside the zone, false otherwise.
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="zonecomponent-_removeobject"></a>
+
+#### **`ZoneComponent::_RemoveObject()`**
+
+ Remove an object from the triggered list (for one-shot zones).
+
+#### This function is internal use only and not intended for public use!
+
+Signature:
+```cpp
+ void _RemoveObject(const GameObject* object);
+```
+**Parameters:**
+- `object`: The GameObject to remove.
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
 ---
 <a id="zonecomponent-zonecomponentgameobject-owner-zoneshape-shape-const-math-vector3-pos-const-math-vector3-size-bool-oneshot-false"></a>
 
@@ -104,7 +207,7 @@ Signature:
 
 Signature:
 ```cpp
- std::unique_ptr<Component> Clone() const override;
+ std::unique_ptr<IComponent> Clone() const override;
 ```
 **Returns:** A unique pointer to the cloned ZoneComponent
 
@@ -357,90 +460,6 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-<a id="zonecomponent-_addobject"></a>
-
-#### **`ZoneComponent::_AddObject()`**
-
- Add an object to the triggered list (for one-shot zones).
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- void _AddObject(GameObject* object);
-```
-**Parameters:**
-- `object`: The GameObject to add.
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
-<a id="zonecomponent-_hasonetimeobject"></a>
-
-#### **`ZoneComponent::_HasOneTimeObject()`**
-
- Check if an object is in the triggered list (for one-shot zones).
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- bool _HasOneTimeObject(GameObject* object);
-```
-**Parameters:**
-- `object`: The GameObject to check.
-
-**Returns:** True if the object is in the triggered list, false otherwise. Returns false if not a one-shot zone
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-<a id="zonecomponent-_istrackingobject"></a>
-
-#### **`ZoneComponent::_IsTrackingObject()`**
-
- Check if an object is currently inside the zone.
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- bool _IsTrackingObject(GameObject* object) const;
-```
-**Parameters:**
-- `object`: The GameObject to check.
-
-**Returns:** True if the object is inside the zone, false otherwise.
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-<a id="zonecomponent-_removeobject"></a>
-
-#### **`ZoneComponent::_RemoveObject()`**
-
- Remove an object from the triggered list (for one-shot zones).
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- void _RemoveObject(GameObject* object);
-```
-**Parameters:**
-- `object`: The GameObject to remove.
-
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
 <a id="zonecomponent-addtag"></a>
 
 #### **`ZoneComponent::AddTag()`**
@@ -609,25 +628,6 @@ Signature:
 - `tag`: The tag to filter GameObjects.
 
 **Returns:** A vector of pointers to GameObjects inside the zone with the specified tag.
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-<a id="zonecomponent-_getowner"></a>
-
-#### **`ZoneComponent::_GetOwner()`**
-
- Get the owner GameObject of this zone component.
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- GameObject* _GetOwner() const;
-```
-**Returns:** Pointer to the owner GameObject.
 
 **Thread Safety:** read-only
 

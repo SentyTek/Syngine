@@ -382,7 +382,7 @@ Signature:
 | --- | --- | --- | 
 | `int` | `width` | Default 1080p |
 | `int` | `height` | Default 1080p |
-| `bool` | `fullscreen` | Windowed by default |
+| `int` | `windowMode` | 0 = bordered, 1 = borderless fullscreen, 2 = |
 | `float` | `brightness` | Normal brightness |
 | `bool` | `vSync` | V-Sync enabled by default |
 | `bool` | `useShadows` | Shadows enabled by default |
@@ -390,7 +390,6 @@ Signature:
 | `bool` | `useSSAO` | SSAO enabled by default |
 | `DataNode` | `customSettings` | Custom video settings as DataNode tree |
 | `float` | `masterVolume` | Master volume (0.0 to 1.0) |
-| `float[8]` | `channels` | Volume for 8 audio channels |
 | `float` | `mouseSensitivity` | Normal sensitivity |
 | `bool` | `invertY` | Y-axis not inverted by default |
 | `DataNode` | `binds` | Key bindings as a map of action -> key |
@@ -418,7 +417,7 @@ Signature:
 | `DataNode` | `rootGameObjectData` | Serialized GameObject tree (with all |
 | `nullptr` | `Pointer` | to the deserialized root GameObject (not |
 | `false` | `Indicates` | if the prefab was successfully loaded/created |
-| `void` | `WriteGameObject(const` | DataNode& node, scl::xml::XmlDocument& doc, scl::xml::XmlElem* parent) const Helper to serialize prefab |
+| `scl::xml::XmlElem*` | `parent)` | const Helper to serialize prefab |
 **This function has been available since:** v0.0.1
 
 ---
@@ -438,7 +437,7 @@ Signature:
 | `std::string` | `name` | Human-readable name of the scene |
 | `std::string` | `guid` | Unique identifier for the scene |
 | `DataNode` | `gameObjects` | Array of root GameObjects in the scene |
-| `DataNode` | `sceneSettings` | Scene-specific settings (lighting, fog, skybox, etc.) |
+| `DataNode` | `sceneSettings` | Scene-specific settings (lighting, fog, |
 | `DataNode` | `Serialize()` | const Helper to serialize scene |
 **This function has been available since:** v0.0.1
 
@@ -456,7 +455,7 @@ Signature:
 **Members:**
 | Type | Name | Description |
 | --- | --- | --- | 
-| `DataNode` | `state` | Serialized game state (player data, world state, etc. Game sets this up) |
+| `DataNode` | `state` | Serialized game state (player data, world state, |
 | `DataNode` | `Serialize()` | const Helper to serialize save data |
 **This function has been available since:** v0.0.1
 

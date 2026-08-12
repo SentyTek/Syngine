@@ -54,6 +54,7 @@ Class to manage materials and their instances @section MaterialManager
 - [MaterialExists()](#materialmanager-materialexists)
 - [GetMaterialByName()](#materialmanager-getmaterialbyname)
 - [CreateMaterial()](#materialmanager-creatematerial)
+- [DestroyAllMaterials()](#materialmanager-destroyallmaterials)
 
 ---
 <a id="syngine-materialparameter"></a>
@@ -615,6 +616,21 @@ Signature:
 
 **Returns:** Material& Reference to the newly created material
 
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.2
+
+---
+<a id="materialmanager-destroyallmaterials"></a>
+
+#### **`MaterialManager::DestroyAllMaterials()`**
+
+ Destroy all materials
+
+Signature:
+```cpp
+ static void DestroyAllMaterials();
+```
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.2

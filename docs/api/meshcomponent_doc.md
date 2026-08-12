@@ -4,7 +4,7 @@
 
 [<- Back](../index.md)
 
-[See source](./../../include/Syngine/ECS/Components/MeshComponent.h)
+[See source](./../../include/Syngine/GameObjects/Components/MeshComponent.h)
 
 Component for rendering 3D mesh models. Supports loading 3D asset files and uploading custom mesh data. @section MeshComponent
 
@@ -137,7 +137,7 @@ Signature:
 
 Signature:
 ```cpp
- std::unique_ptr<Component> Clone() const override;
+ std::unique_ptr<IComponent> Clone() const override;
 ```
 **Returns:** A unique pointer to the cloned MeshComponent
 
