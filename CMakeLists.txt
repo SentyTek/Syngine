@@ -36,6 +36,7 @@ add_library(Syngine STATIC
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
     src/Syngine/Core/LuaManager.cpp
+    src/Syngine/Core/JobSystem.cpp
 
     #Scene
     src/Syngine/Scene/ZoneSystem.cpp
@@ -84,7 +85,7 @@ endif()
 # Uncomment to enable graphics debugging.
 # This is done because programs like RenderDoc do not work if window's `dbghelp.dll` is loaded, which we use for crash handling/logging.
 # And so this macro prevents those features from being compiled in. This also disables the Syngine Profiler, which may cause compile-time errors. Use at your own risk.
-target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
+# target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
 
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
@@ -290,10 +291,10 @@ target_include_directories(Syngine
         ${CMAKE_CURRENT_LIST_DIR}/third_party/sol2
         ${CMAKE_CURRENT_LIST_DIR}/third_party/sol2/include
         ${CMAKE_CURRENT_LIST_DIR}/
+        ${CMAKE_CURRENT_LIST_DIR}/lib
     PRIVATE
         # Engine private headers/sources directory
         ${CMAKE_CURRENT_LIST_DIR}/src
-        ${CMAKE_CURRENT_LIST_DIR}/lib
 )
 
 # --- Link Libraries ---

@@ -19,6 +19,7 @@
 #include <Syngine/Graphics/Resources/ModelLoader.h>
 #include <Syngine/Physics/PhysicsManager.h>
 #include <Syngine/Utils/Profiler.h>
+#include <Syngine/Core/JobSystem.h>
 
 #include <cstdint>
 #include <memory>
@@ -225,6 +226,15 @@ class Core {
         m_fixedUpdateCallbacks.clear();
     }
 
+    static JobSystem& Jobs() {
+        if (m_instance && m_instance->m_context) {
+            return m_instance->m_context->jobSystem;
+        } else {
+            throw std::runtime_error(
+                "Core::Jobs() called before Core is initialized");
+        }
+    }
+
   private:
     struct _internal {
         // Mouse sensitivity
@@ -261,6 +271,7 @@ class Core {
         std::unique_ptr<ZoneSystem> ZoneSystem; //* Pointer to the zone manager
         std::unique_ptr<LuaManager> luaState;   //* Pointer to the Lua state
         DebugModes                  debug;      //* Debug modes flags
+        JobSystem                   jobSystem;  //* Reference to the job system
     };
 
     /// @brief Get the global App instance
@@ -373,5 +384,7 @@ class Core {
     friend class Syngine::Profiler;
 #endif
 };
+
+inline JobSystem& Jobs() { return Core::Get()->Jobs(); }
 
 } // namespace Syngine

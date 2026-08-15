@@ -96,7 +96,7 @@ void Phys::_Init() {
     // Need a job system for the physics update.
     // In the future this will be replaced with a job system from the Engine
     // itself. As well, using the engine's existing thread pool is preferred
-    int numThreads = max(1, (int)std::thread::hardware_concurrency() - 1);
+    int numThreads = std::max(1, Jobs()._GetJoltWorkers());
     mJobSystem     = new JobSystemThreadPool(
         cMaxPhysicsJobs, cMaxPhysicsBarriers, numThreads);
 
@@ -276,8 +276,6 @@ BodyID Phys::_CreateMeshBody(RVec3Arg         position,
                              const float      mass) {
     BodyInterface& bodyInterface = mPhysicsSystem.GetBodyInterface();
     if (meshData.vertices.empty() || meshData.indices.empty()) {
-        Syngine::Logger::Error(
-            "SynginePhys::CreateMeshBody: Mesh data is empty.");
         return BodyID(); // Return an invalid BodyID
     }
 
