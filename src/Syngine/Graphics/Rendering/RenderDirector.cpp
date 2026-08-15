@@ -12,6 +12,7 @@
 #include <Syngine/Graphics/Rendering/RenderDirector.h>
 #include "Syngine/GameObjects/Components/BillboardComponent.h"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
+#include "Syngine/Graphics/Resources/ShaderManager.h"
 #include "Syngine/Graphics/Resources/UniformRegistry.h"
 #include "Syngine/Scene/GameObjectRegistry.h"
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
@@ -72,25 +73,26 @@ _CreateSolidRGBA8Texture(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 } // namespace
 
 // I present to you an unholy abomination of static member definitions
-RenderDirector::RenderCoreBuffers RenderDirector::m_buffers = {
-    .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
-    .sceneColor =
+bool                              RenderDirector::m_collectedresources = false;
+RenderDirector::RenderCoreBuffers RenderDirector::m_buffers            = {
+               .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
+               .sceneColor =
         BGFX_INVALID_HANDLE, //* Color texture for scene rendering (RGBA16F)
-    .sceneDepth =
+               .sceneDepth =
         BGFX_INVALID_HANDLE, //* Depth texture for scene rendering (D24S8)
-    .sceneNormal =
+               .sceneNormal =
         BGFX_INVALID_HANDLE, //* Normal texture for scene rendering (RGBA8)
-    .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
-    .ssaoBlurHFB =
+               .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
+               .ssaoBlurHFB =
         BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (horizontal)
-    .ssaoBlurVFB =
+               .ssaoBlurVFB =
         BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (vertical)
-    .ssaoTex   = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
-    .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
-    .ssaoBlurFinal =
+               .ssaoTex   = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
+               .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
+               .ssaoBlurFinal =
         BGFX_INVALID_HANDLE, //* SSAO texture post-blur (Use this one) (R8)
-    .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
-    .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
+               .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
+               .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
 };
 
 bool RenderDirector::m_changeVsyncThisFrame      = false;
@@ -279,20 +281,12 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
                                   VIEW_BILLBOARD);
         ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_shadow", VIEW_SHADOW);
-        size_t ssao = ShaderManager::LoadShader(
+        ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao", VIEW_AO);
         ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao_blur", VIEW_AO);
         ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "tonemapping", VIEW_POSTPROCESS);
-
-        m_ssaoProgram      = ShaderManager::Get(ssao);
-        m_defaultShadowMap = UniformRegistry::_GetUniformHandle("s_shadowMap");
-        m_ssao_depthTex    = UniformRegistry::_GetUniformHandle("s_depth");
-        m_ssao_normalTex   = UniformRegistry::_GetUniformHandle("s_normal");
-        m_ssaob_ssaoTex    = UniformRegistry::_GetUniformHandle("s_ssao");
-        m_tonemap_sceneTex = UniformRegistry::_GetUniformHandle("s_sceneColor");
-        m_tonemap_ssaoTex  = UniformRegistry::_GetUniformHandle("s_ssao");
     }
 
     if (!bgfx::isValid(s_fallbackAlbedo)) {
@@ -669,6 +663,16 @@ bool RenderDirector::_SetVsync() {
         0, 0, 0, uint16_t(Renderer::width), uint16_t(Renderer::height));
 
     return true;
+}
+
+void RenderDirector::_GetRenderResources() {
+    m_ssaoProgram      = ShaderManager::Get("ssao").get();
+    m_defaultShadowMap = UniformRegistry::_GetUniformHandle("s_shadowMap");
+    m_ssao_depthTex    = UniformRegistry::_GetUniformHandle("s_depth");
+    m_ssao_normalTex   = UniformRegistry::_GetUniformHandle("s_normal");
+    m_ssaob_ssaoTex    = UniformRegistry::_GetUniformHandle("s_ssao");
+    m_tonemap_sceneTex = UniformRegistry::_GetUniformHandle("s_sceneColor");
+    m_tonemap_ssaoTex  = UniformRegistry::_GetUniformHandle("s_ssao");
 }
 
 /*
@@ -1521,9 +1525,12 @@ void RenderDirector::_SetMaterialUniforms(const Shader*                 shader,
 
     // Bind material paramters
     if (!packet.material || !packet.material->m_material) return;
+    packet.material->_SyncPendingOverrides();
     for (size_t i = 0; i < shader->m_materialParams.size(); ++i) {
         const auto& shaderDesc = shader->m_materialParams[i];
-        const auto& override   = packet.material->m_parameterOverrides[i];
+        const auto& override = i < packet.material->m_parameterOverrides.size()
+                                   ? packet.material->m_parameterOverrides[i]
+                                   : std::optional<MaterialParameter>{};
         const auto& matData =
             override ? override->storage
                      : packet.material->m_material->m_parameters[i].storage;
@@ -1551,7 +1558,8 @@ void RenderDirector::_SetMaterialUniforms(const Shader*                 shader,
         if (it == packet.material->m_material->m_textures.end()) continue;
         const size_t index = static_cast<size_t>(
             it - packet.material->m_material->m_textures.begin());
-        const auto& texture = packet.material->m_textureOverrides[index]
+        const auto& texture = index < packet.material->m_textureOverrides.size() &&
+                                      packet.material->m_textureOverrides[index]
                                   ? *packet.material->m_textureOverrides[index]
                                   : *it;
         const bgfx::TextureHandle texHandle = texture.handle;
@@ -1592,18 +1600,33 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         }
     }
 
+    auto packetJob    = Jobs().DispatchWithResult([camera] {
+        _CollectRenderPackets(camera);
+        return true;
+    });
+    bool packetsReady = false;
+
     if (!_PrepareRenderViews(camera)) {
         Renderer::_UpdateDrawID();
         return false;
     }
-    _CollectRenderPackets(camera);
+
+    bool isPendingShaders = ShaderManager::_CheckPendingShaders();
+    if (isPendingShaders) {
+        return false;
+    } else if (!m_collectedresources) {
+        RenderDirector::_GetRenderResources();
+        m_collectedresources = true;
+    }
+    MaterialManager::_CheckPendingMaterials();
 
     // Main render loop
     for (auto view : _allViews) {
         auto progList = ShaderManager::GetProgramsByViewID(view);
 
         for (auto& program : progList) {
-            if (!bgfx::isValid(program->m_program)) continue;
+            if (!program->isValid || !bgfx::isValid(program->m_program))
+                continue;
 
             // Draw logic based on view type
             switch (view) {
@@ -1613,7 +1636,13 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 }
                 break;
             case VIEW_SKY: _DrawSky(program, camera); break;
-            case VIEW_FORWARD: _DrawForward(program, camera); break;
+            case VIEW_FORWARD:
+                if (!packetsReady) {
+                    packetJob.Wait();
+                    packetsReady = true;
+                }
+                _DrawForward(program, camera);
+                break;
             case VIEW_DEBUG:
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
@@ -1622,6 +1651,10 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 // using this view ID.
                 break;
             case VIEW_BILLBOARD:
+                if (!packetsReady) {
+                    packetJob.Wait();
+                    packetsReady = true;
+                }
                 if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
                 _DrawBillboard(program, camera);
                 break;
@@ -1631,6 +1664,8 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
             }
         }
     }
+
+    if (!packetsReady) packetJob.Wait();
 
 #ifndef NDEBUG
     _DrawUIDebug(camera);

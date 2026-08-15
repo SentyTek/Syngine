@@ -669,7 +669,10 @@ void Core::_ReloadChangedAssets() {
     }
 }
 
-void Core::_ReloadShaders() { ShaderManager::ReloadAllShaders(); }
+void Core::_ReloadShaders() {
+    RenderDirector::m_collectedresources = false;
+    ShaderManager::ReloadAllShaders();
+}
 
 void Core::_ReloadLua() {
     if (m_context->luaState) {

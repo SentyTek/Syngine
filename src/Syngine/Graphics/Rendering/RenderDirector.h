@@ -239,6 +239,10 @@ class RenderDirector {
     friend class Core;
     friend class Renderer;
     friend class UniformRegistry;
+
+    static void _GetRenderResources();
+    static bool
+        m_collectedresources; //* Whether render resources have been collected
 };
 
 } // namespace Syngine

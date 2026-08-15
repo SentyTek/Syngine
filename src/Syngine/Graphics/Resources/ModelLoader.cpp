@@ -6,11 +6,13 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/Core/Core.h"
 #include <Syngine/Graphics/Resources/ModelLoader.h>
-#include "Syngine/Graphics/Resources/ShaderManager.h"
+#include <Syngine/Graphics/Resources/ShaderManager.h>
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Graphics/Resources/MaterialManager.h>
 #include <Syngine/Core/Logger.h>
+#include <Syngine/Core/JobSystem.h>
 
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
@@ -110,30 +112,50 @@ bgfx::TextureHandle _LoadAssimpTexture(const aiScene*  scene,
 } // namespace
 
 /* Base class */
-std::vector<ModelData> ModelLoader::loadedMeshes;
 
-// Returns a vector of all loaded meshes
-std::vector<ModelData>& ModelLoader::_GetMeshes() { return loadedMeshes; }
-
-// Returns a pointer to a mesh by its ID, or nullptr if not found.
-// ID param is the index in the meshes vector, returned from the LoadModel
-// function.
-ModelData* ModelLoader::_GetMeshById(int id) {
-    for (auto& mesh : loadedMeshes) {
-        if (mesh.id == id) {
-            return &mesh;
-        }
+void ModelLoader::CreateBGFXResources(ModelData& out) {
+    if (out.vertices.empty() || out.indices.empty()) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
+                              "Cannot create BGFX resources for empty mesh");
+        return;
     }
-    return nullptr; // not found
-}
 
-void ModelLoader::_UnloadAllMeshes() {
-    for (auto& mesh : loadedMeshes) {
-        for (auto& material : mesh.materials) material.Destroy();
-        bgfx::destroy(mesh.vbh);
-        bgfx::destroy(mesh.ibh);
+    // Create vertex layout
+    bgfx::VertexLayout layout;
+    layout.begin()
+        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
+        .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float) // macro UV
+        .add(bgfx::Attrib::TexCoord1, 2, bgfx::AttribType::Float) // detail UV
+        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
+        .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
+        .end(); // stride = 72 bytes
+
+    // Create vertex buffer
+    const bgfx::Memory* mem = bgfx::alloc(
+        static_cast<uint32_t>(out.vertices.size() * sizeof(Vertex)));
+    memcpy(mem->data,
+           out.vertices.data(),
+           static_cast<uint32_t>(out.vertices.size() * sizeof(Vertex)));
+    out.vbh = bgfx::createVertexBuffer(mem, layout);
+
+    // Create index buffer
+    mem = bgfx::alloc(static_cast<uint32_t>(out.indices.size()) *
+                      sizeof(uint32_t));
+    memcpy(mem->data,
+           out.indices.data(),
+           static_cast<uint32_t>(out.indices.size()) * sizeof(uint32_t));
+    out.ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
+
+    if (!bgfx::isValid(out.vbh) || !bgfx::isValid(out.ibh)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              true,
+                              "Failed to create vertex/index buffer");
+        return;
     }
-    loadedMeshes.clear();
+
+    out.valid = true; // Mark as valid after creating BGFX resources
 }
 
 /* Assimp importer */
@@ -176,12 +198,8 @@ bool AssimpLoader::_LoadModel(ModelData&         out,
             Syngine::LogLevel::ERR, true, "Failed to process model scene.");
         return false;
     }
-    modelData.id = static_cast<int>(loadedMeshes.size());
-
-    modelData.valid = true; // Mark as valid after processing
 
     Syngine::Logger::Info("Loaded mesh", true);
-    loadedMeshes.push_back(modelData);
     out = modelData;
     return true;
 }
@@ -193,6 +211,7 @@ bool AssimpLoader::processScene(ModelData&     out,
     out.vertices.clear();
     out.indices.clear();
     out.subMeshes.clear();
+    out.valid = false;
 
     std::vector<MaterialInstance> allMaterials;
     {
@@ -215,129 +234,154 @@ bool AssimpLoader::processScene(ModelData&     out,
     }
 
     // Process all meshes in scene
+    std::vector<TempProcessedMesh> tempMeshes(scene->mNumMeshes);
+    Jobs().ParallelFor(scene->mNumMeshes, [&](size_t begin, size_t end) {
+        for (uint32_t meshIdx = static_cast<uint32_t>(begin);
+             meshIdx < static_cast<uint32_t>(end);
+             ++meshIdx) {
+            aiMesh*            aiMeshPtr = scene->mMeshes[meshIdx];
+            TempProcessedMesh& tempMesh  = tempMeshes[meshIdx];
+
+            // Create submesh record for this Assimp mesh
+            SubMesh subMesh;
+            subMesh.indexCount = aiMeshPtr->mNumFaces * 3; // assuming triangles
+
+            // Map Assimp material index to our materials array
+            // Invalid indicies are 255
+            subMesh.materialIndex =
+                (aiMeshPtr->mMaterialIndex < allMaterials.size())
+                    ? static_cast<uint8_t>(aiMeshPtr->mMaterialIndex)
+                    : 255;
+
+            subMesh.name = aiMeshPtr->mName.C_Str();
+
+            // Compute AABB for this submesh
+            if (aiMeshPtr->mNumVertices > 0) {
+                aiVector3D min = aiMeshPtr->mVertices[0];
+                aiVector3D max = aiMeshPtr->mVertices[0];
+                for (uint32_t v = 1; v < aiMeshPtr->mNumVertices; ++v) {
+                    const aiVector3D& vert = aiMeshPtr->mVertices[v];
+                    min.x                  = std::min(min.x, vert.x);
+                    min.y                  = std::min(min.y, vert.y);
+                    min.z                  = std::min(min.z, vert.z);
+                    max.x                  = std::max(max.x, vert.x);
+                    max.y                  = std::max(max.y, vert.y);
+                    max.z                  = std::max(max.z, vert.z);
+                }
+                subMesh.boundMin.setX(min.x);
+                subMesh.boundMin.setY(min.y);
+                subMesh.boundMin.setZ(min.z);
+                subMesh.boundMax.setX(max.x);
+                subMesh.boundMax.setY(max.y);
+                subMesh.boundMax.setZ(max.z);
+            } else {
+                // No vertices, set empty bounds
+                subMesh.boundMin = Math::Vector3(); // No arg zeroes it out
+                subMesh.boundMax = Math::Vector3();
+            }
+            tempMesh.subMesh = subMesh;
+
+            // Process vertices for this mesh
+            tempMesh.vertices.resize(aiMeshPtr->mNumVertices);
+            for (size_t v = 0; v < aiMeshPtr->mNumVertices; v++) {
+                Vertex vertex;
+
+                const aiVector3D pos = _MirrorX(aiMeshPtr->mVertices[v]);
+
+                // Position
+                vertex.pos = _ToVector3(pos);
+
+                // Normal
+                if (aiMeshPtr->HasNormals()) {
+                    const aiVector3D n = _Normalized(aiMeshPtr->mNormals[v]);
+                    const aiVector3D nMirrored = _MirrorX(n);
+                    vertex.normal              = _ToVector3(nMirrored);
+                }
+
+                // UV0
+                if (aiMeshPtr->HasTextureCoords(0)) {
+                    vertex.uv0.setX(aiMeshPtr->mTextureCoords[0][v].x);
+                    vertex.uv0.setY(aiMeshPtr->mTextureCoords[0][v].y);
+                }
+
+                // UV1
+                if (aiMeshPtr->HasTextureCoords(1)) {
+                    vertex.uv1.setX(aiMeshPtr->mTextureCoords[1][v].x);
+                    vertex.uv1.setY(aiMeshPtr->mTextureCoords[1][v].y);
+                } else {
+                    // Fallback replicate UV0
+                    vertex.uv1 = vertex.uv0;
+                }
+
+                // Color
+                if (aiMeshPtr->HasVertexColors(0)) {
+                    const aiColor4D& col = aiMeshPtr->mColors[0][v];
+                    vertex.color         = _ToVector4(col);
+                } else {
+                    // Default to white
+                    vertex.color = Math::Vector4(1.0f);
+                }
+
+                // Tangent and bitangent
+                if (aiMeshPtr->HasTangentsAndBitangents()) {
+                    const aiVector3D t = _Normalized(aiMeshPtr->mTangents[v]);
+                    const aiVector3D b = _Normalized(aiMeshPtr->mBitangents[v]);
+
+                    const aiVector3D tMirrored = _MirrorX(t);
+                    const aiVector3D bMirrored = _MirrorX(b);
+
+                    // Store handedness in w component of tangent
+                    // sign(dot(cross(normal, tangent), bitangent))
+                    aiVector3D cross = aiVector3D(vertex.normal[0],
+                                                  vertex.normal[1],
+                                                  vertex.normal[2]) ^
+                                       tMirrored;
+
+                    vertex.tangent = Math::Vector4(
+                        tMirrored.x,
+                        tMirrored.y,
+                        tMirrored.z,
+                        (cross * bMirrored) < 0.0f ? -1.0f : 1.0f);
+                }
+
+                tempMesh.vertices[v] = vertex;
+            }
+
+            // Process indices for this mesh
+            tempMesh.indices.resize(aiMeshPtr->mNumFaces *
+                                    3); // assuming triangles
+            for (size_t f = 0; f < aiMeshPtr->mNumFaces; ++f) {
+                const aiFace& face = aiMeshPtr->mFaces[f];
+
+                if (face.mNumIndices == 3) {
+                    const size_t i = f * 3;
+
+                    tempMesh.indices[i + 0] = face.mIndices[0];
+                    tempMesh.indices[i + 1] = face.mIndices[2];
+                    tempMesh.indices[i + 2] = face.mIndices[1];
+                }
+            }
+        }
+    });
+
+    // Merge temp meshes into the output model data
     uint32_t vertexOffset = 0;
     uint32_t indexOffset  = 0;
-
-    for (uint32_t meshIdx = 0; meshIdx < scene->mNumMeshes; ++meshIdx) {
-        aiMesh* aiMeshPtr = scene->mMeshes[meshIdx];
-
-        // Create submesh record for this Assimp mesh
-        SubMesh subMesh;
+    for (const auto& tempMesh : tempMeshes) {
+        SubMesh subMesh    = tempMesh.subMesh;
         subMesh.indexStart = indexOffset;
-        subMesh.indexCount = aiMeshPtr->mNumFaces * 3; // assuming triangles
 
-        // Map Assimp material index to our materials array
-        // Invalid indicies are 255
-        subMesh.materialIndex =
-            (aiMeshPtr->mMaterialIndex < allMaterials.size())
-                ? static_cast<uint8_t>(aiMeshPtr->mMaterialIndex)
-                : 255;
-
-        subMesh.name = aiMeshPtr->mName.C_Str();
-
-        // Compute AABB for this submesh
-        if (aiMeshPtr->mNumVertices > 0) {
-            aiVector3D min = aiMeshPtr->mVertices[0];
-            aiVector3D max = aiMeshPtr->mVertices[0];
-            for (uint32_t v = 1; v < aiMeshPtr->mNumVertices; ++v) {
-                const aiVector3D& vert = aiMeshPtr->mVertices[v];
-                min.x                  = std::min(min.x, vert.x);
-                min.y                  = std::min(min.y, vert.y);
-                min.z                  = std::min(min.z, vert.z);
-                max.x                  = std::max(max.x, vert.x);
-                max.y                  = std::max(max.y, vert.y);
-                max.z                  = std::max(max.z, vert.z);
-            }
-            subMesh.boundMin.setX(min.x);
-            subMesh.boundMin.setY(min.y);
-            subMesh.boundMin.setZ(min.z);
-            subMesh.boundMax.setX(max.x);
-            subMesh.boundMax.setY(max.y);
-            subMesh.boundMax.setZ(max.z);
-        } else {
-            // No vertices, set empty bounds
-            subMesh.boundMin = Math::Vector3(); // No arg zeroes it out
-            subMesh.boundMax = Math::Vector3();
+        out.vertices.insert(out.vertices.end(),
+                            tempMesh.vertices.begin(),
+                            tempMesh.vertices.end());
+        out.indices.reserve(out.indices.size() + tempMesh.indices.size());
+        for (const auto& idx : tempMesh.indices) {
+            out.indices.push_back(idx + vertexOffset);
         }
         out.subMeshes.push_back(subMesh);
 
-        // Process vertices for this mesh
-        for (uint32_t v = 0; v < aiMeshPtr->mNumVertices; ++v) {
-            Vertex vertex = {};
-
-            const aiVector3D pos = _MirrorX(aiMeshPtr->mVertices[v]);
-
-            // Position
-            vertex.pos = _ToVector3(pos);
-
-            // Normal
-            if (aiMeshPtr->HasNormals()) {
-                const aiVector3D n = _Normalized(aiMeshPtr->mNormals[v]);
-                const aiVector3D nMirrored = _MirrorX(n);
-                vertex.normal              = _ToVector3(nMirrored);
-            }
-
-            // UV0
-            if (aiMeshPtr->HasTextureCoords(0)) {
-                vertex.uv0.setX(aiMeshPtr->mTextureCoords[0][v].x);
-                vertex.uv0.setY(aiMeshPtr->mTextureCoords[0][v].y);
-            }
-
-            // UV1
-            if (aiMeshPtr->HasTextureCoords(1)) {
-                vertex.uv1.setX(aiMeshPtr->mTextureCoords[1][v].x);
-                vertex.uv1.setY(aiMeshPtr->mTextureCoords[1][v].y);
-            } else {
-                // Fallback replicate UV0
-                vertex.uv1 = vertex.uv0;
-            }
-
-            // Color
-            if (aiMeshPtr->HasVertexColors(0)) {
-                const aiColor4D& col = aiMeshPtr->mColors[0][v];
-                vertex.color         = _ToVector4(col);
-            } else {
-                // Default to white
-                vertex.color = Math::Vector4(1.0f);
-            }
-
-            // Tangent and bitangent
-            if (aiMeshPtr->HasTangentsAndBitangents()) {
-                const aiVector3D t = _Normalized(aiMeshPtr->mTangents[v]);
-                const aiVector3D b = _Normalized(aiMeshPtr->mBitangents[v]);
-
-                const aiVector3D tMirrored = _MirrorX(t);
-                const aiVector3D bMirrored = _MirrorX(b);
-
-                // Store handedness in w component of tangent
-                // sign(dot(cross(normal, tangent), bitangent))
-                aiVector3D cross = aiVector3D(vertex.normal[0],
-                                              vertex.normal[1],
-                                              vertex.normal[2]) ^
-                                   tMirrored;
-
-                vertex.tangent =
-                    Math::Vector4(tMirrored.x,
-                                  tMirrored.y,
-                                  tMirrored.z,
-                                  (cross * bMirrored) < 0.0f ? -1.0f : 1.0f);
-            }
-
-            out.vertices.push_back(vertex);
-        }
-
-        // Process indices for this mesh
-        for (uint32_t f = 0; f < aiMeshPtr->mNumFaces; ++f) {
-            const aiFace& face = aiMeshPtr->mFaces[f];
-            if (face.mNumIndices == 3) { // Only support triangles
-                out.indices.push_back(vertexOffset + face.mIndices[0]);
-                out.indices.push_back(vertexOffset + face.mIndices[2]);
-                out.indices.push_back(vertexOffset + face.mIndices[1]);
-            }
-        }
-
-        vertexOffset += aiMeshPtr->mNumVertices;
-        indexOffset += aiMeshPtr->mNumFaces * 3;
+        vertexOffset += static_cast<uint32_t>(tempMesh.vertices.size());
+        indexOffset += static_cast<uint32_t>(tempMesh.indices.size());
     }
 
     Math::Vector3 minBounds(std::numeric_limits<float>::max());
@@ -355,43 +399,6 @@ bool AssimpLoader::processScene(ModelData&     out,
 
     out.numSubMeshes = static_cast<uint8_t>(out.subMeshes.size());
 
-    // create bgfx vertex layout
-    bgfx::VertexLayout layout;
-    layout.begin()
-        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
-        .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float) // macro UV
-        .add(bgfx::Attrib::TexCoord1, 2, bgfx::AttribType::Float) // detail UV
-        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
-        .end(); // stride = 72 bytes
-
-    // create buffers
-    const bgfx::Memory* mem =
-        bgfx::alloc(uint32_t(out.vertices.size() * sizeof(Vertex)));
-    memcpy(
-        mem->data, out.vertices.data(), out.vertices.size() * sizeof(Vertex));
-    bgfx::VertexBufferHandle vbh = bgfx::createVertexBuffer(mem, layout);
-
-    mem = bgfx::alloc(
-        static_cast<uint32_t>(out.indices.size() * sizeof(uint32_t)));
-    memcpy(
-        mem->data, out.indices.data(), out.indices.size() * sizeof(uint32_t));
-    bgfx::IndexBufferHandle ibh =
-        bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
-
-    // checks
-    if (!bgfx::isValid(vbh) || !bgfx::isValid(ibh)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              true,
-                              "Failed to create vertex/index buffer");
-        return false;
-    }
-
-    // and output
-    out.vbh = vbh;
-    out.ibh = ibh;
-
     return true;
 }
 
@@ -399,15 +406,8 @@ bool AssimpLoader::processScene(ModelData&     out,
 bool AssimpLoader::_ReloadModel(ModelData&         out,
                                 scl::stream*       stream,
                                 const std::string& assetPath,
-                                int                id) {
-    ModelData* mesh = _GetMeshById(id);
-    if (!mesh) {
-        Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR, true, "Mesh with ID %d not found", id);
-        return false;
-    }
-    mesh->valid = false; // Mark as invalid before reloading
-
+                                int                id,
+                                bool               loadTextures) {
     Assimp::Importer importer;
     const int        flags = aiProcess_JoinIdenticalVertices |
                       aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
@@ -425,32 +425,13 @@ bool AssimpLoader::_ReloadModel(ModelData&         out,
     }
 
     ModelData temp;
-    if (!processScene(temp, scene, stream)) {
+    if (!processScene(temp, scene, stream, loadTextures)) {
         Syngine::Logger::Error("Failed to process model scene during reload.");
         return false;
     }
 
-    // Unload existing resources
-    bgfx::destroy(mesh->vbh);
-    bgfx::destroy(mesh->ibh);
-    for (auto& mat : mesh->materials) {
-        mat.Destroy();
-    }
-
-    mesh->vertices     = std::move(temp.vertices);
-    mesh->indices      = std::move(temp.indices);
-    mesh->materials    = std::move(temp.materials);
-    mesh->numMaterials = temp.numMaterials;
-    mesh->vbh          = temp.vbh;
-    mesh->ibh          = temp.ibh;
-    mesh->id =
-        static_cast<int>(loadedMeshes.size()); // Update ID to the new index
-
-    mesh->valid = true;
-
-    Syngine::Logger::LogF(
-        Syngine::LogLevel::INFO, true, "Reloaded mesh with ID %d", mesh->id);
-    out = *mesh; // Update output with reloaded data
+    temp.id = id;
+    out     = std::move(temp);
     return true;
 }
 

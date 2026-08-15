@@ -228,26 +228,31 @@ Material& MaterialManager::GetDefaultMaterialPBR() {
         existing
             ? *existing
             : MaterialManager::CreateMaterial(name, ShaderManager::Get(name));
-    mat._SetDefault("u_materialParams1",
-                    Math::Vector4(0.0f, 0.2f, 0.0f, 0.0f).data(),
-                    sizeof(Math::Vector4));
-    mat._SetDefault("u_materialParams2",
-                    Math::Vector4(0.0f, 0.0f, 0.0f, 0.0f).data(),
-                    sizeof(Math::Vector4));
-    mat._SetDefault("u_uvScale",
-                    Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f).data(),
-                    sizeof(Math::Vector4));
-    mat._SetDefault("u_baseColor",
-                    Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f).data(),
-                    sizeof(Math::Vector4));
-    mat._SetDefaultTexture("s_albedo",
-                           GetFallbackAlbedoTexture(),
-                           BGFX_SAMPLER_MIN_ANISOTROPIC,
-                           0);
-    mat._SetDefaultTexture("s_normalMap",
-                           GetFallbackNormalTexture(),
-                           BGFX_SAMPLER_MIN_ANISOTROPIC,
-                           2);
+
+    const auto initialize = [](Material& material) {
+        material._SetDefault("u_materialParams1",
+                             Math::Vector4(0.0f, 0.2f, 0.0f, 0.0f).data(),
+                             sizeof(Math::Vector4));
+        material._SetDefault("u_materialParams2",
+                             Math::Vector4(0.0f, 0.0f, 0.0f, 0.0f).data(),
+                             sizeof(Math::Vector4));
+        material._SetDefault("u_uvScale",
+                             Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f).data(),
+                             sizeof(Math::Vector4));
+        material._SetDefault("u_baseColor",
+                             Math::Vector4(1.0f, 1.0f, 1.0f, 1.0f).data(),
+                             sizeof(Math::Vector4));
+        material._SetDefaultTexture("s_albedo",
+                                    GetFallbackAlbedoTexture(),
+                                    BGFX_SAMPLER_MIN_ANISOTROPIC,
+                                    0);
+        material._SetDefaultTexture("s_normalMap",
+                                    GetFallbackNormalTexture(),
+                                    BGFX_SAMPLER_MIN_ANISOTROPIC,
+                                    2);
+    };
+
+    mat._SetDeferredInitialization(initialize);
     return mat;
 }
 

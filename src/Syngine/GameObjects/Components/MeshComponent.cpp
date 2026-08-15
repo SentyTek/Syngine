@@ -6,13 +6,13 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/Core/Core.h"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/GameObjects/ComponentRegistry.h"
 #include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/Math/Vector3.hpp"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
 #include "Syngine/Math/Vector4.hpp"
-#include "Syngine/Utils/FsUtils.h"
 #include "Syngine/GameObjects/Components/MeshComponent.h"
 #include "Syngine/GameObjects/GameObject.h"
 #include "Syngine/Utils/Profiler.h"
@@ -44,6 +44,7 @@ MeshComponent::MeshComponent(GameObject*        owner,
     this->modelData     = Syngine::ModelData();
     this->m_bundlePath  = "meshes/meshes.spk";
     this->m_texturePath = path;
+    this->m_loadTextures = loadTextures;
     this->Init(this->m_bundlePath, this->m_texturePath, loadTextures);
 }
 
@@ -55,6 +56,7 @@ MeshComponent::MeshComponent(GameObject*        owner,
     this->modelData     = Syngine::ModelData();
     this->m_bundlePath  = bundlePath;
     this->m_texturePath = texturePath;
+    this->m_loadTextures = loadTextures;
     this->Init(bundlePath, texturePath, loadTextures);
 }
 
@@ -106,9 +108,9 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     // Get the data stream from the bundle
     std::string resolvedBundlePath =
         Syngine::Internal::ResolvePath(bundlePath.c_str());
-    scl::stream meshStream =
-        Serializer::_ReadFromBundle(resolvedBundlePath, texturePath);
-    if (meshStream.size() == 0) {
+    auto meshStream = std::make_shared<scl::stream>(
+        Serializer::_ReadFromBundle(resolvedBundlePath, texturePath));
+    if (meshStream->size() == 0) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
             false,
@@ -118,16 +120,20 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
         return false; // Error loading mesh stream
     }
 
+    this->modelData       = ModelData(); // Reset model data before loading
+    this->modelData.valid = false; // Mark as invalid until loading is complete
+    this->m_loadTextures  = loadTextures;
+    this->m_isReloadingMesh = false;
+    this->m_isWaitingForMeshLoad = true;
+    this->m_aabbDirty            = true;
     // Load the mesh data from the bundle
-    AssimpLoader loader;
-    if (!loader._LoadModel(
-            this->modelData, &meshStream, texturePath, loadTextures)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              false,
-                              "Failed to load mesh from %s",
-                              texturePath.c_str());
-        return false; // Error loading mesh
-    }
+    this->m_meshLoadJob = Jobs().DispatchWithResult(
+        [meshStream, texturePath, loadTextures]() mutable {
+            ModelData    out;
+            AssimpLoader loader;
+            loader._LoadModel(out, meshStream.get(), texturePath, loadTextures);
+            return out;
+        });
 
     // For hot reloading the bundle will update, not textures specifically.
     try {
@@ -142,6 +148,25 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     }
 
     return true; // Success
+}
+
+void MeshComponent::Update(float deltaTime) {
+    if (this->m_isWaitingForMeshLoad) {
+        if (m_meshLoadJob.IsComplete()) {
+            m_isWaitingForMeshLoad = false;
+            ModelData data         = m_meshLoadJob.Get();
+            AssimpLoader::CreateBGFXResources(data);
+            if (!data.valid) {
+                m_isReloadingMesh = false;
+                return;
+            }
+            if (m_isReloadingMesh) {
+                UnloadMesh();
+            }
+            this->modelData = std::move(data);
+            m_isReloadingMesh = false;
+        }
+    }
 }
 
 bool MeshComponent::UnloadMesh() {
@@ -162,12 +187,14 @@ bool MeshComponent::UnloadMesh() {
 }
 
 bool MeshComponent::ReloadMesh() {
+    if (m_isWaitingForMeshLoad) return false;
+
     // Get the data stream from the bundle
     std::string resolvedBundlePath =
         Syngine::Internal::ResolvePath(this->m_bundlePath.c_str());
-    scl::stream meshStream =
-        Serializer::_ReadFromBundle(resolvedBundlePath, this->m_texturePath);
-    if (meshStream.size() == 0) {
+    auto meshStream = std::make_shared<scl::stream>(
+        Serializer::_ReadFromBundle(resolvedBundlePath, this->m_texturePath));
+    if (meshStream->size() == 0) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
             false,
@@ -177,22 +204,26 @@ bool MeshComponent::ReloadMesh() {
         return false; // Error loading mesh stream
     }
 
-    // Reload the mesh data from the bundle
-    AssimpLoader loader;
-    if (!loader._ReloadModel(this->modelData,
-                             &meshStream,
-                             this->m_texturePath,
-                             this->modelData.id)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              false,
-                              "Failed to reload mesh from %s",
-                              _MakeRelativeToRoot(this->m_texturePath).c_str());
-        return false; // Error reloading mesh
-    }
+    const int modelId = this->modelData.id;
+    const std::string texturePath = this->m_texturePath;
+    const bool loadTextures = this->m_loadTextures;
+    this->m_isWaitingForMeshLoad = true;
+    this->m_isReloadingMesh     = true;
+    this->m_meshLoadJob = Jobs().DispatchWithResult(
+        [meshStream, texturePath, modelId, loadTextures]() mutable {
+            ModelData    out;
+            AssimpLoader loader;
+            loader._ReloadModel(out,
+                                meshStream.get(),
+                                texturePath,
+                                modelId,
+                                loadTextures);
+            return out;
+        });
 
     try {
         this->modelData.lastWriteTime =
-            std::filesystem::last_write_time(this->m_texturePath);
+            std::filesystem::last_write_time(resolvedBundlePath);
     } catch (const std::filesystem::filesystem_error& e) {
         Syngine::Logger::LogF(Syngine::LogLevel::WARN,
                               true,
@@ -282,7 +313,8 @@ void MeshComponent::SetObjectUVScaleOverride(float uvScaleOverride) {
 bool MeshComponent::UploadMesh(std::vector<float>    vertices,
                                std::vector<uint32_t> indices,
                                Math::Vector4         baseColor) {
-    if (this->modelData.vertices.size() > 0 || this->modelData.subMeshes.size() > 0) {
+    if (this->modelData.vertices.size() > 0 ||
+        this->modelData.subMeshes.size() > 0) {
         Syngine::Logger::LogF(Syngine::LogLevel::WARN,
                               false,
                               "MeshComponent already has mesh data");
@@ -425,14 +457,15 @@ const MeshAABB& MeshComponent::GetAABB() const {
     }
 
     // Fast Cache Return
-    if (!m_aabbDirty && m_cachedTransformVersion == currentTransformVersion) {
-        return m_aabb;
+    if (!this->m_aabbDirty &&
+        this->m_cachedTransformVersion == currentTransformVersion) {
+        return this->m_aabb;
     }
 
     if (this->modelData.subMeshes.empty()) {
-        m_aabbDirty              = false;
-        m_cachedTransformVersion = currentTransformVersion;
-        return m_aabb; // Return default empty AABB
+        this->m_aabbDirty              = true;
+        this->m_cachedTransformVersion = currentTransformVersion;
+        return this->m_aabb; // Return default empty AABB
     }
 
     // Get local AABB
@@ -444,14 +477,14 @@ const MeshAABB& MeshComponent::GetAABB() const {
 
     // If no transform component, return local AABB straight up
     if (!transform) {
-        m_aabb.min         = localMin;
-        m_aabb.max         = localMax;
-        m_aabb.center      = localCenter;
-        m_aabb.halfExtents = localExtents;
+        this->m_aabb.min         = localMin;
+        this->m_aabb.max         = localMax;
+        this->m_aabb.center      = localCenter;
+        this->m_aabb.halfExtents = localExtents;
 
-        m_aabbDirty              = false;
-        m_cachedTransformVersion = currentTransformVersion;
-        return m_aabb;
+        this->m_aabbDirty              = false;
+        this->m_cachedTransformVersion = currentTransformVersion;
+        return this->m_aabb;
     }
 
     // Fast World AABB Transformation via Basis Vectors (Jim Arvo's Method)
@@ -478,15 +511,15 @@ const MeshAABB& MeshComponent::GetAABB() const {
     }
 
     // Store final world AABB
-    m_aabb.center      = worldCenter;
-    m_aabb.halfExtents = worldExtents;
-    m_aabb.min         = worldCenter - worldExtents;
-    m_aabb.max         = worldCenter + worldExtents;
+    this->m_aabb.center      = worldCenter;
+    this->m_aabb.halfExtents = worldExtents;
+    this->m_aabb.min         = worldCenter - worldExtents;
+    this->m_aabb.max         = worldCenter + worldExtents;
 
-    m_aabbDirty              = false;
-    m_cachedTransformVersion = currentTransformVersion;
+    this->m_aabbDirty              = false;
+    this->m_cachedTransformVersion = currentTransformVersion;
 
-    return m_aabb;
+    return this->m_aabb;
 }
 
 static Syngine::ComponentRegistrar s_meshRegistrar(

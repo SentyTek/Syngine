@@ -6,12 +6,14 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
+#include "Syngine/Core/Core.h"
 #include <Syngine/Graphics/Resources/ShaderManager.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
 #include <Syngine/Utils/Serializer.h>
 
 #include <bgfx/bgfx.h>
+#include <memory>
 #include <miniscl.hpp>
 
 #include <string>
@@ -20,6 +22,11 @@
 namespace Syngine {
 
 std::vector<Shader> ShaderManager::m_loadedShaders; // List of loaded shaders
+std::vector<Syngine::JobResult<ShaderManager::TempShaderData>>
+           ShaderManager::m_tempShaderData; // List of temporary shader data
+std::mutex ShaderManager::tempDataMutex;    // Mutex for thread-safe access to
+                                            // m_tempShaderData
+int ShaderManager::nextId = 0; // Unique ID for the next shader to be loaded
 
 std::vector<ShaderManager::_UniformMeta>
 ShaderManager::_parseShaderMetadata(scl::pack::Packager& packager,
@@ -439,92 +446,146 @@ bgfx::ShaderHandle ShaderManager::_LoadShaderFromMemory(const void* data,
     return bgfx::createShader(mem);
 }
 
-std::optional<Shader>
-ShaderManager::_BuildShader(const std::string&    bundlePath,
-                            const std::string&    shaderName,
-                            const Syngine::ViewID viewId) {
-
+std::optional<Shader> ShaderManager::_BuildShader(const std::string& bundlePath,
+                                                  const std::string& shaderName,
+                                                  const Syngine::ViewID viewId,
+                                                  bool synchronous) {
     // Open the bundle
-    scl::pack::Packager packager;
-    scl::path           resolvedBundlePath =
-        Internal::ResolvePath(bundlePath.c_str()).c_str();
-    if (!resolvedBundlePath.exists()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              false,
-                              "LoadShader: bundle file not found: %s",
-                              bundlePath.c_str());
-        return std::nullopt;
-    }
+    auto future = Jobs().DispatchWithResult([bundlePath = std::move(bundlePath),
+                                             shaderName = std::move(shaderName),
+                                             viewId     = std::move(viewId)]() {
+        TempShaderData tempData;
 
-    if (!packager.open(resolvedBundlePath.cstr())) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              false,
-                              "LoadShader: failed to open bundle: %s",
-                              bundlePath.c_str());
-        return std::nullopt;
-    }
+        scl::pack::Packager packager;
+        scl::path           resolvedBundlePath =
+            Internal::ResolvePath(bundlePath.c_str()).c_str();
+        if (!resolvedBundlePath.exists()) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  false,
+                                  "LoadShader: bundle file not found: %s",
+                                  bundlePath.c_str());
 
-    // Start actually loading the shader, starting with parsing the metadata
-    std::vector<ShaderManager::_UniformMeta> requestedUniforms =
-        ShaderManager::_parseShaderMetadata(packager, shaderName);
-    if (requestedUniforms.empty()) {
-        if (shaderName.starts_with("default")) {
-#ifndef NDEBUG
-            Syngine::Logger::LogF(
-                Syngine::LogLevel::FATAL,
-                false,
-                "LoadShader: failed to parse shader metadata "
-                "for default shader %s in bundle %s. Look at the log for "
-                "more "
-                "details.",
-                shaderName.c_str(),
-                bundlePath.c_str());
-#else
+            tempData.safe = false;
+            return tempData;
+        }
+
+        if (!packager.open(resolvedBundlePath.cstr())) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  false,
+                                  "LoadShader: failed to open bundle: %s",
+                                  bundlePath.c_str());
+
+            tempData.safe = false;
+            return tempData;
+        }
+
+        // Parse metadata
+        tempData.requestedUniforms =
+            ShaderManager::_parseShaderMetadata(packager, shaderName);
+        if (tempData.requestedUniforms.empty()) {
             Syngine::Logger::LogF(
                 Syngine::LogLevel::ERR,
                 false,
-                "Failed to load a default shader. Please check the log for "
-                "more details. Shader: %s",
+                "LoadShader: failed to parse shader metadata for shader %s",
                 shaderName.c_str());
-#endif
+
+            tempData.safe = false;
+            return tempData;
+        }
+
+        // Load binaries
+        scl::stream vertStream = Serializer::_ReadFromBundle(
+            bundlePath, shaderName + ".vert.bin", packager);
+        scl::stream fragStream = Serializer::_ReadFromBundle(
+            bundlePath, shaderName + ".frag.bin", packager);
+        if (vertStream.size() == 0 || fragStream.size() == 0) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  false,
+                                  "LoadShader: failed to read shader binaries "
+                                  "for shader %s",
+                                  shaderName.c_str());
+
+            tempData.safe = false;
+            return tempData;
+        }
+
+        packager.close();
+
+        // Copy streams to vectors for thread safety
+        tempData.vertStream = std::move(vertStream);
+        tempData.fragStream = std::move(fragStream);
+
+        // Resolve bindings
+        if (tempData.requestedUniforms.front().name != "none" &&
+            !ShaderManager::_resolveBindings(tempData.requestedUniforms)) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  false,
+                                  "LoadShader: failed to resolve uniform "
+                                  "bindings for shader %s",
+                                  shaderName.c_str());
+
+            tempData.safe = false;
+            return tempData;
+        }
+
+        tempData.bundlePath = bundlePath;
+        tempData.shaderName = shaderName;
+        tempData.viewId     = viewId;
+        tempData.id =
+            Get(shaderName)->id; // Get the ID of the shader being loaded
+
+        return tempData;
+    });
+
+    if (!synchronous) {
+        std::lock_guard<std::mutex> lock(tempDataMutex);
+        m_tempShaderData.push_back(std::move(future));
+    }
+
+    if (synchronous) {
+        // Wait for the job to complete and get the result
+        auto tempData = std::move(future.Get());
+        if (!tempData.safe) {
+            Syngine::Logger::LogF(
+                Syngine::LogLevel::ERR,
+                false,
+                "LoadShader: failed to build shader %s in bundle %s",
+                shaderName.c_str(),
+                bundlePath.c_str());
             return std::nullopt;
         }
-        Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR,
-            false,
-            "Failed to parse shader metadata for %s in bundle %s",
-            shaderName.c_str(),
-            bundlePath.c_str());
+
+        if (!_CreateBGFXResources(tempData)) {
+            Syngine::Logger::LogF(
+                Syngine::LogLevel::ERR,
+                false,
+                "LoadShader: failed to create BGFX resources for shader %s "
+                "in bundle %s",
+                shaderName.c_str(),
+                bundlePath.c_str());
+            return std::nullopt;
+        }
+
+        auto shader = Get(tempData.id);
+        if (!shader) {
+            Syngine::Logger::LogF(
+                Syngine::LogLevel::ERR,
+                false,
+                "LoadShader: shader ID %d disappeared while building %s",
+                tempData.id,
+                shaderName.c_str());
+            return std::nullopt;
+        }
+
+        return std::move(*shader);
+    } else {
+        // If asynchronous, return an empty optional for now. The shader will be
+        // created in the next _CheckPendingShaders() call.
         return std::nullopt;
     }
+}
 
-    // Load binaries
-    scl::stream vertStream = Serializer::_ReadFromBundle(
-        bundlePath, shaderName + ".vert.bin", packager);
-    scl::stream fragStream = Serializer::_ReadFromBundle(
-        bundlePath, shaderName + ".frag.bin", packager);
-    if (vertStream.size() == 0 || fragStream.size() == 0) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              false,
-                              "LoadShader: failed to read shader binaries "
-                              "for %s in bundle %s",
-                              shaderName.c_str(),
-                              bundlePath.c_str());
-        return std::nullopt;
-    }
-
-    // Resolve bindings
-    if (requestedUniforms.front().name != "none" &&
-        !ShaderManager::_resolveBindings(requestedUniforms)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              false,
-                              "LoadShader: failed to resolve uniform bindings "
-                              "for %s in bundle %s",
-                              shaderName.c_str(),
-                              bundlePath.c_str());
-        return std::nullopt;
-    }
-
+bool ShaderManager::_CreateBGFXResources(TempShaderData& tempData) {
     // Create uniforms
     std::vector<Shader::EngineUniform> frameUniforms;
     std::vector<Shader::EngineUniform> viewUniforms;
@@ -532,7 +593,7 @@ ShaderManager::_BuildShader(const std::string&    bundlePath,
     std::vector<Shader::EngineSampler> engineSamplers;
     std::vector<MaterialParameterDesc> materialParams;
     std::vector<TextureParameterDesc>  textureParams;
-    if (!ShaderManager::_createUniforms(requestedUniforms,
+    if (!ShaderManager::_createUniforms(tempData.requestedUniforms,
                                         frameUniforms,
                                         viewUniforms,
                                         drawUniforms,
@@ -543,56 +604,118 @@ ShaderManager::_BuildShader(const std::string&    bundlePath,
             Syngine::LogLevel::ERR,
             false,
             "LoadShader: failed to create uniforms for %s in bundle %s",
-            shaderName.c_str(),
-            bundlePath.c_str());
-        return std::nullopt;
+            tempData.shaderName.c_str(),
+            tempData.bundlePath.c_str());
+        return false;
     }
 
     // Create program
-    bgfx::ShaderHandle vs =
-        _LoadShaderFromMemory(vertStream.data(), vertStream.size());
-    bgfx::ShaderHandle fs =
-        _LoadShaderFromMemory(fragStream.data(), fragStream.size());
+    bgfx::ShaderHandle  vs = _LoadShaderFromMemory(tempData.vertStream.data(),
+                                                  tempData.vertStream.size());
+    bgfx::ShaderHandle  fs = _LoadShaderFromMemory(tempData.fragStream.data(),
+                                                  tempData.fragStream.size());
     bgfx::ProgramHandle program = bgfx::createProgram(vs, fs, true);
     if (!bgfx::isValid(program)) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
             false,
             "LoadShader: failed to create program for %s in bundle %s",
-            shaderName.c_str(),
-            bundlePath.c_str());
+            tempData.shaderName.c_str(),
+            tempData.bundlePath.c_str());
         bgfx::destroy(vs);
         bgfx::destroy(fs);
-        return std::nullopt;
+        return false;
     }
 
-    packager.close();
-    return Shader(program,
-                  bundlePath,
-                  shaderName,
+    Shader shader(program,
+                  tempData.bundlePath,
+                  tempData.shaderName,
                   frameUniforms,
                   viewUniforms,
                   drawUniforms,
                   engineSamplers,
                   materialParams,
                   textureParams,
-                  viewId);
-}
+                  tempData.viewId);
+    shader.id      = tempData.id;
+    shader.isValid = true;
 
-size_t ShaderManager::LoadShader(const std::string&    bundlePath,
-                                 const std::string&    shaderName,
-                                 const Syngine::ViewID viewId) {
-    auto shader = _BuildShader(bundlePath, shaderName, viewId);
-    if (!shader) {
-        return 0;
+    // replace shader in existing id slot
+    if (auto it = std::find_if(
+            m_loadedShaders.begin(),
+            m_loadedShaders.end(),
+            [&tempData](const Shader& s) { return s.id == tempData.id; });
+        it != m_loadedShaders.end()) {
+        *it = std::move(shader);
+    } else {
+        m_loadedShaders.push_back(std::move(shader));
     }
 
-    m_loadedShaders.push_back(std::move(*shader));
-    return m_loadedShaders.size(); // Return the new shader ID (1-based)
+    return true;
+}
+
+void ShaderManager::LoadShader(const std::string&    bundlePath,
+                               const std::string&    shaderName,
+                               const Syngine::ViewID viewId) {
+    Shader shader;
+    int    id         = nextId++;
+    shader.id         = id;
+    shader.m_viewId   = viewId;
+    shader.shaderName = shaderName;
+    shader.bundlePath = bundlePath;
+    m_loadedShaders.push_back(std::move(shader));
+    _BuildShader(bundlePath, shaderName, viewId);
+}
+
+bool ShaderManager::_CheckPendingShaders() {
+    std::lock_guard<std::mutex> lock(tempDataMutex);
+    bool                        anyCompleted = false;
+    for (auto it = m_tempShaderData.begin(); it != m_tempShaderData.end();) {
+        if (it->IsComplete()) {
+            auto tempData = std::move(it->Get());
+            if (!tempData.safe) {
+                Syngine::Logger::LogF(
+                    Syngine::LogLevel::ERR,
+                    false,
+                    "LoadShader: failed to build shader %s in bundle %s",
+                    tempData.shaderName.c_str(),
+                    tempData.bundlePath.c_str());
+                it = m_tempShaderData.erase(it);
+                continue;
+            }
+
+            if (!_CreateBGFXResources(tempData)) {
+                Syngine::Logger::LogF(
+                    Syngine::LogLevel::ERR,
+                    false,
+                    "LoadShader: failed to create BGFX resources for shader "
+                    "%s in bundle %s",
+                    tempData.shaderName.c_str(),
+                    tempData.bundlePath.c_str());
+                it = m_tempShaderData.erase(it);
+                continue;
+            }
+
+            std::shared_ptr<Shader> shaderPtr = Get(tempData.id);
+            /*Syngine::Logger::LogF(Syngine::LogLevel::INFO,
+                                  true,
+                                  "LoadShader: successfully loaded shader %s",
+                                  shaderPtr->shaderName.c_str());*/
+            anyCompleted = true;
+            it           = m_tempShaderData.erase(it);
+        } else {
+            ++it;
+        }
+    }
+    return anyCompleted;
 }
 
 bool ShaderManager::ReloadShader(size_t shaderId) {
-    if (shaderId == 0 || shaderId > m_loadedShaders.size()) {
+    auto shaderIt = std::find_if(
+        m_loadedShaders.begin(),
+        m_loadedShaders.end(),
+        [shaderId](const Shader& shader) { return shader.id == shaderId; });
+    if (shaderIt == m_loadedShaders.end()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               true,
                               "ReloadShader: invalid shader ID %zu",
@@ -600,14 +723,12 @@ bool ShaderManager::ReloadShader(size_t shaderId) {
         return false;
     }
 
-    const size_t shaderIndex = shaderId - 1;
+    const bgfx::ProgramHandle oldProgram = shaderIt->m_program;
+    const std::string         bundlePath = shaderIt->bundlePath;
+    const std::string         shaderName = shaderIt->shaderName;
+    const ViewID              viewId     = shaderIt->m_viewId;
 
-    const Shader& oldShader = m_loadedShaders[shaderIndex];
-
-    std::string bundlePath = oldShader.bundlePath;
-    std::string shaderName = oldShader.shaderName;
-
-    if (!bgfx::isValid(oldShader.m_program)) {
+    if (!bgfx::isValid(oldProgram)) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               true,
                               "ReloadShader: invalid shader ID %zu",
@@ -617,22 +738,33 @@ bool ShaderManager::ReloadShader(size_t shaderId) {
 
     // Build replacement shader first just in case it fails, so we don't lose
     // the old one
-    auto replacement = _BuildShader(
-        oldShader.bundlePath, oldShader.shaderName, oldShader.m_viewId);
+    auto replacement = _BuildShader(bundlePath, shaderName, viewId, true);
     if (!replacement) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
             true,
             "ReloadShader: failed to load new shader for %s in bundle %s",
-            oldShader.shaderName.c_str(),
-            oldShader.bundlePath.c_str());
+            shaderName.c_str(),
+            bundlePath.c_str());
         return false;
     }
 
-    const bgfx::ProgramHandle oldProgram =
-        m_loadedShaders[shaderIndex].m_program;
+    // _BuildShader has already replaced this same ID slot. Move the returned
+    // value back into it so references held by materials and the renderer
+    // continue to point at the canonical shader object.
+    shaderIt = std::find_if(
+        m_loadedShaders.begin(),
+        m_loadedShaders.end(),
+        [shaderId](const Shader& shader) { return shader.id == shaderId; });
+    if (shaderIt == m_loadedShaders.end()) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              true,
+                              "ReloadShader: shader ID %zu disappeared",
+                              shaderId);
+        return false;
+    }
+    *shaderIt = std::move(*replacement);
 
-    m_loadedShaders[shaderIndex] = std::move(*replacement);
     if (bgfx::isValid(oldProgram)) {
         bgfx::destroy(oldProgram);
     }
@@ -666,23 +798,26 @@ bool ShaderManager::UnloadShader(size_t shaderId) {
     return true;
 }
 
-Shader* ShaderManager::Get(size_t shaderId) {
-    if (shaderId == 0 || shaderId > m_loadedShaders.size()) {
+std::shared_ptr<Shader> ShaderManager::Get(size_t shaderId) {
+    auto it =
+        std::find_if(m_loadedShaders.begin(),
+                     m_loadedShaders.end(),
+                     [shaderId](const Shader& s) { return s.id == shaderId; });
+    if (it != m_loadedShaders.end()) {
+        return std::shared_ptr<Shader>(&(*it), [](Shader*) {});
+    } else {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               true,
-                              "GetShader: invalid shader ID %zu",
+                              "GetShader: shader ID %zu not found",
                               shaderId);
         return nullptr;
     }
-
-    const size_t shaderIndex = shaderId - 1;
-    return &m_loadedShaders[shaderIndex];
 }
 
-Shader* ShaderManager::Get(const std::string& shaderName) {
+std::shared_ptr<Shader> ShaderManager::Get(const std::string& shaderName) {
     for (auto& shader : m_loadedShaders) {
         if (shader.shaderName == shaderName) {
-            return &shader;
+            return std::shared_ptr<Shader>(&shader, [](Shader*) {});
         }
     }
     Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -703,14 +838,20 @@ bool ShaderManager::UnloadAllShaders() {
 }
 
 bool ShaderManager::ReloadAllShaders() {
-    for (size_t i = 0; i < m_loadedShaders.size(); ++i) {
-        if (!ReloadShader(i + 1)) { // Shader IDs are 1-based
+    std::vector<size_t> shaderIds;
+    shaderIds.reserve(m_loadedShaders.size());
+    for (const auto& shader : m_loadedShaders) {
+        shaderIds.push_back(static_cast<size_t>(shader.id));
+    }
+
+    for (const size_t shaderId : shaderIds) {
+        if (!ReloadShader(shaderId)) {
             Syngine::Logger::LogF(
                 Syngine::LogLevel::ERR,
                 true,
                 "ReloadAllShaders: failed to reload shader ID "
                 "%zu",
-                i + 1);
+                shaderId);
             return false;
         }
     }
