@@ -10,6 +10,7 @@
 #include <Syngine/Core/Logger.h>
 #include <Syngine/Scene/ZoneSystem.h>
 #include <Syngine/Graphics/Rendering/RenderDirector.h>
+#include "Syngine/Core/JobSystem.h"
 #include "Syngine/GameObjects/Components/BillboardComponent.h"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
 #include "Syngine/Graphics/Resources/ShaderManager.h"
@@ -1114,7 +1115,7 @@ void RenderDirector::_DrawForward(const Shader*    program,
     _SetViewUniforms(program);
 
     for (auto& packet : m_renderPackets) {
-        if (program->m_program.idx != packet.shader->m_program.idx)
+        if (packet.shader == nullptr || program->m_program.idx != packet.shader->m_program.idx)
             continue; // Skip if not matching program
 
         bgfx::setState(renderState | (packet.mirror ? BGFX_STATE_CULL_CW
@@ -1600,11 +1601,18 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         }
     }
 
-    auto packetJob    = Jobs().DispatchWithResult([camera] {
-        _CollectRenderPackets(camera);
-        return true;
-    });
     bool packetsReady = false;
+    auto packetJob = JobResult<bool>();
+    if (Jobs().GetWorkerCount() > 3) {
+        packetJob = Jobs().DispatchWithResult([camera] {
+            _CollectRenderPackets(camera);
+            return true;
+        });
+    } else {
+        _CollectRenderPackets(camera);
+        packetsReady = true;
+    }
+
 
     if (!_PrepareRenderViews(camera)) {
         Renderer::_UpdateDrawID();

@@ -71,10 +71,11 @@ std::string _GetAssimpFormatHint(const std::string& assetPath) {
 
 struct DecodedAssimpTexture {
     ModelData::DeferredTextureData::PayloadType payloadType =
-        ModelData::DeferredTextureData::PayloadType::Encoded;
+        ModelData::DeferredTextureData::PayloadType::RGBA8;
     std::vector<uint8_t> payload;
-    uint16_t             width  = 0;
-    uint16_t             height = 0;
+    uint16_t             width   = 0;
+    uint16_t             height  = 0;
+    bool                 hasMips = false;
     std::string          debugName;
 };
 
@@ -89,11 +90,19 @@ _DecodeAssimpTexturePayload(const aiScene* scene, const aiString& texPath) {
                 scene->GetEmbeddedTexture(texPath.C_Str())) {
             if (embedded->mHeight == 0) {
                 DecodedAssimpTexture decoded;
+                DecodedTextureData   decodedTexture;
+                if (!DecodeTextureFromMemory(
+                        reinterpret_cast<const uint8_t*>(embedded->pcData),
+                        embedded->mWidth,
+                        decodedTexture)) {
+                    return std::nullopt;
+                }
                 decoded.payloadType =
-                    ModelData::DeferredTextureData::PayloadType::Encoded;
-                decoded.payload.resize(embedded->mWidth);
-                std::memcpy(
-                    decoded.payload.data(), embedded->pcData, embedded->mWidth);
+                    ModelData::DeferredTextureData::PayloadType::RGBA8;
+                decoded.payload   = std::move(decodedTexture.payload);
+                decoded.width     = decodedTexture.width;
+                decoded.height    = decodedTexture.height;
+                decoded.hasMips   = decodedTexture.hasMips;
                 decoded.debugName = texPath.C_Str();
                 return decoded;
             }
@@ -106,6 +115,7 @@ _DecodeAssimpTexturePayload(const aiScene* scene, const aiString& texPath) {
             decoded.payload.resize(pixelCount * 4);
             decoded.width     = static_cast<uint16_t>(embedded->mWidth);
             decoded.height    = static_cast<uint16_t>(embedded->mHeight);
+            decoded.hasMips   = false;
             decoded.debugName = texPath.C_Str();
             for (uint32_t i = 0; i < pixelCount; ++i) {
                 const aiTexel& src         = embedded->pcData[i];
@@ -129,80 +139,98 @@ _CreateDeferredTexture(const ModelData::DeferredTextureData& deferred) {
         return BGFX_INVALID_HANDLE;
     }
 
-    if (deferred.payloadType ==
-        ModelData::DeferredTextureData::PayloadType::RGBA8) {
-        if (deferred.width == 0 || deferred.height == 0) {
-            return BGFX_INVALID_HANDLE;
-        }
-        return bgfx::createTexture2D(
-            deferred.width,
-            deferred.height,
-            false,
-            1,
-            bgfx::TextureFormat::RGBA8,
-            BGFX_TEXTURE_NONE,
-            bgfx::copy(deferred.payload.data(),
-                       static_cast<uint32_t>(deferred.payload.size())));
+    if (deferred.width == 0 || deferred.height == 0) {
+        return BGFX_INVALID_HANDLE;
     }
 
-    return Syngine::LoadTextureFromMemory(deferred.payload.data(),
-                                          deferred.payload.size(),
-                                          deferred.debugName.c_str());
+    return bgfx::createTexture2D(
+        deferred.width,
+        deferred.height,
+        deferred.hasMips,
+        1,
+        bgfx::TextureFormat::RGBA8,
+        BGFX_TEXTURE_NONE,
+        bgfx::copy(deferred.payload.data(),
+                   static_cast<uint32_t>(deferred.payload.size())));
 }
 
 } // namespace
 
 /* Base class */
 
-void ModelLoader::CreateBGFXResources(ModelData& out) {
+bool ModelLoader::CreateBGFXResources(ModelData& out,
+                                      uint32_t   maxTextureUploadsPerCall) {
+    if (out.valid) {
+        return true;
+    }
+
     if (out.vertices.empty() || out.indices.empty()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               false,
                               "Cannot create BGFX resources for empty mesh");
-        return;
+        return false;
     }
 
-    // Create vertex layout
-    bgfx::VertexLayout layout;
-    layout.begin()
-        .add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float, false, false)
-        .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float) // macro UV
-        .add(bgfx::Attrib::TexCoord1, 2, bgfx::AttribType::Float) // detail UV
-        .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
-        .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
-        .end(); // stride = 72 bytes
+    if (!out.gpuBuffersReady) {
+        // Create vertex layout
+        bgfx::VertexLayout layout;
+        layout.begin()
+            .add(bgfx::Attrib::Position,
+                 3,
+                 bgfx::AttribType::Float,
+                 false,
+                 false)
+            .add(bgfx::Attrib::Normal, 3, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::TexCoord0,
+                 2,
+                 bgfx::AttribType::Float) // macro UV
+            .add(bgfx::Attrib::TexCoord1,
+                 2,
+                 bgfx::AttribType::Float) // detail UV
+            .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Float)
+            .add(bgfx::Attrib::Tangent, 4, bgfx::AttribType::Float)
+            .end(); // stride = 72 bytes
 
-    // Create vertex buffer
-    const bgfx::Memory* mem = bgfx::alloc(
-        static_cast<uint32_t>(out.vertices.size() * sizeof(Vertex)));
-    memcpy(mem->data,
-           out.vertices.data(),
-           static_cast<uint32_t>(out.vertices.size() * sizeof(Vertex)));
-    out.vbh = bgfx::createVertexBuffer(mem, layout);
+        // Create vertex buffer
+        const bgfx::Memory* mem = bgfx::alloc(
+            static_cast<uint32_t>(out.vertices.size() * sizeof(Vertex)));
+        memcpy(mem->data,
+               out.vertices.data(),
+               static_cast<uint32_t>(out.vertices.size() * sizeof(Vertex)));
+        out.vbh = bgfx::createVertexBuffer(mem, layout);
 
-    // Create index buffer
-    mem = bgfx::alloc(static_cast<uint32_t>(out.indices.size()) *
-                      sizeof(uint32_t));
-    memcpy(mem->data,
-           out.indices.data(),
-           static_cast<uint32_t>(out.indices.size()) * sizeof(uint32_t));
-    out.ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
+        // Create index buffer
+        mem = bgfx::alloc(static_cast<uint32_t>(out.indices.size()) *
+                          sizeof(uint32_t));
+        memcpy(mem->data,
+               out.indices.data(),
+               static_cast<uint32_t>(out.indices.size()) * sizeof(uint32_t));
+        out.ibh = bgfx::createIndexBuffer(mem, BGFX_BUFFER_INDEX32);
 
-    if (!bgfx::isValid(out.vbh) || !bgfx::isValid(out.ibh)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              true,
-                              "Failed to create vertex/index buffer");
-        return;
+        if (!bgfx::isValid(out.vbh) || !bgfx::isValid(out.ibh)) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  true,
+                                  "Failed to create vertex/index buffer");
+            return false;
+        }
+
+        out.gpuBuffersReady = true;
     }
 
-    for (const auto& deferred : out.deferredTextures) {
+    uint32_t uploadsThisCall = 0;
+    while (out.deferredTextureUploadCursor < out.deferredTextures.size() &&
+           uploadsThisCall < maxTextureUploadsPerCall) {
+        const auto& deferred =
+            out.deferredTextures[out.deferredTextureUploadCursor];
+
         const bgfx::TextureHandle handle = _CreateDeferredTexture(deferred);
         if (!bgfx::isValid(handle)) {
             Syngine::Logger::LogF(Syngine::LogLevel::WARN,
                                   true,
                                   "Failed to create deferred texture for %s",
                                   deferred.paramName.c_str());
+            ++out.deferredTextureUploadCursor;
+            ++uploadsThisCall;
             continue;
         }
 
@@ -213,23 +241,34 @@ void ModelLoader::CreateBGFXResources(ModelData& out) {
                 "Deferred texture material index out of range: %u",
                 deferred.materialIndex);
             bgfx::destroy(handle);
+            ++out.deferredTextureUploadCursor;
+            ++uploadsThisCall;
             continue;
         }
 
         out.materials[deferred.materialIndex].SetTexture(
             deferred.paramName, handle, deferred.samplerFlags, deferred.stage);
+
+        ++out.deferredTextureUploadCursor;
+        ++uploadsThisCall;
+    }
+
+    if (out.deferredTextureUploadCursor < out.deferredTextures.size()) {
+        return false;
     }
 
     out.deferredTextures.clear();
+    out.deferredTextureUploadCursor = 0;
 
     out.valid = true; // Mark as valid after creating BGFX resources
+    return true;
 }
 
 /* Assimp importer */
 
 // Returns true if the model was loaded successfully, false otherwise
 bool AssimpLoader::_LoadModel(ModelData&         out,
-                              scl::stream*       stream,
+                              scl::stream&       stream,
                               const std::string& assetPath,
                               bool               loadTextures) {
     Assimp::Importer importer;
@@ -243,7 +282,7 @@ bool AssimpLoader::_LoadModel(ModelData&         out,
     // read file. ideally use some kind of post processing (tangents, join
     // indices, etc), but this is a simple example
     const aiScene* scene = importer.ReadFileFromMemory(
-        stream->data(), stream->size(), flags, formatHint.c_str());
+        stream.data(), stream.size(), flags, formatHint.c_str());
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->HasMeshes()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -267,19 +306,21 @@ bool AssimpLoader::_LoadModel(ModelData&         out,
     }
 
     Syngine::Logger::Info("Loaded mesh", true);
-    out = modelData;
+    out = std::move(modelData);
     return true;
 }
 
 bool AssimpLoader::processScene(ModelData&     out,
                                 const aiScene* scene,
-                                scl::stream*   meshStream,
+                                scl::stream&   meshStream,
                                 bool           loadTextures) {
     out.vertices.clear();
     out.indices.clear();
     out.subMeshes.clear();
     out.deferredTextures.clear();
-    out.valid = false;
+    out.deferredTextureUploadCursor = 0;
+    out.gpuBuffersReady             = false;
+    out.valid                       = false;
 
     std::vector<MaterialInstance> allMaterials;
     {
@@ -297,8 +338,8 @@ bool AssimpLoader::processScene(ModelData&     out,
                 MaterialManager::GetDefaultMaterialPBR().CreateInstance());
         }
 
-        out.materials    = allMaterials;
         out.numMaterials = static_cast<uint8_t>(allMaterials.size());
+        out.materials    = std::move(allMaterials);
     }
 
     // Process all meshes in scene
@@ -317,7 +358,7 @@ bool AssimpLoader::processScene(ModelData&     out,
             // Map Assimp material index to our materials array
             // Invalid indicies are 255
             subMesh.materialIndex =
-                (aiMeshPtr->mMaterialIndex < allMaterials.size())
+                (aiMeshPtr->mMaterialIndex < out.numMaterials)
                     ? static_cast<uint8_t>(aiMeshPtr->mMaterialIndex)
                     : 255;
 
@@ -446,7 +487,7 @@ bool AssimpLoader::processScene(ModelData&     out,
         for (const auto& idx : tempMesh.indices) {
             out.indices.push_back(idx + vertexOffset);
         }
-        out.subMeshes.push_back(subMesh);
+        out.subMeshes.push_back(std::move(subMesh));
 
         vertexOffset += static_cast<uint32_t>(tempMesh.vertices.size());
         indexOffset += static_cast<uint32_t>(tempMesh.indices.size());
@@ -472,7 +513,7 @@ bool AssimpLoader::processScene(ModelData&     out,
 
 // Reloads a model by its ID, returns true if successful
 bool AssimpLoader::_ReloadModel(ModelData&         out,
-                                scl::stream*       stream,
+                                scl::stream&       stream,
                                 const std::string& assetPath,
                                 int                id,
                                 bool               loadTextures) {
@@ -482,7 +523,7 @@ bool AssimpLoader::_ReloadModel(ModelData&         out,
                       aiProcess_DropNormals;
     const std::string formatHint = _GetAssimpFormatHint(assetPath);
     const aiScene*    scene      = importer.ReadFileFromMemory(
-        stream->data(), stream->size(), flags, formatHint.c_str());
+        stream.data(), stream.size(), flags, formatHint.c_str());
     if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE ||
         !scene->HasMeshes()) {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
@@ -505,12 +546,10 @@ bool AssimpLoader::_ReloadModel(ModelData&         out,
 
 MaterialInstance AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
                                                 const aiScene* scene,
-                                                scl::stream*   meshStream,
+                                                scl::stream&   meshStream,
                                                 ModelData&     out,
                                                 uint32_t       materialIndex,
                                                 bool           loadTextures) {
-    (void)meshStream;
-
     // Start with default material
     // This loads in the base parameters used by most shaders.
     bool hasTex = (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
@@ -563,6 +602,7 @@ MaterialInstance AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
             deferred.payload       = decoded->payload;
             deferred.width         = decoded->width;
             deferred.height        = decoded->height;
+            deferred.hasMips       = decoded->hasMips;
             deferred.debugName     = decoded->debugName;
             out.deferredTextures.push_back(std::move(deferred));
             return true;

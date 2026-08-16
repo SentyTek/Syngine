@@ -21,6 +21,7 @@
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
 
+#include <memory>
 #include <sol/sol.hpp>
 #include "miniscl.hpp"
 
@@ -127,11 +128,13 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     this->m_isWaitingForMeshLoad = true;
     this->m_aabbDirty            = true;
     // Load the mesh data from the bundle
-    this->m_meshLoadJob = Jobs().DispatchWithResult(
-        [meshStream, texturePath, loadTextures]() mutable {
+    this->m_meshLoadJob =
+        Jobs().DispatchWithResult([meshStream = std::move(meshStream),
+                                   texturePath,
+                                   loadTextures]() mutable {
             ModelData    out;
             AssimpLoader loader;
-            loader._LoadModel(out, meshStream.get(), texturePath, loadTextures);
+            loader._LoadModel(out, *meshStream, texturePath, loadTextures);
             return out;
         });
 
@@ -155,17 +158,19 @@ void MeshComponent::Update(float deltaTime) {
         if (m_meshLoadJob.IsComplete()) {
             m_isWaitingForMeshLoad = false;
             ModelData data         = m_meshLoadJob.Get();
-            AssimpLoader::CreateBGFXResources(data);
-            if (!data.valid) {
-                m_isReloadingMesh = false;
-                return;
-            }
             if (m_isReloadingMesh) {
                 UnloadMesh();
             }
-            this->modelData   = std::move(data);
+            this->modelData = std::move(data);
+            if (!AssimpLoader::CreateBGFXResources(this->modelData)) {
+                m_isReloadingMesh = false;
+                return;
+            }
             m_isReloadingMesh = false;
         }
+    } else if (!this->modelData.valid && !this->modelData.vertices.empty() &&
+               !this->modelData.indices.empty()) {
+        AssimpLoader::CreateBGFXResources(this->modelData);
     }
 }
 
@@ -209,12 +214,15 @@ bool MeshComponent::ReloadMesh() {
     const bool        loadTextures = this->m_loadTextures;
     this->m_isWaitingForMeshLoad   = true;
     this->m_isReloadingMesh        = true;
-    this->m_meshLoadJob            = Jobs().DispatchWithResult(
-        [meshStream, texturePath, modelId, loadTextures]() mutable {
+    this->m_meshLoadJob =
+        Jobs().DispatchWithResult([meshStream = std::move(meshStream),
+                                   texturePath,
+                                   modelId,
+                                   loadTextures]() mutable {
             ModelData    out;
             AssimpLoader loader;
             loader._ReloadModel(
-                out, meshStream.get(), texturePath, modelId, loadTextures);
+                out, *meshStream, texturePath, modelId, loadTextures);
             return out;
         });
 

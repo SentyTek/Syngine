@@ -229,7 +229,7 @@ class MeshComponent : public Syngine::IComponent {
     JobResult<ModelData> m_meshLoadJob; //* Job result for the mesh load job
 
     void                _RecalculateAABB();
-    TransformComponent* m_transform;
+    TransformComponent* m_transform = nullptr;
 
     friend class Core;
 };
