@@ -20,8 +20,6 @@
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_SUPPORT_SIMD
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_NEON
 #endif
 #include "stb_image.h"
 
@@ -131,7 +129,7 @@ bool Syngine::DecodeTextureFromMemory(const uint8_t*      data,
         mipH = std::max(1, mipH / 2);
     }
 
-    std::vector<uint8_t> packedMips;
+    std::vector<std::byte> packedMips;
     packedMips.reserve(totalBytes);
 
     std::vector<uint8_t> currentLevel(
@@ -141,7 +139,10 @@ bool Syngine::DecodeTextureFromMemory(const uint8_t*      data,
 
     for (int level = 0; level < mipCount; ++level) {
         packedMips.insert(
-            packedMips.end(), currentLevel.begin(), currentLevel.end());
+            packedMips.end(),
+            reinterpret_cast<const std::byte*>(currentLevel.data()),
+            reinterpret_cast<const std::byte*>(currentLevel.data() +
+                                               currentLevel.size()));
 
         if (level + 1 < mipCount) {
             std::vector<uint8_t> nextLevel;

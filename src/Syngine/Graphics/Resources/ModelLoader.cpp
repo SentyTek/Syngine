@@ -72,11 +72,11 @@ std::string _GetAssimpFormatHint(const std::string& assetPath) {
 struct DecodedAssimpTexture {
     ModelData::DeferredTextureData::PayloadType payloadType =
         ModelData::DeferredTextureData::PayloadType::RGBA8;
-    std::vector<uint8_t> payload;
-    uint16_t             width   = 0;
-    uint16_t             height  = 0;
-    bool                 hasMips = false;
-    std::string          debugName;
+    std::vector<std::byte> payload;
+    uint16_t               width   = 0;
+    uint16_t               height  = 0;
+    bool                   hasMips = false;
+    std::string            debugName;
 };
 
 std::optional<DecodedAssimpTexture>
@@ -119,10 +119,10 @@ _DecodeAssimpTexturePayload(const aiScene* scene, const aiString& texPath) {
             decoded.debugName = texPath.C_Str();
             for (uint32_t i = 0; i < pixelCount; ++i) {
                 const aiTexel& src         = embedded->pcData[i];
-                decoded.payload[i * 4 + 0] = src.r;
-                decoded.payload[i * 4 + 1] = src.g;
-                decoded.payload[i * 4 + 2] = src.b;
-                decoded.payload[i * 4 + 3] = src.a;
+                decoded.payload[i * 4 + 0] = static_cast<std::byte>(src.r);
+                decoded.payload[i * 4 + 1] = static_cast<std::byte>(src.g);
+                decoded.payload[i * 4 + 2] = static_cast<std::byte>(src.b);
+                decoded.payload[i * 4 + 3] = static_cast<std::byte>(src.a);
             }
 
             return decoded;

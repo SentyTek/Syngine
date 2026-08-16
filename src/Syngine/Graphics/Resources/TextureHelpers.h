@@ -17,10 +17,10 @@
 namespace Syngine {
 
 struct DecodedTextureData {
-    uint16_t             width   = 0;
-    uint16_t             height  = 0;
-    bool                 hasMips = false;
-    std::vector<uint8_t> payload;
+    uint16_t               width   = 0;
+    uint16_t               height  = 0;
+    bool                   hasMips = false;
+    std::vector<std::byte> payload;
 };
 
 /// @brief Loads a texture from memory
@@ -36,8 +36,8 @@ LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
 /// @param size Size of encoded texture data in bytes
 /// @param out Decoded output data including packed mip payload
 /// @return true if decoding succeeded, false otherwise
-bool DecodeTextureFromMemory(const uint8_t*    data,
-                             size_t            size,
+bool DecodeTextureFromMemory(const uint8_t*      data,
+                             size_t              size,
                              DecodedTextureData& out);
 
 /// @brief Loads a texture from file
