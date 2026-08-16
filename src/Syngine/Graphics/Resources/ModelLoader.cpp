@@ -20,7 +20,9 @@
 #include <assimp/postprocess.h>
 #include <miniscl.hpp>
 
+#include <algorithm>
 #include <cstdint>
+#include <optional>
 
 namespace Syngine {
 
@@ -67,46 +69,85 @@ std::string _GetAssimpFormatHint(const std::string& assetPath) {
     return ext;
 }
 
-bgfx::TextureHandle _LoadAssimpTexture(const aiScene*  scene,
-                                       const aiString& texPath) {
+struct DecodedAssimpTexture {
+    ModelData::DeferredTextureData::PayloadType payloadType =
+        ModelData::DeferredTextureData::PayloadType::Encoded;
+    std::vector<uint8_t> payload;
+    uint16_t             width  = 0;
+    uint16_t             height = 0;
+    std::string          debugName;
+};
+
+std::optional<DecodedAssimpTexture>
+_DecodeAssimpTexturePayload(const aiScene* scene, const aiString& texPath) {
     if (texPath.length == 0) {
-        return BGFX_INVALID_HANDLE;
+        return std::nullopt;
     }
 
     if (scene) {
         if (const aiTexture* embedded =
                 scene->GetEmbeddedTexture(texPath.C_Str())) {
             if (embedded->mHeight == 0) {
-                return Syngine::LoadTextureFromMemory(
-                    reinterpret_cast<const uint8_t*>(embedded->pcData),
-                    embedded->mWidth,
-                    texPath.C_Str());
+                DecodedAssimpTexture decoded;
+                decoded.payloadType =
+                    ModelData::DeferredTextureData::PayloadType::Encoded;
+                decoded.payload.resize(embedded->mWidth);
+                std::memcpy(
+                    decoded.payload.data(), embedded->pcData, embedded->mWidth);
+                decoded.debugName = texPath.C_Str();
+                return decoded;
             }
 
             // Assimp stores raw textures as aiTexel (BGRA8); convert to RGBA8.
             const uint32_t pixelCount = embedded->mWidth * embedded->mHeight;
-            std::vector<uint8_t> rgba(pixelCount * 4);
+            DecodedAssimpTexture decoded;
+            decoded.payloadType =
+                ModelData::DeferredTextureData::PayloadType::RGBA8;
+            decoded.payload.resize(pixelCount * 4);
+            decoded.width     = static_cast<uint16_t>(embedded->mWidth);
+            decoded.height    = static_cast<uint16_t>(embedded->mHeight);
+            decoded.debugName = texPath.C_Str();
             for (uint32_t i = 0; i < pixelCount; ++i) {
-                const aiTexel& src = embedded->pcData[i];
-                rgba[i * 4 + 0]    = src.r;
-                rgba[i * 4 + 1]    = src.g;
-                rgba[i * 4 + 2]    = src.b;
-                rgba[i * 4 + 3]    = src.a;
+                const aiTexel& src         = embedded->pcData[i];
+                decoded.payload[i * 4 + 0] = src.r;
+                decoded.payload[i * 4 + 1] = src.g;
+                decoded.payload[i * 4 + 2] = src.b;
+                decoded.payload[i * 4 + 3] = src.a;
             }
 
-            return bgfx::createTexture2D(
-                static_cast<uint16_t>(embedded->mWidth),
-                static_cast<uint16_t>(embedded->mHeight),
-                false,
-                1,
-                bgfx::TextureFormat::RGBA8,
-                BGFX_TEXTURE_NONE,
-                bgfx::copy(rgba.data(), static_cast<uint32_t>(rgba.size())));
+            return decoded;
         }
     }
 
     // Textures should always be in the glb files.
-    return BGFX_INVALID_HANDLE;
+    return std::nullopt;
+}
+
+bgfx::TextureHandle
+_CreateDeferredTexture(const ModelData::DeferredTextureData& deferred) {
+    if (deferred.payload.empty()) {
+        return BGFX_INVALID_HANDLE;
+    }
+
+    if (deferred.payloadType ==
+        ModelData::DeferredTextureData::PayloadType::RGBA8) {
+        if (deferred.width == 0 || deferred.height == 0) {
+            return BGFX_INVALID_HANDLE;
+        }
+        return bgfx::createTexture2D(
+            deferred.width,
+            deferred.height,
+            false,
+            1,
+            bgfx::TextureFormat::RGBA8,
+            BGFX_TEXTURE_NONE,
+            bgfx::copy(deferred.payload.data(),
+                       static_cast<uint32_t>(deferred.payload.size())));
+    }
+
+    return Syngine::LoadTextureFromMemory(deferred.payload.data(),
+                                          deferred.payload.size(),
+                                          deferred.debugName.c_str());
 }
 
 } // namespace
@@ -154,6 +195,32 @@ void ModelLoader::CreateBGFXResources(ModelData& out) {
                               "Failed to create vertex/index buffer");
         return;
     }
+
+    for (const auto& deferred : out.deferredTextures) {
+        const bgfx::TextureHandle handle = _CreateDeferredTexture(deferred);
+        if (!bgfx::isValid(handle)) {
+            Syngine::Logger::LogF(Syngine::LogLevel::WARN,
+                                  true,
+                                  "Failed to create deferred texture for %s",
+                                  deferred.paramName.c_str());
+            continue;
+        }
+
+        if (deferred.materialIndex >= out.materials.size()) {
+            Syngine::Logger::LogF(
+                Syngine::LogLevel::WARN,
+                true,
+                "Deferred texture material index out of range: %u",
+                deferred.materialIndex);
+            bgfx::destroy(handle);
+            continue;
+        }
+
+        out.materials[deferred.materialIndex].SetTexture(
+            deferred.paramName, handle, deferred.samplerFlags, deferred.stage);
+    }
+
+    out.deferredTextures.clear();
 
     out.valid = true; // Mark as valid after creating BGFX resources
 }
@@ -211,6 +278,7 @@ bool AssimpLoader::processScene(ModelData&     out,
     out.vertices.clear();
     out.indices.clear();
     out.subMeshes.clear();
+    out.deferredTextures.clear();
     out.valid = false;
 
     std::vector<MaterialInstance> allMaterials;
@@ -218,8 +286,8 @@ bool AssimpLoader::processScene(ModelData&     out,
         // Process all aiScene materials
         for (uint32_t i = 0; i < scene->mNumMaterials; ++i) {
             aiMaterial*      aiMat = scene->mMaterials[i];
-            MaterialInstance mat =
-                _ProcessMaterial(aiMat, scene, meshStream, loadTextures);
+            MaterialInstance mat   = _ProcessMaterial(
+                aiMat, scene, meshStream, out, i, loadTextures);
             allMaterials.push_back(mat);
         }
 
@@ -438,7 +506,11 @@ bool AssimpLoader::_ReloadModel(ModelData&         out,
 MaterialInstance AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
                                                 const aiScene* scene,
                                                 scl::stream*   meshStream,
+                                                ModelData&     out,
+                                                uint32_t       materialIndex,
                                                 bool           loadTextures) {
+    (void)meshStream;
+
     // Start with default material
     // This loads in the base parameters used by most shaders.
     bool hasTex = (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0 ||
@@ -467,32 +539,44 @@ MaterialInstance AssimpLoader::_ProcessMaterial(aiMaterial*    aiMat,
 
     // Load textures if requested
     if (loadTextures) {
-        aiString texPath;
+        auto queueTexture = [&](aiTextureType      texType,
+                                const std::string& paramName,
+                                uint32_t           samplerFlags,
+                                uint8_t            stage) {
+            if (aiMat->GetTextureCount(texType) == 0) {
+                return false;
+            }
+
+            aiString texPath;
+            aiMat->GetTexture(texType, 0, &texPath);
+            const auto decoded = _DecodeAssimpTexturePayload(scene, texPath);
+            if (!decoded.has_value()) {
+                return false;
+            }
+
+            ModelData::DeferredTextureData deferred;
+            deferred.materialIndex = materialIndex;
+            deferred.paramName     = paramName;
+            deferred.samplerFlags  = samplerFlags;
+            deferred.stage         = stage;
+            deferred.payloadType   = decoded->payloadType;
+            deferred.payload       = decoded->payload;
+            deferred.width         = decoded->width;
+            deferred.height        = decoded->height;
+            deferred.debugName     = decoded->debugName;
+            out.deferredTextures.push_back(std::move(deferred));
+            return true;
+        };
+
         if (aiMat->GetTextureCount(aiTextureType_BASE_COLOR) > 0) {
-            aiMat->GetTexture(aiTextureType_BASE_COLOR, 0, &texPath);
-            const bgfx::TextureHandle albedo =
-                _LoadAssimpTexture(scene, texPath);
-            if (bgfx::isValid(albedo)) {
-                mat.SetTexture("s_albedo", albedo, 0, 0);
-            }
+            queueTexture(aiTextureType_BASE_COLOR, "s_albedo", 0, 0);
         } else if (aiMat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-            aiMat->GetTexture(aiTextureType_DIFFUSE, 0, &texPath);
-            const bgfx::TextureHandle albedo =
-                _LoadAssimpTexture(scene, texPath);
-            if (bgfx::isValid(albedo)) {
-                mat.SetTexture("s_albedo", albedo, 0, 0);
-            }
+            queueTexture(aiTextureType_DIFFUSE, "s_albedo", 0, 0);
         }
 
         // Normal map
         if (aiMat->GetTextureCount(aiTextureType_NORMALS) > 0) {
-            aiString normalPath;
-            aiMat->GetTexture(aiTextureType_NORMALS, 0, &normalPath);
-            const bgfx::TextureHandle normal =
-                _LoadAssimpTexture(scene, normalPath);
-            if (bgfx::isValid(normal)) {
-                mat.SetTexture("s_normalMap", normal, 0, 2);
-            }
+            queueTexture(aiTextureType_NORMALS, "s_normalMap", 0, 2);
         }
 
         // Height map - try to find a texture with _height suffix

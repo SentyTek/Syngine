@@ -470,19 +470,20 @@ bool Core::Update() {
     }
 
     // Run one post-physics sync per frame so render/camera-facing state tracks
-    // the latest simulation result even when physics doesn't tick this frame.
-    if (m_internal.simulate) {
-        SYN_PROFILE_SCOPE("Post Update")
-        for (auto& [id, go] : allGameObjects) {
-            if (!go.IsActive()) continue;
-            auto& components = go.GetComponents();
-            for (auto& [typeId, component] : components) {
-                if (component && component->IsEnabled()) {
-                    component->PostPhysicsUpdate();
-                }
+    // the latest simulation result even when physics doesn't tick this frame
+    // TODO: Take another look at just commenting out this branch.
+    // if (m_internal.simulate) {
+    // SYN_PROFILE_SCOPE("Post Update")
+    for (auto& [id, go] : allGameObjects) {
+        if (!go.IsActive()) continue;
+        auto& components = go.GetComponents();
+        for (auto& [typeId, component] : components) {
+            if (component && component->IsEnabled()) {
+                component->PostPhysicsUpdate();
             }
         }
     }
+    //}
 
     if (!Renderer::m_isRendering) {
         GameObjectRegistry::_RemoveQueuedObjects();

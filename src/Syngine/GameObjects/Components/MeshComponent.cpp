@@ -41,9 +41,9 @@ MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& path,
                              bool               loadTextures)
     : IComponent(owner) {
-    this->modelData     = Syngine::ModelData();
-    this->m_bundlePath  = "meshes/meshes.spk";
-    this->m_texturePath = path;
+    this->modelData      = Syngine::ModelData();
+    this->m_bundlePath   = "meshes/meshes.spk";
+    this->m_texturePath  = path;
     this->m_loadTextures = loadTextures;
     this->Init(this->m_bundlePath, this->m_texturePath, loadTextures);
 }
@@ -53,9 +53,9 @@ MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& texturePath,
                              bool               loadTextures)
     : IComponent(owner) {
-    this->modelData     = Syngine::ModelData();
-    this->m_bundlePath  = bundlePath;
-    this->m_texturePath = texturePath;
+    this->modelData      = Syngine::ModelData();
+    this->m_bundlePath   = bundlePath;
+    this->m_texturePath  = texturePath;
     this->m_loadTextures = loadTextures;
     this->Init(bundlePath, texturePath, loadTextures);
 }
@@ -123,7 +123,7 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     this->modelData       = ModelData(); // Reset model data before loading
     this->modelData.valid = false; // Mark as invalid until loading is complete
     this->m_loadTextures  = loadTextures;
-    this->m_isReloadingMesh = false;
+    this->m_isReloadingMesh      = false;
     this->m_isWaitingForMeshLoad = true;
     this->m_aabbDirty            = true;
     // Load the mesh data from the bundle
@@ -163,7 +163,7 @@ void MeshComponent::Update(float deltaTime) {
             if (m_isReloadingMesh) {
                 UnloadMesh();
             }
-            this->modelData = std::move(data);
+            this->modelData   = std::move(data);
             m_isReloadingMesh = false;
         }
     }
@@ -204,20 +204,17 @@ bool MeshComponent::ReloadMesh() {
         return false; // Error loading mesh stream
     }
 
-    const int modelId = this->modelData.id;
-    const std::string texturePath = this->m_texturePath;
-    const bool loadTextures = this->m_loadTextures;
-    this->m_isWaitingForMeshLoad = true;
-    this->m_isReloadingMesh     = true;
-    this->m_meshLoadJob = Jobs().DispatchWithResult(
+    const int         modelId      = this->modelData.id;
+    const std::string texturePath  = this->m_texturePath;
+    const bool        loadTextures = this->m_loadTextures;
+    this->m_isWaitingForMeshLoad   = true;
+    this->m_isReloadingMesh        = true;
+    this->m_meshLoadJob            = Jobs().DispatchWithResult(
         [meshStream, texturePath, modelId, loadTextures]() mutable {
             ModelData    out;
             AssimpLoader loader;
-            loader._ReloadModel(out,
-                                meshStream.get(),
-                                texturePath,
-                                modelId,
-                                loadTextures);
+            loader._ReloadModel(
+                out, meshStream.get(), texturePath, modelId, loadTextures);
             return out;
         });
 
@@ -445,27 +442,28 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
     return true;
 }
 
-const MeshAABB& MeshComponent::GetAABB() const {
-    SYN_PROFILE_FUNCTION();
+void MeshComponent::_RecalculateAABB() {
+    uint64_t currentTransformVersion = 0;
 
-    TransformComponent* transform               = nullptr;
-    uint64_t            currentTransformVersion = 0;
+    if (m_transform == nullptr) {
+        m_transform = this->m_owner->GetComponent<TransformComponent>();
+        if (!m_transform) {
+            return; // No transform available
+        }
+    }
 
-    transform = this->m_owner->GetComponent<TransformComponent>();
-    if (transform) {
-        currentTransformVersion = transform->GetVersion();
+    if (m_transform) {
+        currentTransformVersion = m_transform->GetVersion();
     }
 
     // Fast Cache Return
     if (!this->m_aabbDirty &&
         this->m_cachedTransformVersion == currentTransformVersion) {
-        return this->m_aabb;
+        return;
     }
 
     if (this->modelData.subMeshes.empty()) {
-        this->m_aabbDirty              = true;
-        this->m_cachedTransformVersion = currentTransformVersion;
-        return this->m_aabb; // Return default empty AABB
+        return; // Return default empty AABB
     }
 
     // Get local AABB
@@ -476,7 +474,7 @@ const MeshAABB& MeshComponent::GetAABB() const {
     Math::Vector3 localExtents = (localMax - localMin) * 0.5f;
 
     // If no transform component, return local AABB straight up
-    if (!transform) {
+    if (!m_transform) {
         this->m_aabb.min         = localMin;
         this->m_aabb.max         = localMax;
         this->m_aabb.center      = localCenter;
@@ -484,12 +482,12 @@ const MeshAABB& MeshComponent::GetAABB() const {
 
         this->m_aabbDirty              = false;
         this->m_cachedTransformVersion = currentTransformVersion;
-        return this->m_aabb;
+        return;
     }
 
     // Fast World AABB Transformation via Basis Vectors (Jim Arvo's Method)
     // Avoids transforming 8 individual corners or touching vertex memory.
-    const Mat4& M = transform->GetModelMatrix();
+    const Mat4& M = m_transform->GetModelMatrix();
 
     // World position from matrix translation column/row
     Math::Vector3 worldCenter = Math::Vector3(M.m(3, 0), M.m(3, 1), M.m(3, 2));
@@ -518,9 +516,11 @@ const MeshAABB& MeshComponent::GetAABB() const {
 
     this->m_aabbDirty              = false;
     this->m_cachedTransformVersion = currentTransformVersion;
-
-    return this->m_aabb;
 }
+
+const MeshAABB& MeshComponent::GetAABB() const { return this->m_aabb; }
+
+void MeshComponent::PostPhysicsUpdate() { _RecalculateAABB(); }
 
 static Syngine::ComponentRegistrar s_meshRegistrar(
     Syngine::SYN_COMPONENT_MESH,

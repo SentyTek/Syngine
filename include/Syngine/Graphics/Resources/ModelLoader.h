@@ -61,12 +61,32 @@ struct SubMesh {
 /// @section ModelLoader
 /// @since v0.0.1
 struct ModelData {
+    struct DeferredTextureData {
+        enum class PayloadType : uint8_t {
+            Encoded,
+            RGBA8,
+        };
+
+        uint32_t             materialIndex = 0;
+        std::string          paramName;
+        uint32_t             samplerFlags = 0;
+        uint8_t              stage        = 0;
+        PayloadType          payloadType  = PayloadType::Encoded;
+        std::vector<uint8_t> payload;
+        uint16_t             width  = 0;
+        uint16_t             height = 0;
+        std::string          debugName;
+    };
+
     // Base properties
     std::vector<Vertex>   vertices;  //* List of vertices in the mesh
     std::vector<uint32_t> indices;   //* List of indices for indexed drawing
     std::vector<SubMesh>  subMeshes; //* List of submeshes in the mesh
     std::vector<MaterialInstance>
-            materials;    //* Per-mesh material instances used by the mesh
+        materials; //* Per-mesh material instances used by the mesh
+    std::vector<DeferredTextureData>
+        deferredTextures; //* Texture payloads decoded on workers, uploaded on
+                          //main thread
     uint8_t numSubMeshes; //* Number of submeshes in the mesh
     uint8_t numMaterials; //* Number of materials used by the mesh
 
@@ -94,7 +114,7 @@ class ModelLoader {
     virtual bool _LoadModel(ModelData&         out,
                             scl::stream*       meshStream,
                             const std::string& assetPath,
-                            bool               loadTextures) = 0;
+                            bool               loadTextures)   = 0;
     virtual bool _ReloadModel(ModelData&         out,
                               scl::stream*       stream,
                               const std::string& assetPath,
@@ -169,6 +189,8 @@ class AssimpLoader : public ModelLoader {
     static MaterialInstance _ProcessMaterial(aiMaterial*    aiMat,
                                              const aiScene* scene,
                                              scl::stream*   meshStream,
+                                             ModelData&     out,
+                                             uint32_t       materialIndex,
                                              bool loadTextures = true);
 
     struct TempProcessedMesh {
