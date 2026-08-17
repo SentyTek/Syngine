@@ -16,6 +16,7 @@
 #include <memory>
 #include <miniscl.hpp>
 
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -446,14 +447,16 @@ bgfx::ShaderHandle ShaderManager::_LoadShaderFromMemory(const void* data,
     return bgfx::createShader(mem);
 }
 
-std::optional<Shader> ShaderManager::_BuildShader(const std::string& bundlePath,
-                                                  const std::string& shaderName,
-                                                  const Syngine::ViewID viewId,
-                                                  bool synchronous) {
+Shader* ShaderManager::_BuildShader(const std::string&    bundlePath,
+                                    const std::string&    shaderName,
+                                    const Syngine::ViewID viewId,
+                                    bool                  synchronous,
+                                    int                   id) {
     // Open the bundle
     auto future = Jobs().DispatchWithResult([bundlePath = std::move(bundlePath),
                                              shaderName = std::move(shaderName),
-                                             viewId     = std::move(viewId)]() {
+                                             viewId     = std::move(viewId),
+                                             id         = id]() {
         TempShaderData tempData;
 
         scl::pack::Packager packager;
@@ -531,8 +534,7 @@ std::optional<Shader> ShaderManager::_BuildShader(const std::string& bundlePath,
         tempData.bundlePath = bundlePath;
         tempData.shaderName = shaderName;
         tempData.viewId     = viewId;
-        tempData.id =
-            Get(shaderName)->id; // Get the ID of the shader being loaded
+        tempData.id         = id;
 
         return tempData;
     });
@@ -540,9 +542,7 @@ std::optional<Shader> ShaderManager::_BuildShader(const std::string& bundlePath,
     if (!synchronous) {
         std::lock_guard<std::mutex> lock(tempDataMutex);
         m_tempShaderData.push_back(std::move(future));
-    }
-
-    if (synchronous) {
+    } else {
         // Wait for the job to complete and get the result
         auto tempData = std::move(future.Get());
         if (!tempData.safe) {
@@ -552,7 +552,7 @@ std::optional<Shader> ShaderManager::_BuildShader(const std::string& bundlePath,
                 "LoadShader: failed to build shader %s in bundle %s",
                 shaderName.c_str(),
                 bundlePath.c_str());
-            return std::nullopt;
+            return nullptr;
         }
 
         if (!_CreateBGFXResources(tempData)) {
@@ -563,10 +563,10 @@ std::optional<Shader> ShaderManager::_BuildShader(const std::string& bundlePath,
                 "in bundle %s",
                 shaderName.c_str(),
                 bundlePath.c_str());
-            return std::nullopt;
+            return nullptr;
         }
 
-        auto shader = Get(tempData.id);
+        Shader* shader = Get(tempData.id);
         if (!shader) {
             Syngine::Logger::LogF(
                 Syngine::LogLevel::ERR,
@@ -574,15 +574,15 @@ std::optional<Shader> ShaderManager::_BuildShader(const std::string& bundlePath,
                 "LoadShader: shader ID %d disappeared while building %s",
                 tempData.id,
                 shaderName.c_str());
-            return std::nullopt;
+            return nullptr;
         }
 
-        return std::move(*shader);
-    } else {
-        // If asynchronous, return an empty optional for now. The shader will be
-        // created in the next _CheckPendingShaders() call.
-        return std::nullopt;
+        return shader;
     }
+
+    // If asynchronous, return nullptr for now. The shader will be
+    // created in the next _CheckPendingShaders() call.
+    return nullptr;
 }
 
 bool ShaderManager::_CreateBGFXResources(TempShaderData& tempData) {
@@ -641,15 +641,15 @@ bool ShaderManager::_CreateBGFXResources(TempShaderData& tempData) {
     shader.isValid = true;
 
     // replace shader in existing id slot
-    if (auto it = std::find_if(
-            m_loadedShaders.begin(),
-            m_loadedShaders.end(),
-            [&tempData](const Shader& s) { return s.id == tempData.id; });
-        it != m_loadedShaders.end()) {
-        *it = std::move(shader);
-    } else {
-        m_loadedShaders.push_back(std::move(shader));
+    auto it = std::find_if(
+        m_loadedShaders.begin(),
+        m_loadedShaders.end(),
+        [&tempData](const Shader& s) { return s.id == tempData.id; });
+    if (it == m_loadedShaders.end()) {
+        return false;
     }
+
+    *it = std::move(shader);
 
     return true;
 }
@@ -658,18 +658,21 @@ void ShaderManager::LoadShader(const std::string&    bundlePath,
                                const std::string&    shaderName,
                                const Syngine::ViewID viewId) {
     Shader shader;
-    int    id         = nextId++;
-    shader.id         = id;
-    shader.m_viewId   = viewId;
-    shader.shaderName = shaderName;
-    shader.bundlePath = bundlePath;
+    int    id                = nextId++;
+    shader.id                = id;
+    shader.m_viewId          = viewId;
+    shader.shaderName        = shaderName;
+    shader.bundlePath        = bundlePath;
+    shader.isWaitingOnWorker = true;
     m_loadedShaders.push_back(std::move(shader));
-    _BuildShader(bundlePath, shaderName, viewId);
+    _BuildShader(bundlePath, shaderName, viewId, false, id);
 }
 
 bool ShaderManager::_CheckPendingShaders() {
     std::lock_guard<std::mutex> lock(tempDataMutex);
-    bool                        anyCompleted = false;
+    bool                        anyCompleted    = false;
+    bool                        anyStillPending = false;
+
     for (auto it = m_tempShaderData.begin(); it != m_tempShaderData.end();) {
         if (it->IsComplete()) {
             auto tempData = std::move(it->Get());
@@ -696,8 +699,8 @@ bool ShaderManager::_CheckPendingShaders() {
                 continue;
             }
 
-            std::shared_ptr<Shader> shaderPtr = Get(tempData.id);
-            /*Syngine::Logger::LogF(Syngine::LogLevel::INFO,
+            /*Shader* shaderPtr = Get(tempData.id);
+            Syngine::Logger::LogF(Syngine::LogLevel::INFO,
                                   true,
                                   "LoadShader: successfully loaded shader %s",
                                   shaderPtr->shaderName.c_str());*/
@@ -707,6 +710,15 @@ bool ShaderManager::_CheckPendingShaders() {
             ++it;
         }
     }
+
+    for (auto it = m_loadedShaders.begin(); it != m_loadedShaders.end();) {
+        if (it->isWaitingOnWorker) {
+            anyStillPending = true;
+        }
+        ++it;
+    }
+    if (anyStillPending) return true;
+
     return anyCompleted;
 }
 
@@ -798,13 +810,13 @@ bool ShaderManager::UnloadShader(size_t shaderId) {
     return true;
 }
 
-std::shared_ptr<Shader> ShaderManager::Get(size_t shaderId) {
+Shader* ShaderManager::Get(size_t shaderId) {
     auto it =
         std::find_if(m_loadedShaders.begin(),
                      m_loadedShaders.end(),
                      [shaderId](const Shader& s) { return s.id == shaderId; });
     if (it != m_loadedShaders.end()) {
-        return std::shared_ptr<Shader>(&(*it), [](Shader*) {});
+        return &(*it);
     } else {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               true,
@@ -814,10 +826,10 @@ std::shared_ptr<Shader> ShaderManager::Get(size_t shaderId) {
     }
 }
 
-std::shared_ptr<Shader> ShaderManager::Get(const std::string& shaderName) {
+Shader* ShaderManager::Get(const std::string& shaderName) {
     for (auto& shader : m_loadedShaders) {
         if (shader.shaderName == shaderName) {
-            return std::shared_ptr<Shader>(&shader, [](Shader*) {});
+            return &shader;
         }
     }
     Syngine::Logger::LogF(Syngine::LogLevel::ERR,

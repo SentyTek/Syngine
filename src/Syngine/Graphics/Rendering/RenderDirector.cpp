@@ -667,7 +667,7 @@ bool RenderDirector::_SetVsync() {
 }
 
 void RenderDirector::_GetRenderResources() {
-    m_ssaoProgram      = ShaderManager::Get("ssao").get();
+    m_ssaoProgram      = ShaderManager::Get("ssao");
     m_defaultShadowMap = UniformRegistry::_GetUniformHandle("s_shadowMap");
     m_ssao_depthTex    = UniformRegistry::_GetUniformHandle("s_depth");
     m_ssao_normalTex   = UniformRegistry::_GetUniformHandle("s_normal");
@@ -1115,7 +1115,8 @@ void RenderDirector::_DrawForward(const Shader*    program,
     _SetViewUniforms(program);
 
     for (auto& packet : m_renderPackets) {
-        if (packet.shader == nullptr || program->m_program.idx != packet.shader->m_program.idx)
+        if (packet.shader == nullptr ||
+            program->m_program.idx != packet.shader->m_program.idx)
             continue; // Skip if not matching program
 
         bgfx::setState(renderState | (packet.mirror ? BGFX_STATE_CULL_CW
@@ -1559,10 +1560,11 @@ void RenderDirector::_SetMaterialUniforms(const Shader*                 shader,
         if (it == packet.material->m_material->m_textures.end()) continue;
         const size_t index = static_cast<size_t>(
             it - packet.material->m_material->m_textures.begin());
-        const auto& texture = index < packet.material->m_textureOverrides.size() &&
-                                      packet.material->m_textureOverrides[index]
-                                  ? *packet.material->m_textureOverrides[index]
-                                  : *it;
+        const auto& texture =
+            index < packet.material->m_textureOverrides.size() &&
+                    packet.material->m_textureOverrides[index]
+                ? *packet.material->m_textureOverrides[index]
+                : *it;
         const bgfx::TextureHandle texHandle = texture.handle;
         const uint32_t            realFlags = flags | texture.samplerFlags;
         bgfx::setTexture(uniform.stage, uniform.handle, texHandle, realFlags);
@@ -1601,24 +1603,7 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         }
     }
 
-    bool packetsReady = false;
-    auto packetJob = JobResult<bool>();
-    if (Jobs().GetWorkerCount() > 3) {
-        packetJob = Jobs().DispatchWithResult([camera] {
-            _CollectRenderPackets(camera);
-            return true;
-        });
-    } else {
-        _CollectRenderPackets(camera);
-        packetsReady = true;
-    }
-
-
-    if (!_PrepareRenderViews(camera)) {
-        Renderer::_UpdateDrawID();
-        return false;
-    }
-
+    Logger::Info("Got to 1");
     bool isPendingShaders = ShaderManager::_CheckPendingShaders();
     if (isPendingShaders) {
         return false;
@@ -1627,6 +1612,19 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         m_collectedresources = true;
     }
     MaterialManager::_CheckPendingMaterials();
+
+    Logger::Info("Got to 2");
+
+    // temporarily (?) making this sync again because it was causing issues on
+    // all platforms.
+    _CollectRenderPackets(camera);
+
+    if (!_PrepareRenderViews(camera)) {
+        Renderer::_UpdateDrawID();
+        return false;
+    }
+
+    Logger::Info("Got to 3");
 
     // Main render loop
     for (auto view : _allViews) {
@@ -1644,13 +1642,7 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 }
                 break;
             case VIEW_SKY: _DrawSky(program, camera); break;
-            case VIEW_FORWARD:
-                if (!packetsReady) {
-                    packetJob.Wait();
-                    packetsReady = true;
-                }
-                _DrawForward(program, camera);
-                break;
+            case VIEW_FORWARD: _DrawForward(program, camera); break;
             case VIEW_DEBUG:
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
@@ -1659,10 +1651,6 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 // using this view ID.
                 break;
             case VIEW_BILLBOARD:
-                if (!packetsReady) {
-                    packetJob.Wait();
-                    packetsReady = true;
-                }
                 if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
                 _DrawBillboard(program, camera);
                 break;
@@ -1672,8 +1660,6 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
             }
         }
     }
-
-    if (!packetsReady) packetJob.Wait();
 
 #ifndef NDEBUG
     _DrawUIDebug(camera);

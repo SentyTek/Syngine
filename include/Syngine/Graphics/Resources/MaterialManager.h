@@ -152,7 +152,7 @@ class Material {
 
   public:
     const std::string       name;   //* Name of the material
-    std::shared_ptr<Shader> shader; //* Pointer to the associated shader
+    Shader* shader; //* Pointer to the associated shader
 
     Material(const Material& other) = delete;
 
@@ -182,7 +182,7 @@ class Material {
     /// @threadsafety not-safe
     /// @internal
     /// @since v0.0.2
-    Material(const std::string& name, std::shared_ptr<Shader> shader)
+    Material(const std::string& name, Shader* shader)
         : name(name), shader(shader) {
         if (shader->isValid) {
             _InitMaterialParameters();
@@ -306,7 +306,7 @@ class MaterialInstance {
     /// @threadsafety read-only
     /// @since v0.0.2
     Shader* GetShader() const {
-        return m_material ? m_material->shader.get() : nullptr;
+        return m_material ? m_material->shader : nullptr;
     }
 
     /// @brief Set the value of a material parameter by name
@@ -620,8 +620,7 @@ class MaterialManager {
     /// @return Material& Reference to the newly created material
     /// @threadsafety not-safe
     /// @since v0.0.2
-    static Material& CreateMaterial(const std::string&      name,
-                                    std::shared_ptr<Shader> shader) {
+    static Material& CreateMaterial(const std::string& name, Shader* shader) {
         if (MaterialExists(name)) {
             return GetMaterialByName(name);
         }

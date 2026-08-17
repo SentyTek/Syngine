@@ -175,10 +175,11 @@ class ShaderManager {
     static bgfx::ShaderHandle _LoadShaderFromMemory(const void* data,
                                                     size_t      size);
 
-    static std::optional<Shader> _BuildShader(const std::string& bundlePath,
-                                              const std::string& shaderName,
-                                              const ViewID       viewId,
-                                              bool synchronous = false);
+    static Shader* _BuildShader(const std::string& bundlePath,
+                                const std::string& shaderName,
+                                const ViewID       viewId,
+                                bool               synchronous = false,
+                                int                id          = 0);
 
     static bool _CreateBGFXResources(TempShaderData& shader);
 
@@ -253,7 +254,7 @@ class ShaderManager {
     /// if not found
     /// @threadsafety read-only
     /// @since v0.0.2
-    static std::shared_ptr<Shader> Get(size_t shaderId);
+    static Shader* Get(size_t shaderId);
 
     /// @brief Get a shader by its name
     /// @param shaderName Name of the shader to retrieve
@@ -264,7 +265,7 @@ class ShaderManager {
     /// for
     /// @threadsafety read-only
     /// @since v0.0.2
-    static std::shared_ptr<Shader> Get(const std::string& shaderName);
+    static Shader* Get(const std::string& shaderName);
 };
 
 } // namespace Syngine
