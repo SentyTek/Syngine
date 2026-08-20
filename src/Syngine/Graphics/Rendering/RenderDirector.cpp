@@ -1603,7 +1603,6 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         }
     }
 
-    Logger::Info("Got to 1");
     bool isPendingShaders = ShaderManager::_CheckPendingShaders();
     if (isPendingShaders) {
         return false;
@@ -1613,8 +1612,6 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     }
     MaterialManager::_CheckPendingMaterials();
 
-    Logger::Info("Got to 2");
-
     // temporarily (?) making this sync again because it was causing issues on
     // all platforms.
     _CollectRenderPackets(camera);
@@ -1623,8 +1620,6 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         Renderer::_UpdateDrawID();
         return false;
     }
-
-    Logger::Info("Got to 3");
 
     // Main render loop
     for (auto view : _allViews) {
