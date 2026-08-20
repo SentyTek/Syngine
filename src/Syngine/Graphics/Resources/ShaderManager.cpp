@@ -749,8 +749,10 @@ bool ShaderManager::ReloadShader(size_t shaderId) {
     }
 
     // Build replacement shader first just in case it fails, so we don't lose
-    // the old one
-    auto replacement = _BuildShader(bundlePath, shaderName, viewId, true);
+    // the old one. Rebuild into the same shader ID slot.
+    const int canonicalId = shaderIt->id;
+    Shader*   replacement =
+        _BuildShader(bundlePath, shaderName, viewId, true, canonicalId);
     if (!replacement) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
@@ -760,22 +762,6 @@ bool ShaderManager::ReloadShader(size_t shaderId) {
             bundlePath.c_str());
         return false;
     }
-
-    // _BuildShader has already replaced this same ID slot. Move the returned
-    // value back into it so references held by materials and the renderer
-    // continue to point at the canonical shader object.
-    shaderIt = std::find_if(
-        m_loadedShaders.begin(),
-        m_loadedShaders.end(),
-        [shaderId](const Shader& shader) { return shader.id == shaderId; });
-    if (shaderIt == m_loadedShaders.end()) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              true,
-                              "ReloadShader: shader ID %zu disappeared",
-                              shaderId);
-        return false;
-    }
-    *shaderIt = std::move(*replacement);
 
     if (bgfx::isValid(oldProgram)) {
         bgfx::destroy(oldProgram);

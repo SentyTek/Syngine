@@ -935,8 +935,10 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
             continue;
         }
 
-        Mat4 modelMtx =
-            go->GetComponent<TransformComponent>()->GetModelMatrix();
+        auto* transform = go->GetComponent<TransformComponent>();
+        if (!transform) continue;
+
+        Mat4  modelMtx  = transform->GetModelMatrix();
         float det       = modelMtx.determinant();
         bool  mirrored  = det < 0.0f;
         Mat4  normalMtx = modelMtx.inverse();
@@ -946,6 +948,16 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         for (size_t submeshIdx = 0; submeshIdx < meshData.subMeshes.size();
              ++submeshIdx) {
             const auto& subMesh = meshData.subMeshes[submeshIdx];
+
+            if (subMesh.materialIndex >= meshData.materials.size()) {
+                Logger::LogF(LogLevel::WARN,
+                             true,
+                             "Skipping submesh with invalid material index "
+                             "%u (materials: %zu)",
+                             subMesh.materialIndex,
+                             meshData.materials.size());
+                continue;
+            }
 
             /*RenderPacket renderPacket{
                 .vbh        = meshData.vbh,
@@ -958,6 +970,14 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
                 .shader = meshData.materials[subMesh.materialIndex].GetShader(),
                 .go     = go
             };*/
+
+            if (fPacketCount >= static_cast<int>(fPackets.size())) {
+                Logger::LogF(LogLevel::WARN,
+                             true,
+                             "RenderPacket overflow. Prepass count "
+                             "drifted during collection.");
+                break;
+            }
 
             std::construct_at(
                 &fPackets[fPacketCount++],
@@ -975,9 +995,11 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         }
     }
 
-    // Sort forward packets by shader and material
-    std::sort(fPackets.begin(),
-              fPackets.end(),
+    // Sort only initialized packets. Sorting the full allocated span would
+    // include uninitialized entries and trigger undefined behavior.
+    auto sortedForwardPackets = fPackets.first(fPacketCount);
+    std::sort(sortedForwardPackets.begin(),
+              sortedForwardPackets.end(),
               [](const RenderPacket& a, const RenderPacket& b) {
                   if (a.shader != b.shader) {
                       return std::less<Shader*>{}(a.shader, b.shader);
@@ -1002,10 +1024,12 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         // Since we can't use _ShouldCullBySize for billboards (they don't have
         // mesh data), we do a simple distance check here and skip if they're
         // too far away to be visible
-        const Vector3 camPos = camera->GetPosition();
-        const Vector3 goPos =
-            go->GetComponent<TransformComponent>()->GetWorldPosition();
-        const float distance = (goPos - camPos).length();
+        const Vector3 camPos    = camera->GetPosition();
+        auto*         transform = go->GetComponent<TransformComponent>();
+        if (!transform) continue;
+
+        const Vector3 goPos    = transform->GetWorldPosition();
+        const float   distance = (goPos - camPos).length();
         if (distance > m_maxSmallObjDistance) {
             m_drawnCounts.culledSize++;
             continue;
@@ -1018,8 +1042,7 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
             continue;
         }
 
-        Mat4 modelMtx =
-            go->GetComponent<TransformComponent>()->GetModelMatrix();
+        Mat4 modelMtx = transform->GetModelMatrix();
 
         /*RenderPacket packet(
             { .vbh        = m_billboardVbh,
@@ -1048,7 +1071,7 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
     }
 
     // Only return the valid portion of the packet arrays
-    return { fPackets.first(fPacketCount), bPackets.first(bPacketCount) };
+    return { sortedForwardPackets, bPackets.first(bPacketCount) };
 }
 
 void RenderDirector::_ScreenSpaceQuad(ViewID view, const Shader* program) {
