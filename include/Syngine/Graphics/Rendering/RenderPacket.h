@@ -31,7 +31,24 @@ struct RenderPacket {
     Shader*           shader;
     GameObject*       go;
 
-    bool visible;
+    bool visible = false;
+
+    RenderPacket(bgfx::VertexBufferHandle vbh,
+                 bgfx::IndexBufferHandle  ibh,
+                 const Math::Matrix4x4&   modelMtx,
+                 bool                     mirror,
+                 uint32_t                 indexStart,
+                 uint32_t                 indexCount,
+                 uint32_t                 depth,
+                 MaterialInstance*        material,
+                 Shader*                  shader,
+                 GameObject*              go,
+                 bool                     visible)
+        : vbh(vbh), ibh(ibh), modelMtx(modelMtx), mirror(mirror),
+          indexStart(indexStart), indexCount(indexCount), depth(depth),
+          material(material), shader(shader), go(go), visible(visible) {}
+
+    RenderPacket() = default;
 };
 
 } // namespace Syngine

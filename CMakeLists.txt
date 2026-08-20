@@ -38,6 +38,7 @@ add_library(Syngine STATIC
     src/Syngine/Core/LuaManager.cpp
     src/Syngine/Core/JobSystem.cpp
     src/Syngine/Core/ThreadManager.cpp
+    src/Syngine/Core/Memory/ArenaAlloc.cpp
 
     #Scene
     src/Syngine/Scene/ZoneSystem.cpp
