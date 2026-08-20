@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "ThreadManager.h"
 #include <Syngine/Scene/GameObjectRegistry.h>
 #include <Syngine/Core/LuaManager.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
@@ -20,6 +21,7 @@
 #include <Syngine/Physics/PhysicsManager.h>
 #include <Syngine/Utils/Profiler.h>
 #include <Syngine/Core/JobSystem.h>
+#include <Syngine/Core/ThreadManager.h>
 
 #include <cstdint>
 #include <memory>
@@ -235,6 +237,15 @@ class Core {
         }
     }
 
+    static ThreadManager& Threads() {
+        if (m_instance && m_instance->m_context) {
+            return m_instance->m_context->threadManager;
+        } else {
+            throw std::runtime_error(
+                "Core::Threads() called before Core is initialized");
+        }
+    }
+
   private:
     struct _internal {
         // Mouse sensitivity
@@ -272,6 +283,7 @@ class Core {
         std::unique_ptr<LuaManager> luaState;   //* Pointer to the Lua state
         DebugModes                  debug;      //* Debug modes flags
         JobSystem                   jobSystem;  //* Reference to the job system
+        ThreadManager threadManager; //* Reference to the thread manager
     };
 
     /// @brief Get the global App instance
@@ -385,6 +397,7 @@ class Core {
 #endif
 };
 
-inline JobSystem& Jobs() { return Core::Get()->Jobs(); }
+inline JobSystem&     Jobs() { return Core::Get()->Jobs(); }
+inline ThreadManager& Threads() { return Core::Threads(); }
 
 } // namespace Syngine
