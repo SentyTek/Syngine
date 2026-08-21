@@ -30,6 +30,8 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(engine_tests
     Core/StartStop.cpp
+    Core/Threads.cpp
+    Core/ArenaAlloc.cpp
     ECS/GameObjectLifecycle.cpp
     ECS/TransformHierarchy.cpp
     ECS/EntityDeletion-Queries.cpp

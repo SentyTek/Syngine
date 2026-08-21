@@ -483,6 +483,8 @@ Signature:
 | `std::unique_ptr<ZoneSystem>` | `ZoneSystem` | Pointer to the zone manager |
 | `std::unique_ptr<LuaManager>` | `luaState` | Pointer to the Lua state |
 | `DebugModes` | `debug` | Debug modes flags |
+| `JobSystem` | `jobSystem` | Reference to the job system |
+| `ThreadManager` | `threadManager` | Reference to the thread manager |
 **This function has been available since:** v0.0.1
 
 ---

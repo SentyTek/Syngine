@@ -183,8 +183,6 @@ Signature:
 
  Update the mesh component. Unused.
 
-**Note:** There is no specific update logic for the mesh component
-
 Signature:
 ```cpp
  void Update(float deltaTime) override;
@@ -430,4 +428,5 @@ Signature:
 | `mutable` | `MeshAABB` | Axis-aligned bounding box of the mesh |
 | `std::string` | `m_bundlePath` | Path to the shader bundle containing the mesh |
 | `std::string` | `m_texturePath` | Path to the mesh within the bundle |
+| `JobResult<ModelData>` | `m_meshLoadJob` | Job result for the mesh load job |
 ---

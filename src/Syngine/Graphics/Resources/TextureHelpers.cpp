@@ -19,6 +19,7 @@
 
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
+#define STBI_SUPPORT_SIMD
 #endif
 #include "stb_image.h"
 
@@ -73,13 +74,45 @@ static void _BoxDownsample2x2(const uint8_t*        src,
 bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data,
                                                    size_t         size,
                                                    const char*    name) {
+    DecodedTextureData decoded;
+    if (!DecodeTextureFromMemory(data, size, decoded)) {
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR, false, "Failed to load embedded texture");
+        return BGFX_INVALID_HANDLE;
+    }
+
+    const bgfx::Memory* mem = bgfx::copy(
+        decoded.payload.data(), static_cast<uint32_t>(decoded.payload.size()));
+    const bgfx::TextureHandle tex =
+        bgfx::createTexture2D(decoded.width,
+                              decoded.height,
+                              decoded.hasMips,
+                              1,
+                              bgfx::TextureFormat::RGBA8,
+                              BGFX_TEXTURE_NONE,
+                              mem);
+
+    if (!bgfx::isValid(tex)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              true,
+                              "Failed to create texture %s (%dx%d)",
+                              name ? name : "<memory>",
+                              decoded.width,
+                              decoded.height);
+        return BGFX_INVALID_HANDLE;
+    }
+
+    return tex;
+}
+
+bool Syngine::DecodeTextureFromMemory(const uint8_t*      data,
+                                      size_t              size,
+                                      DecodedTextureData& out) {
     int      w, h, channels;
     stbi_uc* pixels = stbi_load_from_memory(
         data, static_cast<int>(size), &w, &h, &channels, 4);
     if (!pixels) {
-        Syngine::Logger::LogF(
-            Syngine::LogLevel::ERR, false, "Failed to load embedded texture");
-        return BGFX_INVALID_HANDLE;
+        return false;
     }
 
     int mipCount = 1;
@@ -96,7 +129,7 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data,
         mipH = std::max(1, mipH / 2);
     }
 
-    std::vector<uint8_t> packedMips;
+    std::vector<std::byte> packedMips;
     packedMips.reserve(totalBytes);
 
     std::vector<uint8_t> currentLevel(
@@ -106,7 +139,10 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data,
 
     for (int level = 0; level < mipCount; ++level) {
         packedMips.insert(
-            packedMips.end(), currentLevel.begin(), currentLevel.end());
+            packedMips.end(),
+            reinterpret_cast<const std::byte*>(currentLevel.data()),
+            reinterpret_cast<const std::byte*>(currentLevel.data() +
+                                               currentLevel.size()));
 
         if (level + 1 < mipCount) {
             std::vector<uint8_t> nextLevel;
@@ -117,30 +153,13 @@ bgfx::TextureHandle Syngine::LoadTextureFromMemory(const uint8_t* data,
         }
     }
 
-    const bgfx::Memory* mem =
-        bgfx::copy(packedMips.data(), static_cast<uint32_t>(packedMips.size()));
-    const bgfx::TextureHandle tex =
-        bgfx::createTexture2D(static_cast<uint16_t>(w),
-                              static_cast<uint16_t>(h),
-                              mipCount > 1,
-                              1,
-                              bgfx::TextureFormat::RGBA8,
-                              BGFX_TEXTURE_NONE,
-                              mem);
-
     stbi_image_free(pixels);
 
-    if (!bgfx::isValid(tex)) {
-        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
-                              true,
-                              "Failed to create texture %s (%dx%d)",
-                              name ? name : "<memory>",
-                              w,
-                              h);
-        return BGFX_INVALID_HANDLE;
-    }
-
-    return tex;
+    out.width   = static_cast<uint16_t>(w);
+    out.height  = static_cast<uint16_t>(h);
+    out.hasMips = mipCount > 1;
+    out.payload = std::move(packedMips);
+    return true;
 }
 
 bgfx::TextureHandle Syngine::LoadTextureFromFile(const char* path) {

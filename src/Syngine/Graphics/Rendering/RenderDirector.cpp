@@ -10,8 +10,12 @@
 #include <Syngine/Core/Logger.h>
 #include <Syngine/Scene/ZoneSystem.h>
 #include <Syngine/Graphics/Rendering/RenderDirector.h>
+#include "Syngine/Core/JobSystem.h"
+#include "Syngine/Core/Memory/ArenaAlloc.h"
 #include "Syngine/GameObjects/Components/BillboardComponent.h"
+#include "Syngine/Graphics/Rendering/RenderPacket.h"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
+#include "Syngine/Graphics/Resources/ShaderManager.h"
 #include "Syngine/Graphics/Resources/UniformRegistry.h"
 #include "Syngine/Scene/GameObjectRegistry.h"
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
@@ -72,25 +76,26 @@ _CreateSolidRGBA8Texture(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 } // namespace
 
 // I present to you an unholy abomination of static member definitions
-RenderDirector::RenderCoreBuffers RenderDirector::m_buffers = {
-    .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
-    .sceneColor =
+bool                              RenderDirector::m_collectedresources = false;
+RenderDirector::RenderCoreBuffers RenderDirector::m_buffers            = {
+               .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
+               .sceneColor =
         BGFX_INVALID_HANDLE, //* Color texture for scene rendering (RGBA16F)
-    .sceneDepth =
+               .sceneDepth =
         BGFX_INVALID_HANDLE, //* Depth texture for scene rendering (D24S8)
-    .sceneNormal =
+               .sceneNormal =
         BGFX_INVALID_HANDLE, //* Normal texture for scene rendering (RGBA8)
-    .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
-    .ssaoBlurHFB =
+               .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
+               .ssaoBlurHFB =
         BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (horizontal)
-    .ssaoBlurVFB =
+               .ssaoBlurVFB =
         BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (vertical)
-    .ssaoTex   = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
-    .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
-    .ssaoBlurFinal =
+               .ssaoTex   = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
+               .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
+               .ssaoBlurFinal =
         BGFX_INVALID_HANDLE, //* SSAO texture post-blur (Use this one) (R8)
-    .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
-    .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
+               .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
+               .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
 };
 
 bool RenderDirector::m_changeVsyncThisFrame      = false;
@@ -127,8 +132,9 @@ RenderDirector::DrawnObjectCount RenderDirector::m_drawnCounts;
 float                            RenderDirector::m_maxSmallObjDistance =
     50.0f; //* Small objects get culled beyond this distance
 
-std::vector<Renderer::RenderPacket> RenderDirector::m_renderPackets;
-std::vector<Renderer::RenderPacket> RenderDirector::m_billboardRenderPackets;
+Memory::ArenaAlloc RenderDirector::m_renderPackets;
+Memory::ArenaAlloc RenderDirector::m_billboardRenderPackets;
+
 std::array<Math::Matrix4x4, RenderDirector::NUM_CASCADES>
            RenderDirector::m_csmLightViewProj;
 Math::Vec4 RenderDirector::m_csmCascadeSplits;
@@ -279,20 +285,12 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
                                   VIEW_BILLBOARD);
         ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "default_shadow", VIEW_SHADOW);
-        size_t ssao = ShaderManager::LoadShader(
+        ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao", VIEW_AO);
         ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "ssao_blur", VIEW_AO);
         ShaderManager::LoadShader(
             SYNINT_DEFAULT_SHADERBUNDLE_NAME, "tonemapping", VIEW_POSTPROCESS);
-
-        m_ssaoProgram      = ShaderManager::Get(ssao);
-        m_defaultShadowMap = UniformRegistry::_GetUniformHandle("s_shadowMap");
-        m_ssao_depthTex    = UniformRegistry::_GetUniformHandle("s_depth");
-        m_ssao_normalTex   = UniformRegistry::_GetUniformHandle("s_normal");
-        m_ssaob_ssaoTex    = UniformRegistry::_GetUniformHandle("s_ssao");
-        m_tonemap_sceneTex = UniformRegistry::_GetUniformHandle("s_sceneColor");
-        m_tonemap_ssaoTex  = UniformRegistry::_GetUniformHandle("s_ssao");
     }
 
     if (!bgfx::isValid(s_fallbackAlbedo)) {
@@ -386,8 +384,8 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
 void RenderDirector::_Shutdown() {
     // Clear packet caches so stale handle values are not reused during
     // teardown while destroy commands are queued.
-    m_renderPackets.clear();
-    m_billboardRenderPackets.clear();
+    m_renderPackets.Reset();
+    m_billboardRenderPackets.Reset();
 
     // Explicitly detach all view framebuffer bindings before resource
     // destruction. Views can retain refs to framebuffers/textures.
@@ -671,6 +669,16 @@ bool RenderDirector::_SetVsync() {
     return true;
 }
 
+void RenderDirector::_GetRenderResources() {
+    m_ssaoProgram      = ShaderManager::Get("ssao");
+    m_defaultShadowMap = UniformRegistry::_GetUniformHandle("s_shadowMap");
+    m_ssao_depthTex    = UniformRegistry::_GetUniformHandle("s_depth");
+    m_ssao_normalTex   = UniformRegistry::_GetUniformHandle("s_normal");
+    m_ssaob_ssaoTex    = UniformRegistry::_GetUniformHandle("s_ssao");
+    m_tonemap_sceneTex = UniformRegistry::_GetUniformHandle("s_sceneColor");
+    m_tonemap_ssaoTex  = UniformRegistry::_GetUniformHandle("s_ssao");
+}
+
 /*
 --- Drawing helpers ---
 */
@@ -886,19 +894,31 @@ bool RenderDirector::_ShouldCullBySizeShadow(
     return false; // Otherwise, don't cull by size for shadows
 }
 
-void RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
+std::tuple<std::span<RenderPacket>, std::span<RenderPacket>>
+RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
-    m_renderPackets.clear();
-    m_billboardRenderPackets.clear();
 
-    // Iterate registry
+    // Prepass to figure out packet count
+    int         packetCount = 0;
     const auto& gameObjects = GameObjectRegistry::GetRenderableObjects();
-    m_renderPackets.reserve(gameObjects.size());
+    std::vector<GameObject*> validGOs;
+    validGOs.reserve(gameObjects.size());
     for (auto& go : gameObjects) {
         if (!go || !go->IsActive()) continue;
-
         auto meshComp = go->GetComponent<MeshComponent>();
         if (!meshComp || !meshComp->IsEnabled()) continue;
+        validGOs.push_back(go);
+        packetCount += meshComp->modelData.subMeshes.size();
+    }
+
+    m_renderPackets = Memory::ArenaAlloc(packetCount * sizeof(RenderPacket));
+    auto fPackets   = m_renderPackets.Allocate<RenderPacket>(
+        packetCount, alignof(RenderPacket));
+
+    // Actual pass for visibilty and packet construction
+    int fPacketCount = 0;
+    for (auto& go : validGOs) {
+        auto meshComp = go->GetComponent<MeshComponent>();
 
         MeshAABB      aabb = meshComp->GetAABB();
         Math::Vector3 min  = aabb.min;
@@ -915,8 +935,10 @@ void RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
             continue;
         }
 
-        Mat4 modelMtx =
-            go->GetComponent<TransformComponent>()->GetModelMatrix();
+        auto* transform = go->GetComponent<TransformComponent>();
+        if (!transform) continue;
+
+        Mat4  modelMtx  = transform->GetModelMatrix();
         float det       = modelMtx.determinant();
         bool  mirrored  = det < 0.0f;
         Mat4  normalMtx = modelMtx.inverse();
@@ -927,23 +949,57 @@ void RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
              ++submeshIdx) {
             const auto& subMesh = meshData.subMeshes[submeshIdx];
 
-            m_renderPackets.push_back(
-                { .vbh        = meshData.vbh,
-                  .ibh        = meshData.ibh,
-                  .modelMtx   = modelMtx,
-                  .mirror     = mirrored,
-                  .indexStart = subMesh.indexStart,
-                  .indexCount = subMesh.indexCount,
-                  .material   = &meshData.materials[subMesh.materialIndex],
-                  .shader =
-                      meshData.materials[subMesh.materialIndex].GetShader(),
-                  .go = go });
+            if (subMesh.materialIndex >= meshData.materials.size()) {
+                Logger::LogF(LogLevel::WARN,
+                             true,
+                             "Skipping submesh with invalid material index "
+                             "%u (materials: %zu)",
+                             subMesh.materialIndex,
+                             meshData.materials.size());
+                continue;
+            }
+
+            /*RenderPacket renderPacket{
+                .vbh        = meshData.vbh,
+                .ibh        = meshData.ibh,
+                .modelMtx   = modelMtx,
+                .mirror     = mirrored,
+                .indexStart = subMesh.indexStart,
+                .indexCount = subMesh.indexCount,
+                .material   = &meshData.materials[subMesh.materialIndex],
+                .shader = meshData.materials[subMesh.materialIndex].GetShader(),
+                .go     = go
+            };*/
+
+            if (fPacketCount >= static_cast<int>(fPackets.size())) {
+                Logger::LogF(LogLevel::WARN,
+                             true,
+                             "RenderPacket overflow. Prepass count "
+                             "drifted during collection.");
+                break;
+            }
+
+            std::construct_at(
+                &fPackets[fPacketCount++],
+                meshData.vbh,
+                meshData.ibh,
+                modelMtx,
+                mirrored,
+                subMesh.indexStart,
+                subMesh.indexCount,
+                0,
+                &meshData.materials[subMesh.materialIndex],
+                meshData.materials[subMesh.materialIndex].GetShader(),
+                go,
+                true);
         }
     }
 
-    // Sort forward packets by shader and material
-    std::sort(m_renderPackets.begin(),
-              m_renderPackets.end(),
+    // Sort only initialized packets. Sorting the full allocated span would
+    // include uninitialized entries and trigger undefined behavior.
+    auto sortedForwardPackets = fPackets.first(fPacketCount);
+    std::sort(sortedForwardPackets.begin(),
+              sortedForwardPackets.end(),
               [](const RenderPacket& a, const RenderPacket& b) {
                   if (a.shader != b.shader) {
                       return std::less<Shader*>{}(a.shader, b.shader);
@@ -954,7 +1010,11 @@ void RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
     // Include billboards too
     auto billboardGameObjects = GameObjectRegistry::GetGameObjectsWithComponent(
         SYN_COMPONENT_BILLBOARD);
-    m_billboardRenderPackets.reserve(billboardGameObjects.size());
+    m_billboardRenderPackets =
+        Memory::ArenaAlloc(billboardGameObjects.size() * sizeof(RenderPacket));
+    auto bPackets = m_billboardRenderPackets.Allocate<RenderPacket>(
+        billboardGameObjects.size());
+    int bPacketCount = 0;
     for (auto& go : billboardGameObjects) {
         if (!go || !go->IsActive()) continue;
 
@@ -964,10 +1024,12 @@ void RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         // Since we can't use _ShouldCullBySize for billboards (they don't have
         // mesh data), we do a simple distance check here and skip if they're
         // too far away to be visible
-        const Vector3 camPos = camera->GetPosition();
-        const Vector3 goPos =
-            go->GetComponent<TransformComponent>()->GetWorldPosition();
-        const float distance = (goPos - camPos).length();
+        const Vector3 camPos    = camera->GetPosition();
+        auto*         transform = go->GetComponent<TransformComponent>();
+        if (!transform) continue;
+
+        const Vector3 goPos    = transform->GetWorldPosition();
+        const float   distance = (goPos - camPos).length();
         if (distance > m_maxSmallObjDistance) {
             m_drawnCounts.culledSize++;
             continue;
@@ -980,10 +1042,9 @@ void RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
             continue;
         }
 
-        Mat4 modelMtx =
-            go->GetComponent<TransformComponent>()->GetModelMatrix();
+        Mat4 modelMtx = transform->GetModelMatrix();
 
-        m_billboardRenderPackets.push_back(
+        /*RenderPacket packet(
             { .vbh        = m_billboardVbh,
               .ibh        = m_billboardIbh,
               .modelMtx   = modelMtx,
@@ -993,7 +1054,24 @@ void RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
               .material   = &billboardComp->_GetMaterial(),
               .shader     = billboardComp->_GetMaterial().GetShader(),
               .go         = go });
+        */
+
+        std::construct_at(&bPackets[bPacketCount++],
+                          m_billboardVbh,
+                          m_billboardIbh,
+                          modelMtx,
+                          false,
+                          0,
+                          6,
+                          0,
+                          &billboardComp->_GetMaterial(),
+                          billboardComp->_GetMaterial().GetShader(),
+                          go,
+                          true);
     }
+
+    // Only return the valid portion of the packet arrays
+    return { sortedForwardPackets, bPackets.first(bPacketCount) };
 }
 
 void RenderDirector::_ScreenSpaceQuad(ViewID view, const Shader* program) {
@@ -1098,8 +1176,9 @@ void RenderDirector::_DrawSky(const Shader*          program,
     bgfx::submit(program->m_viewId, program->m_program);
 }
 
-void RenderDirector::_DrawForward(const Shader*    program,
-                                  CameraComponent* camera) {
+void RenderDirector::_DrawForward(const Shader*           program,
+                                  CameraComponent*        camera,
+                                  std::span<RenderPacket> packets) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program->m_viewId, "Forward");
     bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
@@ -1109,8 +1188,9 @@ void RenderDirector::_DrawForward(const Shader*    program,
     _SetFrameUniforms(program);
     _SetViewUniforms(program);
 
-    for (auto& packet : m_renderPackets) {
-        if (program->m_program.idx != packet.shader->m_program.idx)
+    for (auto& packet : packets) {
+        if (packet.shader == nullptr ||
+            program->m_program.idx != packet.shader->m_program.idx)
             continue; // Skip if not matching program
 
         bgfx::setState(renderState | (packet.mirror ? BGFX_STATE_CULL_CW
@@ -1219,8 +1299,9 @@ void RenderDirector::_DrawDebug(const Shader*    program,
     }
 }
 
-void RenderDirector::_DrawBillboard(const Shader*    program,
-                                    CameraComponent* camera) {
+void RenderDirector::_DrawBillboard(const Shader*           program,
+                                    CameraComponent*        camera,
+                                    std::span<RenderPacket> packets) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program->m_viewId, "Billboards");
     bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
@@ -1232,7 +1313,7 @@ void RenderDirector::_DrawBillboard(const Shader*    program,
     _SetViewUniforms(program);
 
     // Draw billboards
-    for (auto packet : m_billboardRenderPackets) {
+    for (auto packet : packets) {
         bgfx::setState(renderState);
         _SetObjectUniforms(program, packet);
         _SetMaterialUniforms(program, packet);
@@ -1521,9 +1602,12 @@ void RenderDirector::_SetMaterialUniforms(const Shader*                 shader,
 
     // Bind material paramters
     if (!packet.material || !packet.material->m_material) return;
+    packet.material->_SyncPendingOverrides();
     for (size_t i = 0; i < shader->m_materialParams.size(); ++i) {
         const auto& shaderDesc = shader->m_materialParams[i];
-        const auto& override   = packet.material->m_parameterOverrides[i];
+        const auto& override = i < packet.material->m_parameterOverrides.size()
+                                   ? packet.material->m_parameterOverrides[i]
+                                   : std::optional<MaterialParameter>{};
         const auto& matData =
             override ? override->storage
                      : packet.material->m_material->m_parameters[i].storage;
@@ -1551,9 +1635,11 @@ void RenderDirector::_SetMaterialUniforms(const Shader*                 shader,
         if (it == packet.material->m_material->m_textures.end()) continue;
         const size_t index = static_cast<size_t>(
             it - packet.material->m_material->m_textures.begin());
-        const auto& texture = packet.material->m_textureOverrides[index]
-                                  ? *packet.material->m_textureOverrides[index]
-                                  : *it;
+        const auto& texture =
+            index < packet.material->m_textureOverrides.size() &&
+                    packet.material->m_textureOverrides[index]
+                ? *packet.material->m_textureOverrides[index]
+                : *it;
         const bgfx::TextureHandle texHandle = texture.handle;
         const uint32_t            realFlags = flags | texture.samplerFlags;
         bgfx::setTexture(uniform.stage, uniform.handle, texHandle, realFlags);
@@ -1592,18 +1678,31 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
         }
     }
 
+    bool isPendingShaders = ShaderManager::_CheckPendingShaders();
+    if (isPendingShaders) {
+        return false;
+    } else if (!m_collectedresources) {
+        RenderDirector::_GetRenderResources();
+        m_collectedresources = true;
+    }
+    MaterialManager::_CheckPendingMaterials();
+
     if (!_PrepareRenderViews(camera)) {
         Renderer::_UpdateDrawID();
         return false;
     }
-    _CollectRenderPackets(camera);
+
+    // temporarily (?) making this sync again because it was causing issues on
+    // all platforms.
+    auto packets = _CollectRenderPackets(camera);
 
     // Main render loop
     for (auto view : _allViews) {
         auto progList = ShaderManager::GetProgramsByViewID(view);
 
         for (auto& program : progList) {
-            if (!bgfx::isValid(program->m_program)) continue;
+            if (!program->isValid || !bgfx::isValid(program->m_program))
+                continue;
 
             // Draw logic based on view type
             switch (view) {
@@ -1613,7 +1712,9 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 }
                 break;
             case VIEW_SKY: _DrawSky(program, camera); break;
-            case VIEW_FORWARD: _DrawForward(program, camera); break;
+            case VIEW_FORWARD:
+                _DrawForward(program, camera, std::get<0>(packets));
+                break;
             case VIEW_DEBUG:
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
@@ -1623,7 +1724,7 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 break;
             case VIEW_BILLBOARD:
                 if (debug.Enabled && debug.Gizmos) _DrawDbgBillboard(program);
-                _DrawBillboard(program, camera);
+                _DrawBillboard(program, camera, std::get<1>(packets));
                 break;
             case VIEW_POSTPROCESS: _DrawPostProcess(program); break;
             case VIEW_AO: _DrawSSAO(program); break;
@@ -1637,6 +1738,10 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
 #endif
 
     bgfx::frame();
+
+    m_renderPackets.Reset();
+    m_billboardRenderPackets.Reset();
+
     Renderer::_UpdateDrawID();
     return true;
 }

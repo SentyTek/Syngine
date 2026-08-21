@@ -19,6 +19,7 @@
 #include <array>
 #include <cstddef>
 #include <cstring>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -60,6 +61,9 @@ class Material {
     std::vector<MaterialParameter> m_parameters; // Material parameters
     std::vector<TextureParameter>
         m_textures; // Textures associated with the material
+    std::function<void(Material&)> m_deferredInitialization;
+    bool                           m_parametersInitialized         = false;
+    bool                           m_initializationCallbackApplied = false;
 
     friend class RenderDirector;
     friend class MaterialManager;
@@ -119,24 +123,9 @@ class Material {
         it->stage        = stage;
     }
 
-  public:
-    const std::string name;   //* Name of the material
-    Shader* const     shader; //* Pointer to the associated shader
+    inline void _InitMaterialParameters() {
+        if (m_parametersInitialized || !shader || !shader->isValid) return;
 
-    Material(const Material& other) = delete;
-
-    Material& operator=(const Material&) = delete;
-
-    /// @brief Construct a Material with a given name and shader
-    /// @param name Name of the material
-    /// @param shader Pointer to the associated shader
-    /// @note Generally recommended to use MaterialManager::CreateMaterial to
-    /// create a new material.
-    /// @threadsafety not-safe
-    /// @internal
-    /// @since v0.0.2
-    Material(const std::string& name, Shader* shader)
-        : name(name), shader(shader) {
         for (const auto& shaderParam : shader->m_materialParams) {
             MaterialParameter param;
             param.name = shaderParam.name;
@@ -150,6 +139,53 @@ class Material {
                                    BGFX_INVALID_HANDLE,
                                    0,
                                    shaderTexture.stage });
+        }
+        m_parametersInitialized = true;
+
+        if (m_deferredInitialization) {
+            auto initialization      = std::move(m_deferredInitialization);
+            m_deferredInitialization = nullptr;
+            m_initializationCallbackApplied = true;
+            initialization(*this);
+        }
+    };
+
+  public:
+    const std::string       name;   //* Name of the material
+    Shader* shader; //* Pointer to the associated shader
+
+    Material(const Material& other) = delete;
+
+    Material& operator=(const Material&) = delete;
+
+    /// @brief Internal helper to set a deferred initialization callback for the
+    /// material. This is used to set default values for material parameters
+    /// after the shader has been loaded and the material is fully initialized.
+    /// @param callback Function to call when the material is fully initialized
+    /// @threadsafety not-safe
+    void _SetDeferredInitialization(std::function<void(Material&)> callback) {
+        if (m_initializationCallbackApplied) return;
+
+        if (m_parametersInitialized) {
+            m_initializationCallbackApplied = true;
+            callback(*this);
+        } else {
+            m_deferredInitialization = std::move(callback);
+        }
+    }
+
+    /// @brief Construct a Material with a given name and shader
+    /// @param name Name of the material
+    /// @param shader Pointer to the associated shader
+    /// @note Generally recommended to use MaterialManager::CreateMaterial to
+    /// create a new material.
+    /// @threadsafety not-safe
+    /// @internal
+    /// @since v0.0.2
+    Material(const std::string& name, Shader* shader)
+        : name(name), shader(shader) {
+        if (shader->isValid) {
+            _InitMaterialParameters();
         }
     }
 
@@ -172,6 +208,8 @@ class MaterialInstance {
     const Material*                               m_material = nullptr;
     std::vector<std::optional<MaterialParameter>> m_parameterOverrides;
     std::vector<std::optional<TextureParameter>>  m_textureOverrides;
+    std::vector<MaterialParameter>                m_pendingParameters;
+    std::vector<TextureParameter>                 m_pendingTextures;
 
     friend class RenderDirector;
 
@@ -207,6 +245,41 @@ class MaterialInstance {
             m_material->m_textures.end(),
             [&](const TextureParameter& tex) { return tex.name == paramName; });
         return it == m_material->m_textures.end() ? nullptr : &*it;
+    }
+
+    void _SyncPendingOverrides() {
+        if (!m_material || !m_material->m_parametersInitialized) return;
+
+        m_parameterOverrides.resize(m_material->m_parameters.size());
+        m_textureOverrides.resize(m_material->m_textures.size());
+
+        for (const auto& pending : m_pendingParameters) {
+            auto it = std::find_if(m_material->m_parameters.begin(),
+                                   m_material->m_parameters.end(),
+                                   [&](const MaterialParameter& parameter) {
+                                       return parameter.name == pending.name;
+                                   });
+            if (it != m_material->m_parameters.end()) {
+                const size_t index =
+                    static_cast<size_t>(it - m_material->m_parameters.begin());
+                m_parameterOverrides[index] = pending;
+            }
+        }
+        m_pendingParameters.clear();
+
+        for (const auto& pending : m_pendingTextures) {
+            auto it = std::find_if(m_material->m_textures.begin(),
+                                   m_material->m_textures.end(),
+                                   [&](const TextureParameter& texture) {
+                                       return texture.name == pending.name;
+                                   });
+            if (it != m_material->m_textures.end()) {
+                const size_t index =
+                    static_cast<size_t>(it - m_material->m_textures.begin());
+                m_textureOverrides[index] = pending;
+            }
+        }
+        m_pendingTextures.clear();
     }
 
   public:
@@ -245,6 +318,7 @@ class MaterialInstance {
     inline void
     Set(const std::string& paramName, const void* data, size_t size) {
         if (!m_material) return;
+        _SyncPendingOverrides();
         auto it = std::find_if(m_material->m_parameters.begin(),
                                m_material->m_parameters.end(),
                                [&](const MaterialParameter& param) {
@@ -258,6 +332,14 @@ class MaterialInstance {
                 m_parameterOverrides[index]->storage.data(),
                 data,
                 std::min(size, m_parameterOverrides[index]->storage.size()));
+        } else if (!m_material->m_parametersInitialized) {
+            MaterialParameter pending;
+            pending.name = paramName;
+            pending.storage.fill(std::byte{ 0 });
+            std::memcpy(pending.storage.data(),
+                        data,
+                        std::min(size, pending.storage.size()));
+            m_pendingParameters.push_back(std::move(pending));
         } else {
             Syngine::Logger::Error(
                 "Material parameter not found: " + paramName +
@@ -299,11 +381,17 @@ class MaterialInstance {
                            uint32_t            samplerFlags,
                            uint8_t             stage) {
         if (!m_material) return;
+        _SyncPendingOverrides();
         auto it = std::find_if(
             m_material->m_textures.begin(),
             m_material->m_textures.end(),
             [&](const TextureParameter& tex) { return tex.name == paramName; });
         if (it == m_material->m_textures.end()) {
+            if (!m_material->m_parametersInitialized) {
+                m_pendingTextures.push_back(
+                    { paramName, texture, samplerFlags, stage });
+                return;
+            }
             Syngine::Logger::Error("Texture parameter not found: " + paramName);
             return;
         }
@@ -365,12 +453,24 @@ template <>
 inline Math::Vector4
 MaterialInstance::Get<Math::Vector4>(const std::string& paramName) const {
     const MaterialParameter* param = _FindParameter(paramName);
-    if (!param) return Math::Vector4();
+    if (!param) {
+        auto pending = std::find_if(m_pendingParameters.begin(),
+                                    m_pendingParameters.end(),
+                                    [&](const MaterialParameter& parameter) {
+                                        return parameter.name == paramName;
+                                    });
+        if (pending == m_pendingParameters.end()) return Math::Vector4();
+
+        std::array<float, 4> values;
+        std::memcpy(values.data(), pending->storage.data(), sizeof(values));
+        return Math::Vector4(values[0], values[1], values[2], values[3]);
+    }
     const size_t index =
         static_cast<size_t>(param - m_material->m_parameters.data());
-    const auto&          storage = m_parameterOverrides[index]
-                                       ? m_parameterOverrides[index]->storage
-                                       : param->storage;
+    const auto& storage =
+        index < m_parameterOverrides.size() && m_parameterOverrides[index]
+            ? m_parameterOverrides[index]->storage
+            : param->storage;
     std::array<float, 4> values;
     std::memcpy(values.data(), storage.data(), sizeof(values));
     return Math::Vector4(values[0], values[1], values[2], values[3]);
@@ -383,9 +483,10 @@ MaterialInstance::Get<Math::Mat3>(const std::string& paramName) const {
     if (!param) return Math::Mat3();
     const size_t index =
         static_cast<size_t>(param - m_material->m_parameters.data());
-    const auto&          storage = m_parameterOverrides[index]
-                                       ? m_parameterOverrides[index]->storage
-                                       : param->storage;
+    const auto& storage =
+        index < m_parameterOverrides.size() && m_parameterOverrides[index]
+            ? m_parameterOverrides[index]->storage
+            : param->storage;
     std::array<float, 9> values;
     std::memcpy(values.data(), storage.data(), sizeof(values));
     return Math::Mat3(values.data());
@@ -398,9 +499,10 @@ MaterialInstance::Get<Math::Mat4>(const std::string& paramName) const {
     if (!param) return Math::Mat4();
     const size_t index =
         static_cast<size_t>(param - m_material->m_parameters.data());
-    const auto&           storage = m_parameterOverrides[index]
-                                        ? m_parameterOverrides[index]->storage
-                                        : param->storage;
+    const auto& storage =
+        index < m_parameterOverrides.size() && m_parameterOverrides[index]
+            ? m_parameterOverrides[index]->storage
+            : param->storage;
     std::array<float, 16> values;
     std::memcpy(values.data(), storage.data(), sizeof(values));
     return Math::Mat4(values.data());
@@ -427,6 +529,15 @@ class MaterialManager {
     static std::vector<std::unique_ptr<Material>>
                      m_materials; //* Vector of all loaded materials;
     static Material& _DeserializeMaterial(scl::stream& xmlStream);
+
+    static void _CheckPendingMaterials() {
+        for (auto& mat : m_materials) {
+            if (!mat->m_parametersInitialized) {
+                mat->_InitMaterialParameters();
+            }
+        }
+    };
+    friend class RenderDirector;
 
   public:
     /// @brief Get a material by its name

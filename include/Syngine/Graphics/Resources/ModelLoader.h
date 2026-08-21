@@ -61,18 +61,40 @@ struct SubMesh {
 /// @section ModelLoader
 /// @since v0.0.1
 struct ModelData {
+    struct DeferredTextureData {
+        enum class PayloadType : uint8_t {
+            RGBA8,
+        };
+
+        uint32_t               materialIndex = 0;
+        std::string            paramName;
+        uint32_t               samplerFlags = 0;
+        uint8_t                stage        = 0;
+        PayloadType            payloadType  = PayloadType::RGBA8;
+        std::vector<std::byte> payload;
+        uint16_t               width   = 0;
+        uint16_t               height  = 0;
+        bool                   hasMips = false;
+        std::string            debugName;
+    };
+
     // Base properties
     std::vector<Vertex>   vertices;  //* List of vertices in the mesh
     std::vector<uint32_t> indices;   //* List of indices for indexed drawing
     std::vector<SubMesh>  subMeshes; //* List of submeshes in the mesh
     std::vector<MaterialInstance>
-            materials;    //* Per-mesh material instances used by the mesh
+        materials; //* Per-mesh material instances used by the mesh
+    std::vector<DeferredTextureData>
+        deferredTextures; //* Texture payloads decoded on workers, uploaded on
+                          // main thread
     uint8_t numSubMeshes; //* Number of submeshes in the mesh
     uint8_t numMaterials; //* Number of materials used by the mesh
 
     // GPU resources
     bgfx::VertexBufferHandle vbh; //* Handle to the vertex buffer on the GPU
     bgfx::IndexBufferHandle  ibh; //* Handle to the index buffer on the GPU
+    bool                     gpuBuffersReady             = false;
+    uint32_t                 deferredTextureUploadCursor = 0;
 
     // Metadata
     int  id; //* Unique ID for the mesh (for hot reloading and editor purposes)
@@ -90,44 +112,23 @@ struct ModelData {
 /// @section ModelLoader
 /// @since v0.0.1
 class ModelLoader {
-  protected:
-    static std::vector<ModelData> loadedMeshes;
-
   public:
     virtual bool _LoadModel(ModelData&         out,
-                            scl::stream*       meshStream,
+                            scl::stream&       meshStream,
                             const std::string& assetPath,
-                            bool               loadTextures) = 0;
+                            bool               loadTextures)   = 0;
     virtual bool _ReloadModel(ModelData&         out,
-                              scl::stream*       stream,
+                              scl::stream&       stream,
                               const std::string& assetPath,
-                              int                id)          = 0;
+                              int                id,
+                              bool               loadTextures) = 0;
 
-    /// @brief Unloads all loaded models
-    /// @note This is used to clear all loaded models, for example when the
-    /// game is shutting down
+    /// @brief Creates BGFX resources for the given ModelData
+    /// @param data ModelData for which to create BGFX resources
     /// @threadsafety not-safe
-    /// @post All loaded models are unloaded and their resources are freed
-    /// @since v0.0.1
-    /// @internal
-    static void _UnloadAllMeshes();
-
-    /// @brief Get all loaded meshes
-    /// @return std::vector<ModelData>& A reference to the vector of all loaded
-    /// models
-    /// @threadsafety read-only
-    /// @since v0.0.1
-    /// @internal
-    static std::vector<ModelData>& _GetMeshes();
-
-    /// @brief Get a mesh by its ID
-    /// @param id ID of the mesh to get
-    /// @return ModelData* Pointer to the mesh with the given ID, nullptr if
-    /// not found
-    /// @threadsafety read-only
-    /// @since v0.0.1
-    /// @internal
-    static ModelData* _GetMeshById(int id);
+    /// @since v0.0.2
+    static bool CreateBGFXResources(ModelData& out,
+                                    uint32_t   maxTextureUploadsPerCall = 2);
 
     virtual ~ModelLoader() = default; // this keeps getting deleted???
 };
@@ -143,11 +144,11 @@ class AssimpLoader : public ModelLoader {
     /// @param meshStream Stream containing the model data
     /// @param loadTextures Whether to load textures for the model
     /// @return true if the model was loaded successfully, false otherwise
-    /// @threadsafety not-safe
-    /// @since v0.0.1
+    /// @threadsafety safe
+    /// @since v0.0.2
     /// @internal
     bool _LoadModel(ModelData&         out,
-                    scl::stream*       meshStream,
+                    scl::stream&       meshStream,
                     const std::string& assetPath,
                     bool               loadTextures) override;
 
@@ -159,9 +160,10 @@ class AssimpLoader : public ModelLoader {
     /// hot reloading
     /// @internal
     bool _ReloadModel(ModelData&         out,
-                      scl::stream*       stream,
+                      scl::stream&       stream,
                       const std::string& assetPath,
-                      int                id) override;
+                      int                id,
+                      bool               loadTextures) override;
 
   private:
     /// @brief Processes the Assimp scene and fills the MeshData structure
@@ -175,7 +177,7 @@ class AssimpLoader : public ModelLoader {
     /// @internal
     static bool processScene(ModelData&     out,
                              const aiScene* scene,
-                             scl::stream*   meshStream,
+                             scl::stream&   meshStream,
                              bool           loadTextures = true);
 
     /// @brief Processes an Assimp material and fills the Material structure
@@ -189,8 +191,16 @@ class AssimpLoader : public ModelLoader {
     /// @internal
     static MaterialInstance _ProcessMaterial(aiMaterial*    aiMat,
                                              const aiScene* scene,
-                                             scl::stream*   meshStream,
+                                             scl::stream&   meshStream,
+                                             ModelData&     out,
+                                             uint32_t       materialIndex,
                                              bool loadTextures = true);
+
+    struct TempProcessedMesh {
+        std::vector<Vertex>   vertices;
+        std::vector<uint32_t> indices;
+        SubMesh               subMesh;
+    };
 };
 
 } // namespace Syngine

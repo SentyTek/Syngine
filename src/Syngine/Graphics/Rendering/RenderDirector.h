@@ -12,6 +12,7 @@
 #include <Syngine/Graphics/Resources/ShaderManager.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/GameObjects/AllComponents.h>
+#include <Syngine/Core/Memory/ArenaAlloc.h>
 #include <Syngine/Math/Matrix4x4.hpp>
 
 #include <bgfx/bgfx.h>
@@ -96,12 +97,12 @@ class RenderDirector {
 
     static bool _CreateSceneBuffers();
 
-    static std::vector<Renderer::RenderPacket>
+    static Memory::ArenaAlloc
         m_renderPackets; //* All forward render packets for the current frame
-    static std::vector<Renderer::RenderPacket>
+    static Memory::ArenaAlloc
         m_billboardRenderPackets; //* All billboard render packets for the
                                   // current frame
-    static void
+    static std::tuple<std::span<RenderPacket>, std::span<RenderPacket>>
     _CollectRenderPackets(CameraComponent* camera); //* Collect render packets
                                                     // for the current frame
 
@@ -113,11 +114,15 @@ class RenderDirector {
 
     static void _DrawShadows(const Shader* program, CameraComponent* camera);
     static void _DrawSky(const Shader* program, const CameraComponent* camera);
-    static void _DrawForward(const Shader* program, CameraComponent* camera);
+    static void _DrawForward(const Shader*           program,
+                             CameraComponent*        camera,
+                             std::span<RenderPacket> packets);
     static void _DrawDebug(const Shader*    program,
                            CameraComponent* camera,
                            DebugModes       debug);
-    static void _DrawBillboard(const Shader* program, CameraComponent* camera);
+    static void _DrawBillboard(const Shader*           program,
+                               CameraComponent*        camera,
+                               std::span<RenderPacket> packets);
     static void _DrawSSAO(const Shader* program);
     static void _DrawPostProcess(const Shader* program);
     static void _DrawDbgBillboard(Shader* program);
@@ -239,6 +244,10 @@ class RenderDirector {
     friend class Core;
     friend class Renderer;
     friend class UniformRegistry;
+
+    static void _GetRenderResources();
+    static bool
+        m_collectedresources; //* Whether render resources have been collected
 };
 
 } // namespace Syngine

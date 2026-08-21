@@ -28,8 +28,14 @@ We have several pages of documentation available. Note the API reference is auto
 
 - [Core](api/core_doc.md)
 - [Input](api/input_doc.md)
+- [Jobsystem](api/jobsystem_doc.md)
 - [Logger](api/logger_doc.md)
 - [Luamanager](api/luamanager_doc.md)
+- [Threadmanager](api/threadmanager_doc.md)
+
+#### Core/Memory
+
+- [Arenaalloc](api/arenaalloc_doc.md)
 
 #### GameObjects
 

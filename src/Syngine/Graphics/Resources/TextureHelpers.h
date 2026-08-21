@@ -6,11 +6,22 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
+#pragma once
+
 #include <bgfx/bgfx.h>
 #include <string>
 #include <SDL3/SDL.h>
+#include <cstdint>
+#include <vector>
 
 namespace Syngine {
+
+struct DecodedTextureData {
+    uint16_t               width   = 0;
+    uint16_t               height  = 0;
+    bool                   hasMips = false;
+    std::vector<std::byte> payload;
+};
 
 /// @brief Loads a texture from memory
 /// @param data Pointer to the texture data in memory
@@ -19,6 +30,15 @@ namespace Syngine {
 /// @return A bgfx::TextureHandle representing the loaded texture
 bgfx::TextureHandle
 LoadTextureFromMemory(const uint8_t* data, size_t size, const char* name);
+
+/// @brief Decodes texture bytes into RGBA8 and packs mip levels.
+/// @param data Pointer to encoded texture data in memory
+/// @param size Size of encoded texture data in bytes
+/// @param out Decoded output data including packed mip payload
+/// @return true if decoding succeeded, false otherwise
+bool DecodeTextureFromMemory(const uint8_t*      data,
+                             size_t              size,
+                             DecodedTextureData& out);
 
 /// @brief Loads a texture from file
 /// @param path Path to the texture file

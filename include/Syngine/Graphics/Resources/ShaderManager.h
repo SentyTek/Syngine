@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include "Syngine/Core/JobSystem.h"
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
 #include <Syngine/Core/Logger.h>
 #include <Syngine/Utils/Serializer.h>
@@ -16,6 +17,7 @@
 
 #include <array>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <sys/stat.h>
 #include <vector>
@@ -114,8 +116,13 @@ class Shader {
     friend class Material;
 
   public:
+    Shader() : m_program(BGFX_INVALID_HANDLE), m_viewId(Syngine::ViewID{}) {};
     Shader(Shader&&) noexcept            = default;
     Shader& operator=(Shader&&) noexcept = default;
+
+    bool isValid           = false;
+    bool isWaitingOnWorker = false;
+    int  id = 0; // Unique ID for the shader, assigned by ShaderManager
 };
 
 /// @brief Class to manage shaders and their associated metadata
@@ -139,6 +146,17 @@ class ShaderManager {
         UniformGetter    getter;
     };
 
+    struct TempShaderData {
+        scl::stream               vertStream;
+        scl::stream               fragStream;
+        std::vector<_UniformMeta> requestedUniforms;
+        bool                      safe = true;
+        std::string               bundlePath;
+        std::string               shaderName;
+        ViewID                    viewId;
+        int                       id = 0;
+    };
+
     static std::vector<_UniformMeta>
     _parseShaderMetadata(scl::pack::Packager& packager,
                          const std::string&   shaderName);
@@ -157,25 +175,44 @@ class ShaderManager {
     static bgfx::ShaderHandle _LoadShaderFromMemory(const void* data,
                                                     size_t      size);
 
-    static std::optional<Shader> _BuildShader(const std::string& bundlePath,
-                                              const std::string& shaderName,
-                                              const ViewID       viewId);
+    static Shader* _BuildShader(const std::string& bundlePath,
+                                const std::string& shaderName,
+                                const ViewID       viewId,
+                                bool               synchronous = false,
+                                int                id          = 0);
+
+    static bool _CreateBGFXResources(TempShaderData& shader);
+
+    /// @brief Check if any pending shaders have completed loading and create
+    /// their bgfx resources
+    /// @return true if any shaders were completed, false if all shaders are
+    /// ready
+    /// @internal
+    /// @since v0.0.2
+    static bool _CheckPendingShaders();
 
     ShaderManager() = delete; // Prevent instantiation of this class
 
     static std::vector<Shader> m_loadedShaders; // List of loaded shaders
+    static std::vector<Syngine::JobResult<TempShaderData>>
+        m_tempShaderData; // List of temporary shader data
+    static std::mutex
+        tempDataMutex; // Mutex for thread-safe access to m_tempShaderData
+
+    static int nextId; // Unique ID for the next shader to be loaded
+
+    friend class RenderDirector;
+
   public:
     /// @brief Load a shader from a bundle and return its ID
     /// @param bundlePath Path to the bundle containing the shader
     /// @param shaderName Name of the shader to load
     /// @param viewId View ID associated with the shader
-    /// @return size_t ID of the loaded shader, or BGFX_INVALID_HANDLE if
-    /// loading failed
     /// @threadsafety not-safe
     /// @since v0.0.2
-    static size_t LoadShader(const std::string& bundlePath,
-                             const std::string& shaderName,
-                             const ViewID       viewId);
+    static void LoadShader(const std::string& bundlePath,
+                           const std::string& shaderName,
+                           const ViewID       viewId);
 
     /// @brief Unload a shader by its ID
     /// @param shaderId ID of the shader to unload

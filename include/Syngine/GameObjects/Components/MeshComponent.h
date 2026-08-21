@@ -7,6 +7,8 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include "Syngine/Core/JobSystem.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include <Syngine/GameObjects/Component.h>
 #include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/Graphics/Resources/ModelLoader.h>
@@ -101,9 +103,10 @@ class MeshComponent : public Syngine::IComponent {
 
     /// @brief Update the mesh component. Unused.
     /// @param deltaTime Time elapsed since the last update in seconds
-    /// @note There is no specific update logic for the mesh component
     /// @since v0.0.1
-    void Update(float deltaTime) override {};
+    void Update(float deltaTime) override;
+
+    void PostPhysicsUpdate() override;
 
     /// @brief Load a mesh from a file
     /// @param bundlePath Path to the shader bundle containing the mesh
@@ -218,6 +221,15 @@ class MeshComponent : public Syngine::IComponent {
         1.0f;                  //* UV scale override for the whole object
     std::string m_bundlePath;  //* Path to the shader bundle containing the mesh
     std::string m_texturePath; //* Path to the mesh within the bundle
+    bool        m_loadTextures = true;
+
+    bool m_isWaitingForMeshLoad =
+        false; //* Whether the component is waiting for the mesh to load
+    bool                 m_isReloadingMesh = false;
+    JobResult<ModelData> m_meshLoadJob; //* Job result for the mesh load job
+
+    void                _RecalculateAABB();
+    TransformComponent* m_transform = nullptr;
 
     friend class Core;
 };

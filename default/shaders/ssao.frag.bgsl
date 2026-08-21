@@ -2,10 +2,10 @@ $input v_texcoord0
 
 #include <bgfx_shader.sh>
 
-// @Sampler name="s_depth" stage="0" src="Renderer.sceneDepth"
+// @EngineSampler name="s_depth" stage="0" src="Renderer.sceneDepth"
 SAMPLER2D(s_depth, 0);
 
-// @Sampler name="s_normal" stage="1" src="Renderer.sceneNormal"
+// @EngineSampler name="s_normal" stage="1" src="Renderer.sceneNormal"
 SAMPLER2D(s_normal, 1);
 
 // @EngineUniform freq="frame" src="Renderer.SSAO.Params"

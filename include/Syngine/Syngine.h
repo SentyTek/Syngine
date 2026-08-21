@@ -11,6 +11,8 @@
 #include <Syngine/Core/Core.h>
 #include <Syngine/Core/Logger.h>
 #include <Syngine/Core/Input.h>
+#include <Syngine/Core/JobSystem.h>
+#include <Syngine/Core/ThreadManager.h>
 
 #include <Syngine/Scene/GameObjectRegistry.h>
 
