@@ -15,6 +15,7 @@
 ### Functions: 
 
 - [LoadTextureFromMemory()](#syngine-loadtexturefrommemory)
+- [DecodeTextureFromMemory()](#syngine-decodetexturefrommemory)
 - [LoadTextureFromFile()](#syngine-loadtexturefromfile)
 - [LoadTextureFromBundle()](#syngine-loadtexturefrombundle)
 - [CreateFlatTexture()](#syngine-createflattexture)
@@ -37,6 +38,24 @@ bgfx::TextureHandle LoadTextureFromMemory(const uint8_t* data, size_t size, cons
 - `name`: Name of the texture for debugging purposes
 
 **Returns:** A bgfx::TextureHandle representing the loaded texture
+
+---
+<a id="syngine-decodetexturefrommemory"></a>
+
+#### **`Syngine::DecodeTextureFromMemory()`**
+
+ Decodes texture bytes into RGBA8 and packs mip levels.
+
+Signature:
+```cpp
+bool DecodeTextureFromMemory(const uint8_t* data, size_t size, DecodedTextureData& out);
+```
+**Parameters:**
+- `data`: Pointer to encoded texture data in memory
+- `size`: Size of encoded texture data in bytes
+- `out`: Decoded output data including packed mip payload
+
+**Returns:** true if decoding succeeded, false otherwise
 
 ---
 <a id="syngine-loadtexturefromfile"></a>

@@ -25,6 +25,7 @@ Class to manage shaders and their associated metadata @section ShaderManager @in
 
 ### Functions: 
 
+- [_CheckPendingShaders()](#shadermanager-_checkpendingshaders)
 - [LoadShader()](#shadermanager-loadshader)
 - [UnloadShader()](#shadermanager-unloadshader)
 - [ReloadShader()](#shadermanager-reloadshader)
@@ -118,6 +119,23 @@ Signature:
 **This function has been available since:** v0.0.2
 
 ---
+<a id="shadermanager-_checkpendingshaders"></a>
+
+#### **`ShaderManager::_CheckPendingShaders()`**
+
+ Check if any pending shaders have completed loading and create their bgfx resources
+
+#### This function is internal use only and not intended for public use!
+
+Signature:
+```cpp
+ static bool _CheckPendingShaders();
+```
+**Returns:** true if any shaders were completed, false if all shaders are ready
+
+**This function has been available since:** v0.0.2
+
+---
 <a id="shadermanager-loadshader"></a>
 
 #### **`ShaderManager::LoadShader()`**
@@ -126,14 +144,12 @@ Signature:
 
 Signature:
 ```cpp
- static size_t LoadShader(const std::string& bundlePath, const std::string& shaderName, const ViewID viewId);
+ static void LoadShader(const std::string& bundlePath, const std::string& shaderName, const ViewID viewId);
 ```
 **Parameters:**
 - `bundlePath`: Path to the bundle containing the shader
 - `shaderName`: Name of the shader to load
 - `viewId`: View ID associated with the shader
-
-**Returns:** size_t ID of the loaded shader, or BGFX_INVALID_HANDLE if loading failed
 
 **Thread Safety:** not-safe
 

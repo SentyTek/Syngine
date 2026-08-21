@@ -32,6 +32,7 @@ Class to manage materials and their instances @section MaterialManager
 
 - [_SetDefault()](#material-_setdefault)
 - [_SetDefaultTexture()](#material-_setdefaulttexture)
+- [_SetDeferredInitialization()](#material-_setdeferredinitialization)
 - [CreateInstance()](#material-createinstance)
 - [Clone()](#material-clone)
 - [_FindParameter()](#materialinstance-_findparameter)
@@ -155,6 +156,22 @@ Signature:
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.2
+
+---
+<a id="material-_setdeferredinitialization"></a>
+
+#### **`Material::_SetDeferredInitialization()`**
+
+ Internal helper to set a deferred initialization callback for the material. This is used to set default values for material parameters after the shader has been loaded and the material is fully initialized.
+
+Signature:
+```cpp
+ void _SetDeferredInitialization(std::function<void(Material&)> callback);
+```
+**Parameters:**
+- `callback`: Function to call when the material is fully initialized
+
+**Thread Safety:** not-safe
 
 ---
 <a id="material-materialconst-std-string-name-shader-shader"></a>
@@ -641,5 +658,5 @@ Signature:
 | Type | Name | Description |
 | --- | --- | --- | 
 | `const` | `std` | Name of the material |
-| `Shader*` | `const` | Pointer to the associated shader |
+| `Shader*` | `shader` | Pointer to the associated shader |
 ---

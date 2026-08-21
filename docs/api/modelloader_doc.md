@@ -13,6 +13,7 @@ AssimpLoader class for loading 3D models using Assimp @section ModelLoader
 ---
 ## Goto: 
 
+- [Member Variables](#member-variables)
 
 ## Additional Functions: 
 
@@ -24,9 +25,7 @@ AssimpLoader class for loading 3D models using Assimp @section ModelLoader
 
 ### Functions: 
 
-- [_UnloadAllMeshes()](#modelloader-_unloadallmeshes)
-- [_GetMeshes()](#modelloader-_getmeshes)
-- [_GetMeshById()](#modelloader-_getmeshbyid)
+- [CreateBGFXResources()](#modelloader-createbgfxresources)
 - [_LoadModel()](#assimploader-_loadmodel)
 - [_ReloadModel()](#assimploader-_reloadmodel)
 - [processScene()](#assimploader-processscene)
@@ -87,85 +86,25 @@ Signature:
 ```cpp
 struct ModelData
 ```
-**Members:**
-| Type | Name | Description |
-| --- | --- | --- | 
-| `std::vector<Vertex>` | `vertices` | List of vertices in the mesh |
-| `std::vector<uint32_t>` | `indices` | List of indices for indexed drawing |
-| `std::vector<SubMesh>` | `subMeshes` | List of submeshes in the mesh |
-| `materials` | `Per-mesh` | material instances used by the mesh |
-| `uint8_t` | `numSubMeshes` | Number of submeshes in the mesh |
-| `uint8_t` | `numMaterials` | Number of materials used by the mesh |
-| `bgfx::VertexBufferHandle` | `vbh` | Handle to the vertex buffer on the GPU |
-| `bgfx::IndexBufferHandle` | `ibh` | Handle to the index buffer on the GPU |
-| `int` | `id` | Unique ID for the mesh (for hot reloading and editor purposes) |
-| `bool` | `valid` | Whether the mesh data is valid and can be rendered |
-| `lastWriteTime` | `Last` | write time of the mesh file (for hot reloading) |
-| `localMin` | `Minimum` | corner of the local axis-aligned bounding box |
-| `localMax` | `Maximum` | corner of the local axis-aligned bounding box |
 **This function has been available since:** v0.0.1
 
 ---
-<a id="modelloader-_unloadallmeshes"></a>
+<a id="modelloader-createbgfxresources"></a>
 
-#### **`ModelLoader::_UnloadAllMeshes()`**
+#### **`ModelLoader::CreateBGFXResources()`**
 
- Unloads all loaded models
-
-#### This function is internal use only and not intended for public use!
-
-**Note:** This is used to clear all loaded models, for example when the game is shutting down
-
-**Postconditions:** All loaded models are unloaded and their resources are freed
+ Creates BGFX resources for the given ModelData
 
 Signature:
 ```cpp
- static void _UnloadAllMeshes();
-```
-**Thread Safety:** not-safe
-
-**This function has been available since:** v0.0.1
-
----
-<a id="modelloader-_getmeshes"></a>
-
-#### **`ModelLoader::_GetMeshes()`**
-
- Get all loaded meshes
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- static std::vector<ModelData>& _GetMeshes();
-```
-**Returns:** std::vector<ModelData>& A reference to the vector of all loaded models
-
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
-
----
-<a id="modelloader-_getmeshbyid"></a>
-
-#### **`ModelLoader::_GetMeshById()`**
-
- Get a mesh by its ID
-
-#### This function is internal use only and not intended for public use!
-
-Signature:
-```cpp
- static ModelData* _GetMeshById(int id);
+ static bool CreateBGFXResources(ModelData& out, uint32_t maxTextureUploadsPerCall = 2);
 ```
 **Parameters:**
-- `id`: ID of the mesh to get
+- `data`: ModelData for which to create BGFX resources
 
-**Returns:** ModelData* Pointer to the mesh with the given ID, nullptr if not found
+**Thread Safety:** not-safe
 
-**Thread Safety:** read-only
-
-**This function has been available since:** v0.0.1
+**This function has been available since:** v0.0.2
 
 ---
 <a id="assimploader-_loadmodel"></a>
@@ -178,7 +117,7 @@ Signature:
 
 Signature:
 ```cpp
- bool _LoadModel(ModelData& out, scl::stream* meshStream, const std::string& assetPath, bool loadTextures) override;
+ bool _LoadModel(ModelData& out, scl::stream& meshStream, const std::string& assetPath, bool loadTextures) override;
 ```
 **Parameters:**
 - `out`: ModelData to fill with the loaded model
@@ -187,9 +126,9 @@ Signature:
 
 **Returns:** true if the model was loaded successfully, false otherwise
 
-**Thread Safety:** not-safe
+**Thread Safety:** safe
 
-**This function has been available since:** v0.0.1
+**This function has been available since:** v0.0.2
 
 ---
 <a id="assimploader-_reloadmodel"></a>
@@ -204,7 +143,7 @@ Signature:
 
 Signature:
 ```cpp
- bool _ReloadModel(ModelData& out, scl::stream* stream, const std::string& assetPath, int id) override;
+ bool _ReloadModel(ModelData& out, scl::stream& stream, const std::string& assetPath, int id, bool loadTextures) override;
 ```
 **Parameters:**
 - `out`: ModelData to fill with the reloaded model
@@ -223,7 +162,7 @@ Signature:
 
 Signature:
 ```cpp
- static bool processScene(ModelData& out, const aiScene* scene, scl::stream* meshStream, bool loadTextures = true);
+ static bool processScene(ModelData& out, const aiScene* scene, scl::stream& meshStream, bool loadTextures = true);
 ```
 **Parameters:**
 - `out`: ModelData to fill with the processed data
@@ -247,7 +186,7 @@ Signature:
 
 Signature:
 ```cpp
- static MaterialInstance _ProcessMaterial(aiMaterial* aiMat, const aiScene* scene, scl::stream* meshStream, bool loadTextures = true);
+ static MaterialInstance _ProcessMaterial(aiMaterial* aiMat, const aiScene* scene, scl::stream& meshStream, ModelData& out, uint32_t materialIndex, bool loadTextures = true);
 ```
 **Parameters:**
 - `aiMat`: Assimp material to process
@@ -260,4 +199,18 @@ Signature:
 
 **This function has been available since:** v0.0.1
 
+---
+## Member Variables
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `std::vector<Vertex>` | `vertices` | List of vertices in the mesh |
+| `std::vector<uint32_t>` | `indices` | List of indices for indexed drawing |
+| `std::vector<SubMesh>` | `subMeshes` | List of submeshes in the mesh |
+| `uint8_t` | `numSubMeshes` | Number of submeshes in the mesh |
+| `uint8_t` | `numMaterials` | Number of materials used by the mesh |
+| `bgfx::VertexBufferHandle` | `vbh` | Handle to the vertex buffer on the GPU |
+| `bgfx::IndexBufferHandle` | `ibh` | Handle to the index buffer on the GPU |
+| `int` | `id` | Unique ID for the mesh (for hot reloading and editor purposes) |
+| `bool` | `valid` | Whether the mesh data is valid and can be rendered |
 ---
