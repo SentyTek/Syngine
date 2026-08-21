@@ -37,7 +37,7 @@ set(CMAKE_CXX_STANDARD 20)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON \"Enable folder grouping in IDEs\")
 
 # Set the current year for copyright notices
-set(CURRENT_YEAR 2025)
+set(CURRENT_YEAR 2026)
 
 # Set the install prefix based on platform
 if(UNIX AND NOT APPLE)
@@ -65,17 +65,14 @@ endif()
 
 # set the output directory for built objects.
 # This makes sure that the dynamic library goes into the build directory automatically.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY \"\${CMAKE_BINARY_DIR}/bin\")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY \"\${CMAKE_BINARY_DIR}/lib\")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 # Add engine first
 add_subdirectory(engine)
 
 # Add the game
 add_subdirectory(game)
-
-# And finally the editor
-# add_subdirectory(editor)
 
 set_target_properties(\${EXECUTABLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"\${CMAKE_BINARY_DIR}/\$<CONFIGURATION>/bin\")" > CMakeLists.txt
 
@@ -156,17 +153,16 @@ using namespace Syngine;
 
 int AppMain(int argc, char* argv[]) {
     std::string gameName = "$PROJECT_NAME";
-    Syngine::EngineConfig config   = { .windowTitle  = gameName,
+    Syngine::EngineConfig config   = { .gameName  = gameName,
                                        .windowWidth  = 1600,
                                        .windowHeight = 900,
                                        .usePhysics   = true };
 
     Syngine::RendererConfig rConfig  = { .useShadows      = true,
-                                         .shadowDist      = 500.0f,
+                                         .shadowDist      = 500,
                                          .vsync           = true,
                                          .usePseudoCamera = false };
 
-    Syngine::Logger::Init(gameName);
     Syngine::Logger::Info("Starting " + gameName, true);
 
     // Create game
@@ -174,9 +170,9 @@ int AppMain(int argc, char* argv[]) {
     engine.Initialize(rConfig);
 
     // Create default camera
-    Syngine::GameObject* camera = new Syngine::GameObject("MainCamera");
-    Syngine::CameraComponent* cameraComp = camera->AddComponent<Syngine::CameraComponent>();
-
+    Syngine::GameObject& camera = Syngine::GameObjectRegistry::CreateGameObject("MainCamera");
+    Syngine::CameraComponent* cameraComp = camera.AddComponent<Syngine::CameraComponent>();
+    Renderer::SetActiveCamera(cameraComp);
 
     Logger::Info("Starting event loop", true);
     while (engine.IsRunning()) {
@@ -185,14 +181,13 @@ int AppMain(int argc, char* argv[]) {
             SYN_PROFILE_SCOPE("MainLoop")
             engine.HandleEvents();
             engine.Update();
-            engine.Render(cameraComp);
+            engine.Render();
         }
     }
 
     // Cleanup
     Syngine::GameObjectRegistry::Clear();
     ShaderManager::UnloadAllShaders();
-    Syngine::Logger::Shutdown();
     return 0;
 }
 EOF

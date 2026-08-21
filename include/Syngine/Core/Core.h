@@ -199,7 +199,7 @@ class Core {
     /// @note This is updated every second and may not be accurate for short
     /// time intervals.
     /// @since v0.0.2
-    static float GetFPS() { return m_frameCounter.lastFPS; }
+    static int GetFPS() { return m_frameCounter.lastFPS; }
 
     /// @brief Add a callback function to be called every frame during the
     /// update phase

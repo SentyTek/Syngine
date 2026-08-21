@@ -78,24 +78,24 @@ _CreateSolidRGBA8Texture(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 // I present to you an unholy abomination of static member definitions
 bool                              RenderDirector::m_collectedresources = false;
 RenderDirector::RenderCoreBuffers RenderDirector::m_buffers            = {
-               .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
-               .sceneColor =
+    .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
+    .sceneColor =
         BGFX_INVALID_HANDLE, //* Color texture for scene rendering (RGBA16F)
-               .sceneDepth =
+    .sceneDepth =
         BGFX_INVALID_HANDLE, //* Depth texture for scene rendering (D24S8)
-               .sceneNormal =
+    .sceneNormal =
         BGFX_INVALID_HANDLE, //* Normal texture for scene rendering (RGBA8)
-               .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
-               .ssaoBlurHFB =
+    .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
+    .ssaoBlurHFB =
         BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (horizontal)
-               .ssaoBlurVFB =
+    .ssaoBlurVFB =
         BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (vertical)
-               .ssaoTex   = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
-               .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
-               .ssaoBlurFinal =
+    .ssaoTex   = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
+    .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
+    .ssaoBlurFinal =
         BGFX_INVALID_HANDLE, //* SSAO texture post-blur (Use this one) (R8)
-               .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
-               .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
+    .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
+    .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
 };
 
 bool RenderDirector::m_changeVsyncThisFrame      = false;
@@ -313,10 +313,10 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
     m_config.shadowMapSize = SHADOW_MAP_SIZE; // Ensure shadow map size is set
 
     // create billboard buffers
-    static const float billboardVertices[]   = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-                                                 0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
-                                                 0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-                                                 -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
+    static const float billboardVertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
+                                               0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
+                                               0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
+                                               -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
     static const uint16_t billboardIndices[] = { 0, 1, 2, 0, 2, 3 };
 
     bgfx::VertexLayout billboardLayout;
@@ -510,11 +510,11 @@ bool RenderDirector::_CreateSceneBuffers() {
         BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
     m_buffers.sceneColor  = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                 uint16_t(Renderer::height),
-                                                 false,
-                                                 1,
-                                                 bgfx::TextureFormat::RGBA16F,
-                                                 tsFlags);
+                                                  uint16_t(Renderer::height),
+                                                  false,
+                                                  1,
+                                                  bgfx::TextureFormat::RGBA16F,
+                                                  tsFlags);
     m_buffers.sceneNormal = bgfx::createTexture2D(uint16_t(Renderer::width),
                                                   uint16_t(Renderer::height),
                                                   false,
@@ -522,11 +522,11 @@ bool RenderDirector::_CreateSceneBuffers() {
                                                   bgfx::TextureFormat::RGBA16F,
                                                   tsFlags);
     m_buffers.sceneDepth  = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                 uint16_t(Renderer::height),
-                                                 false,
-                                                 1,
-                                                 bgfx::TextureFormat::D24S8,
-                                                 BGFX_TEXTURE_RT);
+                                                  uint16_t(Renderer::height),
+                                                  false,
+                                                  1,
+                                                  bgfx::TextureFormat::D24S8,
+                                                  BGFX_TEXTURE_RT);
 
     if (m_config.useSSAO) {
         const uint16_t ssaoWidth  = uint16_t(std::max(1, Renderer::width / 2));
@@ -899,7 +899,7 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
     SYN_PROFILE_FUNCTION();
 
     // Prepass to figure out packet count
-    int         packetCount = 0;
+    size_t      packetCount = 0;
     const auto& gameObjects = GameObjectRegistry::GetRenderableObjects();
     std::vector<GameObject*> validGOs;
     validGOs.reserve(gameObjects.size());
@@ -916,7 +916,7 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         packetCount, alignof(RenderPacket));
 
     // Actual pass for visibilty and packet construction
-    int fPacketCount = 0;
+    size_t fPacketCount = 0;
     for (auto& go : validGOs) {
         auto meshComp = go->GetComponent<MeshComponent>();
 
@@ -1330,7 +1330,7 @@ void RenderDirector::_DrawBillboard(const Shader*           program,
 void RenderDirector::_DrawSSAO(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     if (!m_config.useSSAO) return;
-    uint64_t samplerFlags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
+    uint32_t samplerFlags = BGFX_SAMPLER_MIN_POINT | BGFX_SAMPLER_MAG_POINT |
                             BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
     if (program->m_program.idx == m_ssaoProgram->m_program.idx) {
