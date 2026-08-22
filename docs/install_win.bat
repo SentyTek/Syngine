@@ -8,13 +8,7 @@ echo Creating new Syngine project: %PROJECT_NAME%. This may take a few moments..
 cd ..\..\
 if /I "%INIT_GIT%"=="Y" (
     git init
-    git submodule add https://github.com/SentyTek/SyngineStudio editor
     git submodule add https://github.com/SentyTek/Syngine engine
-) else (
-    if not exist editor mkdir editor
-    cd editor
-    git clone https://github.com/SentyTek/SyngineStudio.git .
-    cd ..
 )
 
 if not exist game mkdir game
@@ -64,8 +58,8 @@ echo endif^(^)
 echo.
 echo # set the output directory for built objects.
 echo # This makes sure that the dynamic library goes into the build directory automatically.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+echo set^(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>"^)
+echo set^(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>"^)
 echo.
 echo # Add engine first
 echo add_subdirectory^(engine^)
@@ -74,7 +68,7 @@ echo # Add the game
 echo add_subdirectory^(game^)
 echo.
 
-set_target_properties^(${EXECUTABLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>/bin"^)
+echo set_target_properties^(${EXECUTABLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>/bin"^)
 ) > CMakeLists.txt
 
 cd game
@@ -153,7 +147,7 @@ echo .DS_Store
 
 cd game\src
 (
-echo #include "Syngine/Syngine.h"
+echo #include ^<Syngine/Syngine.h^>
 echo #include ^<string^>
 echo using namespace Syngine;
 echo.
@@ -176,9 +170,9 @@ echo     Syngine::Core engine^(config^);
 echo     engine.Initialize^(rConfig^);
 echo.
 echo     // Create default camera
-echo     Syngine::GameObject& camera = Syngine::GameObjectRegistry::CreateGameObject^("MainCamera"^);
+echo     Syngine::GameObject^& camera = Syngine::GameObjectRegistry::CreateGameObject^("MainCamera"^);
 echo     Syngine::CameraComponent* cameraComp = camera.AddComponent^<Syngine::CameraComponent^>^(^);
-echo     Renderer::SetActiveCamera(cameraComp);
+echo     Renderer::SetActiveCamera^(cameraComp^);
 echo.
 echo     Logger::Info^("Starting event loop"^, true^);
 echo     while ^(engine.IsRunning^(^)^) {
@@ -187,7 +181,7 @@ echo         {
 echo             SYN_PROFILE_SCOPE^("MainLoop"^)
 echo             engine.HandleEvents^(^);
 echo             engine.Update^(^);
-echo             engine.Render^(cameraComp^);
+echo             engine.Render^(^);
 echo         }
 echo     }
 echo.

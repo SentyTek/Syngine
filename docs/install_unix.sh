@@ -9,13 +9,7 @@ cd ../../
 
 if [ "$INIT_GIT" = "Y" ] || [ "$INIT_GIT" = "y" ]; then
     git init
-    git submodule add https://github.com/SentyTek/SyngineStudio editor
     git submodule add https://github.com/SentyTek/Syngine engine
-else
-    mkdir -p editor
-    cd editor
-    git clone https://github.com/SentyTek/SyngineStudio.git .
-    cd ..
 fi
 
 mkdir -p game
@@ -147,7 +141,7 @@ cd game/src
 touch main.cpp
 cat > main.cpp <<EOF
 
-#include "Syngine/Syngine.h"
+#include <Syngine/Syngine.h>
 #include <string>
 using namespace Syngine;
 
