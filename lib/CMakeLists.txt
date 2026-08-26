@@ -7,7 +7,7 @@
 # ╰──────────────────────────────────────╯
 # lib/CMakeLists.txt
 
-# This primarily links Lua. May be extended if other libraries are added that need to be linked to the engine that aren't vendored.
+# This primarily links Lua and Dear ImGui. May be extended if other libraries are added that need to be linked to the engine that aren't vendored.
 
 # I yoinked this from https://github.com/eliasdaler/cmake-lua-with-sol2-example which allows redistribution
 
@@ -64,3 +64,14 @@ endif()
 if(NOT MSVC)
     target_include_directories(Syngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
+
+target_sources(Syngine PRIVATE
+  imgui/imgui.cpp
+  imgui/imgui_draw.cpp
+  imgui/imgui_tables.cpp
+  imgui/imgui_widgets.cpp
+  imgui/imgui_demo.cpp
+  imgui/backends/imgui_impl_sdl3.cpp
+  imgui/backends/imgui_impl_bgfx.cpp
+)
+
