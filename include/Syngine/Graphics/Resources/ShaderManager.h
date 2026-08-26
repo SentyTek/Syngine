@@ -17,13 +17,15 @@
 
 #include <array>
 #include <cstdint>
-#include <memory>
-#include <optional>
 #include <sys/stat.h>
 #include <vector>
 #include <string>
 
 #define SYNINT_SHADER_METADATA_VERSION "1.0"
+
+namespace Syngine::UI::Debug {
+class ImGui_ImplBgfx; // Forward declaration
+}
 
 namespace Syngine {
 enum ViewID : bgfx::ViewId;
@@ -54,7 +56,6 @@ struct TextureParameterDesc {
 
 /// @brief Class representing a shader program and its associated metadata
 /// @section ShaderManager
-/// @internal
 /// @since v0.0.2
 class Shader {
     /// @brief Struct to hold information about an engine uniform
@@ -114,6 +115,7 @@ class Shader {
     friend class ShaderManager;
     friend class RenderDirector;
     friend class Material;
+    friend class ::Syngine::UI::Debug::ImGui_ImplBgfx;
 
   public:
     Shader() : m_program(BGFX_INVALID_HANDLE), m_viewId(Syngine::ViewID{}) {};
@@ -123,6 +125,9 @@ class Shader {
     bool isValid           = false;
     bool isWaitingOnWorker = false;
     int  id = 0; // Unique ID for the shader, assigned by ShaderManager
+
+    ViewID              GetViewID() const { return m_viewId; }
+    bgfx::ProgramHandle GetProgram() const { return m_program; }
 };
 
 /// @brief Class to manage shaders and their associated metadata

@@ -139,6 +139,10 @@ class Renderer {
     /// @since v0.0.2
     static CameraComponent* GetActiveCamera() { return m_camera; }
 
+#ifdef SYN_IS_EDITOR
+    static bgfx::TextureHandle GetSceneTexture();
+#endif
+
   private:
     struct UniformCacheEntry {
         uint16_t             idx;

@@ -19,7 +19,8 @@
 
 #include <cstdint>
 #include <array>
-#include <vector>
+
+#define SYNINT_DEFAULT_SHADERBUNDLE_NAME "shaders/default_shaders.spk"
 
 namespace Syngine {
 
@@ -127,6 +128,7 @@ class RenderDirector {
     static void _DrawPostProcess(const Shader* program);
     static void _DrawDbgBillboard(Shader* program);
     static void _DrawUIDebug(CameraComponent* camera);
+    static void _DrawUI(const Shader* program);
 
     static float
         m_maxSmallObjDistance; //* Small objects get culled beyond this distance
@@ -248,6 +250,10 @@ class RenderDirector {
     static void _GetRenderResources();
     static bool
         m_collectedresources; //* Whether render resources have been collected
+
+#ifdef SYN_IS_EDITOR
+    static UI::Debug::ImGui_ImplBgfx m_uiDebug;
+#endif
 };
 
 } // namespace Syngine

@@ -30,6 +30,7 @@
 #include <Syngine/Utils/Serializer.h>
 #include <Syngine/Utils/Version.h>
 #include <Syngine/Utils/Profiler.h>
+#include <lib/imgui/backends/imgui_impl_bgfx.hpp>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
@@ -43,8 +44,6 @@
 #if BX_PLATFORM_OSX
 #include "Syngine/Graphics/Rendering/MetalBridge.h"
 #endif
-
-#define SYNINT_DEFAULT_SHADERBUNDLE_NAME "shaders/default_shaders.spk"
 
 #define SYN_INT_RENDEREXIT(program)                                            \
     Syngine::Logger::Error("Failed to create " #program " program");           \
@@ -138,6 +137,10 @@ Memory::ArenaAlloc RenderDirector::m_billboardRenderPackets;
 std::array<Math::Matrix4x4, RenderDirector::NUM_CASCADES>
            RenderDirector::m_csmLightViewProj;
 Math::Vec4 RenderDirector::m_csmCascadeSplits;
+
+#ifdef SYN_IS_EDITOR
+UI::Debug::ImGui_ImplBgfx RenderDirector::m_uiDebug;
+#endif
 
 bool RenderDirector::_Initialize(const RendererConfig& config) {
     m_config = config;
@@ -376,6 +379,9 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
         return false;
     }
 
+#ifdef SYN_IS_EDITOR
+    m_uiDebug.Init();
+#endif
     Window::_SetContextCreated(true);
 
     return true;
@@ -466,6 +472,10 @@ void RenderDirector::_Shutdown() {
     // Most render targets are framebuffer-owned. Invalidate cached handles
     // instead of destroying textures a second time.
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
+
+#ifdef SYN_IS_EDITOR
+    m_uiDebug.Shutdown();
+#endif
 
     // bgfx destroy calls are processed asynchronously. Advance a couple frames
     // so queued destroy commands retire before backend shutdown.
@@ -1303,6 +1313,9 @@ void RenderDirector::_DrawBillboard(const Shader*           program,
                                     CameraComponent*        camera,
                                     std::span<RenderPacket> packets) {
     SYN_PROFILE_FUNCTION();
+
+    if (packets.empty()) return;
+
     bgfx::setViewName(program->m_viewId, "Billboards");
     bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
     const uint64_t renderState = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
@@ -1372,8 +1385,13 @@ void RenderDirector::_DrawSSAO(const Shader* program) {
 void RenderDirector::_DrawPostProcess(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program->m_viewId, "PostProcess");
+#ifdef SYN_IS_EDITOR
+    bgfx::setViewFrameBuffer(VIEW_POSTPROCESS,
+                             m_buffers.sceneFB); // Scene buffer
+#else
     bgfx::setViewFrameBuffer(VIEW_POSTPROCESS,
                              BGFX_INVALID_HANDLE); // Backbuffer
+#endif
     bgfx::setTexture(0, m_tonemap_sceneTex, m_buffers.sceneColor);
     bgfx::setTexture(1, m_tonemap_ssaoTex, m_buffers.ssaoBlurFinal);
     _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
@@ -1388,11 +1406,13 @@ void RenderDirector::_DrawDbgBillboard(Shader* program) {
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_BLEND_ALPHA |
                      BGFX_STATE_DEPTH_TEST_ALWAYS;
 
-    _SetFrameUniforms(program);
-    _SetViewUniforms(program);
-
     // Draw all gizmos
     std::vector<GameObject*> gizmos = GameObjectRegistry::GetGizmos();
+
+    if (gizmos.empty()) return;
+
+    _SetFrameUniforms(program);
+    _SetViewUniforms(program);
 
     // Build render packets for gizmos and draw them
     std::vector<Renderer::RenderPacket> packets;
@@ -1435,10 +1455,21 @@ void RenderDirector::_DrawUIDebug(CameraComponent* camera) {
     int maxCols = width / 8;   // Assuming each character is 8 pixels wide
     int maxRows = height / 16; // Assuming each character is 16 pixels tall
 
+#ifndef SYN_IS_EDITOR
     bgfx::dbgTextPrintf(
         1, maxRows - 2, 0x0C, "Syngine v%s", SYN_VERSION_STRING);
     bgfx::dbgTextPrintf(
         1, maxRows - 1, 0x0C, "FOR INTERNAL USE ONLY - NOT FOR PUBLIC RELEASE");
+#endif
+}
+
+void RenderDirector::_DrawUI(const Shader* program) {
+#ifdef SYN_IS_EDITOR
+    SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(VIEW_UI, "UI");
+
+    m_uiDebug.Render(VIEW_UI);
+#endif
 }
 
 bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
@@ -1536,6 +1567,16 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
                              bgfx::getCaps()->homogeneousDepth);
                 bgfx::setViewTransform(view, identity.data(), orthoProj.data());
             }
+            break;
+        }
+        case VIEW_UI: {
+            bgfx::setViewRect(view,
+                              0,
+                              0,
+                              uint16_t(Renderer::width),
+                              uint16_t(Renderer::height));
+            bgfx::setViewClear(
+                view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
             break;
         }
         default: {
@@ -1728,6 +1769,7 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 break;
             case VIEW_POSTPROCESS: _DrawPostProcess(program); break;
             case VIEW_AO: _DrawSSAO(program); break;
+            case VIEW_UI: _DrawUI(program); break;
             default: break;
             }
         }

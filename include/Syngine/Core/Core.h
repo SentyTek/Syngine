@@ -246,6 +246,14 @@ class Core {
         }
     }
 
+#ifdef SYN_IS_EDITOR
+    static bool viewportHovered;
+    static bool viewportActive;
+    // Set while the editor camera is being dragged (e.g. RMB look) so input
+    // keeps routing to the game even if the cursor leaves the Scene viewport.
+    static bool mouseCaptureOverride;
+#endif
+
   private:
     struct _internal {
         // Mouse sensitivity

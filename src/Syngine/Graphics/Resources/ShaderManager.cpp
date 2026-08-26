@@ -13,10 +13,8 @@
 #include <Syngine/Utils/Serializer.h>
 
 #include <bgfx/bgfx.h>
-#include <memory>
 #include <miniscl.hpp>
 
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -611,9 +609,9 @@ bool ShaderManager::_CreateBGFXResources(TempShaderData& tempData) {
 
     // Create program
     bgfx::ShaderHandle  vs = _LoadShaderFromMemory(tempData.vertStream.data(),
-                                                  tempData.vertStream.size());
+                                                   tempData.vertStream.size());
     bgfx::ShaderHandle  fs = _LoadShaderFromMemory(tempData.fragStream.data(),
-                                                  tempData.fragStream.size());
+                                                   tempData.fragStream.size());
     bgfx::ProgramHandle program = bgfx::createProgram(vs, fs, true);
     if (!bgfx::isValid(program)) {
         Syngine::Logger::LogF(
@@ -815,6 +813,9 @@ Shader* ShaderManager::Get(size_t shaderId) {
 Shader* ShaderManager::Get(const std::string& shaderName) {
     for (auto& shader : m_loadedShaders) {
         if (shader.shaderName == shaderName) {
+            while (shader.isWaitingOnWorker) {
+                _CheckPendingShaders();
+            }
             return &shader;
         }
     }

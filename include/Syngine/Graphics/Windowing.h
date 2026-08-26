@@ -73,7 +73,9 @@ class Window {
     /// @since v0.0.1
     static int GetWindowMode() { return m_windowMode; }
 
-    /// @brief Sets the visibility of the mouse cursor.
+    /// @brief Sets the visibility of the mouse cursor. Also restricts the mouse
+    /// to the window, but still does movement events even when on the edge of
+    /// the window.
     /// @param visible True to show the cursor, false to hide it.
     /// @threadsafety not-safe
     /// @since v0.0.1

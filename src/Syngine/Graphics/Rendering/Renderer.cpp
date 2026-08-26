@@ -124,4 +124,10 @@ void Renderer::SetPseudoCamera(CameraComponent* camera) {
     m_pseudoCamera = camera;
 }
 
+#ifdef SYN_IS_EDITOR
+bgfx::TextureHandle Renderer::GetSceneTexture() {
+    return RenderDirector::m_buffers.sceneColor;
+}
+#endif
+
 } // namespace Syngine
