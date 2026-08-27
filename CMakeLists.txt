@@ -7,97 +7,73 @@
 # ╰──────────────────────────────────────╯
 # Engine main CMakeLists (root/engine/CMakeLists.txt)
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.31)
+
+if (MSVC)
+    cmake_policy(SET CMP0091 NEW)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY
+        "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
+endif()
+
 project(Syngine)
 set(CMAKE_CXX_STANDARD 20)
 set(SYNGINE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE STRING "Syngine source dir" FORCE)
 
 # Enable CTest in the engine project so standalone engine CI can discover tests.
 include(CTest)
+include(FetchContent)
 
 # Generate Version.h for all engine builds (including engine-only CI).
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/versioning.cmake)
 define_version()
-
-# Use static runtime on MSVC. Several libraries we use require this.
-# Please don't change this.
-if(MSVC)
-    # For Debug configurations: Change /MDd to /MTd
-    string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG_TEMP "${CMAKE_C_FLAGS_DEBUG}")
-    if(NOT CMAKE_C_FLAGS_DEBUG_TEMP MATCHES "/MTd") # Add /MTd if /MDd wasn't found (shouldn't happen for default debug)
-        set(CMAKE_C_FLAGS_DEBUG_TEMP "${CMAKE_C_FLAGS_DEBUG_TEMP} /MTd")
-    endif()
-    string(REPLACE "/MD " " " CMAKE_C_FLAGS_DEBUG_TEMP "${CMAKE_C_FLAGS_DEBUG_TEMP}") # Remove /MD (release DLL) if present
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG_TEMP}" CACHE STRING "C Debug flags" FORCE)
-
-    string(REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG_TEMP "${CMAKE_CXX_FLAGS_DEBUG}")
-    if(NOT CMAKE_CXX_FLAGS_DEBUG_TEMP MATCHES "/MTd")
-        set(CMAKE_CXX_FLAGS_DEBUG_TEMP "${CMAKE_CXX_FLAGS_DEBUG_TEMP} /MTd")
-    endif()
-    string(REPLACE "/MD " " " CMAKE_CXX_FLAGS_DEBUG_TEMP "${CMAKE_CXX_FLAGS_DEBUG_TEMP}")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG_TEMP}" CACHE STRING "CXX Debug flags" FORCE)
-
-    # For Release configurations: Change /MD to /MT
-    string(REPLACE "/MD" "/MT" CMAKE_C_FLAGS_RELEASE_TEMP "${CMAKE_C_FLAGS_RELEASE}")
-    if(NOT CMAKE_C_FLAGS_RELEASE_TEMP MATCHES "/MT") # Add /MT if /MD wasn't found
-        set(CMAKE_C_FLAGS_RELEASE_TEMP "${CMAKE_C_FLAGS_RELEASE_TEMP} /MT")
-    endif()
-    string(REPLACE "/MDd " " " CMAKE_C_FLAGS_RELEASE_TEMP "${CMAKE_C_FLAGS_RELEASE_TEMP}") # Remove /MDd (debug DLL) if present
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE_TEMP}" CACHE STRING "C Release flags" FORCE)
-
-    string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE_TEMP "${CMAKE_CXX_FLAGS_RELEASE}")
-    if(NOT CMAKE_CXX_FLAGS_RELEASE_TEMP MATCHES "/MT")
-        set(CMAKE_CXX_FLAGS_RELEASE_TEMP "${CMAKE_CXX_FLAGS_RELEASE_TEMP} /MT")
-    endif()
-    string(REPLACE "/MDd " " " CMAKE_CXX_FLAGS_RELEASE_TEMP "${CMAKE_CXX_FLAGS_RELEASE_TEMP}")
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE_TEMP}" CACHE STRING "CXX Release flags" FORCE)
-
-    # Also set CMAKE_MSVC_RUNTIME_LIBRARY. Sub-projects might still query this variable.
-    # This is a really ugly fix
-    set(CMAKE_MSVC_RUNTIME_LIBRARY
-        "$<$<CONFIG:Debug>:MultiThreadedDebug>$<$<CONFIG:Release>:MultiThreaded>$<$<CONFIG:RelWithDebInfo>:MultiThreaded>$<$<CONFIG:MinSizeRel>:MultiThreaded>"
-        CACHE STRING "MSVC Runtime Library selection for Syngine project" FORCE
-    )
-endif()
 
 # Add all required source files
 add_library(Syngine STATIC
     # Core
     src/Syngine/Core/Entry.cpp
     src/Syngine/Core/Core.cpp
-    src/Syngine/Core/Registry.cpp
     src/Syngine/Core/Logger.cpp
     src/Syngine/Core/Input.cpp
-    src/Syngine/Core/ZoneManager.cpp
     src/Syngine/Core/LuaManager.cpp
+    src/Syngine/Core/JobSystem.cpp
+    src/Syngine/Core/ThreadManager.cpp
+    src/Syngine/Core/Memory/ArenaAlloc.cpp
+
+    #Scene
+    src/Syngine/Scene/ZoneSystem.cpp
+    src/Syngine/Scene/GameObjectRegistry.cpp
 
     # Graphics
-    src/Syngine/Graphics/Renderer.cpp
+    src/Syngine/Graphics/Rendering/Renderer.cpp
+    src/Syngine/Graphics/Rendering/RenderDirector.cpp
+    src/Syngine/Graphics/Rendering/DebugRenderer.cpp
+    src/Syngine/Graphics/Resources/TextureHelpers.cpp
+    src/Syngine/Graphics/Resources/ShaderManager.cpp
+    src/Syngine/Graphics/Resources/ModelLoader.cpp
+    src/Syngine/Graphics/Resources/MaterialManager.cpp
     src/Syngine/Graphics/Windowing.cpp
-    src/Syngine/Graphics/DebugRenderer.cpp
-    src/Syngine/Graphics/TextureHelpers.cpp
-    src/Syngine/Graphics/RenderCore.cpp
 
     # Utils
-    src/Syngine/Utils/ModelLoader.cpp
     src/Syngine/Utils/FsUtils.cpp
     src/Syngine/Utils/Profiler.cpp
     src/Syngine/Utils/Serializer.cpp
     src/Syngine/Utils/Prefab.cpp
 
     # Physics
-    src/Syngine/Physics/Physics.cpp
+    src/Syngine/Physics/PhysicsManager.cpp
 
-    # ECS
-    src/Syngine/ECS/GameObject.cpp
-    src/Syngine/ECS/Components/MeshComponent.cpp
-    src/Syngine/ECS/Components/TransformComponent.cpp
-    src/Syngine/ECS/Components/RigidbodyComponent.cpp
-    src/Syngine/ECS/Components/PlayerComponent.cpp
-    src/Syngine/ECS/Components/CameraComponent.cpp
-    src/Syngine/ECS/Components/ZoneComponent.cpp
-    src/Syngine/ECS/Components/BillboardComponent.cpp
-    src/Syngine/ECS/ComponentRegistry.cpp
+    # GameObject system
+    src/Syngine/GameObjects/GameObject.cpp
+    src/Syngine/GameObjects/ComponentRegistry.cpp
+    src/Syngine/GameObjects/Components/MeshComponent.cpp
+    src/Syngine/GameObjects/Components/TransformComponent.cpp
+    src/Syngine/GameObjects/Components/RigidbodyComponent.cpp
+    src/Syngine/GameObjects/Components/PlayerComponent.cpp
+    src/Syngine/GameObjects/Components/CameraComponent.cpp
+    src/Syngine/GameObjects/Components/ZoneComponent.cpp
+    src/Syngine/GameObjects/Components/BillboardComponent.cpp
+    src/Syngine/GameObjects/Components/DirectionalLightComponent.cpp
 )
 
 set_target_properties(Syngine PROPERTIES FOLDER "Engine")
@@ -116,7 +92,7 @@ target_compile_definitions(Syngine PUBLIC SYN_DEBUG_GRAPHICS)
 # Apple needs OBJC++ files for Metal support
 if(APPLE)
     target_sources(Syngine PRIVATE
-        src/Syngine/Graphics/MetalBridge.mm
+        src/Syngine/Graphics/Rendering/MetalBridge.mm
     )
 endif()
 
@@ -149,6 +125,13 @@ set_default_option(ASSIMP_INSTALL OFF "Disable installing Assimp targets and con
 set_default_option(JOLT_BUILD_EXAMPLES OFF "Disable building Jolt examples")
 set_default_option(JOLT_BUILD_TESTS OFF "Disable building Jolt tests")
 set_default_option(JOLT_PROFILE_ENABLED OFF "Disable Jolt profiling")
+# We may turn these on at some point. Currently we want to use bgfx for compute shaders,
+# and we don't need Jolt's fancy hair simulation that runs on the GPU. If they move more
+# to the GPU or we want to use Jolt's GPU features, we can turn these on.
+set_default_option("JOLT_USE_DX12" OFF "Disable Jolt DX12 Compute")
+set_default_option("JOLT_USE_VK" OFF "Disable Jolt Vulkan Compute")
+set_default_option("JOLT_USE_MTL" OFF "Disable Jolt Metal Compute")
+set_default_option("JOLT_USE_CPU_COMPUTE" OFF "Disable Jolt CPU Compute")
 
 # BGFX Options
 set_default_option(BGFX_BUILD_TOOLS ON "Enable building BGFX tools")
@@ -186,6 +169,7 @@ elseif(MSVC)
     set_default_option(SDL_RENDER_DISABLED ON "Disable SDL rendering subsystem on Windows platforms")
 
     set_default_option(ASSIMP_MSVC_STATIC_RUNTIME ON "Force Assimp to use static MSVC runtime (/MT or /MTd)")
+    #set_default_option(USE_STATIC_MSVC_RUNTIME_LIBRARY ON "Force Jolt to use static MSVC runtime (/MT or /MTd)")
 else() # Linux and other Unix-like systems
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D12 OFF "Disable Direct3D 12 Renderer")
     set_default_option(BGFX_CONFIG_RENDERER_DIRECT3D11 OFF "Disable Direct3D 11 Renderer")
@@ -195,7 +179,24 @@ else() # Linux and other Unix-like systems
     set_default_option(BGFX_CONFIG_RENDERER_METAL OFF "Disable Metal Renderer")
     set_default_option(SDL_RENDER_DISABLED ON "Disable SDL rendering subsystem on Linux/Unix platforms")
 
+    target_compile_definitions(Syngine PRIVATE JPH_DEBUG_RENDERER)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DJPH_DEBUG_RENDERER")
     add_compile_options(-frtti) # Jolt needs RTTI on Unix platforms
+endif()
+
+# Apply patches
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/ApplyPatches.cmake)
+
+apply_patch(
+    "${CMAKE_CURRENT_LIST_DIR}/third_party/patches/fix_bgfx_uniform_assert.patch"
+    "${CMAKE_CURRENT_LIST_DIR}/third_party/bgfx.cmake/bgfx"
+    "bgfx_uniform_assert_patch"
+)
+if (NOT APPLE AND NOT MSVC)
+    apply_patch("${CMAKE_CURRENT_LIST_DIR}/third_party/patches/fix_assimp_linux_minizip.patch"
+        "${CMAKE_CURRENT_LIST_DIR}/third_party/assimp"
+        "assimp_linux_minizip_patch"
+    )
 endif()
 
 # Configure all third party files by calling their cmake scripts
@@ -207,12 +208,20 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/JoltPhysics/Build ${CMAKE
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/lib)
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/third_party/sol2 ${CMAKE_BINARY_DIR}/third_party/sol2 EXCLUDE_FROM_ALL)
 
+FetchContent_Declare(
+    directxmath
+    GIT_REPOSITORY https://github.com/microsoft/DirectXMath.git
+    GIT_TAG jun2026
+)
+FetchContent_MakeAvailable(directxmath)
+target_link_libraries(Syngine PUBLIC DirectXMath)
+
 if (MSVC AND TARGET Jolt)
     target_compile_options(Jolt PRIVATE /wd4865 /WX-) # Disable "the underlying type of ... will change when '/Zc:enumTypes' is specified on the command line" warning and don't treat as error
 endif()
 
 # Add the third party things to respective folders
-set_target_properties(SDL_uclibc PROPERTIES FOLDER "ThirdParty/SDL")
+# set_target_properties(SDL_uclibc PROPERTIES FOLDER "ThirdParty/SDL")
 set_target_properties(SDL3_test PROPERTIES FOLDER "ThirdParty/SDL")
 set_target_properties(SDL3-static PROPERTIES FOLDER "ThirdParty/SDL")
 set_target_properties(bgfx PROPERTIES FOLDER "ThirdParty/bgfx")
@@ -284,10 +293,10 @@ target_include_directories(Syngine
         ${CMAKE_CURRENT_LIST_DIR}/third_party/sol2
         ${CMAKE_CURRENT_LIST_DIR}/third_party/sol2/include
         ${CMAKE_CURRENT_LIST_DIR}/
+        ${CMAKE_CURRENT_LIST_DIR}/lib
     PRIVATE
         # Engine private headers/sources directory
         ${CMAKE_CURRENT_LIST_DIR}/src
-        ${CMAKE_CURRENT_LIST_DIR}/lib
 )
 
 # --- Link Libraries ---
@@ -308,9 +317,11 @@ if(MSVC)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/clangd.cmake)
-clangd(Syngine
+clangd(
+    TARGET Syngine
     EXCLUDE_PATHS "third_party/*"
     OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}"
     INLAY_HINTS
     INLAY_DEDUCED_TYPES
-    INLAY_PARAMETER_NAMES)
+    INLAY_PARAMETER_NAMES
+)

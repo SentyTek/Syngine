@@ -1,6 +1,7 @@
 AllComponents.h
 Version.h
 InputHelpers.h
-RenderCore.h
+RenderDirector.h
 MetalBridge.h
 Helpers.h
+Math.hpp

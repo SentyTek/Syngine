@@ -7,7 +7,7 @@ The API documentation and glossary are generated automatically by a custom Lua g
 
 In addition, the repository comes with `.clang-format` and `.editor-format` files preconfigured with the recommended code formatting guidelines for Syngine, which your code editor can use and autoformat. These should make it easy to write clean and complete documentation as you go along writing code. Please place these files in the root directory of your project to ensure your code follows our standards.
 
-All functions designed for internal engine use only should be marked with `_functionname`. We use PascalCase for function names and camelCase for variable names, generally using CAPITAL_SNAKE_CASE for macros and enum cases.
+All functions designed for internal engine use only should be marked with `_functionname`. We use PascalCase for function, enum, and struct names and camelCase for variable names, generally using CAPITAL_SNAKE_CASE for macros and enum cases.
 
 We use top-of-file comments on all header and source files which look like this:
 ```cpp
@@ -24,7 +24,7 @@ You can copy-and-paste that comment into any new header and source files you cre
 Any internal or private function should be prefixed with an underscore (`void _InternalClassHelper()` for example). Class member variables should be prefixed with `m_` (`m_carSpeed` for example). Class names are PascalCase, variable names are camelCase, constants and enum members are UPPER_SNAKE_CASE.
 
 ## Code documentation format
-SynDoc Format v1 (Inspired by Doxygen)
+SynDoc Format v1.1 (Inspired by Doxygen)
 
 Core tags:
 - `@brief` Short description, used in summaries (`@brief Creates an explosion particle effect`)
@@ -33,22 +33,27 @@ Core tags:
 - `@note` Highlight behavior, limitations, or gotchas in plain text
 - `@example` Code snippet showing how to use the function
 - `@since` Version where the function or system was added
-- `@deprecated` Marks function or system as deprecated with an optional reason
+- `@deprecated` Marks function or system as deprecated
 
 Optional Behavior tags:
 - `@threadsafety` Whether it's thread safe. Either `safe`, `not-safe`, or `read-only`
 - `@pre` Pre-condition, must be true before call (`@pre Entity must be valid`)
 - `@post` Post-condition, what happens after call (`@post Buffer will be cleared`)
 - `@throws` Indicates what errors a function might throw (`@throw May throw std::runtime_error if file is not found`)
+- `@noexcept` Indicates this function will not throw a runtime error or call `Logger::Fatal` and you should be careful with it
+- `@block` Indicates this function will block the thread
 
 Optional tags:
+- `@alias` Alias for a class
 - `@section` Local grouping (`Rendering`, `Physics`) for search. Every function, class, struct, and enum with the same section will end up on the same page. All public member functions within a class will automatically be on the class/section page.
 - `@internal` Indicates an internal use function
-- `@noexcept` Indicates this function will not throw a runtime error or call `Logger::Fatal`
-- `@block` Indicates this function will block the thread
 - `@nodiscard` Indicated the return value should not be ignored
-- `@see` Links an existing page in the documentation (`@see GameObject`)
-- To reference a function, struct, enum, or public class member in the same section or class, do \``Components`` to create a hyperlink to it
+- `@see` Creates a hyperlink to another file or object in the docs. I.e `@see SetRot` (if SetRot is a function/enum/struct in the class) will link to SetRot. Or doing `@see Windowing.h` will link to Windowing.h's docs. 
+- `@constructor` Tag can be added to constructors to explicitly mark it as a constructor. Recommended for classes with more than one method of construction
+- `@priority` Tag can be added to add this function to the "Popular Functions" list at the top of the class's doc file
+- `@nameoverride ExactName` can be added to class doc blocks to change the name of the rendered name in the Index. E.g instead of `Billboardcomponent`, doing `@nameoverride BillboardComponent` will capitalize the C in the index, into `BillboardComponent`
+- `@noclassprefix` Will remove the class prefix from all function descriptions in the class. For example, instead of `HealthComponent::ApplyDamage()`, it will simply be listed as `ApplyDamage()`. Useful for singletons
+- `@classprefix Prefix` Will change the class prefix on all functino descriptions in the class to `Prefix`. Useful for object classes like Components. E.g with `@classprefix myThruster.` will turn `ThrusterComponent::Toggle()` into `myThruster.Toggle()`
 
 ### Full block example
 ```cpp
@@ -60,7 +65,7 @@ Optional tags:
 /// @section ECS
 /// @noexcept
 /// @example
-/// auto renderables = GetGameObjectsWithComponent(RendererComponent);
+/// auto renderables = GetGameObjectsWithComponent(ZoneComponent);
 static std::vector<GameObject*> GetGameObjectsWithComponent(Syngine::Components type) noexcept;
 ```
 
@@ -73,6 +78,7 @@ Structs and Enums should be documented similarly to functions, with any tags tha
 ```cpp
 /// @brief An enum to hold the state
 /// @section PlayerComponent
+/// @since v6.7
 enum States = {
     RUNNING   = 0, //* When running!
     EXPLODING = 1, //* When exploding!
@@ -83,6 +89,8 @@ Classes can be documented like this, similarly to everything else:
 ```cpp
 /// @brief Wowie is it a super car alright!
 /// @section Supercar
+/// @alias car
+/// @classprefix myCar
 /// @internal
 class Syngine::Supercar {
 
@@ -92,4 +100,4 @@ class Syngine::Supercar {
 The generator ignores double slash comments all together, and tags in variable comments are also ignored, simply linked as a member in the class.
 The generator only goes through header files `.h` and `.hpp` for comments, not `.c`, `.inl`, or `.cpp`
 
-Classes that inherit from `Syngine::Component` do not need documentation on their constructor or destructor, as this is typically handled by `GameObject::AddComponent<>()`
+Classes that inherit from `Syngine::IComponent` do not need documentation on their constructor or destructor, as this is typically handled by `GameObject::AddComponent<>()`

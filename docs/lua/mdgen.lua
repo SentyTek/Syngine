@@ -142,7 +142,7 @@ function MarkdownFile:__tostring()
             local nextIsListItem = nextLine and (nextLine:sub(1, 2) == "- " or nextLine:find("^%d+%. "))
             result = result .. line .. (nextIsListItem and "\n" or "\n\n")
         else
-            result = result .. line .. "\n\n"
+            result = result .. line .. "\n"
         end
     end
     return result

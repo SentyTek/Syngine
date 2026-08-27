@@ -3,7 +3,7 @@
 // │ Created 2025-07-14                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #ifdef _WIN32
@@ -18,12 +18,11 @@
 #include <cxxabi.h>
 #endif
 
-#include "Syngine/Core/Core.h"
-#include "Syngine/Core/Logger.h"
-#include "Syngine/Utils/FsUtils.h"
+#include <Syngine/Core/Core.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/Utils/FsUtils.h>
 
-#include "SDL3/SDL.h"
-#include "SDL3/SDL_messagebox.h"
+#include <SDL3/SDL.h>
 
 #include <cstdio>
 #include <fstream>
@@ -47,13 +46,9 @@
 
 namespace Syngine {
 
-void Logger::SetVerbose(bool verbose) {
-    m_verbose = verbose;
-}
+void Logger::SetVerbose(bool verbose) { m_verbose = verbose; }
+bool Logger::IsVerbose() { return m_verbose; }
 
-bool Logger::IsVerbose() {
-    return m_verbose;
-}
 static std::string DescribeCurrentException() {
     try {
         throw; // Re-throw the current exception to capture its type and message
@@ -87,6 +82,7 @@ static void LoggerTerminateHandler() {
 
 #ifdef _WIN32
 const char* SehCodeToString(DWORD code) {
+    /* clang-format off */
     switch (code) {
         case EXCEPTION_ACCESS_VIOLATION:         return "EXCEPTION_ACCESS_VIOLATION";
         case EXCEPTION_ARRAY_BOUNDS_EXCEEDED:    return "EXCEPTION_ARRAY_BOUNDS_EXCEEDED";
@@ -111,13 +107,14 @@ const char* SehCodeToString(DWORD code) {
         case EXCEPTION_GUARD_PAGE:               return "EXCEPTION_GUARD_PAGE";
         default:                                 return "UNKNOWN_SEH_EXCEPTION";
     }
+    /* clang-format on */
 }
 #endif
 
 void Logger::SetupCrashHandler() {
     // Setup common signal handlers for crashes
 #if defined(__linux__) || defined(__APPLE__)
-    struct sigaction signalAction {};
+    struct sigaction signalAction{};
     signalAction.sa_handler = _CrashHandler;
     sigemptyset(&signalAction.sa_mask);
     signalAction.sa_flags = SA_RESTART;
@@ -150,12 +147,12 @@ void Logger::SetupCrashHandler() {
 void Logger::_CrashHandler(int signal) {
     const char* signalName = "Unknown";
     switch (signal) {
-        case SIGSEGV: signalName = "SIGSEGV (Segmentation Fault)"; break;
-        case SIGABRT: signalName = "SIGABRT (Abort)"; break;
-        case SIGFPE:  signalName = "SIGFPE (Floating Point Exception)";  break;
-        case SIGILL:  signalName = "SIGILL (Illegal Instruction)";  break;
-        case SIGTERM: signalName = "SIGTERM (Termination)"; break;
-        default:      signalName = "Unknown (Signal)"; break;
+    case SIGSEGV: signalName = "SIGSEGV (Segmentation Fault)"; break;
+    case SIGABRT: signalName = "SIGABRT (Abort)"; break;
+    case SIGFPE: signalName = "SIGFPE (Floating Point Exception)"; break;
+    case SIGILL: signalName = "SIGILL (Illegal Instruction)"; break;
+    case SIGTERM: signalName = "SIGTERM (Termination)"; break;
+    default: signalName = "Unknown (Signal)"; break;
     }
 
     Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR, false);
@@ -166,7 +163,7 @@ void Logger::_CrashHandler(int signal) {
 
     Logger::Log("=== END OF CRASH REPORT ===", LogLevel::ERR, false);
     Logger::Log(m_appName + " has crashed. Press OK to exit. This should be "
-                          "reported to the developers.",
+                            "reported to the developers.",
                 LogLevel::FATAL);
 }
 
@@ -174,17 +171,23 @@ void Logger::_CrashHandler(int signal) {
 LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
     const DWORD code = ep->ExceptionRecord->ExceptionCode;
     std::string addrStr;
-    uintptr_t addr = (uintptr_t)ep->ExceptionRecord->ExceptionAddress;
+    uintptr_t   addr = (uintptr_t)ep->ExceptionRecord->ExceptionAddress;
     char        buf[32];
     sprintf_s(buf, sizeof(buf), "0x%016llX", (unsigned long long)addr);
     addrStr = buf;
     Logger::Log("=== CRASH DETECTED ===", LogLevel::ERR, false);
-    Logger::Log("Exception Code: " + std::to_string(code), LogLevel::ERR, false);
+    Logger::Log(
+        "Exception Code: " + std::to_string(code), LogLevel::ERR, false);
     Logger::Log("Exception Address: " + addrStr, LogLevel::ERR, false);
-    Logger::Log("Exception Type: " + std::string(SehCodeToString(code)), LogLevel::ERR, false);
+    Logger::Log("Exception Type: " + std::string(SehCodeToString(code)),
+                LogLevel::ERR,
+                false);
 
-    if (code == EXCEPTION_ACCESS_VIOLATION && ep->ExceptionRecord->NumberParameters >= 2) {
-        const auto mode = ep->ExceptionRecord->ExceptionInformation[0]; // 0 read, 1 write, 8 execute
+    if (code == EXCEPTION_ACCESS_VIOLATION &&
+        ep->ExceptionRecord->NumberParameters >= 2) {
+        const auto mode =
+            ep->ExceptionRecord
+                ->ExceptionInformation[0]; // 0 read, 1 write, 8 execute
         const auto addr = ep->ExceptionRecord->ExceptionInformation[1];
         Logger::LogF(LogLevel::ERR,
                      false,
@@ -207,7 +210,7 @@ LONG WINAPI Logger::_WindowsExceptionHandler(EXCEPTION_POINTERS* ep) {
 #endif
 
 void Logger::PrintStackTrace() {
-const int MAX_FRAMES = 50;
+    const int MAX_FRAMES = 50;
 #ifdef _WIN32
     // Windows stack trace provided by dbghelp
     HANDLE process = GetCurrentProcess();
@@ -223,25 +226,25 @@ const int MAX_FRAMES = 50;
 
     DWORD imageType;
 #ifdef _M_IX86
-    imageType = IMAGE_FILE_MACHINE_I386;
-    stackFrame.AddrPC.Offset = context.Eip;
-    stackFrame.AddrPC.Mode = AddrModeFlat;
+    imageType                   = IMAGE_FILE_MACHINE_I386;
+    stackFrame.AddrPC.Offset    = context.Eip;
+    stackFrame.AddrPC.Mode      = AddrModeFlat;
     stackFrame.AddrFrame.Offset = context.Ebp;
-    stackFrame.AddrFrame.Mode = AddrModeFlat;
+    stackFrame.AddrFrame.Mode   = AddrModeFlat;
     stackFrame.AddrStack.Offset = context.Esp;
-    stackFrame.AddrStack.Mode = AddrModeFlat;
+    stackFrame.AddrStack.Mode   = AddrModeFlat;
 #elif _M_X64
-    imageType = IMAGE_FILE_MACHINE_AMD64;
-    stackFrame.AddrPC.Offset = context.Rip;
-    stackFrame.AddrPC.Mode = AddrModeFlat;
+    imageType                   = IMAGE_FILE_MACHINE_AMD64;
+    stackFrame.AddrPC.Offset    = context.Rip;
+    stackFrame.AddrPC.Mode      = AddrModeFlat;
     stackFrame.AddrFrame.Offset = context.Rsp;
-    stackFrame.AddrFrame.Mode = AddrModeFlat;
+    stackFrame.AddrFrame.Mode   = AddrModeFlat;
     stackFrame.AddrStack.Offset = context.Rsp;
-    stackFrame.AddrStack.Mode = AddrModeFlat;
+    stackFrame.AddrStack.Mode   = AddrModeFlat;
 #endif
 
     char symbolBuffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
-    PSYMBOL_INFO symbol = (PSYMBOL_INFO)symbolBuffer;
+    PSYMBOL_INFO symbol  = (PSYMBOL_INFO)symbolBuffer;
     symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
     symbol->MaxNameLen   = MAX_SYM_NAME;
 
@@ -263,7 +266,8 @@ const int MAX_FRAMES = 50;
         DWORD64 address = stackFrame.AddrPC.Offset;
         char    addrStr[32];
         sprintf_s(addrStr, "0x%016llX", address);
-        std::string frameInfo = "Frame " + std::to_string(frameNum) + ": " + addrStr;
+        std::string frameInfo =
+            "Frame " + std::to_string(frameNum) + ": " + addrStr;
 
         if (SymFromAddr(process, address, NULL, symbol)) {
             frameInfo += " - " + std::string(symbol->Name);
@@ -280,8 +284,8 @@ const int MAX_FRAMES = 50;
     }
 #elif defined(__linux__) || defined(__APPLE__)
     // Linux/Mac stack trace using backtrace()
-    void* array[MAX_FRAMES];
-    size_t size = backtrace(array, MAX_FRAMES);
+    void*  array[MAX_FRAMES];
+    size_t size    = backtrace(array, MAX_FRAMES);
     char** symbols = backtrace_symbols(array, size);
 
     if (symbols == NULL) {
@@ -293,7 +297,7 @@ const int MAX_FRAMES = 50;
         std::string frameInfo = "Frame " + std::to_string(i) + ": ";
 
         // Try to demangle C++ symbols
-        char* demangled = nullptr;
+        char* demangled    = nullptr;
         char* mangledStart = strchr(symbols[i], '(');
         char* mangledEnd   = strchr(symbols[i], '+');
 
@@ -322,31 +326,34 @@ const int MAX_FRAMES = 50;
 }
 
 std::string Logger::_GetTimestamp() {
-    auto now = std::chrono::system_clock::now();
+    auto        now   = std::chrono::system_clock::now();
     std::time_t now_c = std::chrono::system_clock::to_time_t(now);
     char        buf[20];
-    std::strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now_c));
+    std::strftime(
+        buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", std::localtime(&now_c));
     return std::string(buf);
 }
 
 [[nodiscard]]
 std::string Logger::_LogLevelToString(LogLevel level) noexcept {
     switch (level) {
-        case LogLevel::INFO:  return "INFO";
-        case LogLevel::WARN:  return "WARN";
-        case LogLevel::ERR:   return "ERRR";
-        case LogLevel::FATAL: return "FATL";
-        default:              return "UNKN";
+    case LogLevel::INFO: return "INFO";
+    case LogLevel::WARN: return "WARN";
+    case LogLevel::ERR: return "ERRR";
+    case LogLevel::FATAL: return "FATL";
+    default: return "UNKN";
     }
 }
 
 void Logger::_Init(const std::string&           appname,
-                  const std::filesystem::path& logPath,
-                  bool                         verbose) {
+                   const std::filesystem::path& logPath,
+                   bool                         verbose) {
     m_appName = appname;
-    std::filesystem::path logFolder = Syngine::_GetAppDataPath(m_appName) / "logs";
+    std::filesystem::path logFolder =
+        Syngine::_GetAppDataPath(m_appName) / "logs";
     if (logFolder.empty()) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Log folder path is empty, cannot initialize logger.");
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Log folder path is empty, cannot initialize logger.");
         return;
     }
 
@@ -354,7 +361,9 @@ void Logger::_Init(const std::string&           appname,
     try {
         std::filesystem::create_directories(logFolder);
     } catch (const std::filesystem::filesystem_error& e) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create log directory: %s", e.what());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Failed to create log directory: %s",
+                     e.what());
         return;
     }
 
@@ -366,17 +375,19 @@ void Logger::_Init(const std::string&           appname,
             std::filesystem::rename(fullLogPath, prevLogPath);
         }
     } catch (const std::filesystem::filesystem_error& e) {
-            SDL_Log("Failed to rename previous log file: %s", e.what());
+        SDL_Log("Failed to rename previous log file: %s", e.what());
     }
 
     // Open the log file for writing and clear its contents
-    m_logFile = std::make_unique<std::ofstream>(fullLogPath,
-                                              std::ios::out | std::ios::trunc);
+    m_logFile = std::make_unique<std::ofstream>(
+        fullLogPath, std::ios::out | std::ios::trunc);
     if (!m_logFile->is_open()) {
         // Log file probably doen't exist, try to create it
         std::ofstream testFile(fullLogPath);
         if (!testFile.is_open()) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to create log file at %s", fullLogPath.string().c_str());
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "Failed to create log file at %s",
+                         fullLogPath.string().c_str());
             m_logFile = nullptr;
             return;
         }
@@ -386,11 +397,14 @@ void Logger::_Init(const std::string&           appname,
         m_logFile = std::make_unique<std::ofstream>(
             fullLogPath, std::ios::out | std::ios::trunc);
         if (!m_logFile->is_open()) {
-            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to open log file at %s", fullLogPath.string().c_str());
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "Failed to open log file at %s",
+                         fullLogPath.string().c_str());
             m_logFile = nullptr;
             return;
         }
     }
+    m_logFilePath = fullLogPath.string();
 
     SetupCrashHandler();
 
@@ -406,8 +420,8 @@ void Logger::_Shutdown() {
     // (the mutex is already locked if called from Log(FATAL))
     if (m_logFile && m_logFile->is_open()) {
         (*m_logFile) << "[" << _GetTimestamp() << "] "
-                   << "[" << _LogLevelToString(LogLevel::INFO) << "] "
-                   << "Logger shutting down" << std::endl;
+                     << "[" << _LogLevelToString(LogLevel::INFO) << "] "
+                     << "Logger shutting down" << std::endl;
         m_logFile->flush();
         m_logFile->close();
         m_logFile = nullptr;
@@ -435,12 +449,13 @@ void Logger::Log(const std::string_view message,
                     throw std::runtime_error(finalMessage);
                 } else {
                     SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-                                            "Fatal Error",
-                                            finalMessage.c_str(),
-                                            m_mainWindow);
+                                             "Fatal Error",
+                                             finalMessage.c_str(),
+                                             m_mainWindow);
                 }
             } else {
-                throw std::runtime_error(finalMessage); // If no context, just throw an exception
+                throw std::runtime_error(
+                    finalMessage); // If no context, just throw an exception
             }
         }
         return;
@@ -458,46 +473,48 @@ void Logger::Log(const std::string_view message,
     try {
         if (m_verbose || !writeOnlyInDebug) {
             (*m_logFile) << "[" << _GetTimestamp() << "] "
-                    << "[" << _LogLevelToString(level) << "] "
-                    << message << std::endl;
+                         << "[" << _LogLevelToString(level) << "] " << message
+                         << std::endl;
             if (m_autoFlush) {
                 m_logFile->flush();
             }
         }
     } catch (const std::exception& e) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to log message: %s", e.what());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Failed to log message: %s",
+                     e.what());
     }
 #else
     // Always write in debug mode
     try {
         (*m_logFile) << "[" << _GetTimestamp() << "] "
-                << "[" << _LogLevelToString(level) << "] "
-                << message << std::endl;
+                     << "[" << _LogLevelToString(level) << "] " << message
+                     << std::endl;
         if (m_autoFlush) {
             m_logFile->flush();
         }
     } catch (const std::exception& e) {
-        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "Failed to log message: %s", e.what());
+        SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                     "Failed to log message: %s",
+                     e.what());
     }
 #endif
 
     if (toConsole) {
         switch (level) {
-            case LogLevel::INFO:
-                SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
-                break;
-            case LogLevel::WARN:
-                SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
-                break;
-            case LogLevel::ERR:
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
-                break;
-            case LogLevel::FATAL:
-                SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
-                break;
-            default:
-                SDL_Log("%s", message.data());
-                break;
+        case LogLevel::INFO:
+            SDL_LogInfo(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
+            break;
+        case LogLevel::WARN:
+            SDL_LogWarn(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
+            break;
+        case LogLevel::ERR:
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
+            break;
+        case LogLevel::FATAL:
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION, "%s", message.data());
+            break;
+        default: SDL_Log("%s", message.data()); break;
         }
     }
 
@@ -513,28 +530,48 @@ void Logger::Log(const std::string_view message,
             if (Core::_GetContext()->config.headless) {
                 throw std::runtime_error(finalMessage);
             } else {
-                SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-                                        "Fatal Error",
-                                        finalMessage.c_str(),
-                                        m_mainWindow);
+                SDL_MessageBoxButtonData buttons[] = {
+                    { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 0, "OK" },
+                    { 0, 1, "Open Log" }
+                };
+                SDL_MessageBoxData data = {};
+                data.flags              = SDL_MESSAGEBOX_ERROR;
+                data.title              = "Fatal Error";
+                data.message            = finalMessage.c_str();
+                data.numbuttons         = 2;
+                data.buttons            = buttons;
+
+                int buttonId = -1;
+                // note this is a blocking call, must click button to continue
+                SDL_ShowMessageBox(&data, &buttonId);
+
+                // Should open the log folder if the user clicked "Open Log"
+                if (buttonId == 1) {
+                    SDL_OpenURL(
+                        ("file://" + m_logFilePath.substr(
+                                         0, m_logFilePath.find_last_of("/\\")))
+                            .c_str());
+                }
 
                 // Break if debug is on
                 /*
                     !!!
                     DEVELOPER:
                     LOOK AT STACK TRACE
-                    The program is already safed by this point, so you can inspect the state.
-                    When done, resume execution. This will terminate the program.
+                    The program is already safed by this point, so you can
+                    inspect the state. When done, resume execution. This will
+                    terminate the program.
                     !!!
                 */
 
-#ifdef _DEBUG
+#ifndef NDEBUG
                 DEBUG_BREAK();
 #endif
                 exit(EXIT_FAILURE);
             }
         } else {
-            throw std::runtime_error(finalMessage); // If no context, just throw an exception
+            throw std::runtime_error(
+                finalMessage); // If no context, just throw an exception
         }
     }
 }
@@ -546,8 +583,9 @@ void Logger::LogHardwareInfo() {
     }
 
     // This is a bit messy but it avoids duplicating code in multiple places
-    Syngine::HardwareSpecs specs = Syngine::Core::Get()->GetSystemSpecifications();
-    std::string            specsStr = "\nSystem Specifications:\n";
+    Syngine::HardwareSpecs specs =
+        Syngine::Core::Get()->GetSystemSpecifications();
+    std::string specsStr = "\nSystem Specifications:\n";
     specsStr += "\tOperating System: " + specs.osName + "\n";
     specsStr += "\tCPU: " + specs.cpuModel + "\n";
     specsStr += "\tCPU Architecture: " + specs.cpuArch + "\n";
@@ -575,7 +613,7 @@ void Logger::LogHardwareInfo() {
 }
 
 void Logger::LogF(LogLevel level, bool writeOnlyInDebug, const char* fmt, ...) {
-        if (!fmt) return;
+    if (!fmt) return;
 
     va_list args;
     va_start(args, fmt);
@@ -626,13 +664,22 @@ void Logger::ToConsole(const char* fmt, ...) {
 
 void Logger::InfoPopup(const std::string_view message) {
     Log(message, LogLevel::INFO, false);
-    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Info", message.data(), m_mainWindow);
+    SDL_ShowSimpleMessageBox(
+        SDL_MESSAGEBOX_INFORMATION, "Info", message.data(), m_mainWindow);
 }
 
-void Logger::Error(const std::string_view message, bool writeOnlyInDebug) { Log(message, LogLevel::ERR, writeOnlyInDebug); }
-void Logger::Info(const std::string_view message, bool writeOnlyInDebug) { Log(message, LogLevel::INFO, writeOnlyInDebug); }
-void Logger::Warn(const std::string_view message, bool writeOnlyInDebug) { Log(message, LogLevel::WARN, writeOnlyInDebug); }
-void Logger::Fatal(const std::string_view message) { Log(message, LogLevel::FATAL); }
+void Logger::Error(const std::string_view message, bool writeOnlyInDebug) {
+    Log(message, LogLevel::ERR, writeOnlyInDebug);
+}
+void Logger::Info(const std::string_view message, bool writeOnlyInDebug) {
+    Log(message, LogLevel::INFO, writeOnlyInDebug);
+}
+void Logger::Warn(const std::string_view message, bool writeOnlyInDebug) {
+    Log(message, LogLevel::WARN, writeOnlyInDebug);
+}
+void Logger::Fatal(const std::string_view message) {
+    Log(message, LogLevel::FATAL);
+}
 
 void Logger::Flush() {
     std::lock_guard<std::mutex> lock(m_logMutex);

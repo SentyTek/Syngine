@@ -3,7 +3,7 @@
 // │ Created 2025-08-05                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #pragma once
@@ -21,8 +21,8 @@ class Window {
   public:
     /// @brief Constructor for the Window class
     /// @param config Engine configuration options
-    /// @throws std::runtime_error if initialization fails (e.g., SDL_CreateWindow()
-    /// fails or missing files)
+    /// @throws std::runtime_error if initialization fails (e.g.,
+    /// SDL_CreateWindow() fails or missing files)
     /// @threadsafety not-safe
     /// @since v0.0.1
     Window(const EngineConfig& config);
@@ -58,19 +58,20 @@ class Window {
     /// @since v0.0.1
     static void SetTitle(const std::string_view& title);
 
-    /// @brief Sets the vertical sync state of the window.
-    /// @param enabled True to enable vertical sync, false to disable it.
-    /// @threadsafety not-safe
-    /// @since v0.0.1
-    static void SetVSync(bool enabled);
-
-    /// @brief Sets the state of the window (bordered, fullscreen borderless,
+    /// @brief Sets the state of the window (bordered, borderless,
     /// exclusive fullscreen)
-    /// @param mode The new window mode. 0 = bordered, 1 = fullscreen borderless,
-    /// 2 = exclusive fullscreen
+    /// @param mode The new window mode. 0 = bordered, 1 = borderless
+    /// fullscreen, 2 = exclusive fullscreen
     /// @threadsafety not-safe
     /// @since v0.0.1
     static void SetWindowMode(int mode);
+
+    /// @brief Gets the current window mode.
+    /// @return The current window mode. 0 = bordered, 1 = borderless
+    /// fullscreen, 2 = exclusive fullscreen
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static int GetWindowMode() { return m_windowMode; }
 
     /// @brief Sets the visibility of the mouse cursor.
     /// @param visible True to show the cursor, false to hide it.
@@ -79,18 +80,17 @@ class Window {
     static void SetMouseCursorVisible(bool visible);
 
     /// @brief Gets the current position of the mouse cursor.
-    /// @param x A float reference to be filled in with the X position of the mouse cursor.
-    /// @param y A float reference to be filled in with the Y position of the mouse cursor.
+    /// @return A Vector2 representing the X and Y position of the mouse cursor.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void GetMousePosition(float& x, float& y);
+    static Math::Vector2 GetMousePosition();
 
     /// @brief Sets the current position of the mouse cursor.
-    /// @param x A float reference to be filled in with the X position of the mouse cursor.
-    /// @param y A float reference to be filled in with the Y position of the mouse cursor.
+    /// @param position A Vector2 representing the new X and Y position of the
+    /// mouse cursor.
     /// @threadsafety not-safe
     /// @since v0.0.1
-    static void SetMousePosition(float& x, float& y);
+    static void SetMousePosition(const Math::Vector2& position);
 
     /// @brief Sets the window's close state.
     /// @param enabled True to close the window, false to keep it open.
@@ -117,6 +117,7 @@ class Window {
     static std::string m_title;
     static bool        m_contextCreated;
     static bool        m_shouldClose;
+    static int         m_windowMode;
     static SDL_Window* m_window;
 };
 

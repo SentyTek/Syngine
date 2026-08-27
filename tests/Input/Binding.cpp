@@ -3,7 +3,7 @@
 // │ Created 2026-07-02                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -45,7 +45,8 @@ TEST_CASE("Unregistering an input action by prefix", "[Input]") {
     REQUIRE(action1 != nullptr);
     REQUIRE(action2 != nullptr);
 
-    size_t removedCount = Syngine::InputAction::UnregisterActionsByPrefix("test.");
+    size_t removedCount =
+        Syngine::InputAction::UnregisterActionsByPrefix("test.");
     REQUIRE(removedCount == 2);
 }
 
@@ -66,7 +67,7 @@ TEST_CASE("Triggering an input action with a key press", "[Input]") {
     SDL_Event event;
     SDL_zero(event); // SDL3 macro to zero out the structure
 
-    event.type = SDL_EVENT_KEY_DOWN;
+    event.type         = SDL_EVENT_KEY_DOWN;
     event.key.scancode = SDL_SCANCODE_A;
     event.key.key = SDL_GetKeyFromScancode(SDL_SCANCODE_A, SDL_KMOD_NONE, true);
     bool res      = SDL_PushEvent(&event);
@@ -99,9 +100,10 @@ TEST_CASE("Triggering an input action with a key combination", "[Input]") {
     // Simulate press by pushing something to the SDL event queue
     SDL_Event eventShift;
     SDL_zero(eventShift);
-    eventShift.type = SDL_EVENT_KEY_DOWN;
+    eventShift.type         = SDL_EVENT_KEY_DOWN;
     eventShift.key.scancode = SDL_SCANCODE_LSHIFT;
-    eventShift.key.key = SDL_GetKeyFromScancode(SDL_SCANCODE_LSHIFT, SDL_KMOD_LSHIFT, true);
+    eventShift.key.key =
+        SDL_GetKeyFromScancode(SDL_SCANCODE_LSHIFT, SDL_KMOD_LSHIFT, true);
     bool res = SDL_PushEvent(&eventShift);
     if (!res) {
         Syngine::Logger::ToConsole("SDL Failed to push event: %s",
@@ -111,11 +113,12 @@ TEST_CASE("Triggering an input action with a key combination", "[Input]") {
 
     SDL_Event eventA;
     SDL_zero(eventA);
-    eventA.type = SDL_EVENT_KEY_DOWN;
+    eventA.type         = SDL_EVENT_KEY_DOWN;
     eventA.key.scancode = SDL_SCANCODE_A;
-    eventA.key.mod = SDL_KMOD_LSHIFT;
-    eventA.key.key = SDL_GetKeyFromScancode(SDL_SCANCODE_A, SDL_KMOD_LSHIFT, true);
-    res            = SDL_PushEvent(&eventA);
+    eventA.key.mod      = SDL_KMOD_LSHIFT;
+    eventA.key.key =
+        SDL_GetKeyFromScancode(SDL_SCANCODE_A, SDL_KMOD_LSHIFT, true);
+    res = SDL_PushEvent(&eventA);
     if (!res) {
         Syngine::Logger::ToConsole("SDL Failed to push event: %s",
                                    SDL_GetError());

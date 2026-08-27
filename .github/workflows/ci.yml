@@ -1,5 +1,9 @@
 name: Syngine CI
 
+env:
+  CMAKE_C_COMPILER_LAUNCHER: ""
+  CMAKE_CXX_COMPILER_LAUNCHER: ""
+
 on:
   push:
     branches: ["**"]
@@ -12,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-2022]
         build_type: [Debug]
 
     runs-on: ${{ matrix.os }}
@@ -48,6 +52,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_C_COMPILER=cl
           -DCMAKE_CXX_COMPILER=cl
+          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
+          -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
           -DSYNGINE_BUILD_TOOLS=OFF
 
       - name: Configure (Linux/macOS)
@@ -59,7 +65,7 @@ jobs:
           -DCMAKE_C_COMPILER=clang
           -DCMAKE_CXX_COMPILER=clang++
           -DSYNGINE_BUILD_TOOLS=OFF
-          ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
+          ${{ matrix.os != 'windows-2022' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
 
       - name: Build
         run: cmake --build build --target Syngine
@@ -69,7 +75,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-2022, macos-latest]
         build_type: [Debug, Release]
 
     runs-on: ${{ matrix.os }}
@@ -116,7 +122,7 @@ jobs:
           -DCMAKE_C_COMPILER=clang
           -DCMAKE_CXX_COMPILER=clang++
           -DSYNGINE_BUILD_TOOLS=OFF
-          ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
+          ${{ matrix.os != 'windows-2022' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
 
       - name: Build
         run: cmake --build build --target Syngine

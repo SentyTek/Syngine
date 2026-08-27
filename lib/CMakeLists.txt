@@ -59,3 +59,8 @@ if (UNIX)
   target_compile_definitions(lua PRIVATE LUA_USE_LINUX)
   target_link_libraries(lua PRIVATE dl)
 endif()
+
+# Include sal.h for DirectXMath on non-Windows platforms
+if(NOT MSVC)
+    target_include_directories(Syngine PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+endif()

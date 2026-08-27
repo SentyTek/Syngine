@@ -66,9 +66,9 @@ local function loadFilesFromPath(path, isPrivate)
     end
 end
 
-local curos = package.config:sub(1, 1) == "\\" and "win" or "unix"
+local systemOS = package.config:sub(1, 1) == "\\" and "win" or "unix"
 
-if curos == "win" then
+if systemOS == "win" then
     error("Windows not supported")
 else
     loadFilesFromPath(incPath, false)
@@ -86,12 +86,16 @@ os.execute("mkdir -p ../api")
 for _, filename in ipairs(files) do
     local fullpath = filename.pre .. "/" .. filename.dir .. "/" .. filename.file
     print("\tProcessing " .. fullpath)
+    local fileBase = filename.file:match("(.+)%.[^.]+$") or filename.file
+    --local classmeta = DocGen.ReadFile(fullpath, "../api/" .. fileBase:lower() .. "_doc")
+    --table.insert(names, { name= "../api/" .. fileBase:lower() .. "_doc.md", dir = filename.dir, private = filename.private, classMeta = classmeta })
+
     -- do not ask me why nil is supplied as first argument, it just works. yes, the function only has 2 args. dont question it
-    local suc, res = pcall(DocGen.ReadFile, nil, fullpath, "../api/" .. filename.file:sub(1, -3):lower() .. "_doc")
+    local suc, res = pcall(DocGen.ReadFile, fullpath, "../api/" .. fileBase:lower() .. "_doc")
 
     if suc then
         print("\tSuccessfully processed " .. fullpath)
-        table.insert(names, { name= "../api/" .. filename.file:sub(1, -3):lower() .. "_doc.md", dir = filename.dir })
+        table.insert(names, { name= "../api/" .. fileBase:lower() .. "_doc.md", dir = filename.dir, private = filename.private, classMeta = res })
     else
         print("\tFAILED to process: " .. res)
         -- record to file
@@ -111,7 +115,9 @@ m:addHeader("Syngine Documentation")
 local f = io.open("start.txt", "r")
 if f then
     for line in f:lines() do
-        m = m + (line .. "\n\n")
+        if line:sub(1, 2) ~= "--" then
+            m = m + (line .. "\n")
+        end
     end
     f:close()
 end
@@ -122,7 +128,7 @@ for _, entry in ipairs(names) do
     if not dir_map[entry.dir] then
         dir_map[entry.dir] = {}
     end
-    table.insert(dir_map[entry.dir], entry.name)
+    table.insert(dir_map[entry.dir], {name = entry.name, private = entry.private, classMeta = entry.classMeta})
 end
 
 -- Sort dirs alphabetically
@@ -134,14 +140,43 @@ table.sort(sorted_dirs)
 
 m:addHeader("Table of Contents", 2)
 m = m + "- [Code Format Policy](policy.md)"
+
+-- Inject from toc.txt
+local tocFile = io.open("toc.txt", "r")
+if tocFile then
+    for line in tocFile:lines() do
+        if line:sub(1, 2) ~= "--" then
+            m = m + (line)
+        end
+    end
+    tocFile:close()
+end
+
 m:addHeader("API Reference", 3)
 for _, dir in ipairs(sorted_dirs) do
     m:addHeader(dir, 4)
-    table.sort(dir_map[dir])
+
+    -- Custom sort: Public first, then Private. Within those groups, sort alphabetically.
+    table.sort(dir_map[dir], function(a, b)
+        if a.private ~= b.private then
+            return not a.private -- false (public) comes before true (private)
+        else
+            return a.name < b.name -- secondary sort alphabetically
+        end
+    end)
+
     m:startList()
-    for _, name in ipairs(dir_map[dir]) do
-        local display_name = name:sub(8, -8):gsub("^%l", string.upper)
-        m:addListItem(string.format("[%s](%s)", display_name, name:sub(4))) -- remove ../ from link
+    for _, entry in ipairs(dir_map[dir]) do
+        local display_name = entry.name:sub(8, -8):gsub("^%l", string.upper)
+        if entry.classMeta and entry.classMeta.nameoverride then
+            display_name = entry.classMeta.nameoverride
+        end
+        m:addListItem(string.format("%s%s[%s](%s)",
+            entry.private and "[Internal] " or "",
+            entry.classMeta and entry.classMeta.deprecated and "**[DEPRECATED]** " or "",
+            display_name,
+            entry.name:sub(4)
+        ))
     end
     m:endList()
 end

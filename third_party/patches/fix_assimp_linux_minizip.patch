@@ -1,0 +1,18 @@
+diff --git a/code/CMakeLists.txt b/code/CMakeLists.txt
+index b4d8a1168..3ec60036d 100644
+--- a/code/CMakeLists.txt
++++ b/code/CMakeLists.txt
+@@ -1601,6 +1601,13 @@ ENDIF()
+ IF(NOT ASSIMP_HUNTER_ENABLED)
+   if (UNZIP_FOUND)
+     INCLUDE_DIRECTORIES(${UNZIP_INCLUDE_DIRS})
++    # Some Linux distributions ship minizip headers under <minizip/unzip.h>
++    # while assimp's code includes <unzip.h>. Add that subdirectory when needed.
++    foreach(unzip_include_dir ${UNZIP_INCLUDE_DIRS})
++      if(EXISTS "${unzip_include_dir}/minizip/unzip.h" AND NOT EXISTS "${unzip_include_dir}/unzip.h")
++        INCLUDE_DIRECTORIES("${unzip_include_dir}/minizip")
++      endif()
++    endforeach()
+     # TODO if cmake required version has been updated to >3.12.0, collapse this to the second case only
+     if(${CMAKE_VERSION} VERSION_LESS "3.12.0")
+       TARGET_LINK_LIBRARIES(assimp ${UNZIP_LIBRARIES})

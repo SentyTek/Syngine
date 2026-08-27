@@ -8,13 +8,7 @@ echo Creating new Syngine project: %PROJECT_NAME%. This may take a few moments..
 cd ..\..\
 if /I "%INIT_GIT%"=="Y" (
     git init
-    git submodule add https://github.com/SentyTek/SyngineStudio editor
     git submodule add https://github.com/SentyTek/Syngine engine
-) else (
-    if not exist editor mkdir editor
-    cd editor
-    git clone https://github.com/SentyTek/SyngineStudio.git .
-    cd ..
 )
 
 if not exist game mkdir game
@@ -28,7 +22,7 @@ if not exist build mkdir build
 
 (
 echo # root/CMakeLists.txt
-echo cmake_minimum_required^(VERSION 3.10^)
+echo cmake_minimum_required^(VERSION 3.31^)
 echo project^("%PROJECT_NAME%"^)
 echo set^(EXECUTABLE_NAME ${PROJECT_NAME}^)
 echo set^(CMAKE_EXPORT_COMPILE_COMMANDS ON^)
@@ -36,7 +30,7 @@ echo set^(CMAKE_CXX_STANDARD 20^)
 echo set_property^(GLOBAL PROPERTY USE_FOLDERS ON "Enable folder grouping in IDEs"^)
 echo.
 echo # Set the current year for copyright notices
-echo set^(CURRENT_YEAR 2025^)
+echo set^(CURRENT_YEAR 2026^)
 echo.
 echo # Set the install prefix based on platform
 echo if^(UNIX AND NOT APPLE^)
@@ -53,14 +47,19 @@ echo     set^(BUNDLE_IDENTIFIER "com.example.%PROJECT_NAME%"^)
 echo endif^(^)
 echo.
 echo # Enable making a Windows executable if on Windows
-echo if^(WIN32^)
+echo if^(MSVC^)
 echo     set^(CMAKE_WIN32_EXECUTABLE ON^)
+echo.
+echo     # Use static runtime on MSVC. Several libraries we use require this.
+echo     # Also set CMAKE_MSVC_RUNTIME_LIBRARY. Sub-projects might still query this variable.
+echo     set^(CMAKE_MSVC_RUNTIME_LIBRARY
+echo         "MultiThreaded$<$<CONFIG:Debug>:Debug>"^)
 echo endif^(^)
 echo.
 echo # set the output directory for built objects.
 echo # This makes sure that the dynamic library goes into the build directory automatically.
-echo set^(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"^)
-echo set^(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"^)
+echo set^(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>"^)
+echo set^(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>"^)
 echo.
 echo # Add engine first
 echo add_subdirectory^(engine^)
@@ -68,10 +67,8 @@ echo.
 echo # Add the game
 echo add_subdirectory^(game^)
 echo.
-echo # And finally the editor
-echo # add_subdirectory^(editor^)
 
-set_target_properties^(${EXECUTABLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>/bin"^)
+echo set_target_properties^(${EXECUTABLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>/bin"^)
 ) > CMakeLists.txt
 
 cd game
@@ -150,23 +147,22 @@ echo .DS_Store
 
 cd game\src
 (
-echo #include "Syngine/Syngine.h"
+echo #include ^<Syngine/Syngine.h^>
 echo #include ^<string^>
 echo using namespace Syngine;
 echo.
 echo int AppMain^(int argc, char* argv[]^) {
 echo     std::string gameName = "%PROJECT_NAME%";
-echo     Syngine::EngineConfig config   = { .windowTitle  = gameName,
+echo     Syngine::EngineConfig config   = { .gameName  = gameName,
 echo                                        .windowWidth  = 1600,
 echo                                        .windowHeight = 900,
 echo                                        .usePhysics   = true };
 echo.
 echo     Syngine::RendererConfig rConfig  = { .useShadows      = true,
-echo                                          .shadowDist      = 500.0f,
+echo                                          .shadowDist      = 500,
 echo                                          .vsync           = true,
 echo                                          .usePseudoCamera = false };
 echo.
-echo     Syngine::Logger::Init^(gameName^);
 echo     Syngine::Logger::Info^("Starting " + gameName^, true^);
 echo.
 echo     // Create game
@@ -174,8 +170,9 @@ echo     Syngine::Core engine^(config^);
 echo     engine.Initialize^(rConfig^);
 echo.
 echo     // Create default camera
-echo     Syngine::GameObject* camera = new Syngine::GameObject^("MainCamera"^);
-echo     Syngine::CameraComponent* cameraComp = camera-^>AddComponent^<Syngine::CameraComponent^>^(^);
+echo     Syngine::GameObject^& camera = Syngine::GameObjectRegistry::CreateGameObject^("MainCamera"^);
+echo     Syngine::CameraComponent* cameraComp = camera.AddComponent^<Syngine::CameraComponent^>^(^);
+echo     Renderer::SetActiveCamera^(cameraComp^);
 echo.
 echo     Logger::Info^("Starting event loop"^, true^);
 echo     while ^(engine.IsRunning^(^)^) {
@@ -184,14 +181,13 @@ echo         {
 echo             SYN_PROFILE_SCOPE^("MainLoop"^)
 echo             engine.HandleEvents^(^);
 echo             engine.Update^(^);
-echo             engine.Render^(cameraComp^);
+echo             engine.Render^(^);
 echo         }
 echo     }
 echo.
 echo     // Cleanup
-echo     Syngine::Registry::Clear^(^);
-echo     Renderer::RemoveAllPrograms^(^);
-echo     Syngine::Logger::Shutdown^(^);
+echo     Syngine::GameObjectRegistry::Clear^(^);
+echo     ShaderManager::UnloadAllShaders^(^);
 echo     return 0;
 echo }
 ) > main.cpp

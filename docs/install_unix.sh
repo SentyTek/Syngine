@@ -9,13 +9,7 @@ cd ../../
 
 if [ "$INIT_GIT" = "Y" ] || [ "$INIT_GIT" = "y" ]; then
     git init
-    git submodule add https://github.com/SentyTek/SyngineStudio editor
     git submodule add https://github.com/SentyTek/Syngine engine
-else
-    mkdir -p editor
-    cd editor
-    git clone https://github.com/SentyTek/SyngineStudio.git .
-    cd ..
 fi
 
 mkdir -p game
@@ -29,7 +23,7 @@ mkdir -p build
 
 touch CMakeLists.txt
 echo "# root/CMakeLists.txt
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.31)
 project(\"$PROJECT_NAME\")
 set(EXECUTABLE_NAME \${PROJECT_NAME})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -37,7 +31,7 @@ set(CMAKE_CXX_STANDARD 20)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON \"Enable folder grouping in IDEs\")
 
 # Set the current year for copyright notices
-set(CURRENT_YEAR 2025)
+set(CURRENT_YEAR 2026)
 
 # Set the install prefix based on platform
 if(UNIX AND NOT APPLE)
@@ -54,23 +48,25 @@ if(APPLE)
 endif()
 
 # Enable making a Windows executable if on Windows
-if(WIN32)
+if(MSVC)
     set(CMAKE_WIN32_EXECUTABLE ON)
+
+    # Use static runtime on MSVC. Several libraries we use require this.
+    # Also set CMAKE_MSVC_RUNTIME_LIBRARY. Sub-projects might still query this variable.
+    set(CMAKE_MSVC_RUNTIME_LIBRARY
+        "MultiThreaded\$\<\$<CONFIG:Debug\>:Debug\>")
 endif()
 
 # set the output directory for built objects.
 # This makes sure that the dynamic library goes into the build directory automatically.
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY \"\${CMAKE_BINARY_DIR}/bin\")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY \"\${CMAKE_BINARY_DIR}/lib\")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 # Add engine first
 add_subdirectory(engine)
 
 # Add the game
 add_subdirectory(game)
-
-# And finally the editor
-# add_subdirectory(editor)
 
 set_target_properties(\${EXECUTABLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY \"\${CMAKE_BINARY_DIR}/\$<CONFIGURATION>/bin\")" > CMakeLists.txt
 
@@ -145,23 +141,22 @@ cd game/src
 touch main.cpp
 cat > main.cpp <<EOF
 
-#include "Syngine/Syngine.h"
+#include <Syngine/Syngine.h>
 #include <string>
 using namespace Syngine;
 
 int AppMain(int argc, char* argv[]) {
     std::string gameName = "$PROJECT_NAME";
-    Syngine::EngineConfig config   = { .windowTitle  = gameName,
+    Syngine::EngineConfig config   = { .gameName  = gameName,
                                        .windowWidth  = 1600,
                                        .windowHeight = 900,
                                        .usePhysics   = true };
 
     Syngine::RendererConfig rConfig  = { .useShadows      = true,
-                                         .shadowDist      = 500.0f,
+                                         .shadowDist      = 500,
                                          .vsync           = true,
                                          .usePseudoCamera = false };
 
-    Syngine::Logger::Init(gameName);
     Syngine::Logger::Info("Starting " + gameName, true);
 
     // Create game
@@ -169,9 +164,9 @@ int AppMain(int argc, char* argv[]) {
     engine.Initialize(rConfig);
 
     // Create default camera
-    Syngine::GameObject* camera = new Syngine::GameObject("MainCamera");
-    Syngine::CameraComponent* cameraComp = camera->AddComponent<Syngine::CameraComponent>();
-
+    Syngine::GameObject& camera = Syngine::GameObjectRegistry::CreateGameObject("MainCamera");
+    Syngine::CameraComponent* cameraComp = camera.AddComponent<Syngine::CameraComponent>();
+    Renderer::SetActiveCamera(cameraComp);
 
     Logger::Info("Starting event loop", true);
     while (engine.IsRunning()) {
@@ -180,14 +175,13 @@ int AppMain(int argc, char* argv[]) {
             SYN_PROFILE_SCOPE("MainLoop")
             engine.HandleEvents();
             engine.Update();
-            engine.Render(cameraComp);
+            engine.Render();
         }
     }
 
     // Cleanup
-    Syngine::Registry::Clear();
-    Renderer::RemoveAllPrograms();
-    Syngine::Logger::Shutdown();
+    Syngine::GameObjectRegistry::Clear();
+    ShaderManager::UnloadAllShaders();
     return 0;
 }
 EOF

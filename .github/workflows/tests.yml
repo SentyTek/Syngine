@@ -1,5 +1,9 @@
 name: Syngine Tests
 
+env:
+  CMAKE_C_COMPILER_LAUNCHER: ""
+  CMAKE_CXX_COMPILER_LAUNCHER: ""
+
 on:
   push:
     branches: ["**"]
@@ -11,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-2022]
         build_type: [Debug]
 
     runs-on: ${{ matrix.os }}
@@ -32,6 +36,8 @@ jobs:
       - name: Setup MSVC Developer Command Prompt
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
+        with:
+          version: 14.41
 
       - name: Install Linux graphics deps
         if: runner.os == 'Linux'
@@ -47,6 +53,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_C_COMPILER=cl
           -DCMAKE_CXX_COMPILER=cl
+          -DCMAKE_POLICY_DEFAULT_CMP0091=NEW
+          -DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
           -DSYNGINE_BUILD_TOOLS=OFF
           -DSYN_ENABLE_TEST_MODE=ON
 
@@ -60,7 +68,7 @@ jobs:
           -DCMAKE_CXX_COMPILER=clang++
           -DSYNGINE_BUILD_TOOLS=OFF
           -DSYN_ENABLE_TEST_MODE=ON
-          ${{ matrix.os != 'windows-latest' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
+          ${{ matrix.os != 'windows-2022' && '-DSDL_UNIX_CONSOLE_BUILD=ON' || '' }}
 
       - name: Build
         run: cmake --build build --target engine_tests

@@ -3,7 +3,7 @@
 // │ Created 2026-06-14                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
-// | Licensed under the MIT License       |
+// │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
@@ -21,17 +21,17 @@ using namespace Catch::Matchers;
 // Tests that the engine can start and stop without crashing, and that
 // subsystems are initialized correctly (except for renderer of course)
 TEST_CASE("Core engine start and stop", "[Core]") {
-    std::string gameName = "TestGame";
+    std::string  gameName = "TestGame";
     EngineConfig config   = { .gameName     = gameName,
                               .windowWidth  = 800,
                               .windowHeight = 600,
                               .usePhysics   = true,
                               .headless     = true };
 
-    Syngine::RendererConfig rConfig  = { .useShadows      = false,
-                                         .shadowDist      = 0,
-                                         .vsync           = false,
-                                         .usePseudoCamera = false };
+    Syngine::RendererConfig rConfig = { .useShadows      = false,
+                                        .shadowDist      = 0,
+                                        .vsync           = false,
+                                        .usePseudoCamera = false };
 
     {
         Core engine(config);
@@ -40,26 +40,27 @@ TEST_CASE("Core engine start and stop", "[Core]") {
         REQUIRE(engine.IsInitialized());
         REQUIRE(Core::IsPhysicsEnabled());
 
-        Renderer::RemoveAllPrograms();
+        ShaderManager::UnloadAllShaders();
     }
 
     // After the engine goes out of scope, subsystems should be cleaned up
     REQUIRE(!Core::IsInitialized());
 }
 
-// Tests that multiple start-stop cycles work correctly without resource leaks or crashes
+// Tests that multiple start-stop cycles work correctly without resource leaks
+// or crashes
 TEST_CASE("Multiple start-stop cycles", "[Core]") {
-    std::string gameName = "TestGame";
+    std::string  gameName = "TestGame";
     EngineConfig config   = { .gameName     = gameName,
                               .windowWidth  = 800,
                               .windowHeight = 600,
                               .usePhysics   = true,
                               .headless     = true };
 
-    Syngine::RendererConfig rConfig  = { .useShadows      = false,
-                                         .shadowDist      = 0,
-                                         .vsync           = false,
-                                         .usePseudoCamera = false };
+    Syngine::RendererConfig rConfig = { .useShadows      = false,
+                                        .shadowDist      = 0,
+                                        .vsync           = false,
+                                        .usePseudoCamera = false };
 
     for (int i = 0; i < 3; ++i) {
         Core engine(config);
@@ -68,7 +69,7 @@ TEST_CASE("Multiple start-stop cycles", "[Core]") {
         REQUIRE(engine.IsInitialized());
         REQUIRE(Core::IsPhysicsEnabled());
 
-        Renderer::RemoveAllPrograms();
+        ShaderManager::UnloadAllShaders();
     }
 
     REQUIRE(!Core::IsInitialized());
@@ -77,17 +78,17 @@ TEST_CASE("Multiple start-stop cycles", "[Core]") {
 // Tests that its not possible to call initialize twice without shutting down,
 // and that the engine handles this gracefully
 TEST_CASE("Double initialization/Double constructor", "[Core]") {
-    std::string gameName = "TestGame";
+    std::string  gameName = "TestGame";
     EngineConfig config   = { .gameName     = gameName,
                               .windowWidth  = 800,
                               .windowHeight = 600,
                               .usePhysics   = true,
                               .headless     = true };
 
-    Syngine::RendererConfig rConfig  = { .useShadows      = false,
-                                         .shadowDist      = 0,
-                                         .vsync           = false,
-                                         .usePseudoCamera = false };
+    Syngine::RendererConfig rConfig = { .useShadows      = false,
+                                        .shadowDist      = 0,
+                                        .vsync           = false,
+                                        .usePseudoCamera = false };
 
     Core engine(config);
     REQUIRE_NOTHROW(engine.Initialize(rConfig));
@@ -95,5 +96,5 @@ TEST_CASE("Double initialization/Double constructor", "[Core]") {
 
     REQUIRE_THROWS([&config]() { Core engine2(config); }());
 
-    Renderer::RemoveAllPrograms();
+    ShaderManager::UnloadAllShaders();
 }

@@ -1,11 +1,19 @@
+
+// @EngineSampler name="s_shadowMap" stage="3" src="Renderer.ShadowMap"
 SAMPLER2D(s_shadowMap, 3);
+
+// @EngineUniform freq="frame" src="Renderer.Debug.CSMCascadeSplits"
 uniform vec4 u_csmSplits;
+
+// @EngineUniform freq="frame" src="Renderer.Debug.CSMLightViewProj" num="4"
 uniform mat4 u_csmLightViewProj[4];
-uniform vec4 u_viewPos;
+// @EngineUniform freq="frame" src="Renderer.ShadowParams"
 uniform vec4 u_shadowParams; // x = homogeneous depth?, y = shadow map size, z = light far plane, w unused.
+
+uniform vec4 u_viewPos;
 uniform vec4 u_csmTexelSize; // x = casc0, y = casc1, z = casc2, w = casc3
 
-float sampleShadowPCF(vec2 uv, float bias, float texelSize, float radius, float zReceiver, vec4 bounds) {
+float sampleShadowPCF(vec2 uv, float compareDepth, float bias, float texelSize, float radius, vec4 bounds) {
     float shadow = 0.0;
 
     UNROLL
@@ -15,7 +23,7 @@ float sampleShadowPCF(vec2 uv, float bias, float texelSize, float radius, float 
             vec2 offset = vec2(float(x), float(y)) * radius * texelSize;
             vec2 sampleUV = clamp(uv + offset, bounds.xy, bounds.zw);
             float sampleDepth = texture2D(s_shadowMap, sampleUV).r;
-            shadow += zReceiver - bias > sampleDepth ? 1.0 : 0.0;
+            shadow += compareDepth - bias > sampleDepth ? 1.0 : 0.0;
         }
     }
     return shadow / 9.0;
@@ -199,7 +207,7 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec4 lightDir, float viewD
 
     // Push base bias into the negatives. With backface shadows, negative bias pulls
     // the shadow outward towards the light slightly, closing contact leaking gaps perfectly.
-    float baseBias = -0.0001;
+    float baseBias = -0.0003;
     float maxBias = 0.00035;
 
     // Slight cascade scale
@@ -216,34 +224,38 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec4 lightDir, float viewD
     vec4 cascadeBounds = vec4(uvOffset + atlasMargin, uvOffset + vec2(0.5, 0.5) - atlasMargin);
 
     float noise = fract(sin(dot(uv, vec2(12.9898, 78.233))) * 43758.5453) * 6.2831853;
+    // Quantize kernel rotation to reduce high-frequency grain in C0 PCSS.
+    float stableNoise = floor(noise * (4.0 / 6.2831853)) * (6.2831853 / 4.0);
 
     // Sample current cascade
-    const float LIGHT_SIZE_TEXELS = 8.0;
+    const float LIGHT_SIZE_TEXELS = 16.0;
+    const float PCSS_SCALE = 25.0;
     if (c == 0) {
         // Dynamic PCSS for nearest cascade
-        float searchRadius = LIGHT_SIZE_TEXELS;
-        float blockerDepth = findBlocker(uv, normalizedZ, searchRadius, texelSize, totalBias, cascadeBounds, noise);
+        float searchRadius = LIGHT_SIZE_TEXELS * 0.75;
+        float blockerDepth = findBlocker(uv, normalizedZ, searchRadius, texelSize, totalBias, cascadeBounds, stableNoise);
 
         if (blockerDepth == -1.0) {
             shadow = 0.0; // fully lit
         } else {
-            const float PCSS_SCALE = 400.0;
-            float depthDiff = max(normalizedZ - blockerDepth, 0.0);
+            float depthDiff = max(normalizedZ - blockerDepth - texelSize * 2.0, 0.0);
             float penumbraSize = max(depthDiff * PCSS_SCALE, 1.0);
             // Cap the max blur size to keep it grounded and match C1's static size
-            penumbraSize = min(penumbraSize, LIGHT_SIZE_TEXELS);
+            penumbraSize = min(penumbraSize, LIGHT_SIZE_TEXELS * 0.75);
 
-            shadow = sampleShadowPoisson16(uv, normalizedZ, totalBias, texelSize, penumbraSize, cascadeBounds, noise);
+            shadow = sampleShadowPoisson16(uv, normalizedZ, totalBias, texelSize, penumbraSize, cascadeBounds, stableNoise);
         }
     } else if (c == 1) {
         // Static softness matching the maximum softness at the end of cascade 0.
-        // Max penumbra of 8.0 in C0, scaled to C1 texels.
-        float staticRadius = max(8.0 * (u_csmTexelSize.x / u_csmTexelSize.y), 1.0);
-        shadow = sampleShadowPoisson16(uv, normalizedZ, totalBias, texelSize, staticRadius, cascadeBounds, noise);
+        // Max penumbra of LIGHT_SIZE_TEXELS in C0, scaled to C1 texels.
+        float staticRadius = max(LIGHT_SIZE_TEXELS * (u_csmTexelSize.x / u_csmTexelSize.y), 1.0) * 0.5;
+        shadow = sampleShadowPoisson8(uv, normalizedZ, totalBias, texelSize, staticRadius, cascadeBounds);
     } else if (c == 2) {
-        shadow = sampleShadowPoisson8(uv, normalizedZ, totalBias, texelSize, 1.0, cascadeBounds);
+        float staticRadius = max(LIGHT_SIZE_TEXELS * (u_csmTexelSize.x / u_csmTexelSize.y), 1.0) * 0.2;
+        shadow = sampleShadowPoisson8(uv, normalizedZ, totalBias, texelSize, staticRadius, cascadeBounds);
     } else {
-        shadow = sampleShadowPCF(uv, totalBias, texelSize, 1.0, normalizedZ, cascadeBounds);
+        float staticRadius = max(LIGHT_SIZE_TEXELS * (u_csmTexelSize.x / u_csmTexelSize.y), 1.0) * 0.1;
+        shadow = sampleShadowPCF(uv, normalizedZ, totalBias, texelSize, staticRadius, cascadeBounds);
     }
 
     // Blend with next cascade only when transitioning
@@ -267,24 +279,29 @@ float getShadowFactor(vec3 worldPos, vec3 geomNormal, vec4 lightDir, float viewD
             float prevShadow;
             if (c - 1 == 0) {
                 // Dynamically calculate C0's PCSS again for the blend region
-                float blockerDepth = findBlocker(prevUv, prevProj.z, LIGHT_SIZE_TEXELS, texelSize, totalBias, prevBounds, noise);
+                float blockerDepth = findBlocker(prevUv, prevProj.z, LIGHT_SIZE_TEXELS * 0.75, texelSize, totalBias, prevBounds, stableNoise);
                 if (blockerDepth == -1.0) {
                     prevShadow = 0.0;
                 } else {
-                    float depthDiff = max(prevProj.z - blockerDepth, 0.0);
-                    float origPenumbra = min(max(depthDiff * 400.0, 1.0), LIGHT_SIZE_TEXELS);
+                    float depthDiff = max(prevProj.z - blockerDepth - texelSize * 2.0, 0.0);
+                    float origPenumbra = min(max(depthDiff * PCSS_SCALE, 1.0), LIGHT_SIZE_TEXELS * 0.75);
 
-                    float blendedPenumbra = mix(origPenumbra, LIGHT_SIZE_TEXELS, fade);
+                    // Keep C0 penumbra stable during cross-cascade blending to avoid a two-stage transition.
+                    prevShadow = sampleShadowPoisson16(prevUv, prevProj.z, totalBias, texelSize, origPenumbra, prevBounds, stableNoise);
 
-                    prevShadow = sampleShadowPoisson16(prevUv, prevProj.z, totalBias, texelSize, blendedPenumbra, prevBounds, noise);
+                    // Match C1 radius to C0 penumbra in the transition zone for continuity in softness.
+                    if (c == 1) {
+                        float dynamicRadiusC1 = max(origPenumbra * (u_csmTexelSize.x / u_csmTexelSize.y), 1.0);
+                        shadow = sampleShadowPoisson8(uv, normalizedZ, totalBias, texelSize, dynamicRadiusC1, cascadeBounds);
+                    }
                 }
             } else if (c - 1 == 1) {
                 float staticRadiusC1 = max(LIGHT_SIZE_TEXELS * (u_csmTexelSize.x / u_csmTexelSize.y), 1.0);
                 // Also smoothly mix C1 into C2 so there is no change in blur size at the c1->c2 fringe
                 float blendedPenumbraC1 = mix(staticRadiusC1, 1.0, fade);
-                prevShadow = sampleShadowPoisson16(prevUv, prevProj.z, totalBias, texelSize, blendedPenumbraC1, prevBounds, noise);
+                prevShadow = sampleShadowPoisson8(prevUv, prevProj.z, totalBias, texelSize, blendedPenumbraC1, prevBounds);
             } else {
-                prevShadow = sampleShadowPCF(prevUv, totalBias, texelSize, 1.0, prevProj.z, prevBounds);
+                prevShadow = sampleShadowPCF(prevUv, prevProj.z, totalBias, texelSize, 1.0, prevBounds);
             }
 
             // Smoothly force blend to current cascade as we reach the physical boundary of the previous cascade
