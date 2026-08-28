@@ -43,7 +43,8 @@ echo if^(APPLE^)
 echo     # set the minimum deployment version for the asset compiler
 echo     set^(MINIMUM_MACOS_VERSION 26.0^)
 echo     # set the bundle identifier for xcode
-echo     set^(BUNDLE_IDENTIFIER "com.example.%PROJECT_NAME%"^)
+echo     string^(TOLOWER "${PROJECT_NAME}" BUNDLE_NAME^)
+echo     set^(BUNDLE_IDENTIFIER "com.COMPANYNAME.${BUNDLE_NAME}"^)
 echo endif^(^)
 echo.
 echo # Enable making a Windows executable if on Windows
@@ -106,26 +107,32 @@ echo ^<?xml version="1.0" encoding="UTF-8"?^>
 echo ^<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"^>
 echo ^<plist version="1.0"^>
 echo ^<dict^>
-echo 	^<key^>NSHighResolutionCapable^</key^>
-echo 	^<true/^>
-echo 	^<key^>CFBundleDevelopmentRegion^</key^>
-echo 	^<string^>en^</string^>
-echo 	^<key^>CFBundleExecutable^</key^>
-echo 	^<string^>${EXECUTABLE_NAME}^</string^>
-echo 	^<key^>CFBundleIdentifier^</key^>
-echo 	^<string^>${BUNDLE_IDENTIFIER}^</string^>
-echo 	^<key^>CFBundleInfoDictionaryVersion^</key^>
-echo 	^<string^>1.0^</string^>
-echo 	^<key^>CFBundleName^</key^>
-echo 	^<string^>${EXECUTABLE_NAME}^</string^>
-echo 	^<key^>CFBundlePackageType^</key^>
-echo 	^<string^>APPL^</string^>
-echo 	^<key^>CFBundleShortVersionString^</key^>
-echo 	^<string^>1^</string^>
-echo 	^<key^>CFBundleVersion^</key^>
-echo 	^<string^>1^</string^>
-echo 	^<key^>NSHumanReadableCopyright^</key^>
-echo 	^<string^>Placeholder Copyright ${CURRENT_YEAR}. Please update this to your own project copyright^</string^>
+echo     ^<key^>CFBundleDevelopmentRegion^</key^>
+echo     ^<string^>en^</string^>
+echo     ^<key^>CFBundleExecutable^</key^>
+echo     ^<string^>${EXECUTABLE_NAME}^</string^>
+echo     ^<key^>CFBundleIconFile^</key^>
+echo     ^<string^>${EXECUTABLE_NAME}^</string^>
+echo     ^<key^>CFBundleIconName^</key^>
+echo     ^<string^>${EXECUTABLE_NAME}^</string^>
+echo     ^<key^>CFBundleIdentifier^</key^>
+echo     ^<string^>${BUNDLE_IDENTIFIER}^</string^>
+echo     ^<key^>CFBundleInfoDictionaryVersion^</key^>
+echo     ^<string^>1.0^</string^>
+echo     ^<key^>CFBundleName^</key^>
+echo     ^<string^>${EXECUTABLE_NAME}^</string^>
+echo     ^<key^>CFBundlePackageType^</key^>
+echo     ^<string^>APPL^</string^>
+echo     ^<key^>CFBundleShortVersionString^</key^>
+echo     ^<string^>1^</string^>
+echo     ^<key^>CFBundleVersion^</key^>
+echo     ^<string^>1^</string^>
+echo     ^<key^>NSAccentColorName^</key^>
+echo     ^<string^>AccentColor^</string^>
+echo     ^<key^>NSHighResolutionCapable^</key^>
+echo     ^<true /^>
+echo     ^<key^>NSHumanReadableCopyright^</key^>
+echo     ^<string^>Copyright 2025-2026 SentyTek. All rights reserved.^</string^>
 echo ^</dict^>
 echo ^</plist^>
 ) > Info.plist.in
