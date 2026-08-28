@@ -392,9 +392,9 @@ bool Core::HandleEvents() {
         bool isMouseEvent = isMouseDown || isMouseUp ||
                             event.type == SDL_EVENT_MOUSE_MOTION ||
                             event.type == SDL_EVENT_MOUSE_WHEEL;
-        bool isKeyDown    = event.type == SDL_EVENT_KEY_DOWN;
-        bool isKeyUp      = event.type == SDL_EVENT_KEY_UP;
-        bool isKeyEvent   = isKeyDown || isKeyUp;
+        bool isKeyDown  = event.type == SDL_EVENT_KEY_DOWN;
+        bool isKeyUp    = event.type == SDL_EVENT_KEY_UP;
+        bool isKeyEvent = isKeyDown || isKeyUp;
 
         if (!mouseCaptureOverride && !isKeyUp && !isMouseUp) {
             if (isMouseEvent && RenderDirector::m_uiDebug.WantCaptureMouse() &&
@@ -442,7 +442,7 @@ bool Core::Update() {
     m_internal.last = m_internal.now;
     m_internal.now  = SDL_GetPerformanceCounter();
     deltaTime       = (m_internal.now - m_internal.last) /
-                      (float)SDL_GetPerformanceFrequency();
+                (float)SDL_GetPerformanceFrequency();
 #endif
 
     // Cap dt after stalls (breakpoints, app suspend) to avoid runaway
@@ -536,7 +536,9 @@ bool Core::Render() {
     SYN_PROFILE_FUNCTION();
     // Render the application
     if (Renderer::IsReady()) {
+#ifdef SYN_IS_EDITOR
         RenderDirector::m_uiDebug.NewFrame();
+#endif
         m_frameCounter.frameCount++;
         m_frameCounter.frameDisplay++;
 
