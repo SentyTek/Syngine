@@ -224,14 +224,9 @@ function(add_assets target)
         set_target_properties(InfoPlistMerge PROPERTIES FOLDER "Game")
 
         # add the Info.plist to the target and have it depend on the icon
-        set_property(
-            SOURCE "${FINAL_PLIST_PATH}"
-            PROPERTY MACOSX_PACKAGE_LOCATION "Contents/"
-        )
-
-        # tell Xcode this is the bundle Info.plist
-        set_target_properties(${target} PROPERTIES
-            XCODE_ATTRIBUTE_INFOPLIST_FILE ${FINAL_PLIST_PATH}
+        set_target_properties(${target} PROPERTIES 
+            MACOSX_BUNDLE TRUE 
+            MACOSX_BUNDLE_INFO_PLIST "${FINAL_PLIST_PATH}"
         )
 
         message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/${target}.icns")
@@ -383,8 +378,8 @@ if(APPLE)
     set_target_properties(${name} PROPERTIES
         MACOSX_BUNDLE TRUE
         XCODE_GENERATE_SCHEME TRUE
-        XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
-        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
+        XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.${name}"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.${name}"
         XCODE_ATTRIBUTE_SDKROOT "macosx"
         # tells Xcode to recognize the app icon. this might not be needed idk
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "${name}"

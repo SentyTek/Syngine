@@ -252,6 +252,8 @@ class Core {
     // Set while the editor camera is being dragged (e.g. RMB look) so input
     // keeps routing to the game even if the cursor leaves the Scene viewport.
     static bool mouseCaptureOverride;
+
+    static void Quit() { m_shouldClose = true; }
 #endif
 
   private:
