@@ -9,6 +9,7 @@
 #include "imgui_impl_bgfx.hpp"
 #include "Syngine/Core/Logger.h"
 #include "Syngine/Graphics/Rendering/Renderer.h"
+#include "Syngine/Graphics/Resources/TextureHelpers.h"
 #include "bgfx/bgfx.h"
 
 #include "bgfx/defines.h"
@@ -198,6 +199,12 @@ bool ImGui_ImplBgfx::WantCaptureMouse() {
 bool ImGui_ImplBgfx::WantCaptureKeyboard() {
     ImGuiIO& io = ::ImGui::GetIO();
     return io.WantCaptureKeyboard;
+}
+
+bgfx::TextureHandle ImGui_ImplBgfx::LoadTex(const std::string& bundlePath,
+                                            const std::string& textureName) {
+    return Syngine::LoadTextureFromBundle(bundlePath.c_str(),
+                                          textureName.c_str());
 }
 
 } // namespace Syngine::UI::Debug

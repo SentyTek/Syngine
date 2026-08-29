@@ -55,6 +55,9 @@ class ImGui_ImplBgfx {
     ToBGFX(ImTextureID texture) {
         return bgfx::TextureHandle{ static_cast<uint16_t>(texture) };
     };
+
+    static bgfx::TextureHandle LoadTex(const std::string& bundlePath,
+                                       const std::string& textureName);
 };
 
 using SImGui = ImGui_ImplBgfx;
