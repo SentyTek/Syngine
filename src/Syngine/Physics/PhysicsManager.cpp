@@ -153,7 +153,6 @@ void Phys::_Update(float deltaTime, int collisionSteps) {
 void Phys::_DrawDebug(int                 width,
                       int                 height,
                       bgfx::ProgramHandle program,
-                      Syngine::Camera     camera,
                       Syngine::Camera     finalCam,
                       DebugModes          debug) {
     if (mDebugRenderer && debug.Enabled) {
@@ -163,9 +162,6 @@ void Phys::_DrawDebug(int                 width,
 
         if (debug.PhysWireframes) {
             mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
-        }
-        if (debug.Gizmos) {
-            mDebugRenderer->DrawFrustum(camera);
         }
         mDebugRenderer->RenderLines(
             finalCam.view, finalCam.proj, width, height, program);

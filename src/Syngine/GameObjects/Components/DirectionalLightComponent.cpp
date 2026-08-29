@@ -20,6 +20,7 @@ DirectionalLightComponent::DirectionalLightComponent(
     float             intensity)
     : IComponent(owner), m_color(color), m_intensity(intensity) {
     _SetDirection(direction);
+    this->m_owner->gizmo = "light_sun";
 }
 
 Serializer::DataNode DirectionalLightComponent::Serialize() const {

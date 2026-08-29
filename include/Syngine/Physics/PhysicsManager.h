@@ -222,13 +222,11 @@ class Phys {
     /// @param width Width of the viewport
     /// @param height Height of the viewport
     /// @param program Shader program to use for rendering
-    /// @param camera Camera to get debug information from
     /// @param finalCam Camera to draw debug information to
     /// @param debug Debug modes to determine what to draw
     void _DrawDebug(int                 width,
                     int                 height,
                     bgfx::ProgramHandle program,
-                    Syngine::Camera     camera,
                     Syngine::Camera     finalCam,
                     DebugModes          debug);
 

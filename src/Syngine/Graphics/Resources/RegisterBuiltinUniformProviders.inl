@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/Scene/GameObjectRegistry.h"
 #include "bgfx/bgfx.h"
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
@@ -315,9 +316,11 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                     auto* transform =
                         packet.go->GetComponent<TransformComponent>();
                     data = { transform->GetWorldPosition(), billboard->size };
+                } else if (auto* transform =
+                               packet.go->GetComponent<TransformComponent>()) {
+                    data = { transform->GetPosition(), 1.0f };
                 } else {
-                    auto* camera = packet.go->GetComponent<CameraComponent>();
-                    data         = { camera->GetPosition(), 1.0f };
+                    data = { 0.0f, 0.0f, 0.0f, 1.0f };
                 }
 
                 return data.data();

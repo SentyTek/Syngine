@@ -13,6 +13,7 @@
 #include "Syngine/Core/JobSystem.h"
 #include "Syngine/Core/Memory/ArenaAlloc.h"
 #include "Syngine/GameObjects/Components/BillboardComponent.h"
+#include "Syngine/GameObjects/Components/DirectionalLightComponent.h"
 #include "Syngine/Graphics/Rendering/RenderPacket.h"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
 #include "Syngine/Graphics/Resources/ShaderManager.h"
@@ -77,24 +78,24 @@ _CreateSolidRGBA8Texture(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
 // I present to you an unholy abomination of static member definitions
 bool                              RenderDirector::m_collectedresources = false;
 RenderDirector::RenderCoreBuffers RenderDirector::m_buffers            = {
-               .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
-               .sceneColor =
+    .sceneFB = BGFX_INVALID_HANDLE, //* Framebuffer for scene rendering
+    .sceneColor =
         BGFX_INVALID_HANDLE, //* Color texture for scene rendering (RGBA16F)
-               .sceneDepth =
+    .sceneDepth =
         BGFX_INVALID_HANDLE, //* Depth texture for scene rendering (D24S8)
-               .sceneNormal =
+    .sceneNormal =
         BGFX_INVALID_HANDLE, //* Normal texture for scene rendering (RGBA8)
-               .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
-               .ssaoBlurHFB =
+    .ssaoFB = BGFX_INVALID_HANDLE, //* Framebuffer for SSAO rendering
+    .ssaoBlurHFB =
         BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (horizontal)
-               .ssaoBlurVFB =
+    .ssaoBlurVFB =
         BGFX_INVALID_HANDLE, //* Temp framebuffer for SSAO blurring (vertical)
-               .ssaoTex   = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
-               .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
-               .ssaoBlurFinal =
+    .ssaoTex   = BGFX_INVALID_HANDLE, //* SSAO texture (R8)
+    .ssaoBlurH = BGFX_INVALID_HANDLE, //* SSAO texture mid-blur (R8)
+    .ssaoBlurFinal =
         BGFX_INVALID_HANDLE, //* SSAO texture post-blur (Use this one) (R8)
-               .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
-               .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
+    .shadowDepth = BGFX_INVALID_HANDLE, //* Shadow map depth texture handle
+    .shadowFB    = BGFX_INVALID_HANDLE, //* Shadow map framebuffer handle
 };
 
 bool RenderDirector::m_changeVsyncThisFrame      = false;
@@ -316,10 +317,10 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
     m_config.shadowMapSize = SHADOW_MAP_SIZE; // Ensure shadow map size is set
 
     // create billboard buffers
-    static const float billboardVertices[]   = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
-                                                 0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
-                                                 0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
-                                                 -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
+    static const float billboardVertices[] = { -0.5f, -0.5f, 0.0f, 0.0f, 1.0f,
+                                               0.5f,  -0.5f, 0.0f, 1.0f, 1.0f,
+                                               0.5f,  0.5f,  0.0f, 1.0f, 0.0f,
+                                               -0.5f, 0.5f,  0.0f, 0.0f, 0.0f };
     static const uint16_t billboardIndices[] = { 0, 1, 2, 0, 2, 3 };
 
     bgfx::VertexLayout billboardLayout;
@@ -520,11 +521,11 @@ bool RenderDirector::_CreateSceneBuffers() {
         BGFX_TEXTURE_RT | BGFX_SAMPLER_U_CLAMP | BGFX_SAMPLER_V_CLAMP;
 
     m_buffers.sceneColor  = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                 uint16_t(Renderer::height),
-                                                 false,
-                                                 1,
-                                                 bgfx::TextureFormat::RGBA16F,
-                                                 tsFlags);
+                                                  uint16_t(Renderer::height),
+                                                  false,
+                                                  1,
+                                                  bgfx::TextureFormat::RGBA16F,
+                                                  tsFlags);
     m_buffers.sceneNormal = bgfx::createTexture2D(uint16_t(Renderer::width),
                                                   uint16_t(Renderer::height),
                                                   false,
@@ -532,11 +533,11 @@ bool RenderDirector::_CreateSceneBuffers() {
                                                   bgfx::TextureFormat::RGBA16F,
                                                   tsFlags);
     m_buffers.sceneDepth  = bgfx::createTexture2D(uint16_t(Renderer::width),
-                                                 uint16_t(Renderer::height),
-                                                 false,
-                                                 1,
-                                                 bgfx::TextureFormat::D24S8,
-                                                 BGFX_TEXTURE_RT);
+                                                  uint16_t(Renderer::height),
+                                                  false,
+                                                  1,
+                                                  bgfx::TextureFormat::D24S8,
+                                                  BGFX_TEXTURE_RT);
 
     if (m_config.useSSAO) {
         const uint16_t ssaoWidth  = uint16_t(std::max(1, Renderer::width / 2));
@@ -1283,30 +1284,42 @@ void RenderDirector::_DrawDebug(const Shader*    program,
         }
     }
 
+    // Draw gizmos for specific objects like the sun light direction
+    const DirectionalLightComponent* sun =
+        GameObjectRegistry::GetFirstActiveDirectionalLight();
+    if (sun) {
+        Vector3 sunDir = sun->GetDirectionVector();
+        // Draw a line representing the sun direction
+        m_drender->DrawLine(Vector3(0.0f).toJoltRVec3(),
+                            (-sunDir * 10.0f).toJoltRVec3(),
+                            JPH::Color::sYellow);
+    }
+
     // Flush all queued debug lines (physics wireframes, frustums, CSM
     // lines, zone bounds, and AABBs) in a single pass.
     // TODO: Rework this to draw camera frustums as gizmos instead of
     // hardcoded
-    const GameObject* p = GameObjectRegistry::GetGameObjectByName("player");
-    if (p && Core::IsPhysicsEnabled()) {
-        CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
-        if (!playerCamera) {
-            return;
+    if (debug.Gizmos && Core::IsPhysicsEnabled()) {
+        const GameObject* p = GameObjectRegistry::GetGameObjectByName("player");
+        if (p) {
+            CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
+            if (playerCamera) {
+                // Keep player camera matrices valid even when simulation is
+                // paused.
+                const int safeWidth  = std::max(Renderer::width, 1);
+                const int safeHeight = std::max(Renderer::height, 1);
+                playerCamera->Update(VIEW_DEBUG, safeWidth, safeHeight);
+
+                m_drender->DrawFrustum(playerCamera->GetCamera());
+            }
         }
-
-        // Keep player camera matrices valid even when simulation is paused.
-        const int safeWidth  = std::max(Renderer::width, 1);
-        const int safeHeight = std::max(Renderer::height, 1);
-        playerCamera->Update(VIEW_DEBUG, safeWidth, safeHeight);
-
-        Core::_GetContext()->physicsManager->_DrawDebug(
-            Renderer::width,
-            Renderer::height,
-            program->m_program,
-            playerCamera->GetCamera(),
-            camera->GetCamera(),
-            debug);
     }
+
+    Core::_GetContext()->physicsManager->_DrawDebug(Renderer::width,
+                                                    Renderer::height,
+                                                    program->m_program,
+                                                    camera->GetCamera(),
+                                                    debug);
 }
 
 void RenderDirector::_DrawBillboard(const Shader*           program,
@@ -1411,12 +1424,17 @@ void RenderDirector::_DrawDbgBillboard(Shader* program) {
 
     if (gizmos.empty()) return;
 
-    _SetFrameUniforms(program);
-    _SetViewUniforms(program);
+    //_SetFrameUniforms(program);
+    //_SetViewUniforms(program);
 
     // Build render packets for gizmos and draw them
     std::vector<Renderer::RenderPacket> packets;
     for (auto go : gizmos) {
+        Mat4 modelMtx = Mat4(); // Default to identity matrix
+        if (go->HasComponent(SYN_COMPONENT_TRANSFORM)) {
+            modelMtx = go->GetComponent<TransformComponent>()->GetModelMatrix();
+        }
+
         auto it = Renderer::m_gizmoRegistry.find(go->gizmo);
         if (it == Renderer::m_gizmoRegistry.end()) continue;
         Renderer::RenderPacket packet;
@@ -1425,9 +1443,8 @@ void RenderDirector::_DrawDbgBillboard(Shader* program) {
         packet.ibh                   = m_billboardIbh;
         packet.material              = &gizmo->_GetMaterial();
         packet.shader                = packet.material->GetShader();
-        packet.modelMtx =
-            go->GetComponent<TransformComponent>()->GetModelMatrix();
-        packet.go = go;
+        packet.modelMtx              = modelMtx;
+        packet.go                    = go;
         packets.push_back(packet);
     }
 

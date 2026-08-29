@@ -250,6 +250,11 @@ void GameObjectRegistry::_NotifyComponentAdded(
             m_DirectionalLights.push_back(
                 gameobject->GetComponent<DirectionalLightComponent>());
         }
+        if (std::find(m_Gizmos.begin(), m_Gizmos.end(), gameobject) ==
+            m_Gizmos.end()) {
+            m_Gizmos.push_back(gameobject);
+            Syngine::Core::_GetContext()->renderer->_RegisterGizmo("light_sun");
+        }
         break;
     default: break; // No action for other component types
     }
