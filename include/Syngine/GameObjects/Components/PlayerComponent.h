@@ -151,6 +151,17 @@ class PlayerComponent : public Syngine::IComponent {
         SetRotation(rotation.x(), rotation.y());
     };
 
+    /// @brief Reset the player component to its default state.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void Reset();
+
+    /// @brief Rebuilds the player character based on the current component
+    /// settings.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void RebuildCharacter();
+
     float maxPitchAngle =
         89.0f; //* Max vertical angle for the camera pitch (in degrees).
 

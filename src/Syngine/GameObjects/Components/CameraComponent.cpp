@@ -8,10 +8,10 @@
 
 #include "Syngine/GameObjects/Components/CameraComponent.h"
 #include "Syngine/GameObjects/ComponentRegistry.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/GameObjects/GameObject.h"
 
 #include "Syngine/Math/Math.hpp"
-#include "Syngine/Utils/Profiler.h"
 #include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
@@ -81,8 +81,18 @@ Serializer::DataNode CameraComponent::Serialize() const {
     return node;
 }
 
-void CameraComponent::Update(int viewId, int width, int height) {
+void CameraComponent::Update(int width, int height) {
     // update view and projection matrices
+    if (this->syncToTransform && this->m_owner) {
+        TransformComponent* transform =
+            this->m_owner->GetComponent<TransformComponent>();
+        if (transform) {
+            this->camera.eye     = transform->GetWorldPosition();
+            Math::Vector3 angles = transform->GetWorldRotationEuler();
+            this->camera.yaw     = angles.x();
+            this->camera.pitch   = angles.y();
+        }
+    }
     Syngine::Camera& cam        = this->camera;
     Math::Vec3       eyeVec     = this->camera.eye.toBxVec3();
     const int        safeWidth  = std::max(width, 1);
@@ -134,12 +144,22 @@ void CameraComponent::SetFOV(float fov) {
 float CameraComponent::GetFOV() const { return this->camera.fov; }
 
 void CameraComponent::SetFarPlane(float farPlane) {
-    if (farPlane < 0.0f && farPlane > this->camera.nearPlane &&
+    if (farPlane < 0.0f || farPlane < this->camera.nearPlane ||
         farPlane > 50000.0f) {
         return;
     }
     this->camera.farPlane = farPlane;
 }
+
+void CameraComponent::SetNearPlane(float nearPlane) {
+    if (nearPlane < 0.0f || nearPlane > this->camera.farPlane ||
+        nearPlane > 50000.0f) {
+        return;
+    }
+    this->camera.nearPlane = nearPlane;
+}
+
+float CameraComponent::GetNearPlane() const { return this->camera.nearPlane; }
 
 float CameraComponent::GetFarPlane() const { return this->camera.farPlane; }
 
@@ -173,8 +193,8 @@ CameraComponent::Frustum CameraComponent::_extractFrustum() {
     const auto extractPlane = [&vp](int axis, float sign) {
         Plane plane;
         plane.normal   = Math::Vec3(vp.m(0, 3) + sign * vp.m(0, axis),
-                                  vp.m(1, 3) + sign * vp.m(1, axis),
-                                  vp.m(2, 3) + sign * vp.m(2, axis));
+                                    vp.m(1, 3) + sign * vp.m(1, axis),
+                                    vp.m(2, 3) + sign * vp.m(2, axis));
         plane.distance = vp.m(3, 3) + sign * vp.m(3, axis);
         return plane;
     };
@@ -242,6 +262,10 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
                 node / "yaw" = std::stof(value);
             } else if (key == "pitch") {
                 node / "pitch" = std::stof(value);
+            } else if (key == "isMainCamera") {
+                node / "isMainCamera" = (value == "true");
+            } else if (key == "syncToTransform") {
+                node / "syncToTransform" = (value == "true");
             }
         }
         return node;
@@ -264,6 +288,12 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
         }
         if (data.Has("yaw") && data.Has("pitch")) {
             comp->SetAngles(data["yaw"].As<float>(), data["pitch"].As<float>());
+        }
+        if (data.Has("isMainCamera")) {
+            comp->isMainCamera = data["isMainCamera"].As<bool>();
+        }
+        if (data.Has("syncToTransform")) {
+            comp->syncToTransform = data["syncToTransform"].As<bool>();
         }
         return comp;
     });

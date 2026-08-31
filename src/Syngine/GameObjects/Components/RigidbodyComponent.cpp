@@ -6,31 +6,31 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Core/Core.h"
-#include "Syngine/Core/Logger.h"
-#include "Syngine/GameObjects/Component.h"
-#include "Syngine/GameObjects/Components/RigidbodyComponent.h"
-#include "Syngine/GameObjects/ComponentRegistry.h"
-#include "Syngine/GameObjects/Components/MeshComponent.h"
-#include "Syngine/GameObjects/Components/TransformComponent.h"
-#include "Syngine/GameObjects/GameObject.h"
-#include "Syngine/Math/Quaternion.hpp"
-#include "Syngine/Math/Vector3.hpp"
-#include "Syngine/Physics/PhysicsManager.h"
-#include "Syngine/Utils/Serializer.h"
+#include <Syngine/Core/Core.h>
+#include <Syngine/Core/Logger.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/GameObjects/Components/RigidbodyComponent.h>
+#include <Syngine/GameObjects/ComponentRegistry.h>
+#include <Syngine/GameObjects/Components/MeshComponent.h>
+#include <Syngine/GameObjects/Components/TransformComponent.h>
+#include <Syngine/GameObjects/GameObject.h>
+#include <Syngine/Math/Quaternion.hpp>
+#include <Syngine/Math/Vector3.hpp>
+#include <Syngine/Physics/PhysicsManager.h>
+#include <Syngine/Utils/Serializer.h>
 
-#include "Jolt/Math/Quat.h"
-#include "Jolt/Physics/Body/BodyInterface.h"
-#include "Jolt/Physics/Collision/Shape/CapsuleShape.h"
-#include "Jolt/Physics/Collision/Shape/CylinderShape.h"
-#include "Jolt/Physics/Collision/Shape/SphereShape.h"
-#include "Jolt/Physics/EActivation.h"
-#include "Jolt/Math/MathTypes.h"
-#include "Jolt/Physics/Body/MotionProperties.h"
+#include <Jolt/Math/Quat.h>
+#include <Jolt/Physics/Body/BodyInterface.h>
+#include <Jolt/Physics/Collision/Shape/BoxShape.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/CylinderShape.h>
+#include <Jolt/Physics/Collision/Shape/SphereShape.h>
+#include <Jolt/Physics/EActivation.h>
+#include <Jolt/Math/MathTypes.h>
 
-#include "bx/math.h"
 #include <sol/sol.hpp>
 
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -46,14 +46,14 @@ RigidbodyComponent::RigidbodyComponent(const RigidbodyComponent& other)
     : IComponent(other.m_owner) {
     if (!Core::IsPhysicsEnabled()) return;
 
-    this->physicsManager  = other.physicsManager;
-    this->transform       = other.transform;
-    this->bodyID          = other.bodyID;
-    this->mass            = other.mass;
-    this->friction        = other.friction;
-    this->restitution     = other.restitution;
-    this->shape           = other.shape;
-    this->shapeParameters = other.shapeParameters;
+    this->m_physicsManager  = other.m_physicsManager;
+    this->m_transform       = other.m_transform;
+    this->m_bodyID          = other.m_bodyID;
+    this->m_mass            = other.m_mass;
+    this->m_friction        = other.m_friction;
+    this->m_restitution     = other.m_restitution;
+    this->m_shape           = other.m_shape;
+    this->m_shapeParameters = other.m_shapeParameters;
 }
 
 RigidbodyComponent&
@@ -61,15 +61,15 @@ RigidbodyComponent::operator=(const RigidbodyComponent& other) {
     if (!Core::IsPhysicsEnabled()) return *this;
 
     if (this != &other) {
-        this->m_owner         = other.m_owner;
-        this->physicsManager  = other.physicsManager;
-        this->transform       = other.transform;
-        this->bodyID          = other.bodyID;
-        this->mass            = other.mass;
-        this->friction        = other.friction;
-        this->restitution     = other.restitution;
-        this->shape           = other.shape;
-        this->shapeParameters = other.shapeParameters;
+        this->m_owner           = other.m_owner;
+        this->m_physicsManager  = other.m_physicsManager;
+        this->m_transform       = other.m_transform;
+        this->m_bodyID          = other.m_bodyID;
+        this->m_mass            = other.m_mass;
+        this->m_friction        = other.m_friction;
+        this->m_restitution     = other.m_restitution;
+        this->m_shape           = other.m_shape;
+        this->m_shapeParameters = other.m_shapeParameters;
     }
     return *this;
 }
@@ -84,83 +84,85 @@ Serializer::DataNode RigidbodyComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type" =
         static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_RIGIDBODY);
-    node / "mass"            = mass;
-    node / "friction"        = friction;
-    node / "restitution"     = restitution;
-    node / "shape"           = static_cast<int>(shape);
-    node / "shapeParameters" = shapeParameters;
+    node / "mass"            = m_mass;
+    node / "friction"        = m_friction;
+    node / "restitution"     = m_restitution;
+    node / "shape"           = static_cast<int>(m_shape);
+    node / "shapeParameters" = m_shapeParameters;
     return node;
 }
 
-JPH::BodyID    RigidbodyComponent::_GetBodyID() const { return bodyID; }
+JPH::BodyID    RigidbodyComponent::_GetBodyID() const { return m_bodyID; }
 Syngine::Phys* RigidbodyComponent::_GetPhysicsManager() const {
-    return physicsManager;
+    return m_physicsManager;
 }
 Math::Vector3 RigidbodyComponent::GetShapeParameters() const {
-    return shapeParameters;
+    return m_shapeParameters;
 }
-float RigidbodyComponent::GetMass() const { return mass; }
-float RigidbodyComponent::GetFriction() const { return friction; }
-float RigidbodyComponent::GetRestitution() const { return restitution; }
+float RigidbodyComponent::GetMass() const { return m_mass; }
+float RigidbodyComponent::GetFriction() const { return m_friction; }
+float RigidbodyComponent::GetRestitution() const { return m_restitution; }
 
 // Initialize the RigidbodyComponent with the given parameters.
 void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
-    pendingParams = params;
-    initPending   = false;
+    m_pendingParams = params;
+    m_initPending   = false;
 
-    if (initComplete && !bodyID.IsInvalid()) {
+    if (m_initComplete && !m_bodyID.IsInvalid()) {
         return;
     }
 
-    this->physicsManager  = Syngine::Core::_GetContext()->physicsManager.get();
-    this->transform       = this->m_owner->GetComponent<TransformComponent>();
-    this->mass            = params.mass;
-    this->friction        = params.friction;
-    this->restitution     = params.restitution;
-    this->shape           = params.shape;
-    this->shapeParameters = params.shapeParameters;
-    if (!this->transform) {
-        initPending = true;
+    this->m_physicsManager = Syngine::Core::_GetContext()->physicsManager.get();
+    this->m_transform      = this->m_owner->GetComponent<TransformComponent>();
+    this->m_mass           = params.mass;
+    this->m_friction       = params.friction;
+    this->m_restitution    = params.restitution;
+    this->m_shape          = params.shape;
+    this->m_shapeParameters = params.shapeParameters;
+    if (!this->m_transform) {
+        m_initPending = true;
         Syngine::Logger::Warn("RigidbodyComponent deferred initialization: "
                               "waiting for TransformComponent");
         return;
     }
 
-    if (!physicsManager || !transform) {
-        initPending = true;
+    if (!m_physicsManager || !m_transform) {
+        m_initPending = true;
         return;
     }
+    m_currentParams = params;
 
-    JPH::RVec3 curPos = transform->GetPosition().toJoltRVec3();
+    JPH::RVec3 curPos = m_transform->GetPosition().toJoltRVec3();
     JPH::Quat  transformRot =
-        transform->GetWorldRotationQuaternion().toJoltQuat();
+        m_transform->GetWorldRotationQuaternion().toJoltQuat();
 
-    switch (shape) {
+    switch (m_shape) {
     case PhysicsShapes::SPHERE: {
-        if (shapeParameters.isZero()) {
+        if (m_shapeParameters.isZero()) {
             Syngine::Logger::Error("RigidbodyComponent::Init: No radius "
                                    "provided for sphere shape.");
             return;
         }
-        float radius = shapeParameters.x();
-        bodyID       = physicsManager->_CreateSphere(
-            curPos, radius, params.motionType, params.layer, mass);
+        float radius = m_shapeParameters.x();
+        m_bodyID     = m_physicsManager->_CreateSphere(
+            curPos, radius, params.motionType, params.layer, m_mass);
         break;
     }
     case PhysicsShapes::BOX: {
-        if (shapeParameters.isZero()) {
+        if (m_shapeParameters.isZero()) {
             Syngine::Logger::Error("RigidbodyComponent::Init: No half extents "
                                    "provided for box shape.");
             return;
         }
-        JPH::Vec3 shapeParametersVec(
-            shapeParameters.x(), shapeParameters.y(), shapeParameters.z());
-        bodyID = physicsManager->_CreateBox(curPos,
-                                            transformRot,
-                                            shapeParametersVec,
-                                            params.motionType,
-                                            params.layer,
-                                            mass);
+        JPH::Vec3 shapeParametersVec(m_shapeParameters.x(),
+                                     m_shapeParameters.y(),
+                                     m_shapeParameters.z());
+        m_bodyID = m_physicsManager->_CreateBox(curPos,
+                                                transformRot,
+                                                shapeParametersVec,
+                                                params.motionType,
+                                                params.layer,
+                                                m_mass);
         break;
     }
     case PhysicsShapes::MESH: {
@@ -177,47 +179,52 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         }
 
         JPH::Vec3 scale(1.0f, 1.0f, 1.0f);
-        if (!shapeParameters.isZero()) {
-            scale = JPH::Vec3(
-                shapeParameters.x(), shapeParameters.y(), shapeParameters.z());
+        if (!m_shapeParameters.isZero()) {
+            scale = JPH::Vec3(m_shapeParameters.x(),
+                              m_shapeParameters.y(),
+                              m_shapeParameters.z());
         }
 
-        bodyID = physicsManager->_CreateMeshBody(curPos,
-                                                 transformRot,
-                                                 meshComp->modelData,
-                                                 params.motionType,
-                                                 params.layer,
-                                                 scale,
-                                                 mass);
+        m_bodyID = m_physicsManager->_CreateMeshBody(curPos,
+                                                     transformRot,
+                                                     meshComp->modelData,
+                                                     params.motionType,
+                                                     params.layer,
+                                                     scale,
+                                                     m_mass);
         break;
     }
     case PhysicsShapes::CAPSULE: {
-        if (shapeParameters.isZero()) {
+        if (m_shapeParameters.isZero()) {
             Syngine::Logger::Error("RigidbodyComponent::Init: No radius and "
                                    "half height provided for capsule shape.");
             return;
         }
-        float radius     = shapeParameters.x();
-        float halfHeight = shapeParameters.y();
-        bodyID           = physicsManager->_CreateCapsule(
-            curPos, radius, halfHeight, params.motionType, params.layer, mass);
+        float radius     = m_shapeParameters.x();
+        float halfHeight = m_shapeParameters.y();
+        m_bodyID         = m_physicsManager->_CreateCapsule(curPos,
+                                                            radius,
+                                                            halfHeight,
+                                                            params.motionType,
+                                                            params.layer,
+                                                            m_mass);
         break;
     }
     case PhysicsShapes::CYLINDER: {
-        if (shapeParameters.isZero()) {
+        if (m_shapeParameters.isZero()) {
             Syngine::Logger::Error("RigidbodyComponent::Init: Not enough "
                                    "parameters for cylinder shape.");
             return;
         }
-        float radius     = shapeParameters.y();
-        float halfHeight = shapeParameters.x();
-        bodyID           = physicsManager->_CreateCylinder(curPos,
-                                                 transformRot,
-                                                 radius,
-                                                 halfHeight,
-                                                 params.motionType,
-                                                 params.layer,
-                                                 mass);
+        float radius     = m_shapeParameters.y();
+        float halfHeight = m_shapeParameters.x();
+        m_bodyID         = m_physicsManager->_CreateCylinder(curPos,
+                                                             transformRot,
+                                                             radius,
+                                                             halfHeight,
+                                                             params.motionType,
+                                                             params.layer,
+                                                             m_mass);
         break;
     }
     case PhysicsShapes::COMPOUND: {
@@ -226,31 +233,33 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
                                    "provided for compound shape.");
             return;
         }
-        bodyID = physicsManager->_CreateCompound(curPos,
-                                                 transformRot,
-                                                 params.compoundParts,
-                                                 params.motionType,
-                                                 params.layer,
-                                                 mass);
+        m_bodyID = m_physicsManager->_CreateCompound(curPos,
+                                                     transformRot,
+                                                     params.compoundParts,
+                                                     params.motionType,
+                                                     params.layer,
+                                                     m_mass);
         break;
     }
     default: return;
     }
 
-    if (!bodyID.IsInvalid()) {
-        JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    if (!m_bodyID.IsInvalid()) {
+        JPH::BodyInterface& bodyInterface =
+            m_physicsManager->_GetBodyInterface();
         // Set the body properties (mass set during body creation)
-        if (friction > 0) bodyInterface.SetFriction(bodyID, friction);
-        if (restitution > 0) bodyInterface.SetRestitution(bodyID, restitution);
-        initComplete = true;
-        initPending  = false;
+        if (m_friction > 0) bodyInterface.SetFriction(m_bodyID, m_friction);
+        if (m_restitution > 0)
+            bodyInterface.SetRestitution(m_bodyID, m_restitution);
+        m_initComplete = true;
+        m_initPending  = false;
     } else {
-        initPending = true;
+        m_initPending = true;
     }
 }
 
 void RigidbodyComponent::RetryInitIfPending() {
-    if (!initPending || initComplete) {
+    if (!m_initPending || m_initComplete) {
         return;
     }
 
@@ -259,36 +268,36 @@ void RigidbodyComponent::RetryInitIfPending() {
         true,
         "RigidbodyComponent: Retrying initialization for GameObject '%s'",
         m_owner->name.c_str());
-    Init(pendingParams);
+    Init(m_pendingParams);
 }
 
 void RigidbodyComponent::SyncBodyToTransform() {
-    if (initPending && !initComplete) {
+    if (m_initPending && !m_initComplete) {
         RetryInitIfPending();
     }
 
-    if (!physicsManager || !transform || bodyID.IsInvalid()) {
+    if (!m_physicsManager || !m_transform || m_bodyID.IsInvalid()) {
         return;
     }
 
-    BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
 
-    JPH::Vec3 pos = transform->GetPosition().toJoltVec3();
-    JPH::Quat rot = transform->GetWorldRotationQuaternion().toJoltQuat();
+    JPH::Vec3 pos = m_transform->GetWorldPosition().toJoltVec3();
+    JPH::Quat rot = m_transform->GetWorldRotationQuaternion().toJoltQuat();
     bodyInterface.SetPositionAndRotation(
-        bodyID, pos, rot, EActivation::Activate);
+        m_bodyID, pos, rot, EActivation::Activate);
 }
 
 void RigidbodyComponent::Update(float deltaTime) {
-    if (initPending && !initComplete) {
+    if (m_initPending && !m_initComplete) {
         RetryInitIfPending();
     }
 
-    if (!physicsManager || !transform || bodyID.IsInvalid()) {
+    if (!m_physicsManager || !m_transform || m_bodyID.IsInvalid()) {
         return;
     }
 
-    BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
     bool           simulate      = Syngine::Core::Get()->GetSimulationState();
 
     if (simulate) {
@@ -296,98 +305,163 @@ void RigidbodyComponent::Update(float deltaTime) {
         // position and rotation over time
         static const float lerpAlpha = 0.2f;
         // When physics drives the transform
-        JPH::Vec3 physicsPos = bodyInterface.GetPosition(bodyID);
-        JPH::Quat physicsRot = bodyInterface.GetRotation(bodyID);
+        JPH::Vec3 physicsPos = bodyInterface.GetPosition(m_bodyID);
+        JPH::Quat physicsRot = bodyInterface.GetRotation(m_bodyID);
 
-        JPH::Vec3 currentPos = transform->GetPosition().toJoltVec3();
+        JPH::Vec3 currentPos = m_transform->GetPosition().toJoltVec3();
         JPH::Quat currentRot =
-            transform->GetWorldRotationQuaternion().toJoltQuat();
+            m_transform->GetWorldRotationQuaternion().toJoltQuat();
 
         // Lerp pos and slerp rot
         JPH::Vec3 lerpedPos =
             currentPos + (physicsPos - currentPos) * lerpAlpha;
         JPH::Quat lerpedRot = currentRot.SLERP(physicsRot, lerpAlpha);
 
-        transform->SetWorldPosition(Vector3(lerpedPos));
-        transform->SetWorldRotationQuat(Quaternion(lerpedRot));
+        m_transform->SetWorldPosition(Vector3(lerpedPos));
+        m_transform->SetWorldRotationQuat(Quaternion(lerpedRot));
 
     } else {
-        JPH::Vec3 pos = transform->GetPosition().toJoltVec3();
-        JPH::Quat rot = transform->GetWorldRotationQuaternion().toJoltQuat();
+        JPH::Vec3 pos = m_transform->GetWorldPosition().toJoltVec3();
+        JPH::Quat rot = m_transform->GetWorldRotationQuaternion().toJoltQuat();
+        Math::Vector3 scale = m_transform->GetWorldScale();
 
         bodyInterface.SetPositionAndRotation(
-            bodyID, pos, rot, EActivation::Activate);
+            m_bodyID, pos, rot, EActivation::Activate);
+
+        Math::Vector3 scaledParams(m_shapeParameters.x() * std::abs(scale.x()),
+                                   m_shapeParameters.y() * std::abs(scale.y()),
+                                   m_shapeParameters.z() * std::abs(scale.z()));
+
+        JPH::Shape* shape = nullptr;
+
+        switch (this->m_shape) {
+        case PhysicsShapes::SPHERE: {
+            if (scaledParams.x() <= 0.0f) {
+                Syngine::Logger::Error(
+                    "RigidbodyComponent::SyncBodyToTransform: "
+                    "Invalid radius for sphere shape.");
+                return;
+            }
+            float radius = scaledParams.x();
+            shape        = new JPH::SphereShape(radius);
+            break;
+        }
+        case PhysicsShapes::BOX: {
+            if (scaledParams.x() <= 0.0f || scaledParams.y() <= 0.0f ||
+                scaledParams.z() <= 0.0f) {
+                Syngine::Logger::Error(
+                    "RigidbodyComponent::SyncBodyToTransform: "
+                    "Invalid extents for box shape.");
+                return;
+            }
+            JPH::Vec3 extents(
+                scaledParams.x(), scaledParams.y(), scaledParams.z());
+            shape = new JPH::BoxShape(extents);
+            break;
+        }
+        case PhysicsShapes::CAPSULE: {
+            if (scaledParams.x() <= 0.0f || scaledParams.y() <= 0.0f) {
+                Syngine::Logger::Error("RigidbodyComponent::"
+                                       "SyncBodyToTransform: Invalid radius or "
+                                       "half height for capsule shape.");
+                return;
+            }
+            float radius             = scaledParams.x();
+            float halfHeightCylinder = scaledParams.y();
+            shape = new JPH::CapsuleShape(halfHeightCylinder, radius);
+            break;
+        }
+        case PhysicsShapes::CYLINDER: {
+            if (scaledParams.x() <= 0.0f || scaledParams.y() <= 0.0f) {
+                Syngine::Logger::Error("RigidbodyComponent::"
+                                       "SyncBodyToTransform: Invalid radius or "
+                                       "half height for cylinder shape.");
+                return;
+            }
+            float radius     = scaledParams.x();
+            float halfHeight = scaledParams.y();
+            shape            = new JPH::CylinderShape(halfHeight, radius);
+            break;
+        }
+        default: break;
+        }
+
+        if (shape) {
+            bodyInterface.SetShape(
+                m_bodyID, shape, true, JPH::EActivation::Activate);
+        }
     }
 }
 
 void RigidbodyComponent::Destroy() {
-    if (physicsManager && !bodyID.IsInvalid()) {
-        BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
-        bodyInterface.RemoveBody(bodyID);
-        bodyInterface.DestroyBody(bodyID);
-        bodyID = BodyID(); // Reset the body ID to an invalid state
+    if (m_physicsManager && !m_bodyID.IsInvalid()) {
+        BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
+        bodyInterface.RemoveBody(m_bodyID);
+        bodyInterface.DestroyBody(m_bodyID);
+        m_bodyID = BodyID(); // Reset the body ID to an invalid state
     }
 }
 
 void RigidbodyComponent::UpdateShapeParameters(
     const Math::Vector3 newShapeParameters) {
-    if (bodyID.IsInvalid() || !physicsManager) {
+    if (m_bodyID.IsInvalid() || !m_physicsManager) {
         Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: "
                                "Invalid body ID or physics manager.");
         return;
     }
 
-    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    JPH::BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
     JPH::Shape*         shape         = nullptr;
 
     // Store new parameters. For MESH shape, interpreted as scalars
     // For other shapes, they are dimensions (radius, extents, etc.)
-    this->shapeParameters = newShapeParameters;
+    this->m_shapeParameters         = newShapeParameters;
+    m_currentParams.shapeParameters = m_shapeParameters;
 
-    switch (this->shape) {
+    switch (this->m_shape) {
     case PhysicsShapes::SPHERE: {
-        if (this->shapeParameters.isZero()) {
+        if (this->m_shapeParameters.isZero()) {
             Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: "
                                    "No radius provided for sphere shape.");
             return;
         }
-        float radius = this->shapeParameters.x();
+        float radius = this->m_shapeParameters.x();
         shape        = new JPH::SphereShape(radius);
         break;
     }
     case PhysicsShapes::BOX: {
-        if (this->shapeParameters.isZero()) {
+        if (this->m_shapeParameters.isZero()) {
             Syngine::Logger::Error("RigidbodyComponent::UpdateShapeParameters: "
                                    "No extents provided for box shape.");
             return;
         }
-        JPH::Vec3 extents(this->shapeParameters.x(),
-                          this->shapeParameters.y(),
-                          this->shapeParameters.z());
+        JPH::Vec3 extents(this->m_shapeParameters.x(),
+                          this->m_shapeParameters.y(),
+                          this->m_shapeParameters.z());
         shape = new JPH::BoxShape(extents);
         break;
     }
     case PhysicsShapes::CAPSULE: {
-        if (this->shapeParameters.isZero()) {
+        if (this->m_shapeParameters.isZero()) {
             Syngine::Logger::Error(
                 "RigidbodyComponent::UpdateShapeParameters: No radius and half "
                 "height provided for capsule shape.");
             return;
         }
-        float radius             = this->shapeParameters.x();
-        float halfHeightCylinder = this->shapeParameters.y();
+        float radius             = this->m_shapeParameters.x();
+        float halfHeightCylinder = this->m_shapeParameters.y();
         shape = new JPH::CapsuleShape(halfHeightCylinder, radius);
         break;
     }
     case PhysicsShapes::CYLINDER: {
-        if (this->shapeParameters.isZero()) {
+        if (this->m_shapeParameters.isZero()) {
             Syngine::Logger::Error(
                 "RigidbodyComponent::UpdateShapeParameters: No radius and half "
                 "height provided for cylinder shape.");
             return;
         }
-        float radius     = this->shapeParameters.x();
-        float halfHeight = this->shapeParameters.y();
+        float radius     = this->m_shapeParameters.x();
+        float halfHeight = this->m_shapeParameters.y();
         shape            = new JPH::CylinderShape(halfHeight, radius);
         break;
     }
@@ -398,13 +472,22 @@ void RigidbodyComponent::UpdateShapeParameters(
     }
 
     if (shape) {
-        bodyInterface.SetShape(bodyID, shape, true, JPH::EActivation::Activate);
-    } else if (this->shape != PhysicsShapes::MESH) {
+        bodyInterface.SetShape(
+            m_bodyID, shape, true, JPH::EActivation::Activate);
+    } else if (this->m_shape != PhysicsShapes::MESH) {
         Syngine::Logger::Error(
             "RigidbodyComponent::UpdateShapeParameters: Failed to create shape "
             "for the specified type.");
         return;
     }
+}
+
+void RigidbodyComponent::SetCurrentParameters(
+    const RigidbodyParameters& newParams) {
+    m_currentParams = newParams;
+    if (!m_physicsManager) return;
+    this->Destroy();
+    this->Init(m_currentParams);
 }
 
 void RigidbodyComponent::SetFriction(float newFriction) {
@@ -418,14 +501,15 @@ void RigidbodyComponent::SetFriction(float newFriction) {
                               "cannot be greater than 1.0.");
         return;
     }
-    if (bodyID.IsInvalid() || !physicsManager) {
+    if (m_bodyID.IsInvalid() || !m_physicsManager) {
         Syngine::Logger::Error("RigidbodyComponent::SetFriction: Invalid body "
                                "ID or physics manager.");
         return;
     }
 
-    friction = newFriction;
-    physicsManager->_GetBodyInterface().SetFriction(bodyID, friction);
+    m_friction               = newFriction;
+    m_currentParams.friction = m_friction;
+    m_physicsManager->_GetBodyInterface().SetFriction(m_bodyID, m_friction);
 }
 
 void RigidbodyComponent::SetRestitution(float newRestitution) {
@@ -439,14 +523,16 @@ void RigidbodyComponent::SetRestitution(float newRestitution) {
                               "cannot be greater than 1.0.");
         return;
     }
-    if (bodyID.IsInvalid() || !physicsManager) {
+    if (m_bodyID.IsInvalid() || !m_physicsManager) {
         Syngine::Logger::Error("RigidbodyComponent::SetRestitution: Invalid "
                                "body ID or physics manager.");
         return;
     }
 
-    restitution = newRestitution;
-    physicsManager->_GetBodyInterface().SetRestitution(bodyID, restitution);
+    m_restitution               = newRestitution;
+    m_currentParams.restitution = m_restitution;
+    m_physicsManager->_GetBodyInterface().SetRestitution(m_bodyID,
+                                                         m_restitution);
 }
 
 //----- Forces and whatnot
@@ -455,23 +541,23 @@ void RigidbodyComponent::SetRestitution(float newRestitution) {
 // mass manually during rb creation. Jolt doesn't really support these modes so
 // it is what it is.
 void RigidbodyComponent::AddForce(const Math::Vector3 force, ForceMode mode) {
-    if (bodyID.IsInvalid() || !physicsManager) return;
-    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    if (m_bodyID.IsInvalid() || !m_physicsManager) return;
+    JPH::BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
 
     switch (mode) {
     case ForceMode::FORCE:
-        bodyInterface.AddForce(bodyID, force.toJoltRVec3());
+        bodyInterface.AddForce(m_bodyID, force.toJoltRVec3());
         break;
     case ForceMode::ACCELERATION:
-        bodyInterface.AddForce(bodyID,
-                               force.toJoltRVec3() * (mass == 0 ? 1.0f : mass));
+        bodyInterface.AddForce(
+            m_bodyID, force.toJoltRVec3() * (m_mass == 0 ? 1.0f : m_mass));
         break;
     case ForceMode::IMPULSE:
-        bodyInterface.AddImpulse(bodyID, force.toJoltRVec3());
+        bodyInterface.AddImpulse(m_bodyID, force.toJoltRVec3());
         break;
     case ForceMode::VELOCITY_CHANGE:
         bodyInterface.AddImpulse(
-            bodyID, force.toJoltRVec3() * (mass == 0 ? 1.0f : mass));
+            m_bodyID, force.toJoltRVec3() * (m_mass == 0 ? 1.0f : m_mass));
         break;
     }
 }
@@ -479,42 +565,42 @@ void RigidbodyComponent::AddForce(const Math::Vector3 force, ForceMode mode) {
 void RigidbodyComponent::AddForceAtPosition(const Math::Vector3 force,
                                             const Math::Vector3 position,
                                             ForceMode           mode) {
-    if (bodyID.IsInvalid() || !physicsManager) return;
-    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    if (m_bodyID.IsInvalid() || !m_physicsManager) return;
+    JPH::BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
 
     JPH::RVec3 pos(position.x(), position.y(), position.z());
     switch (mode) {
     case ForceMode::FORCE:
-        bodyInterface.AddForce(bodyID, force.toJoltVec3(), pos);
+        bodyInterface.AddForce(m_bodyID, force.toJoltVec3(), pos);
         break;
     case ForceMode::ACCELERATION:
-        bodyInterface.AddForce(bodyID, force.toJoltVec3() * mass, pos);
+        bodyInterface.AddForce(m_bodyID, force.toJoltVec3() * m_mass, pos);
         break;
     case ForceMode::IMPULSE:
-        bodyInterface.AddImpulse(bodyID, force.toJoltVec3(), pos);
+        bodyInterface.AddImpulse(m_bodyID, force.toJoltVec3(), pos);
         break;
     case ForceMode::VELOCITY_CHANGE:
-        bodyInterface.AddImpulse(bodyID, force.toJoltVec3() * mass, pos);
+        bodyInterface.AddImpulse(m_bodyID, force.toJoltVec3() * m_mass, pos);
         break;
     }
 }
 
 void RigidbodyComponent::AddTorque(const Math::Vector3 torque, ForceMode mode) {
-    if (bodyID.IsInvalid() || !physicsManager) return;
-    JPH::BodyInterface& bodyInterface = physicsManager->_GetBodyInterface();
+    if (m_bodyID.IsInvalid() || !m_physicsManager) return;
+    JPH::BodyInterface& bodyInterface = m_physicsManager->_GetBodyInterface();
 
     switch (mode) {
     case ForceMode::FORCE:
-        bodyInterface.AddTorque(bodyID, torque.toJoltVec3());
+        bodyInterface.AddTorque(m_bodyID, torque.toJoltVec3());
         break;
     case ForceMode::ACCELERATION:
-        bodyInterface.AddTorque(bodyID, torque.toJoltVec3() * mass);
+        bodyInterface.AddTorque(m_bodyID, torque.toJoltVec3() * m_mass);
         break;
     case ForceMode::IMPULSE:
-        bodyInterface.AddAngularImpulse(bodyID, torque.toJoltVec3());
+        bodyInterface.AddAngularImpulse(m_bodyID, torque.toJoltVec3());
         break;
     case ForceMode::VELOCITY_CHANGE:
-        bodyInterface.AddAngularImpulse(bodyID, torque.toJoltVec3() * mass);
+        bodyInterface.AddAngularImpulse(m_bodyID, torque.toJoltVec3() * m_mass);
         break;
     }
 }

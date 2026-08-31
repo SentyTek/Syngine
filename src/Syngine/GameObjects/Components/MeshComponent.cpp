@@ -15,7 +15,6 @@
 #include "Syngine/Math/Vector4.hpp"
 #include "Syngine/GameObjects/Components/MeshComponent.h"
 #include "Syngine/GameObjects/GameObject.h"
-#include "Syngine/Utils/Profiler.h"
 #include "Syngine/Utils/Serializer.h"
 
 #include "bgfx/bgfx.h"
@@ -33,9 +32,10 @@ namespace Syngine {
 // This constructor does nothing. It is used for creating an empty MeshComponent
 // that can be initialized later.
 MeshComponent::MeshComponent(GameObject* owner) : IComponent(owner) {
-    this->modelData     = Syngine::ModelData();
-    this->m_bundlePath  = "";
-    this->m_texturePath = "";
+    this->modelData       = Syngine::ModelData();
+    this->modelData.valid = false;
+    this->m_bundlePath    = "";
+    this->m_modelPath     = "";
 }
 
 MeshComponent::MeshComponent(GameObject*        owner,
@@ -44,28 +44,28 @@ MeshComponent::MeshComponent(GameObject*        owner,
     : IComponent(owner) {
     this->modelData      = Syngine::ModelData();
     this->m_bundlePath   = "meshes/meshes.spk";
-    this->m_texturePath  = path;
+    this->m_modelPath    = path;
     this->m_loadTextures = loadTextures;
-    this->Init(this->m_bundlePath, this->m_texturePath, loadTextures);
+    this->Init(this->m_bundlePath, this->m_modelPath, loadTextures);
 }
 
 MeshComponent::MeshComponent(GameObject*        owner,
                              const std::string& bundlePath,
-                             const std::string& texturePath,
+                             const std::string& modelPath,
                              bool               loadTextures)
     : IComponent(owner) {
     this->modelData      = Syngine::ModelData();
     this->m_bundlePath   = bundlePath;
-    this->m_texturePath  = texturePath;
+    this->m_modelPath    = modelPath;
     this->m_loadTextures = loadTextures;
-    this->Init(bundlePath, texturePath, loadTextures);
+    this->Init(bundlePath, modelPath, loadTextures);
 }
 
 MeshComponent::MeshComponent(const MeshComponent& other)
     : IComponent(other.m_owner) {
     this->modelData = other.modelData; // Shallow copy, deep copy may be needed
-    this->m_bundlePath  = other.m_bundlePath;
-    this->m_texturePath = other.m_texturePath;
+    this->m_bundlePath = other.m_bundlePath;
+    this->m_modelPath  = other.m_modelPath;
 }
 
 MeshComponent& MeshComponent::operator=(const MeshComponent& other) {
@@ -73,7 +73,7 @@ MeshComponent& MeshComponent::operator=(const MeshComponent& other) {
         IComponent::m_owner = other.m_owner;
         this->modelData     = other.modelData;
         this->m_bundlePath  = other.m_bundlePath;
-        this->m_texturePath = other.m_texturePath;
+        this->m_modelPath   = other.m_modelPath;
     }
     return *this;
 }
@@ -91,33 +91,33 @@ Serializer::DataNode MeshComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type"   = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
     node / "bundle" = m_bundlePath;
-    node / "path"   = m_texturePath;
+    node / "path"   = m_modelPath;
     // TODO: mats will need to be serialized at some point
     return node;
 }
 
 void MeshComponent::Init(const std::string& bundlePath,
-                         const std::string& texturePath,
+                         const std::string& modelPath,
                          bool               loadTextures) {
-    if (!bundlePath.empty() && !texturePath.empty())
-        this->LoadMesh(bundlePath, texturePath, loadTextures);
+    if (!bundlePath.empty() && !modelPath.empty())
+        this->LoadMesh(bundlePath, modelPath, loadTextures);
 }
 
 bool MeshComponent::LoadMesh(const std::string& bundlePath,
-                             const std::string& texturePath,
+                             const std::string& modelPath,
                              bool               loadTextures) {
     // Get the data stream from the bundle
     std::string resolvedBundlePath =
         Syngine::Internal::ResolvePath(bundlePath.c_str());
     auto meshStream = std::make_shared<scl::stream>(
-        Serializer::_ReadFromBundle(resolvedBundlePath, texturePath));
+        Serializer::_ReadFromBundle(resolvedBundlePath, modelPath));
     if (meshStream->size() == 0) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
             false,
-            "Failed to load mesh from bundle %s with texture %s",
+            "Failed to load mesh from bundle %s with model %s",
             resolvedBundlePath.c_str(),
-            texturePath.c_str());
+            modelPath.c_str());
         return false; // Error loading mesh stream
     }
 
@@ -130,11 +130,11 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     // Load the mesh data from the bundle
     this->m_meshLoadJob =
         Jobs().DispatchWithResult([meshStream = std::move(meshStream),
-                                   texturePath,
+                                   modelPath,
                                    loadTextures]() mutable {
             ModelData    out;
             AssimpLoader loader;
-            loader._LoadModel(out, *meshStream, texturePath, loadTextures);
+            loader._LoadModel(out, *meshStream, modelPath, loadTextures);
             return out;
         });
 
@@ -198,33 +198,32 @@ bool MeshComponent::ReloadMesh() {
     std::string resolvedBundlePath =
         Syngine::Internal::ResolvePath(this->m_bundlePath.c_str());
     auto meshStream = std::make_shared<scl::stream>(
-        Serializer::_ReadFromBundle(resolvedBundlePath, this->m_texturePath));
+        Serializer::_ReadFromBundle(resolvedBundlePath, this->m_modelPath));
     if (meshStream->size() == 0) {
         Syngine::Logger::LogF(
             Syngine::LogLevel::ERR,
             false,
-            "Failed to load mesh from bundle %s with texture %s",
+            "Failed to load mesh from bundle %s with model %s",
             resolvedBundlePath.c_str(),
-            this->m_texturePath.c_str());
+            this->m_modelPath.c_str());
         return false; // Error loading mesh stream
     }
 
     const int         modelId      = this->modelData.id;
-    const std::string texturePath  = this->m_texturePath;
+    const std::string modelPath    = this->m_modelPath;
     const bool        loadTextures = this->m_loadTextures;
     this->m_isWaitingForMeshLoad   = true;
     this->m_isReloadingMesh        = true;
-    this->m_meshLoadJob =
-        Jobs().DispatchWithResult([meshStream = std::move(meshStream),
-                                   texturePath,
-                                   modelId,
-                                   loadTextures]() mutable {
-            ModelData    out;
-            AssimpLoader loader;
-            loader._ReloadModel(
-                out, *meshStream, texturePath, modelId, loadTextures);
-            return out;
-        });
+    this->m_meshLoadJob = Jobs().DispatchWithResult([meshStream =
+                                                         std::move(meshStream),
+                                                     modelPath,
+                                                     modelId,
+                                                     loadTextures]() mutable {
+        ModelData    out;
+        AssimpLoader loader;
+        loader._ReloadModel(out, *meshStream, modelPath, modelId, loadTextures);
+        return out;
+    });
 
     try {
         this->modelData.lastWriteTime =
@@ -233,7 +232,7 @@ bool MeshComponent::ReloadMesh() {
         Syngine::Logger::LogF(Syngine::LogLevel::WARN,
                               true,
                               "Failed to get last write time for %s: %s",
-                              this->m_texturePath.c_str(),
+                              this->m_modelPath.c_str(),
                               e.what());
     }
     return true; // Success
@@ -328,9 +327,9 @@ bool MeshComponent::UploadMesh(std::vector<float>    vertices,
 
     Syngine::ModelData modelData;
     bool useVertexColors = (baseColor == Math::Vector4(1.0f, 1.0f, 1.0f, 0.0f));
-    int  vertexSize      = useVertexColors
-                               ? 12
-                               : 8; // if no baseColor provided, expect vertex colors
+    int  vertexSize = useVertexColors
+                          ? 12
+                          : 8; // if no baseColor provided, expect vertex colors
 
     Syngine::SubMesh subMesh;
     subMesh.indexStart    = 0;

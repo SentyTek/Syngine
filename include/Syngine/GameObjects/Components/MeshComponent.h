@@ -58,13 +58,13 @@ class MeshComponent : public Syngine::IComponent {
     /// @brief Constructor for the MeshComponent class
     /// @param owner Pointer to the GameObject that owns this component
     /// @param bundlePath Path to the shader bundle containing the mesh
-    /// @param texturePath Path to the mesh within the bundle
+    /// @param modelPath Path to the mesh within the bundle
     /// @param loadTextures Whether to load textures for the model
     /// @note This should only be called by GameObject::AddComponent<T>()
     /// @since v0.0.1
     MeshComponent(GameObject*        owner,
                   const std::string& bundlePath,
-                  const std::string& texturePath,
+                  const std::string& modelPath,
                   bool               loadTextures = true);
 
     MeshComponent(const MeshComponent& other);
@@ -91,14 +91,14 @@ class MeshComponent : public Syngine::IComponent {
 
     /// @brief Initialize the mesh component
     /// @param bundlePath Path to the shader bundle containing the mesh
-    /// @param texturePath Path to the mesh within the bundle
+    /// @param modelPath Path to the mesh within the bundle
     /// @param loadTextures Whether to load textures for the model
     /// @note This should only be called when the component is added to a
     /// GameObject
     /// @threadsafety not-safe
     /// @since v0.0.1
     void Init(const std::string& bundlePath,
-              const std::string& texturePath,
+              const std::string& modelPath,
               bool               loadTextures = true);
 
     /// @brief Update the mesh component. Unused.
@@ -110,13 +110,13 @@ class MeshComponent : public Syngine::IComponent {
 
     /// @brief Load a mesh from a file
     /// @param bundlePath Path to the shader bundle containing the mesh
-    /// @param texturePath Path to the mesh within the bundle
+    /// @param modelPath Path to the mesh within the bundle
     /// @param loadTextures Whether to load textures for the model
     /// @return true on success, false on failure
     /// @threadsafety not-safe
     /// @since v0.0.1
     bool LoadMesh(const std::string& bundlePath,
-                  const std::string& texturePath,
+                  const std::string& modelPath,
                   bool               loadTextures = true);
 
     /// @brief Reload the mesh from the file
@@ -211,6 +211,33 @@ class MeshComponent : public Syngine::IComponent {
     /// @since v0.0.1
     void SetObjectUVScaleOverride(float uvScaleOverride);
 
+    /// @brief Get the path to the mesh bundle
+    /// @return Path to the mesh bundle
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    const inline std::string& GetBundlePath() const { return m_bundlePath; }
+
+    /// @brief Get the path to the mesh within the bundle
+    /// @return Path to the mesh within the bundle
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    const inline std::string& GetModelPath() const { return m_modelPath; }
+
+    /// @brief Get whether textures should be loaded for this mesh
+    /// @return True if textures should be loaded, false otherwise
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    const inline bool GetLoadTextures() const { return m_loadTextures; }
+
+    /// @brief Set whether textures should be loaded for this mesh
+    /// @param loadTextures True to load textures, false otherwise
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void inline SetLoadTextures(bool loadTextures) {
+        m_loadTextures = loadTextures;
+        ReloadMesh();
+    }
+
   private:
     mutable MeshAABB m_aabb; //* Axis-aligned bounding box of the mesh
     mutable bool     m_aabbDirty =
@@ -218,9 +245,9 @@ class MeshComponent : public Syngine::IComponent {
     mutable uint64_t m_cachedTransformVersion =
         0; //* Cached version of the transform when AABB was last calculated
     float m_objectUVScaleOverride =
-        1.0f;                  //* UV scale override for the whole object
-    std::string m_bundlePath;  //* Path to the shader bundle containing the mesh
-    std::string m_texturePath; //* Path to the mesh within the bundle
+        1.0f;                 //* UV scale override for the whole object
+    std::string m_bundlePath; //* Path to the shader bundle containing the mesh
+    std::string m_modelPath;  //* Path to the mesh within the bundle
     bool        m_loadTextures = true;
 
     bool m_isWaitingForMeshLoad =

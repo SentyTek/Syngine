@@ -73,3 +73,27 @@ TEST_CASE("Local and World Getters in children", "[ECS]") {
 
     GameObjectRegistry::Clear();
 }
+
+TEST_CASE("Parent rotation orbits children around the parent", "[ECS]") {
+    GameObjectRegistry::Clear();
+
+    auto& parent = GameObjectRegistry::CreateGameObject(
+        "Parent", "default", std::vector<std::string>{});
+    auto& child = GameObjectRegistry::CreateGameObject(
+        "Child", "default", std::vector<std::string>{});
+
+    auto* parentTransform = parent.AddComponent<TransformComponent>();
+    auto* childTransform  = child.AddComponent<TransformComponent>();
+    childTransform->SetPosition(SVec3(1.0f, 0.0f, 0.0f));
+    child.SetParent(&parent);
+
+    parentTransform->SetRotationQuat(
+        Quaternion(SVec3(0.0f, 0.0f, 1.0f), DEG2RAD(90.0f)));
+
+    const SVec3 childWorldPosition = childTransform->GetWorldPosition();
+    REQUIRE_THAT(childWorldPosition.x(), WithinAbs(0.0f, FLOAT_MARGIN));
+    REQUIRE_THAT(childWorldPosition.y(), WithinAbs(1.0f, FLOAT_MARGIN));
+    REQUIRE_THAT(childWorldPosition.z(), WithinAbs(0.0f, FLOAT_MARGIN));
+
+    GameObjectRegistry::Clear();
+}

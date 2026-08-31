@@ -238,6 +238,20 @@ void PlayerComponent::Update(float deltaTime) {
         return;
     }
 
+    // If not simulating, just follow the transform and place the camera
+    if (!Core::Get()->GetSimulationState()) {
+        m_camera->SetPosition(m_transform->GetPosition() +
+                              Math::Vector3(0.0f, m_targetEyeHeight, 0.0f));
+        m_currentYaw = m_transform->GetWorldRotationEuler().y();
+        m_camera->SetAngles(m_currentPitch, m_currentYaw);
+        m_character->SetPositionAndRotation(
+            (m_transform->GetPosition() +
+             Math::Vector3(0.0f, standHeight / 2, 0.0f))
+                .toJoltRVec3(),
+            m_transform->GetWorldRotationQuaternion().toJoltQuat());
+        return;
+    }
+
     // Fetch keyboard state internally
     const bool* keystate = SDL_GetKeyboardState(NULL);
 
@@ -411,8 +425,8 @@ void PlayerComponent::Update(float deltaTime) {
             // gravity)
             JPH::Vec3 currentVel = m_character->GetLinearVelocity();
             m_newVelocity        = JPH::Vec3(desiredHorizontalVel.GetX(),
-                                      currentVel.GetY(),
-                                      desiredHorizontalVel.GetZ());
+                                             currentVel.GetY(),
+                                             desiredHorizontalVel.GetZ());
 
             // JUMP! *van halen guitar solo*
             if (enableJumping && keystate[SDL_SCANCODE_SPACE] && isGrounded &&
@@ -467,9 +481,9 @@ void PlayerComponent::PostPhysicsUpdate() {
                                   m_playerState == PlayerState::SLIDING)
                                      ? crouchHeight
                                      : standHeight;
-    bx::Vec3    targetPos      = { charPos.GetX(),
-                                   charPos.GetY() - CapsuleCenterOffset(colliderHeight),
-                                   charPos.GetZ() };
+    bx::Vec3 targetPos = { charPos.GetX(),
+                           charPos.GetY() - CapsuleCenterOffset(colliderHeight),
+                           charPos.GetZ() };
 
     bx::Vec3 currentPos = m_transform->GetPosition().toBxVec3();
 
@@ -505,6 +519,36 @@ void PlayerComponent::SetRotation(float yaw, float pitch) {
     }
     m_currentYaw   = yaw;
     m_currentPitch = pitch;
+}
+
+void PlayerComponent::Reset() {
+    m_currentPitch    = 0.0f;
+    m_currentYaw      = 0.0f;
+    m_playerState     = PlayerState::IDLE;
+    m_prevPlayerState = PlayerState::IDLE;
+    m_simulate        = true;
+    m_deltaTime       = 0.0f;
+    m_moveDirection   = Math::Vector3(0.0f, 0.0f, 0.0f);
+    m_newVelocity     = { 0.0f, 0.0f, 0.0f };
+    m_targetEyeHeight = standHeight * 0.9f;
+    m_crouchEyeHeight = crouchHeight * 0.9f;
+    m_targetMoveSpeed = 1.0f;
+    m_eyeHeight       = m_targetEyeHeight;
+    m_realMoveSpeed   = 1.0f;
+}
+
+void PlayerComponent::RebuildCharacter() {
+    if (!m_character) {
+        Syngine::Logger::Error("PlayerComponent has no character object!");
+        return;
+    }
+
+    m_targetEyeHeight = standHeight * 0.9f;
+    m_crouchEyeHeight = crouchHeight * 0.9f;
+    m_eyeHeight       = m_targetEyeHeight;
+    float halfHeight  = standHeight * 0.5f - playerRadius;
+    m_character->SetShape(new JPH::CapsuleShape(halfHeight, playerRadius),
+                          0.1f);
 }
 
 static Syngine::ComponentRegistrar s_playerRegistrar(

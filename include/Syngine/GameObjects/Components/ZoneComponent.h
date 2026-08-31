@@ -164,6 +164,12 @@ class ZoneComponent : public Syngine::IComponent {
     /// @since v0.0.1
     ZoneShape GetShape() const;
 
+    /// @brief Set the shape of the zone.
+    /// @param shape The new shape of the zone (box or sphere).
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetShape(ZoneShape shape) { this->m_shape = shape; };
+
     /// @brief Get the position of the zone center.
     /// @return The position of the zone center as a Math::Vector3.
     /// @note For box shape, this is the center of the box. For sphere shape,
@@ -253,6 +259,10 @@ class ZoneComponent : public Syngine::IComponent {
     /// @threadsafety not-safe
     /// @since v0.0.1
     void SetTags(const std::vector<std::string>& tags);
+
+#ifdef SYN_IS_EDITOR
+    inline void SetOneShot(bool oneShot) { m_oneShot = oneShot; };
+#endif
 
     // --- Actual zone functions
 

@@ -104,8 +104,11 @@ void TransformComponent::_UpdateWorldMatrix() const {
     if (m_parent) {
         m_parent->_UpdateWorldMatrix();
 
-        // World = Parent * local (reversed here for stupid reasons?)
-        m_worldMtx      = m_parent->m_worldMtx * m_localMtx;
+        // Matrices use DirectX's row-vector convention.  A point in this
+        // transform's local space must therefore be transformed by the local
+        // matrix before its parent's world matrix.  Reversing this order
+        // means a parent's rotation cannot rotate the child's local offset.
+        m_worldMtx      = m_localMtx * m_parent->m_worldMtx;
         m_worldRotation = m_parent->m_worldRotation * m_rotation;
         m_worldRotation.normalize();
     } else { // No parent, world = local
@@ -158,6 +161,24 @@ void TransformComponent::SetRotationQuat(Quaternion rotation) {
 // Note that the params are FULL EXTENT, not half extents.
 void TransformComponent::SetScale(Vector3 scale) {
     m_scale = scale;
+    _MarkLocalDirty();
+}
+
+void TransformComponent::SetWorldScale(Vector3 scale) {
+    if (m_parent) {
+        m_parent->_UpdateWorldMatrix();
+        Mat4 invParentMtx = m_parent->m_worldMtx;
+        if (!invParentMtx.isInvertible()) {
+            m_scale = scale;
+            _MarkLocalDirty();
+            return;
+        }
+        invParentMtx.invert();
+        Vector4 localScale = Math::Vector4(scale, 0) * invParentMtx;
+        m_scale            = localScale.xyz();
+    } else {
+        m_scale = scale;
+    }
     _MarkLocalDirty();
 }
 

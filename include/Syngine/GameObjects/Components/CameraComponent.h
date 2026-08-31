@@ -83,7 +83,6 @@ class CameraComponent : public Syngine::IComponent {
     void Init() override {} // No specific initialization needed
 
     /// @brief Update the camera component
-    /// @param viewId ID of the view to update
     /// @param width Width of the viewport
     /// @param height Height of the viewport
     /// @note This is called every frame to update the camera's view and
@@ -91,7 +90,7 @@ class CameraComponent : public Syngine::IComponent {
     /// @threadsafety not-safe
     /// @since v0.0.1
     /// @internal
-    void Update(int viewId, int width, int height);
+    void Update(int width, int height);
 
     /// @brief Set the camera position
     /// @param position Vector 3 representing the new camera position (x, y, z)
@@ -123,11 +122,23 @@ class CameraComponent : public Syngine::IComponent {
     /// @since v0.0.1
     void SetFarPlane(float farPlane);
 
+    /// @brief Set the camera near clipping plane
+    /// @param nearPlane Near clipping plane distance
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetNearPlane(float nearPlane);
+
     /// @brief Get the camera far clipping plane
     /// @return Far clipping plane distance
     /// @threadsafety read-only
     /// @since v0.0.1
     float GetFarPlane() const;
+
+    /// @brief Get the camera near clipping plane
+    /// @return Near clipping plane distance
+    /// @threadsafety read-only
+    /// @since v0.0.1
+    float GetNearPlane() const;
 
     /// @brief Set the camera angles
     /// @param yaw Yaw angle in radians
@@ -161,6 +172,11 @@ class CameraComponent : public Syngine::IComponent {
     Math::Mat4 GetViewProjMatrix() const {
         return GetCamera().proj * GetCamera().view;
     }
+
+    bool syncToTransform =
+        false; //* Whether the camera should sync its position and orientation
+               // to the transform component
+    bool isMainCamera = false; //* Whether the camera is the main camera
 
   private:
     Camera camera; // Camera data
