@@ -947,7 +947,7 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         }
 
         auto* transform = go->GetComponent<TransformComponent>();
-        if (!transform) continue;
+        if (!transform || !transform->IsEnabled()) continue;
 
         Mat4  modelMtx  = transform->GetModelMatrix();
         float det       = modelMtx.determinant();
@@ -1037,7 +1037,7 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         // too far away to be visible
         const Vector3 camPos    = camera->GetPosition();
         auto*         transform = go->GetComponent<TransformComponent>();
-        if (!transform) continue;
+        if (!transform || !transform->IsEnabled()) continue;
 
         const Vector3 goPos    = transform->GetWorldPosition();
         const float   distance = (goPos - camPos).length();
@@ -1156,8 +1156,11 @@ void RenderDirector::_DrawShadows(const Shader*    program,
             bgfx::setState(renderState);
 
             // Get the transform for this object
-            Mat4 modelMtx = gameObject->GetComponent<TransformComponent>()
-                                ->GetModelMatrix();
+            auto* transformComp =
+                gameObject->GetComponent<TransformComponent>();
+            if (!transformComp || !transformComp->IsEnabled()) continue;
+            Mat4 modelMtx = transformComp->GetModelMatrix();
+
             bgfx::setTransform(modelMtx.data());
 
             bgfx::setVertexBuffer(0, modelData.vbh);
@@ -1300,17 +1303,17 @@ void RenderDirector::_DrawDebug(const Shader*    program,
     // TODO: Rework this to draw camera frustums as gizmos instead of
     // hardcoded
     if (debug.Gizmos && Core::IsPhysicsEnabled()) {
-        const GameObject* p = GameObjectRegistry::GetGameObjectByName("player");
-        if (p) {
-            CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
-            if (playerCamera) {
+        auto cameras = GameObjectRegistry::GetGameObjectsWithComponent(
+            SYN_COMPONENT_CAMERA);
+        const int safeWidth  = std::max(Renderer::width, 1);
+        const int safeHeight = std::max(Renderer::height, 1);
+        for (auto camObj : cameras) {
+            CameraComponent* camera = camObj->GetComponent<CameraComponent>();
+            if (camera) {
                 // Keep player camera matrices valid even when simulation is
                 // paused.
-                const int safeWidth  = std::max(Renderer::width, 1);
-                const int safeHeight = std::max(Renderer::height, 1);
-                playerCamera->Update(VIEW_DEBUG, safeWidth, safeHeight);
-
-                m_drender->DrawFrustum(playerCamera->GetCamera());
+                camera->Update(safeWidth, safeHeight);
+                m_drender->DrawFrustum(camera->GetCamera());
             }
         }
     }
@@ -1450,7 +1453,7 @@ void RenderDirector::_DrawDbgBillboard(Shader* program) {
 
     for (auto& packet : packets) {
         _SetObjectUniforms(program, packet);
-        _SetMaterialUniforms(program, packet);
+        _SetMaterialUniforms(program, packet, BGFX_SAMPLER_MAG_POINT);
         bgfx::setState(state);
 
         bgfx::setTransform(packet.modelMtx.data());
@@ -1499,7 +1502,7 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
 
     const int safeWidth  = std::max(Renderer::width, 1);
     const int safeHeight = std::max(Renderer::height, 1);
-    camera->Update(VIEW_FORWARD, safeWidth, safeHeight);
+    camera->Update(safeWidth, safeHeight);
     Camera cam = camera->GetCamera();
 
     std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
@@ -1551,7 +1554,7 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
             bgfx::setViewClear(
                 view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
 
-            camera->Update(view, Renderer::width, Renderer::height);
+            camera->Update(Renderer::width, Renderer::height);
             Camera cam = camera->GetCamera();
             bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
             break;

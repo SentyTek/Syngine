@@ -527,6 +527,7 @@ bool Core::Update() {
 
     if (!Renderer::m_isRendering) {
         GameObjectRegistry::_RemoveQueuedObjects();
+        GameObjectRegistry::_RemoveQueuedObjectComponents();
     }
 
     return true;

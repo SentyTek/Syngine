@@ -7,6 +7,7 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+#include <concepts>
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -18,6 +19,15 @@
 #include "Syngine/Utils/Serializer.h"
 
 namespace Syngine {
+
+template <typename T>
+concept Component = std::derived_from<T, IComponent> && requires {
+    { T::componentType } -> std::convertible_to<Syngine::ComponentTypeID>;
+};
+
+template <typename T, typename... Args>
+concept ComponentConstructible =
+    Component<T> && std::constructible_from<T, GameObject*, Args...>;
 
 /// @brief GameObject class representing an entity in the game world, such as a
 /// player, enemy, or item. They can have various components attached to them,
@@ -114,13 +124,20 @@ class GameObject {
     /// @since v0.0.1
     void ClearTags();
 
+    /// @brief Set the tags of the GameObject
+    /// @param tags Vector of tags to set
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetTags(const std::vector<std::string>& tags);
+
     /// @brief Get the number of components attached to the GameObject
     /// @return Number of components attached to the GameObject
     /// @threadsafety safe
     /// @since v0.0.1
     size_t GetComponentCount() const noexcept;
 
-    /// @brief Remove a component from the GameObject
+    /// @brief Remove a component from the GameObject. Defers the actual removal
+    /// to the end of the frame.
     /// @param type Type of the component to remove
     /// @return True if the component was removed successfully
     /// @threadsafety not-safe
@@ -146,7 +163,7 @@ class GameObject {
     /// @return Pointer to the component if it exists, nullptr otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    template <typename T> T* GetComponent() const;
+    template <Component T> T* GetComponent() const;
 
     /// @brief Add a component to the GameObject
     /// @tparam T Type of the component to add
@@ -154,7 +171,9 @@ class GameObject {
     /// @return Pointer to the added component if successful, nullptr otherwise
     /// @threadsafety not-safe
     /// @since v0.0.1
-    template <typename T, typename... Args> T* AddComponent(Args&&... args);
+    template <typename T, typename... Args>
+        requires ComponentConstructible<T, Args...>
+    T* AddComponent(Args&&... args);
 
     /// @brief Get const access to the components map for iteration
     /// @return Const reference to the components map
@@ -203,6 +222,14 @@ class GameObject {
     /// @since v0.0.2
     const std::vector<GameObject*>& GetChildren() const;
 
+    /// @brief Checks if this object can become parented to the provided object
+    /// @param potentialParent Pointer to the potential parent GameObject
+    /// @return True if this object can be parented to the provided object,
+    /// false otherwise
+    /// @threadsafety safe
+    /// @since v0.0.2
+    bool CanBeParentedTo(const GameObject* potentialParent) const;
+
   private:
     long id; // Unique ID for the GameObject
 
@@ -222,7 +249,7 @@ class GameObject {
                                      // private members
 };
 
-template <typename T> T* GameObject::GetComponent() const {
+template <Component T> T* GameObject::GetComponent() const {
     auto it = this->components.find(T::componentType);
     if (it == this->components.end()) {
         return nullptr; // Component not found
@@ -232,6 +259,7 @@ template <typename T> T* GameObject::GetComponent() const {
 };
 
 template <typename T, typename... Args>
+    requires ComponentConstructible<T, Args...>
 T* GameObject::AddComponent(Args&&... args) {
     auto type = T::componentType;
     if (components.contains(type)) return nullptr;
@@ -239,10 +267,12 @@ T* GameObject::AddComponent(Args&&... args) {
     // Forward the arguments to the component constructor
     std::unique_ptr<T> component =
         std::make_unique<T>(this, std::forward<Args>(args)...);
+
     T* raw = component.get();
 
     components[type] = std::move(component);
     Syngine::GameObjectRegistry::_NotifyComponentAdded(this, type);
+
     return raw;
 }
 

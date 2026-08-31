@@ -87,18 +87,20 @@ struct ModelData {
     std::vector<DeferredTextureData>
         deferredTextures; //* Texture payloads decoded on workers, uploaded on
                           // main thread
-    uint8_t numSubMeshes; //* Number of submeshes in the mesh
-    uint8_t numMaterials; //* Number of materials used by the mesh
+    uint8_t numSubMeshes = 0; //* Number of submeshes in the mesh
+    uint8_t numMaterials = 0; //* Number of materials used by the mesh
 
     // GPU resources
-    bgfx::VertexBufferHandle vbh; //* Handle to the vertex buffer on the GPU
-    bgfx::IndexBufferHandle  ibh; //* Handle to the index buffer on the GPU
-    bool                     gpuBuffersReady             = false;
-    uint32_t                 deferredTextureUploadCursor = 0;
+    bgfx::VertexBufferHandle vbh =
+        BGFX_INVALID_HANDLE; //* Handle to the vertex buffer on the GPU
+    bgfx::IndexBufferHandle ibh =
+        BGFX_INVALID_HANDLE; //* Handle to the index buffer on the GPU
+    bool     gpuBuffersReady             = false;
+    uint32_t deferredTextureUploadCursor = 0;
 
     // Metadata
     int  id; //* Unique ID for the mesh (for hot reloading and editor purposes)
-    bool valid; //* Whether the mesh data is valid and can be rendered
+    bool valid = false; //* Whether the mesh data is valid and can be rendered
     std::filesystem::file_time_type
         lastWriteTime; //* Last write time of the mesh file (for hot reloading)
 
