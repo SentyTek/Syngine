@@ -46,6 +46,8 @@
 
 namespace Syngine {
 
+std::vector<std::pair<LogMessageFunctionCallback, bool>> Logger::m_callbacks;
+
 void Logger::SetVerbose(bool verbose) { m_verbose = verbose; }
 bool Logger::IsVerbose() { return m_verbose; }
 
@@ -500,6 +502,25 @@ void Logger::Log(const std::string_view message,
     }
 #endif
 
+    for (const auto& [callback, callInDebugOnly] : m_callbacks) {
+#if defined(NDEBUG) && !defined(SYNGINE_DEBUG)
+        if (callInDebugOnly) {
+            continue; // Skip this callback in release mode
+        }
+#endif
+        (void)callInDebugOnly;
+        try {
+            callback(std::string(message), level, _GetTimestamp());
+        } catch (const std::exception& e) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "Log callback threw an exception: %s",
+                         e.what());
+        } catch (...) {
+            SDL_LogError(SDL_LOG_CATEGORY_APPLICATION,
+                         "Log callback threw an unknown exception.");
+        }
+    }
+
     if (toConsole) {
         switch (level) {
         case LogLevel::INFO:
@@ -659,6 +680,18 @@ void Logger::ToConsole(const char* fmt, ...) {
     vsnprintf(buffer.data(), buffer.size(), fmt, args);
     va_end(args);
 
+    for (const auto [callback, callInDebugOnly] : m_callbacks) {
+#if defined(NDEBUG) && !defined(SYN_IS_EDITOR)
+        if (callInDebugOnly) {
+            continue; // Skip this callback in release mode if it's debug-only
+        }
+#endif
+        (void)callInDebugOnly;
+        callback(std::string(buffer.data()),
+                 LogLevel::INFO,
+                 Logger::_GetTimestamp());
+    }
+
     SDL_Log("%s", buffer.data());
 }
 
@@ -691,6 +724,14 @@ void Logger::Flush() {
 bool Logger::_IsLogFileAvailable() {
     std::lock_guard<std::mutex> lock(m_logMutex);
     return m_logFile && m_logFile->is_open();
+}
+
+void Logger::RegisterCallback(LogMessageFunctionCallback callback,
+                              bool                       callInDebugOnly) {
+    if (!callback) return;
+
+    std::lock_guard<std::mutex> lock(m_logMutex);
+    m_callbacks.emplace_back(callback, callInDebugOnly);
 }
 
 } // namespace Syngine

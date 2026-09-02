@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/Components/MeshComponent.h"
 #include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/Scene/GameObjectRegistry.h"
 #include "bgfx/bgfx.h"
@@ -93,12 +95,23 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* ctx) -> const void* {
+                const auto packet =
+                    UniformRegistry::GetContext<const Renderer::RenderPacket>(
+                        ctx);
+                bool receiveShadows = true;
+                if (auto* meshc = packet.go->GetComponent<MeshComponent>()) {
+                    receiveShadows = meshc->receiveShadows;
+                }
                 if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
-                    static const Math::Vec4 zeroDir{ 0.0f, 0.0f, 0.0f, 0.0f };
+                    static const Math::Vec4 zeroDir{
+                        0.0f, 0.0f, 0.0f, receiveShadows ? 1.0f : 0.0f
+                    };
                     return zeroDir.data();
                 }
-                return GameObjectRegistry::GetFirstActiveDirectionalLight()
-                    ->GetDirectionVector()
+                return Math::Vec4(
+                           GameObjectRegistry::GetFirstActiveDirectionalLight()
+                               ->GetDirectionVector(),
+                           receiveShadows ? 1.0f : 0.0f)
                     .data();
             } });
 

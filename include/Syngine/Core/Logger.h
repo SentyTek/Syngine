@@ -28,6 +28,13 @@
 
 struct SDL_Window; // Forward declaration of SDL_Window
 
+#define SYN_LOGLEVEL_TO_STRING(level)                                          \
+    ((level) == Syngine::LogLevel::INFO    ? "INFO"                            \
+     : (level) == Syngine::LogLevel::WARN  ? "WARN"                            \
+     : (level) == Syngine::LogLevel::ERR   ? "ERROR"                           \
+     : (level) == Syngine::LogLevel::FATAL ? "FATAL"                           \
+                                           : "UNKNOWN")
+
 namespace Syngine {
 // Forward declaration of Core class
 class Core;
@@ -41,6 +48,10 @@ enum class LogLevel {
     ERR,   //* Error messages
     FATAL, //* Fatal error messages. Will terminate the application
 };
+
+using LogMessageFunctionCallback = void (*)(const std::string& message,
+                                            LogLevel           level,
+                                            const std::string& timestamp);
 
 /// @brief Logger class for logging messages
 /// @section Logger
@@ -83,8 +94,8 @@ class Logger {
         m_mainWindow = window;
     }
 #ifdef _WIN32
-    static LONG WINAPI
-    _WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
+    static LONG
+        WINAPI _WindowsExceptionHandler(EXCEPTION_POINTERS* ExceptionInfo);
 #endif
     static void _Init(
         const std::string&           appname,
@@ -97,6 +108,8 @@ class Logger {
 
     friend class Core;
     friend class Window;
+
+    static std::vector<std::pair<LogMessageFunctionCallback, bool>> m_callbacks;
 
   public:
     /// @brief Log a message to disk with an optional log level
@@ -242,6 +255,15 @@ class Logger {
     /// @threadsafety safe
     /// @since v0.0.1
     static bool IsVerbose();
+
+    /// @brief Register a callback function to be called on every log message
+    /// @param callback Callback function to register
+    /// @param callInDebugOnly If true, the callback will only be called in
+    /// debug mode
+    /// @threadsafety not-safe
+    /// @since v0.0.3
+    static void RegisterCallback(LogMessageFunctionCallback callback,
+                                 bool callInDebugOnly = false);
 };
 
 } // namespace Syngine
