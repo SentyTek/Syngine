@@ -107,7 +107,8 @@ class RenderDirector {
     _CollectRenderPackets(CameraComponent* camera); //* Collect render packets
                                                     // for the current frame
 
-    static bool _PrepareRenderViews(CameraComponent* camera);
+    static bool _PrepareRenderViews(CameraComponent* camera,
+                                    bool&            outHasAvailGlobalLight);
     static CameraComponent::Frustum
     _GetCascadeFrustum(uint8_t                    cascade,
                        CameraComponent*           camera,

@@ -1492,7 +1492,8 @@ void RenderDirector::_DrawUI(const Shader* program) {
 #endif
 }
 
-bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
+bool RenderDirector::_PrepareRenderViews(CameraComponent* camera,
+                                         bool& outHasAvailGlobalLight) {
     SYN_PROFILE_FUNCTION();
     // Prepare camera and light information
     if (!camera) {
@@ -1515,18 +1516,21 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
         if (!lightSrc) {
             Syngine::Logger::Warn(
                 "No active directional light found for shadow mapping");
-            return false;
+            outHasAvailGlobalLight = false;
+        } else {
+            outHasAvailGlobalLight = true;
+            _CalculateCascadeMatrices(
+                camera, lightSrc, lightView, lightProj, cascadeSplits);
+            m_csmCascadeSplits = cascadeSplits;
         }
-        _CalculateCascadeMatrices(
-            camera, lightSrc, lightView, lightProj, cascadeSplits);
-        m_csmCascadeSplits = cascadeSplits;
     }
 
     // Update main camera matrices
     for (Syngine::ViewID view : _allViews) {
         switch (view) {
         case ViewID::VIEW_SHADOW: {
-            if (!m_config.useShadows) break; // Skip if shadows are disabled
+            if (!m_config.useShadows || !outHasAvailGlobalLight)
+                break; // Skip if shadows are disabled
 
             for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
                 bgfx::ViewId cascadeViewId = view + i;
@@ -1600,14 +1604,14 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
             break;
         }
         default: {
+            if ((view == VIEW_SHADOW || view == VIEW_BILLBOARD) &&
+                !outHasAvailGlobalLight)
+                break; // Skip if no light is available for shadows
             bgfx::setViewRect(view,
                               0,
                               0,
                               uint16_t(Renderer::width),
                               uint16_t(Renderer::height));
-            // bgfx::setViewClear(
-            //     view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
-            //     0x000000ff, 1.0f, 0);
             bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
             break;
         }
@@ -1748,7 +1752,8 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     }
     MaterialManager::_CheckPendingMaterials();
 
-    if (!_PrepareRenderViews(camera)) {
+    bool hasAvailGlobalLight = false;
+    if (!_PrepareRenderViews(camera, hasAvailGlobalLight)) {
         Renderer::_UpdateDrawID();
         return false;
     }
@@ -1768,12 +1773,15 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
             // Draw logic based on view type
             switch (view) {
             case VIEW_SHADOW:
-                if (m_config.useShadows) {
+                if (m_config.useShadows && hasAvailGlobalLight) {
                     _DrawShadows(program, camera);
                 }
                 break;
             case VIEW_SKY: _DrawSky(program, camera); break;
             case VIEW_FORWARD:
+                if (!hasAvailGlobalLight)
+                    break; // Skip if no light is available for forward
+                           // rendering
                 _DrawForward(program, camera, std::get<0>(packets));
                 break;
             case VIEW_DEBUG:

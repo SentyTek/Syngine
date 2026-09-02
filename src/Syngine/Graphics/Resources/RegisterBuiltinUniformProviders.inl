@@ -94,7 +94,8 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             1,
             [](const void* ctx) -> const void* {
                 if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
-                    return nullptr;
+                    static const Math::Vec4 zeroDir{ 0.0f, 0.0f, 0.0f, 0.0f };
+                    return zeroDir.data();
                 }
                 return GameObjectRegistry::GetFirstActiveDirectionalLight()
                     ->GetDirectionVector()
@@ -133,7 +134,8 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             1,
             [](const void* ctx) -> const void* {
                 if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
-                    return nullptr;
+                    static const Math::Vec4 zeroColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                    return zeroColor.data();
                 }
                 return GameObjectRegistry::GetFirstActiveDirectionalLight()
                     ->GetColor()
@@ -322,7 +324,7 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                 } else if (auto* transform =
                                packet.go->GetComponent<TransformComponent>()) {
                     data = { transform->GetPosition(), 1.0f };
-                } else  {
+                } else {
                     data = { 0.0f, 0.0f, 0.0f, 1.0f };
                 }
 
