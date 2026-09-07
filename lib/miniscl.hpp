@@ -1703,8 +1703,6 @@ class XmlNode {
 
   template <int step>
   void print_text(stream& stream, const string& t) {
-    if (!t)
-      return;
 #define _printTilNow()                       \
   *p = '\0';                                 \
   stream.write((const scl::string&)s, step); \
@@ -2345,6 +2343,9 @@ class XmlDocument : public XmlElem, public XmlAllocator {
 #include <queue>
 #include <mutex>
 #include <atomic>
+#include <tuple>
+#include <utility>
+#include <type_traits>
 /*#include "sclcore.hpp"*/
 
 #ifndef SCL_JOBS_FAST_SLEEP
@@ -2357,6 +2358,11 @@ class XmlDocument : public XmlElem, public XmlAllocator {
 
 namespace scl {
 namespace jobs {
+
+class timeout_exception : public std::runtime_error {
+ public:
+  timeout_exception(const scl::string& msg);
+};
 
 template <class WtT>
 class job;
@@ -2372,25 +2378,24 @@ class waitable {
   friend class job;
   using _Waitable = bool;
 
- private:
+ protected:
   std::atomic_bool m_done;
 
- protected:
  public:
   waitable();
   waitable(waitable&& rhs);
-  waitable& operator=(waitable&& rhs);
+  waitable&    operator=(waitable&& rhs);
 
   /**
    * @brief Completes the waitable.
    *
    */
-  void      complete();
+  virtual void complete();
 
   /**
    * @brief Resets the completion state.
    */
-  void      reset();
+  void         reset();
 
   /**
    * @brief Returns the completion status of the waitable.
@@ -2398,7 +2403,7 @@ class waitable {
    * @return true if the waitable is completed.
    * @return false if otherwise.
    */
-  bool      status() const;
+  bool         status() const;
 
   /**
    * @brief Waits for this waitable to be marked completed.
@@ -2406,7 +2411,94 @@ class waitable {
    * @param timeout  Max number of seconds to wait.
    * @return   True: Wait did not time out, False: Wait did time out.
    */
-  bool      wait(double timeout = -1);
+  bool         wait(double timeout = -1);
+};
+
+template <class R>
+class waitable2 : public waitable {
+ protected:
+  R    m_data;
+  bool m_autodel = false;
+
+ public:
+  waitable2() : waitable(), m_data() {
+  }
+
+  void complete() override {
+    // call parent complete
+    waitable::complete();
+    // if autodel is true, just delete
+    if(m_autodel)
+      delete this;
+  }
+
+  /**
+   * @brief Sets stored data
+   * @warning INTERNAL USE
+   */
+  void complete2(R&& data) {
+    m_data = std::move(data);
+  }
+
+  void autodelete() {
+    m_autodel = true;
+  }
+
+  /**
+   * @brief Waits and returns the completed value stored in this waitable.
+   *
+   * @exception scl::jobs::timeout_exception  Exceeded max timeout duration.
+   * @param  timeout  Max time to wait for completion. If < 0, waits forever.
+   * @return  Value resolved by the associated job.
+   */
+  R yield(double timeout = -1) {
+    if(!wait(timeout)) {
+      throw timeout_exception("waitable2 timeout during yield()");
+    }
+    return m_data;
+  }
+};
+
+template <class R>
+class promise {
+ protected:
+  waitable2<R>* m_wt = nullptr;
+
+ public:
+  promise() = default;
+
+  promise(waitable2<R>* wt) : m_wt(wt) {
+  }
+
+  promise(const promise&)            = delete;
+  promise& operator=(const promise&) = delete;
+
+  promise(promise&& rhs) : m_wt(rhs.m_wt) {
+    rhs.m_wt = nullptr;
+  };
+
+  promise& operator=(promise&& rhs) {
+    m_wt     = rhs.m_wt;
+    rhs.m_wt = nullptr;
+    return *this;
+  };
+
+  ~promise() {
+    if(m_wt) {
+      if(m_wt->status())
+        delete m_wt;
+      else
+        m_wt->autodelete();
+    }
+  }
+
+  waitable2<R>* waitable() {
+    return m_wt;
+  }
+
+  waitable2<R>* operator->() {
+    return m_wt;
+  }
 };
 
 class JobWorker;
@@ -2451,6 +2543,29 @@ class job {
   }
 
   virtual void doJob(Wt* waitable, const JobWorker& worker) = 0;
+};
+
+template <class R, class... Args>
+class job2 : public job<waitable2<R>> {
+  std::tuple<Args...>       m_args;
+  std::function<R(Args...)> m_func;
+
+ public:
+  job2(std::function<R(Args...)> func, Args... args)
+      : m_func(func), m_args(std::make_tuple(args...)) {
+  }
+
+  waitable2<R>* getWaitable() const override {
+    return new waitable2<R>();
+  }
+
+  void doJob(waitable2<R>* waitable, const jobs::JobWorker& worker) override {
+    if(!waitable) {
+      throw std::runtime_error("job2: waitable2 is null");
+    }
+    R result = std::apply(m_func, m_args);
+    waitable->complete2(std::move(result));
+  }
 };
 
 class funcJob : public job<waitable> {
@@ -2517,17 +2632,17 @@ class JobServer : protected std::mutex {
   using t_worker = std::pair<std::thread, JobWorker*>;
   using t_wjob   = std::pair<job<waitable>*, waitable*>;
   friend class JobWorker;
-  std::vector<t_worker> m_workers;
-  std::queue<t_wjob>    m_jobs;
-  std::atomic<size_t>   m_lockBits;
-  int                   m_nworkers;
-  std::atomic_bool      m_slow;
-  std::atomic_bool      m_working;
+  std::vector<t_worker>                    m_workers;
+  std::unordered_map<std::thread::id, int> m_idmap;
+  std::queue<t_wjob>                       m_jobs;
+  std::atomic<size_t>                      m_lockBits;
+  int                                      m_nworkers;
+  std::atomic_bool                         m_slow;
+  std::atomic_bool                         m_working;
 
 
-  bool                  takeJob(t_wjob& wjob, const JobWorker& worker);
+  bool takeJob(t_wjob& wjob, const JobWorker& worker);
 
-  static int            ClampThreads(int threads);
 
  public:
   /**
@@ -2641,8 +2756,33 @@ class JobServer : protected std::mutex {
    * be complete.
    * @note  If autodelwt = false, you must free the waitable handle.
    */
-  waitable*   submitJob(std::function<void(const JobWorker& worker)> func,
-      bool autodelwt = true);
+  waitable* submitJob(std::function<void(const JobWorker& worker)> func,
+    bool autodelwt = true);
+
+  /**
+   * @brief Submits a callable function with arguments to the job server.
+   *
+   * @tparam  F a callable type.
+   * @tparam  Args
+   * @tparam  R
+   * @param  func  A callable value to be asynhcronously called.
+   * @param  args  Args to pass to the given function.
+   * @return  A promise containing a waitable holding the result of the call.
+   * If the promise is discarded, so will be the waitable once it is completed.
+   */
+  template <class F, class... Args, class R = std::invoke_result_t<F, Args...>>
+  promise<R> async(const F& func, Args... args) {
+    static_assert(std::is_invocable<F, Args...>(),
+      "invoke requires template type F to be callable");
+    job2<R, Args...>* job = new job2<R, Args...>(func, args...);
+    waitable2<R>*     wt  = job->getWaitable();
+    promise<R>        P   = promise<R>(wt);
+    lock();
+    scl::jobs::job<waitable>* job_ = (scl::jobs::job<waitable>*)job;
+    m_jobs.push(t_wjob(job_, wt));
+    unlock();
+    return P;
+  }
 
   /**
    * @return  Number of workers in this server.
@@ -2654,16 +2794,28 @@ class JobServer : protected std::mutex {
    */
   static int  GetNumThreads();
 
+  static int  ClampThreads(int threads);
+
   /**
-   * @brief  Multithreads a lambda function over a given number of threads.
+   * @brief  Multithreads a given function over a given number of threads.
    *
-   * @param  func(id, n)  Lambda function to be multithreaded.
+   * @param  func(id, n)  Function to be multithreaded.
    * @param  workers  Number of threads to multithread with, with a max of the
    * number of threads in the system.
    */
   static void Multithread(std::function<void(int id, int workers)> func,
     int workers = INT_MAX);
 };
+
+/**
+ * @brief  Multithreads a given function over a given number of threads.
+ *
+ * @param  func(id, n)  Function to be multithreaded.
+ * @param  workers  Number of threads to multithread with, with a max of the
+ * number of threads in the system.
+ */
+void Multithread(std::function<void(int id, int workers)> func,
+  int                                                     workers = INT_MAX);
 } // namespace jobs
 } // namespace scl
 #endif
@@ -3142,11 +3294,11 @@ void packTerminate();
  */
 
 #include <mutex>
-/* #include "sclcore.hpp" */
+/* #include "sclcore.hpp" */ 
 
-/* #include "sclpath.hpp" */
+/* #include "sclpath.hpp" */ 
 
-/* #include "sclpack.hpp" */
+/* #include "sclpack.hpp" */ 
 
 
 #ifdef _WIN32
@@ -4129,7 +4281,7 @@ void terminate() {
  *  Path class definitions for SCL
  */
 
-/* #include "sclpath.hpp" */
+/* #include "sclpath.hpp" */ 
 
 #include <sys/stat.h>
 
@@ -4629,7 +4781,7 @@ static void glob_singlepattern(std::vector<path>& finds, const string& pattern,
       globs.push_back(sym);
       glob.clear();
     } else {
-      if (glob)
+      if(glob)
         glob = glob / sym;
       else
         glob = sym;
@@ -4645,8 +4797,8 @@ static void glob_singlepattern(std::vector<path>& finds, const string& pattern,
   for(size_t i = 1; i < globs.size(); i++) {
     if(globs[i] == "**") {
       scl::string mask = "*";
-      // If not the last glob exp, use the next exp as the mask
-      if(i < globs.size() - 1)
+      // if there are more than 1 components left, use the next as a mask
+      if(i < globs.size() - 2)
         mask = globs[i + 1];
       glob_recurse(mask, dirs);
       i++;
@@ -4743,7 +4895,7 @@ path path::operator/(const path& rhs) const {
  *  SCL work multithreading library
  */
 
-/* #include "scljobs.hpp" */
+/* #include "scljobs.hpp" */ 
 
 #ifdef _WIN32
 #  ifndef WIN32_LEAN_AND_MEAN
@@ -4759,6 +4911,10 @@ path path::operator/(const path& rhs) const {
 
 namespace scl {
 namespace jobs {
+
+timeout_exception::timeout_exception(const scl::string& msg)
+    : std::runtime_error(msg.cstr()) {
+}
 
 waitable::waitable() {
   m_done = false;
@@ -4939,6 +5095,7 @@ void JobServer::start() {
     for(int i = 0; i < m_nworkers; i++) {
       JobWorker*  worker = new JobWorker(this, i);
       std::thread t(JobWorker::work, worker);
+      m_idmap[t.get_id()] = i;
       t.swap(m_workers[i].first);
       m_workers[i].second = worker;
       waitUntil([&]() {
@@ -4982,6 +5139,7 @@ void JobServer::stop() {
         i.first.join();
       delete i.second;
     }
+    m_idmap.clear();
   }
 }
 
@@ -5032,7 +5190,11 @@ int JobServer::workerCount() const {
 
 void JobServer::Multithread(std::function<void(int id, int workers)> func,
   int                                                                workers) {
-  int                      n = ClampThreads(workers);
+  jobs::Multithread(func, workers);
+}
+
+void Multithread(std::function<void(int id, int workers)> func, int workers) {
+  int                      n = JobServer::ClampThreads(workers);
   std::vector<std::thread> w;
   for(int i = 0; i < n; i++)
     w.push_back(std::thread(func, i, n));
@@ -5049,7 +5211,7 @@ void JobServer::Multithread(std::function<void(int id, int workers)> func,
  *  SCL package manager
  */
 
-/* #include "sclpack.hpp" */
+/* #include "sclpack.hpp" */ 
 
 #include <cassert>
 
@@ -5635,10 +5797,10 @@ void packTerminate() {
 /*  sclreduce.cpp
  */
 
-/* #include "sclreduce.hpp" */
+/* #include "sclreduce.hpp" */ 
 
 #define LZ4F_STATIC_LINKING_ONLY
-/* #include "lz4/lz4frame.h" */
+/* #include "lz4/lz4frame.h" */ 
 
 /*
    LZ4F - LZ4-Frame library
@@ -6876,7 +7038,7 @@ void reduce_stream::close() {
 #ifndef LZ4_STATIC_LINKING_ONLY
 #  define LZ4_STATIC_LINKING_ONLY
 #endif
-/* #include "lz4.h" */
+/* #include "lz4.h" */ 
 
 /*
  *  LZ4 - Fast LZ compression algorithm
@@ -10548,13 +10710,13 @@ char* LZ4_slideInputBuffer (void* state)
 *  Library declarations
 **************************************/
 #define LZ4F_STATIC_LINKING_ONLY
-/* #include "lz4frame.h" */
+/* #include "lz4frame.h" */ 
 
 #define LZ4_STATIC_LINKING_ONLY
-/* #include "lz4.h" */
+/* #include "lz4.h" */ 
 
 #define LZ4_HC_STATIC_LINKING_ONLY
-/* #include "lz4hc.h" */
+/* #include "lz4hc.h" */ 
 
 /*
    LZ4 HC - High Compression Mode of LZ4
@@ -10901,7 +11063,7 @@ LZ4LIB_API void LZ4_resetStreamHC (LZ4_streamHC_t* streamHCPtr, int compressionL
 #define LZ4_HC_SLO_098092834
 
 #define LZ4_STATIC_LINKING_ONLY   /* LZ4LIB_STATIC_API */
-/* #include "lz4.h" */
+/* #include "lz4.h" */ 
 
 
 #if defined (__cplusplus)
@@ -10975,7 +11137,7 @@ LZ4LIB_STATIC_API int LZ4_compress_HC_extStateHC_fastReset (
 /* lz4frame.c */
 
 #define XXH_STATIC_LINKING_ONLY
-/* #include "xxhash.h" */
+/* #include "xxhash.h" */ 
 
 /*
    xxHash - Extremely Fast Hash algorithm
@@ -13422,7 +13584,7 @@ size_t LZ4F_decompress_usingDict(LZ4F_dctx* dctx,
 
 /*===    Dependency    ===*/
 #define LZ4_HC_STATIC_LINKING_ONLY
-/* #include "lz4hc.h" */
+/* #include "lz4hc.h" */ 
 
 #include <limits.h>
 
@@ -15680,7 +15842,7 @@ static void* XXH_memcpy(void* dest, const void* src, size_t size) { return memcp
 #include <assert.h>   /* assert */
 
 #define XXH_STATIC_LINKING_ONLY
-/* #include "xxhash.h" */
+/* #include "xxhash.h" */ 
 
 
 
