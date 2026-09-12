@@ -141,6 +141,18 @@ class JobSystem {
     JobSystem();
     ~JobSystem();
 
+    /// @brief Dispatch a job and return a handle to its result.
+    /// @tparam F The type of the job function.
+    /// @param func The job function to dispatch.
+    /// @return A JobResult representing the dispatched job.
+    /// @example
+    /// ```cpp
+    /// auto result = Syngine::Jobs().DispatchWithResult([]() {
+    ///     // Your job code here
+    ///     return 42;
+    /// });
+    /// auto value = result.Get(); // value will be 42
+    /// ```
     template <typename F>
     auto DispatchWithResult(F&& func) noexcept
         -> JobResult<std::invoke_result_t<F>> {
@@ -157,21 +169,56 @@ class JobSystem {
         return JobResult<T>(waitable, std::move(result));
     }
 
+    /// @brief Dispatch a job without expecting a result.
+    /// @tparam F The type of the job function.
+    /// @param func The job function to dispatch.
+    /// @example
+    /// ```cpp
+    /// Syngine::Jobs().Dispatch([]() {
+    ///     // Your job code here
+    /// });
+    /// ```
     template <typename F> void Dispatch(F&& func) {
         m_server.submitJob(
             [func = std::forward<F>(func)](
                 const scl::jobs::JobWorker&) mutable { func(); });
     };
 
+    /// @brief Dispatch a job with advanced options.
+    /// @param func The job function to dispatch.
+    /// @example
+    /// ```cpp
+    /// Syngine::Jobs().DispatchAdvanced([](const scl::jobs::JobWorker& worker)
+    /// {
+    ///     // Your job code here
+    /// });
+    /// ```
     void
     DispatchAdvanced(std::function<void(const scl::jobs::JobWorker&)> func);
 
+    /// @brief Dispatch a parallel for loop.
+    /// @param count The number of iterations.
+    /// @param func The function to execute for each iteration range.
+    /// @example
+    /// ```cpp
+    /// Syngine::Jobs().ParallelFor(100, [](size_t begin, size_t end) {
+    ///     for (size_t i = begin; i < end; ++i) {
+    ///         // Your loop code here
+    ///     }
+    /// });
+    /// ```
     void ParallelFor(size_t                                        count,
                      std::function<void(size_t begin, size_t end)> func);
 
+    /// @brief Wait for a specific job to complete.
+    /// @tparam T The type of the job result.
+    /// @param handle The handle to the job result.
     template <typename T> void Wait(JobResult<T>& handle);
-    void                       WaitAll();
 
+    /// @brief Wait for all dispatched jobs to complete.
+    void WaitAll();
+
+    /// @brief Get the number of worker threads in the job system.
     uint32_t GetWorkerCount();
 };
 

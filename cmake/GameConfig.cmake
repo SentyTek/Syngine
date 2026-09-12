@@ -106,33 +106,45 @@ function(compile_collect_asset_bundle ASSET_SRC_DIR BUNDLE_NAME ASSET_BUNDLE_OUT
 endfunction()
 
 # Asset handling helpers
-function(_add_assets_win_linux target)
-    get_target_property(COPY_ROM ${target} SYNGINE_COPY_ROM)
-    if(COPY_ROM)
-        add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${target}>/rom"
-            COMMENT "ROM assets are staged directly into executable directory"
-        )
-    endif()
-endfunction()
-
-function(_add_assets_mac target)
-    set(ROM_DIR "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/rom")
-
-    get_target_property(COPY_ROM ${target} SYNGINE_COPY_ROM)
-    if(COPY_ROM)
-        add_custom_command(TARGET ${target} POST_BUILD
+function(_create_rom_copy_target target)
+    if(WIN32 OR (UNIX AND NOT APPLE))
+        set(ROM_DIR "$<TARGET_FILE_DIR:${target}>/rom")
+        add_custom_target(${target}RomCopy ALL
             COMMAND ${CMAKE_COMMAND} -E make_directory "${ROM_DIR}"
             COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${SYNGINE_STAGED_ROM_DIR}"
                 "${ROM_DIR}"
-            COMMENT "Copying staged rom assets into app Resources"
+            COMMENT "Copying staged ROM assets to executable directory for ${target}"
+        )
+    elseif(APPLE)
+        set(ROM_DIR "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/rom")
+        add_custom_target(${target}RomCopy ALL
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${ROM_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${SYNGINE_STAGED_ROM_DIR}"
+                "${ROM_DIR}"
+            COMMENT "Copying staged ROM assets into macOS app bundle for ${target}"
         )
     endif()
+    
+    set_target_properties(${target}RomCopy PROPERTIES FOLDER "Game")
+    add_dependencies(${target}RomCopy BuildAssets)
+    add_dependencies(${target} ${target}RomCopy)
+endfunction()
+
+function(_add_assets_win_linux target)
+    # Asset copying is now handled by the ROM copy target created in _create_rom_copy_target
+endfunction()
+
+function(_add_assets_mac target)
+    # Asset copying is now handled by the ROM copy target created in _create_rom_copy_target
 endfunction()
 
 # Function to add assets to the target
 function(add_assets target)
+    # Note: ROM copying is now handled via a dedicated target created in SyngineGame()
+    # This function now only handles app icon and platform-specific asset processing
+    
     if(WIN32 OR (UNIX AND NOT APPLE))
         _add_assets_win_linux(${target})
     elseif(APPLE)
@@ -369,8 +381,12 @@ if(ALL_BUNDLED_GIZMO_FILES)
     message(STATUS "SyngineGame: Added GameGizmos target for ${name}.")
 endif()
 
+add_custom_target(BuildAssets DEPENDS GameShaders GameMeshes GameAssets GameGizmos)
+set_target_properties(BuildAssets PROPERTIES FOLDER "Game")
+
 if(ALL_COMPILED_SHADER_BINARIES OR ALL_BUNDLED_MESH_FILES OR ALL_BUNDLED_OTHER_ASSET_FILES OR ALL_BUNDLED_GIZMO_FILES)
     set_property(TARGET ${name} PROPERTY SYNGINE_COPY_ROM TRUE)
+    _create_rom_copy_target(${name})
 endif()
 
 # --- Target Properties (macOS Bundle Info) ---
