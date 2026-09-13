@@ -62,7 +62,9 @@ struct EngineConfig {
     std::string gameName     = "SyngineGame"; //* Title of the game window
     int         windowWidth  = 800; //* Width of the game window in pixels
     int         windowHeight = 600; //* Height of the game window in pixels
-    bool        usePhysics = true;  //* Whether to initialize the physics system
+    bool        showWindowAuto =
+        true; //* Whether to automatically show the window on initialization
+    bool    usePhysics = true; //* Whether to initialize the physics system
     bool    useLua = true; //* Whether to initialize the Lua scripting system
     LuaLibs luaLibs =
         LuaLibs::DEFAULT;  //* Which Lua libraries to load if useLua is true

@@ -73,6 +73,18 @@ class Window {
     /// @since v0.0.1
     static int GetWindowMode() { return m_windowMode; }
 
+    /// @brief Show or hide the window.
+    /// @param visible True to show the window, false to hide it.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static void SetWindowVisible(bool visible);
+
+    /// @brief Checks if the window is currently visible.
+    /// @return True if the window is visible, false otherwise.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static bool IsWindowVisible();
+
     /// @brief Sets the visibility of the mouse cursor. Also restricts the mouse
     /// to the window, but still does movement events even when on the edge of
     /// the window.

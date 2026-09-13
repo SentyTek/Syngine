@@ -177,7 +177,10 @@ void ImGui_ImplBgfx::Render(ViewID viewID) {
 
             bgfx::TextureHandle tex = ToBGFX(cmd.GetTexID());
 
-            bgfx::setTexture(0, m_shader->m_textureParams[0].handle, tex);
+            bgfx::setTexture(0,
+                             m_shader->m_textureParams[0].handle,
+                             tex,
+                             BGFX_SAMPLER_MAG_POINT);
             bgfx::setState(state);
             bgfx::submit(viewID, m_shader->GetProgram());
         }

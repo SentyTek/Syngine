@@ -269,9 +269,12 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
     bgfx::setViewRect(
         0, 0, 0, uint16_t(Renderer::width), uint16_t(Renderer::height));
 
-    bgfx::touch(0);      // touch the view to clear it
-    bgfx::frame();       // submit the frame
-    SDL_ShowWindow(win); // show the window
+    bgfx::touch(0); // touch the view to clear it
+    bgfx::frame();  // submit the frame
+
+    if (Core::_GetConfig()->showWindowAuto) {
+        SDL_ShowWindow(win); // show the window
+    }
 
     // Create default shaders
     Renderer::m_isReady =
