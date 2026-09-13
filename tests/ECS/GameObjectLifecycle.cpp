@@ -25,6 +25,7 @@ using namespace Catch::Matchers;
 // copying components on GameObjects. Also tests that the Registry correctly
 // reflects component membership in its queries.
 TEST_CASE("ECS component lifecycle", "[ECS]") {
+    SYN_STARTENGINE
     const auto baselineCount = GameObjectRegistry::GetGameObjectCount();
 
     GameObject& go = GameObjectRegistry::CreateGameObject(
@@ -42,6 +43,12 @@ TEST_CASE("ECS component lifecycle", "[ECS]") {
     REQUIRE(go.GetComponentCount() == 1);
 
     REQUIRE(go.RemoveComponent(SYN_COMPONENT_TRANSFORM));
+
+    // Since component removal is deferred, the component is not immediately
+    // destroyed.
+    // Push an update to the engine to process the deferred component removal.
+    engine.Update();
+
     REQUIRE(!go.HasComponent(SYN_COMPONENT_TRANSFORM));
     REQUIRE(go.GetComponent<TransformComponent>() == nullptr);
     REQUIRE(go.GetComponentCount() == 0);

@@ -25,6 +25,7 @@
 #include <memory>
 #include <mutex>
 #include <atomic>
+#include <vector>
 
 struct SDL_Window; // Forward declaration of SDL_Window
 
