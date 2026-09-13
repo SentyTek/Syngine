@@ -272,7 +272,7 @@ void TransformComponent::SetParent(TransformComponent* parent) {
     if (m_parent == parent) return;
 
     // Remove from current parent
-    if (m_parent) {
+    if (m_parent && !m_parent->m_children.empty()) {
         auto& siblings = m_parent->m_children;
         siblings.erase(std::remove(siblings.begin(), siblings.end(), this),
                        siblings.end());

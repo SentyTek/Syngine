@@ -10,6 +10,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "../defines.h"
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include <Syngine/Syngine.h>
 
 using namespace Syngine;
@@ -40,6 +41,7 @@ TEST_CASE("Parent Movement Propagation in children", "[ECS]") {
                  WithinAbs(10.0f, FLOAT_MARGIN));
 
     GameObjectRegistry::Clear();
+    REQUIRE(GameObjectRegistry::GetAllGameObjects().empty());
 }
 
 // Tests that local and world getters work for child GameObjects
