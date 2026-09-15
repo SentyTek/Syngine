@@ -8,7 +8,6 @@
 # root/engine/cmake/CompileMeshes.cmake
 
 include(CMakeParseArguments)
-include(${CMAKE_CURRENT_LIST_DIR}/FileBundle.cmake)
 
 function(compile_all_meshes)
     set(options "")
@@ -33,38 +32,37 @@ function(compile_all_meshes)
         set(ARG_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/meshes")
     endif()
 
+    if(NOT TARGET syntools)
+        message(FATAL_ERROR "compile_all_meshes: 'syntools' target not found. Ensure it is built before this function is called.")
+    endif()
+
+    # Name-only glob: just enough to declare static bundle outputs for Ninja.
+    # Actual per-bundle file discovery is delegated to `syntools pack-tree` at build time.
+    file(GLOB mesh_top_entries RELATIVE "${ARG_SOURCE_DIRECTORY}" "${ARG_SOURCE_DIRECTORY}/*")
+
     set(generated_bundle_files "")
-
-    # One bundle per immediate subdirectory in assets/meshes.
-    file(GLOB mesh_entries RELATIVE "${ARG_SOURCE_DIRECTORY}" "${ARG_SOURCE_DIRECTORY}/*")
-
-    set(root_mesh_files "")
-    foreach(mesh_entry ${mesh_entries})
-        set(full_path "${ARG_SOURCE_DIRECTORY}/${mesh_entry}")
-        if(IS_DIRECTORY "${full_path}")
-            create_file_bundle(
-                BUNDLE_NAME "${mesh_entry}"
-                OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
-                SOURCE_DIRECTORY "${ARG_SOURCE_DIRECTORY}"
-                INPUT_FILES "${mesh_entry}"
-                BUNDLE_FILE_OUTPUT_VAR generated_bundle_file
-            )
-            list(APPEND generated_bundle_files "${generated_bundle_file}")
+    set(has_loose_mesh_files FALSE)
+    foreach(mesh_entry ${mesh_top_entries})
+        if(IS_DIRECTORY "${ARG_SOURCE_DIRECTORY}/${mesh_entry}")
+            list(APPEND generated_bundle_files "${ARG_OUTPUT_DIRECTORY}/${mesh_entry}.spk")
         else()
-            list(APPEND root_mesh_files "${mesh_entry}")
+            set(has_loose_mesh_files TRUE)
         endif()
     endforeach()
+    if(has_loose_mesh_files)
+        list(APPEND generated_bundle_files "${ARG_OUTPUT_DIRECTORY}/meshes.spk")
+    endif()
 
-    # Bundle loose files directly under assets/meshes.
-    if(root_mesh_files)
-        create_file_bundle(
-            BUNDLE_NAME "meshes"
-            OUTPUT_DIRECTORY "${ARG_OUTPUT_DIRECTORY}"
-            SOURCE_DIRECTORY "${ARG_SOURCE_DIRECTORY}"
-            INPUT_FILES ${root_mesh_files}
-            BUNDLE_FILE_OUTPUT_VAR generated_root_bundle
+    if(generated_bundle_files)
+        add_custom_command(
+            OUTPUT ${generated_bundle_files}
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUTPUT_DIRECTORY}"
+            COMMAND $<TARGET_FILE:syntools> pack-tree "${ARG_SOURCE_DIRECTORY}" "${ARG_OUTPUT_DIRECTORY}" "--root-bundle-name=meshes"
+            DEPENDS syntools
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+            COMMENT "Bundling mesh tree from ${ARG_SOURCE_DIRECTORY}"
+            VERBATIM
         )
-        list(APPEND generated_bundle_files "${generated_root_bundle}")
     endif()
 
     if(ARG_BUNDLE_FILES_OUTPUT_VAR)
