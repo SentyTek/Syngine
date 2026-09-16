@@ -39,7 +39,7 @@ CameraComponent::CameraComponent(GameObject* owner)
 
     if (this->m_owner) {
         this->m_owner->gizmo =
-            "camera_render"; // Set gizmo type for this component
+            "g_camera_render"; // Set gizmo type for this component
     }
 }
 
@@ -49,7 +49,7 @@ CameraComponent::CameraComponent(const CameraComponent& other)
 
     if (this->m_owner) {
         this->m_owner->gizmo =
-            "camera_render"; // Set gizmo type for this component
+            "g_camera_render"; // Set gizmo type for this component
     }
 }
 
@@ -60,7 +60,7 @@ CameraComponent& CameraComponent::operator=(const CameraComponent& other) {
 
         if (this->m_owner) {
             this->m_owner->gizmo =
-                "camera_render"; // Set gizmo type for this component
+                "g_camera_render"; // Set gizmo type for this component
         }
     }
     return *this;

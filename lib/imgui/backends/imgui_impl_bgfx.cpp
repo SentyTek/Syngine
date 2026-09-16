@@ -204,8 +204,9 @@ bool ImGui_ImplBgfx::WantCaptureKeyboard() {
     return io.WantCaptureKeyboard;
 }
 
-bgfx::TextureHandle ImGui_ImplBgfx::LoadTex(const std::string& bundlePath,
-                                            const std::string& textureName) {
+[[nodiscard]] bgfx::TextureHandle
+ImGui_ImplBgfx::LoadTex(const std::string& bundlePath,
+                        const std::string& textureName) {
     return Syngine::LoadTextureFromBundle(bundlePath.c_str(),
                                           textureName.c_str());
 }

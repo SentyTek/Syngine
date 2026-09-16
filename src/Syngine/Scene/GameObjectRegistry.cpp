@@ -286,7 +286,7 @@ void GameObjectRegistry::_NotifyComponentAdded(
             m_Gizmos.end()) {
             m_Gizmos.push_back(gameobject);
             Syngine::Core::_GetContext()->renderer->_RegisterGizmo(
-                "camera_render");
+                "g_camera_render");
         }
         break;
     case Syngine::SYN_COMPONENT_ZONE:
@@ -304,7 +304,8 @@ void GameObjectRegistry::_NotifyComponentAdded(
         if (std::find(m_Gizmos.begin(), m_Gizmos.end(), gameobject) ==
             m_Gizmos.end()) {
             m_Gizmos.push_back(gameobject);
-            Syngine::Core::_GetContext()->renderer->_RegisterGizmo("light_sun");
+            Syngine::Core::_GetContext()->renderer->_RegisterGizmo(
+                "g_light_sun");
         }
         break;
     default: break; // No action for other component types

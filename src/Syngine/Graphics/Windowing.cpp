@@ -164,7 +164,7 @@ void Window::SetWindowMode(int mode) {
 #if BX_PLATFORM_WINDOWS
             int width, height;
             SDL_GetWindowSize(m_window, &width, &height);
-            SDL_SetWindowSize(m_window, width, height - 10);
+            SDL_SetWindowSize(m_window, width, height);
             SDL_SetWindowPosition(
                 m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 #endif
