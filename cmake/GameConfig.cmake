@@ -209,6 +209,9 @@ function(add_assets target)
         configure_file("${CMAKE_SOURCE_DIR}/system/Info.plist.in"
                        "${GENERATED_PLIST_PATH}"
         )
+        configure_file("${CMAKE_SOURCE_DIR}/system/Info.plist.in"
+                   "${FINAL_PLIST_PATH}"
+        )
 
         # make a command to run the asset compiler
         add_custom_command(
