@@ -331,11 +331,16 @@ if(MSVC)
     set(BX_COMPILE_DEBUG 1)
 endif()
 
+if(APPLE)
+    set(SYNGINESTUDIO_ROM_PATH "$<TARGET_FILE_DIR:${name}>/../Resources/rom")
+else()
+    set(SYNGINESTUDIO_ROM_PATH "$<TARGET_FILE_DIR:${name}>/rom")
+endif()
 target_compile_definitions(${name} PRIVATE
     "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
     "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
     "SYNGINE_SYNTOOLS_PATH=\"$<TARGET_FILE:syntools>\""
-    "SYNGINE_ASSET_OUTPUT_PATH=\"$<TARGET_FILE_DIR:${name}>/rom\""
+    "SYNGINE_ASSET_OUTPUT_PATH=\"${SYNGINESTUDIO_ROM_PATH}\""
     "SYNGINE_SHADER_OUTPUT_PATH=\"${CMAKE_BINARY_DIR}/shaders\""
 )
 message(STATUS "SyngineGame: Set BX_CONFIG_DEBUG preprocessor definition for ${name}.")
