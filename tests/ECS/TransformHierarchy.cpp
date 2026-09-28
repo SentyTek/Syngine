@@ -36,7 +36,9 @@ TEST_CASE("Parent Movement Propagation in children", "[ECS]") {
     REQUIRE(parentTransform != nullptr);
     REQUIRE(childTransform != nullptr);
 
+    const uint64_t childVersion = childTransform->GetVersion();
     parentTransform->SetPosition(SVec3(10.0f, 0.0f, 0.0f));
+    REQUIRE(childTransform->GetVersion() > childVersion);
     REQUIRE_THAT(childTransform->GetWorldPosition().x(),
                  WithinAbs(10.0f, FLOAT_MARGIN));
 

@@ -75,11 +75,11 @@ void TransformComponent::Init(Vector3    position,
 // --- Dirty flag helpers
 void TransformComponent::_MarkLocalDirty() {
     m_dirtyLocal = true;
-    ++m_version;
     _MarkWorldDirty();
 }
 void TransformComponent::_MarkWorldDirty() {
     m_dirtyWorld = true;
+    ++m_version;
     // Propagate to children
     for (auto& child : m_children) {
         if (child) {
