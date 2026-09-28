@@ -260,6 +260,11 @@ class Core {
     static void Quit() { m_shouldClose = true; }
 #endif
 
+    // Debug keybind actions
+    static void _ReloadChangedAssets();
+    static void _ReloadShaders();
+    static void _ReloadLua();
+
   private:
     struct _internal {
         // Mouse sensitivity
@@ -375,11 +380,6 @@ class Core {
             }
         }
     };
-
-    // Debug keybind actions
-    static void _ReloadChangedAssets();
-    static void _ReloadShaders();
-    static void _ReloadLua();
 
     static Core*         m_instance; //* Pointer to the global Core instance
     static Context*      m_context;  //* Pointer to the global Context instance
