@@ -240,6 +240,25 @@ bool CameraComponent::_aabbInsideFrustum(const Frustum&       frustum,
            _aabbInsidePlane(frustum.f, min, max);
 }
 
+Math::Ray
+CameraComponent::ScreenPointToRay(const Math::Vector2& screenPoint) const {
+    // Implementation for converting a screen point to a ray in world space
+    // This typically involves unprojecting the screen point using the camera's
+    // view and projection matrices
+
+    Math::Vector3 rayOrigin = GetPosition();
+    Math::Vector3 farPoint  = Math::Unproject(screenPoint,
+                                              GetCamera().proj,
+                                              GetCamera().view,
+                                              Renderer::width,
+                                              Renderer::height,
+                                              1.f);
+
+    Math::Vector3 rayDirection = farPoint - rayOrigin;
+
+    return Math::Ray(rayOrigin, rayDirection);
+}
+
 static Syngine::ComponentRegistrar s_cameraRegistrar(
     Syngine::SYN_COMPONENT_CAMERA,
 

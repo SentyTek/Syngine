@@ -1293,7 +1293,7 @@ void RenderDirector::_DrawDebug(const Shader*    program,
     // Draw gizmos for specific objects like the sun light direction
     const DirectionalLightComponent* sun =
         GameObjectRegistry::GetFirstActiveDirectionalLight();
-    if (sun) {
+    if (debug.Gizmos && sun) {
         Vector3 sunDir = sun->GetDirectionVector();
         // Draw a line representing the sun direction
         m_drender->DrawLine(Vector3(0.0f).toJoltRVec3(),

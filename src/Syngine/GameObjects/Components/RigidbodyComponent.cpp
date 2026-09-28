@@ -253,6 +253,8 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
             bodyInterface.SetRestitution(m_bodyID, m_restitution);
         m_initComplete = true;
         m_initPending  = false;
+
+        m_physicsManager->mBodyToGameObjectMap[m_bodyID] = m_owner;
     } else {
         m_initPending = true;
     }

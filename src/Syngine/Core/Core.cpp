@@ -241,10 +241,9 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     "Debug",
                                     KeyBinding(Keycode::F1),
                                     { .onPressed = []() {
-                                        Syngine::DebugModes m =
-                                            Core::GetDebugMode();
-                                        m.PhysWireframes = !m.PhysWireframes;
-                                        Core::SetDebugMode(m);
+                                        Syngine::DebugModes modes = Core::GetDebugMode();
+                                        modes.PhysWireframes = !modes.PhysWireframes;
+                                        Core::SetDebugMode(modes);
                                     } });
 
         InputAction::RegisterAction("syngine.debugGizmos",

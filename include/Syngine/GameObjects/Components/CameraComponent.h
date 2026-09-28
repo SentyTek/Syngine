@@ -173,6 +173,8 @@ class CameraComponent : public Syngine::IComponent {
         return GetCamera().proj * GetCamera().view;
     }
 
+    Math::Ray ScreenPointToRay(const Math::Vector2& screenPoint) const;
+
     bool syncToTransform =
         false; //* Whether the camera should sync its position and orientation
                // to the transform component

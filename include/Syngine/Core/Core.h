@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Syngine {
 // Forward declare
@@ -77,9 +78,10 @@ struct EngineConfig {
 /// @since v0.0.1
 struct DebugModes {
     bool Enabled        = true;  //* Global debug toggle
-    bool PhysWireframes = false; //* Whether to draw physics wireframes
-    bool Gizmos    = true; //* Gizmos such as cameras, lights, and audio sources
-    bool CSMBounds = false;         //* Cascading Shadow Map zone bounds.
+    bool PhysWireframes = false; //* Whether to draw object wireframes
+    std::vector<GameObject*> WireframeObjects; //* Objects to draw as wireframes
+    bool Gizmos = false; //* Gizmos such as cameras, lights, and audio sources
+    bool CSMBounds         = false; //* Cascading Shadow Map zone bounds.
     bool DrawBoundingBoxes = false; //* Whether to draw mesh bounding boxes
 };
 

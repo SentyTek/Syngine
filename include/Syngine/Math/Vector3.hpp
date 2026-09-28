@@ -30,12 +30,11 @@ class Vector3 {
 
     DirectX::XMFLOAT3 m_getStorage() const { return m_storage; }
 
-    inline Vector3(const DirectX::XMFLOAT3& storage) : m_storage(storage) {}
-
-    friend class Matrix3x3; // for matrix-vector multiplication
+    friend class Matrix3x3;  // for matrix-vector multiplication
     friend class Quaternion; // for quaternion-vector multiplication
     friend class Ray;        // for ray operations
   public:
+    inline Vector3(const DirectX::XMFLOAT3& storage) : m_storage(storage) {}
     // MARK: Constructors
 
     /// @brief Default constructor, initializes the vector to (0.0, 0.0, 0.0)
@@ -89,7 +88,8 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3(const ::std::vector<float>& values) {
         if (values.size() != 3) {
-            throw ::std::invalid_argument("Vector3 constructor requires exactly 3 float values.");
+            throw ::std::invalid_argument(
+                "Vector3 constructor requires exactly 3 float values.");
         }
         m_storage.x = values[0];
         m_storage.y = values[1];
@@ -109,7 +109,7 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3& operator=(const Vector3& other) = default;
 
-    inline Vector3(Vector3&& other) noexcept = default;
+    inline Vector3(Vector3&& other) noexcept            = default;
     inline Vector3& operator=(Vector3&& other) noexcept = default;
 
     // MARK: Accessors
@@ -126,7 +126,9 @@ class Vector3 {
     /// @threadsafety safe
     /// @priority
     /// @since v0.0.2
-    inline const float* data() const { return reinterpret_cast<const float*>(&m_storage); }
+    inline const float* data() const {
+        return reinterpret_cast<const float*>(&m_storage);
+    }
 
     /// @brief Get the X component of the vector
     /// @return X component
@@ -237,7 +239,7 @@ class Vector3 {
     /// @threadsafety safe
     /// @since v0.0.2
     inline operator std::vector<float>() const {
-        return ::std::vector<float>{m_storage.x, m_storage.y, m_storage.z};
+        return ::std::vector<float>{ m_storage.x, m_storage.y, m_storage.z };
     }
 
     /// @brief Get a component by index using bracket syntax
@@ -245,9 +247,10 @@ class Vector3 {
     /// @return Component value at the given index
     /// @threadsafety safe
     /// @since v0.0.2
-    inline float operator[] (int index) const {
+    inline float operator[](int index) const {
         if (index < 0 || index > 2) {
-            throw ::std::out_of_range("Index must be between 0 and 2 for Vector3.");
+            throw ::std::out_of_range(
+                "Index must be between 0 and 2 for Vector3.");
         }
         return reinterpret_cast<const float*>(&m_storage)[index];
     }
@@ -259,7 +262,8 @@ class Vector3 {
     /// @since v0.0.2
     inline void set(int index, float value) {
         if (index < 0 || index > 2) {
-            throw ::std::out_of_range("Index must be between 0 and 2 for Vector3.");
+            throw ::std::out_of_range(
+                "Index must be between 0 and 2 for Vector3.");
         }
         reinterpret_cast<float*>(&m_storage)[index] = value;
     }
@@ -269,7 +273,8 @@ class Vector3 {
     /// @threadsafety safe
     /// @since v0.0.2
     inline bool isZero() const {
-        return m_storage.x == 0.0f && m_storage.y == 0.0f && m_storage.z == 0.0f;
+        return m_storage.x == 0.0f && m_storage.y == 0.0f &&
+               m_storage.z == 0.0f;
     }
 
     // MARK: Math operations
@@ -282,7 +287,7 @@ class Vector3 {
     inline Vector3 operator+(const Vector3& other) const {
         DirectX::XMVECTOR v1 = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR v2 = DirectX::XMLoadFloat3(&other.m_storage);
-        Vector3 res;
+        Vector3           res;
         DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorAdd(v1, v2));
         return res;
     }
@@ -295,8 +300,9 @@ class Vector3 {
     inline Vector3 operator-(const Vector3& other) const {
         DirectX::XMVECTOR v1 = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR v2 = DirectX::XMLoadFloat3(&other.m_storage);
-        Vector3 res;
-        DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorSubtract(v1, v2));
+        Vector3           res;
+        DirectX::XMStoreFloat3(&res.m_storage,
+                               DirectX::XMVectorSubtract(v1, v2));
         return res;
     }
 
@@ -307,8 +313,9 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3 operator*(float scalar) const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
-        Vector3 res;
-        DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorScale(v, scalar));
+        Vector3           res;
+        DirectX::XMStoreFloat3(&res.m_storage,
+                               DirectX::XMVectorScale(v, scalar));
         return res;
     }
 
@@ -319,8 +326,9 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3 operator/(float scalar) const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
-        Vector3 res;
-        DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorScale(v, 1.0f / scalar));
+        Vector3           res;
+        DirectX::XMStoreFloat3(&res.m_storage,
+                               DirectX::XMVectorScale(v, 1.0f / scalar));
         return res;
     }
 
@@ -366,7 +374,8 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3& operator/=(float scalar) {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
-        DirectX::XMStoreFloat3(&m_storage, DirectX::XMVectorScale(v, 1.0f / scalar));
+        DirectX::XMStoreFloat3(&m_storage,
+                               DirectX::XMVectorScale(v, 1.0f / scalar));
         return *this;
     }
 
@@ -378,7 +387,8 @@ class Vector3 {
     /// @threadsafety safe
     /// @since v0.0.2
     inline bool operator==(const Vector3& other) const {
-        return m_storage.x == other.m_storage.x && m_storage.y == other.m_storage.y &&
+        return m_storage.x == other.m_storage.x &&
+               m_storage.y == other.m_storage.y &&
                m_storage.z == other.m_storage.z;
     }
 
@@ -397,7 +407,8 @@ class Vector3 {
     /// @threadsafety safe
     /// @since v0.0.2
     inline bool operator<(const Vector3& other) const {
-        return m_storage.x < other.m_storage.x && m_storage.y < other.m_storage.y &&
+        return m_storage.x < other.m_storage.x &&
+               m_storage.y < other.m_storage.y &&
                m_storage.z < other.m_storage.z;
     }
 
@@ -407,7 +418,8 @@ class Vector3 {
     /// @threadsafety safe
     /// @since v0.0.2
     inline bool operator<=(const Vector3& other) const {
-        return m_storage.x <= other.m_storage.x && m_storage.y <= other.m_storage.y &&
+        return m_storage.x <= other.m_storage.x &&
+               m_storage.y <= other.m_storage.y &&
                m_storage.z <= other.m_storage.z;
     }
 
@@ -417,17 +429,20 @@ class Vector3 {
     /// @threadsafety safe
     /// @since v0.0.2
     inline bool operator>(const Vector3& other) const {
-        return m_storage.x > other.m_storage.x && m_storage.y > other.m_storage.y &&
+        return m_storage.x > other.m_storage.x &&
+               m_storage.y > other.m_storage.y &&
                m_storage.z > other.m_storage.z;
     }
 
-    /// @brief Check if all components are greater than or equal to another vector
+    /// @brief Check if all components are greater than or equal to another
+    /// vector
     /// @param other Vector to compare
     /// @return true if all components are greater or equal, false otherwise
     /// @threadsafety safe
     /// @since v0.0.2
     inline bool operator>=(const Vector3& other) const {
-        return m_storage.x >= other.m_storage.x && m_storage.y >= other.m_storage.y &&
+        return m_storage.x >= other.m_storage.x &&
+               m_storage.y >= other.m_storage.y &&
                m_storage.z >= other.m_storage.z;
     }
 
@@ -437,7 +452,7 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3 operator-() const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
-        Vector3 res;
+        Vector3           res;
         DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorNegate(v));
         return res;
     }
@@ -454,7 +469,8 @@ class Vector3 {
         return DirectX::XMVectorGetX(DirectX::XMVector3Length(v));
     }
 
-    /// @brief Calculate the squared length of the vector (more efficient than length)
+    /// @brief Calculate the squared length of the vector (more efficient than
+    /// length)
     /// @return Squared length of the vector
     /// @threadsafety safe
     /// @since v0.0.2
@@ -482,7 +498,7 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3 normalized() const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
-        Vector3 res;
+        Vector3           res;
         DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVector3Normalize(v));
         return res;
     }
@@ -506,7 +522,7 @@ class Vector3 {
     inline Vector3 cross(const Vector3& other) const {
         DirectX::XMVECTOR v1 = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR v2 = DirectX::XMLoadFloat3(&other.m_storage);
-        Vector3 res;
+        Vector3           res;
         DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVector3Cross(v1, v2));
         return res;
     }
@@ -520,10 +536,12 @@ class Vector3 {
     inline float distance(const Vector3& other) const {
         DirectX::XMVECTOR v1 = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR v2 = DirectX::XMLoadFloat3(&other.m_storage);
-        return DirectX::XMVectorGetX(DirectX::XMVector3Length(DirectX::XMVectorSubtract(v1, v2)));
+        return DirectX::XMVectorGetX(
+            DirectX::XMVector3Length(DirectX::XMVectorSubtract(v1, v2)));
     }
 
-    /// @brief Calculate the squared distance between this vector and another vector
+    /// @brief Calculate the squared distance between this vector and another
+    /// vector
     /// @param other Target vector
     /// @return Squared distance between vectors
     /// @threadsafety safe
@@ -546,8 +564,9 @@ class Vector3 {
     inline Vector3 lerp(const Vector3& other, float t) const {
         DirectX::XMVECTOR v1 = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR v2 = DirectX::XMLoadFloat3(&other.m_storage);
-        Vector3 res;
-        DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorLerp(v1, v2, t));
+        Vector3           res;
+        DirectX::XMStoreFloat3(&res.m_storage,
+                               DirectX::XMVectorLerp(v1, v2, t));
         return res;
     }
 
@@ -558,11 +577,12 @@ class Vector3 {
     /// @threadsafety safe
     /// @since v0.0.2
     inline Vector3 clamp(const Vector3& min, const Vector3& max) const {
-        DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
+        DirectX::XMVECTOR v    = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR vmin = DirectX::XMLoadFloat3(&min.m_storage);
         DirectX::XMVECTOR vmax = DirectX::XMLoadFloat3(&max.m_storage);
-        Vector3 res;
-        DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorClamp(v, vmin, vmax));
+        Vector3           res;
+        DirectX::XMStoreFloat3(&res.m_storage,
+                               DirectX::XMVectorClamp(v, vmin, vmax));
         return res;
     }
 
@@ -572,7 +592,7 @@ class Vector3 {
     /// @since v0.0.2
     inline Vector3 abs() const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
-        Vector3 res;
+        Vector3           res;
         DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorAbs(v));
         return res;
     }
@@ -585,12 +605,13 @@ class Vector3 {
     inline Vector3 reflect(const Vector3& normal) const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR n = DirectX::XMLoadFloat3(&normal.m_storage);
-        Vector3 res;
+        Vector3           res;
         DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVector3Reflect(v, n));
         return res;
     }
 
-    /// @brief Refract this vector through a surface with the given normal and eta ratio
+    /// @brief Refract this vector through a surface with the given normal and
+    /// eta ratio
     /// @param normal Surface normal vector
     /// @param eta Ratio of refractive indices
     /// @return Refracted vector
@@ -599,8 +620,9 @@ class Vector3 {
     inline Vector3 refract(const Vector3& normal, float eta) const {
         DirectX::XMVECTOR v = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR n = DirectX::XMLoadFloat3(&normal.m_storage);
-        Vector3 res;
-        DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVector3Refract(v, n, eta));
+        Vector3           res;
+        DirectX::XMStoreFloat3(&res.m_storage,
+                               DirectX::XMVector3Refract(v, n, eta));
         return res;
     }
 
@@ -612,7 +634,7 @@ class Vector3 {
     inline Vector3 min(const Vector3& other) const {
         DirectX::XMVECTOR v1 = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR v2 = DirectX::XMLoadFloat3(&other.m_storage);
-        Vector3 res;
+        Vector3           res;
         DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorMin(v1, v2));
         return res;
     }
@@ -625,13 +647,13 @@ class Vector3 {
     inline Vector3 max(const Vector3& other) const {
         DirectX::XMVECTOR v1 = DirectX::XMLoadFloat3(&m_storage);
         DirectX::XMVECTOR v2 = DirectX::XMLoadFloat3(&other.m_storage);
-        Vector3 res;
+        Vector3           res;
         DirectX::XMStoreFloat3(&res.m_storage, DirectX::XMVectorMax(v1, v2));
         return res;
     }
 };
 
-using Vec3 = Vector3; // Alias Vec3 for Vector3
+using Vec3  = Vector3; // Alias Vec3 for Vector3
 using SVec3 = Vector3; // Alias SVec3 for Vector3
 
 } // namespace Syngine::Math

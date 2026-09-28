@@ -11,16 +11,18 @@
 #include <Syngine/Graphics/Rendering/DebugRenderer.h>
 #include <Syngine/Core/Logger.h>
 #include <Syngine/GameObjects/Components/CameraComponent.h>
-
-#include <thread> //for hardware_concurrency
+#include <Syngine/GameObjects/Components/RigidbodyComponent.h>
 
 // there are TOO MANY Jolt includes
 #include <Jolt/Jolt.h>
 #include <Jolt/Core/Factory.h>
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Geometry/IndexedTriangle.h>
+#include "Jolt/Physics/Collision/CastResult.h"
+#include "Jolt/Physics/Collision/RayCast.h"
 #include <Jolt/Math/Quat.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
 #include <Jolt/Physics/Body/BodyInterface.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
@@ -37,8 +39,29 @@
 #include <Jolt/Physics/Body/MotionType.h>
 #include <Jolt/Physics/Collision/Shape/StaticCompoundShape.h>
 
+#include <algorithm>
+#include <vector>
+
 using namespace JPH;
 using namespace Syngine;
+
+namespace {
+
+class SelectedBodyDrawFilter : public JPH::BodyDrawFilter {
+  public:
+    explicit SelectedBodyDrawFilter(std::vector<JPH::BodyID> bodyIDs)
+        : m_bodyIDs(std::move(bodyIDs)) {}
+
+    bool ShouldDraw(const JPH::Body& body) const override {
+        return std::find(m_bodyIDs.begin(), m_bodyIDs.end(), body.GetID()) !=
+               m_bodyIDs.end();
+    }
+
+  private:
+    std::vector<JPH::BodyID> m_bodyIDs;
+};
+
+} // namespace
 
 void Phys::TraceImpl(const char* inFMT, ...) {
     // format
@@ -156,13 +179,25 @@ void Phys::_DrawDebug(int                 width,
                       Syngine::Camera     finalCam,
                       DebugModes          debug) {
     if (mDebugRenderer && debug.Enabled) {
-        JPH::BodyManager::DrawSettings drawSettings;
-        drawSettings.mDrawShapeWireframe = true;
-        // drawSettings.mDrawShape = false;
-
         if (debug.PhysWireframes) {
-            mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
+            std::vector<JPH::BodyID> bodyIDs;
+            bodyIDs.reserve(debug.WireframeObjects.size());
+            for (GameObject* object : debug.WireframeObjects) {
+                if (!object) continue;
+                RigidbodyComponent* rigidbody =
+                    object->GetComponent<RigidbodyComponent>();
+                if (!rigidbody) continue;
+                const JPH::BodyID bodyID = rigidbody->_GetBodyID();
+                if (!bodyID.IsInvalid()) bodyIDs.push_back(bodyID);
+            }
+
+            SelectedBodyDrawFilter         drawFilter(std::move(bodyIDs));
+            JPH::BodyManager::DrawSettings drawSettings;
+            drawSettings.mDrawShapeWireframe = true;
+            mPhysicsSystem.DrawBodies(
+                drawSettings, mDebugRenderer, &drawFilter);
         }
+
         mDebugRenderer->RenderLines(
             finalCam.view, finalCam.proj, width, height, program);
 
@@ -570,4 +605,28 @@ BodyID Phys::_CreateCompound(RVec3Arg                              position,
     }
     bodyInterface.AddBody(body->GetID(), EActivation::Activate);
     return body->GetID();
+}
+
+RaycastHit Phys::Raycast(const Math::Ray& ray) {
+    JPH::RRayCast      joltRay{ ray.origin().toJoltVec3(),
+                                ray.direction().toJoltVec3() };
+    JPH::RayCastResult hit;
+    bool hadHit = mPhysicsSystem.GetNarrowPhaseQuery().CastRay(joltRay, hit);
+
+    if (hadHit) {
+        BodyID        bodyID   = BodyID(hit.mBodyID);
+        Math::Vector3 hitPoint = joltRay.GetPointOnRay(hit.mFraction);
+
+        GameObject* hitObject = nullptr;
+        auto        it        = mBodyToGameObjectMap.find(bodyID);
+        if (it != mBodyToGameObjectMap.end()) {
+            hitObject = it->second;
+        }
+
+        return RaycastHit{
+            true, hitPoint, Math::Vector3(), hit.mFraction, hitObject
+        };
+    }
+
+    return RaycastHit{ false, Math::Vector3(), Math::Vector3(), 0.0f, nullptr };
 }
