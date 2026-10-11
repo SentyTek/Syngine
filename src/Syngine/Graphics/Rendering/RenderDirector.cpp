@@ -21,6 +21,7 @@
 #include "Syngine/Scene/GameObjectRegistry.h"
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Graphics/Rendering/DebugRenderer.h>
+#include <Syngine/Graphics/Rendering/GizmoOverlay.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Graphics/Windowing.h>
 #include <Syngine/GameObjects/Component.h>
@@ -417,6 +418,10 @@ void RenderDirector::_Shutdown() {
 
     // Submit the detaches above before queueing destroys.
     bgfx::frame();
+
+#ifdef SYN_IS_EDITOR
+    Syngine::Debug::GizmoOverlay::_Shutdown();
+#endif
 
     // Destroy billboard buffers
     if (bgfx::isValid(m_billboardVbh)) {
@@ -1416,6 +1421,21 @@ void RenderDirector::_DrawPostProcess(const Shader* program) {
     _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
 }
 
+#ifdef SYN_IS_EDITOR
+void RenderDirector::_DrawGizmos(const Shader* program) {
+    SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(VIEW_GIZMO, "Transform Gizmos");
+    bgfx::setViewFrameBuffer(VIEW_GIZMO, m_buffers.sceneFB);
+
+    // Depth is cleared for this view, so gizmos draw over everything in the
+    // scene but still occlude themselves correctly.
+    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_DEPTH_TEST_LESS |
+                     BGFX_STATE_BLEND_ALPHA;
+    Syngine::Debug::GizmoOverlay::_Draw(
+        VIEW_GIZMO, state, program->m_program.idx);
+}
+#endif
+
 void RenderDirector::_DrawDbgBillboard(Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_BILL_DBG, "Gizmos");
@@ -1596,6 +1616,18 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera,
             }
             break;
         }
+#ifdef SYN_IS_EDITOR
+        case VIEW_GIZMO: {
+            bgfx::setViewRect(view,
+                              0,
+                              0,
+                              uint16_t(Renderer::width),
+                              uint16_t(Renderer::height));
+            bgfx::setViewClear(view, BGFX_CLEAR_DEPTH, 0x00000000, 1.0f, 0);
+            bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
+            break;
+        }
+#endif
         case VIEW_UI: {
             bgfx::setViewRect(view,
                               0,
@@ -1748,6 +1780,9 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
 
     bool isPendingShaders = ShaderManager::_CheckPendingShaders();
     if (isPendingShaders) {
+#ifdef SYN_IS_EDITOR
+        Syngine::Debug::GizmoOverlay::_EndFrame();
+#endif
         return false;
     } else if (!m_collectedresources) {
         RenderDirector::_GetRenderResources();
@@ -1790,6 +1825,11 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
             case VIEW_DEBUG:
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
+#ifdef SYN_IS_EDITOR
+            case VIEW_GIZMO:
+                if (debug.Enabled) _DrawGizmos(program);
+                break;
+#endif
             case VIEW_BILL_DBG:
                 // Debug billboard draws are submitted from VIEW_BILLBOARD
                 // using this view ID.
@@ -1814,6 +1854,9 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
 
     m_renderPackets.Reset();
     m_billboardRenderPackets.Reset();
+#ifdef SYN_IS_EDITOR
+    Syngine::Debug::GizmoOverlay::_EndFrame();
+#endif
 
     Renderer::_UpdateDrawID();
     return true;

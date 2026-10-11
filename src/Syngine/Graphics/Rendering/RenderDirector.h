@@ -87,13 +87,13 @@ class RenderDirector {
                               std::array<Math::Matrix4x4, 4>& outLightProj,
                               Math::Vector4&                  outCascadeSplits);
 
-    static constexpr std::array<Syngine::ViewID, 11> _allViews = {
-        Syngine::VIEW_SHADOW,      Syngine::VIEW_LIGHT_SHADOWS,
-        Syngine::VIEW_SKY,         Syngine::VIEW_FORWARD,
-        Syngine::VIEW_BILLBOARD,   Syngine::VIEW_DEBUG,
-        Syngine::VIEW_BILL_DBG,    Syngine::VIEW_AO,
-        Syngine::VIEW_POSTPROCESS, Syngine::VIEW_UI,
-        Syngine::VIEW_UI_DEBUG
+    static constexpr std::array<Syngine::ViewID, 12> _allViews = {
+        Syngine::VIEW_SHADOW,    Syngine::VIEW_LIGHT_SHADOWS,
+        Syngine::VIEW_SKY,       Syngine::VIEW_FORWARD,
+        Syngine::VIEW_BILLBOARD, Syngine::VIEW_DEBUG,
+        Syngine::VIEW_GIZMO,     Syngine::VIEW_BILL_DBG,
+        Syngine::VIEW_AO,        Syngine::VIEW_POSTPROCESS,
+        Syngine::VIEW_UI,        Syngine::VIEW_UI_DEBUG
     };
 
     static bool _CreateSceneBuffers();
@@ -128,6 +128,11 @@ class RenderDirector {
     static void _DrawSSAO(const Shader* program);
     static void _DrawPostProcess(const Shader* program);
     static void _DrawDbgBillboard(Shader* program);
+
+#ifdef SYN_IS_EDITOR
+    static void _DrawGizmos(const Shader* program);
+#endif
+
     static void _DrawUIDebug(CameraComponent* camera);
     static void _DrawUI(const Shader* program);
 

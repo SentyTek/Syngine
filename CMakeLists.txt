@@ -48,6 +48,7 @@ add_library(Syngine STATIC
     src/Syngine/Graphics/Rendering/Renderer.cpp
     src/Syngine/Graphics/Rendering/RenderDirector.cpp
     src/Syngine/Graphics/Rendering/DebugRenderer.cpp
+    src/Syngine/Graphics/Rendering/GizmoOverlay.cpp
     src/Syngine/Graphics/Resources/TextureHelpers.cpp
     src/Syngine/Graphics/Resources/ShaderManager.cpp
     src/Syngine/Graphics/Resources/ModelLoader.cpp

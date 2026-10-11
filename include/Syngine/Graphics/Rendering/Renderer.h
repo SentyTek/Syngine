@@ -35,13 +35,15 @@ enum ViewID : bgfx::ViewId {
     VIEW_SHADOW = 0, //* Shadow map rendering (4 cascades)
     VIEW_LIGHT_SHADOWS =
         4, //* Passes for spot and point light shadows (up to 12 lights)
-    VIEW_SKY         = 76, //* Skybox rendering
-    VIEW_FORWARD     = 77, //* Forward rendering pass for translucent objects
-    VIEW_BILLBOARD   = 78, //* Billboard rendering
-    VIEW_DEBUG       = 79, //* Debug rendering pass for debug rendering
-    VIEW_BILL_DBG    = 80, //* Billboard debug rendering
-    VIEW_AO          = 81, //* Ambient occlusion passes (3 passes)
-    VIEW_POSTPROCESS = 84, //* Post-processing effects passes (Max 8 passes)
+    VIEW_SKY       = 76, //* Skybox rendering
+    VIEW_FORWARD   = 77, //* Forward rendering pass for translucent objects
+    VIEW_BILLBOARD = 78, //* Billboard rendering
+    VIEW_AO        = 79, //* Ambient occlusion passes (3 passes)
+    VIEW_DEBUG     = 82, //* Debug rendering pass for debug rendering
+    // wireframes, below billboard gizmos
+    VIEW_BILL_DBG = 83, //* Billboard debug rendering
+    VIEW_GIZMO = 84, //* Editor transform gizmos. Drawn over scene geometry and
+    VIEW_POSTPROCESS = 85, //* Post-processing effects passes (Max 7 passes)
     VIEW_UI          = 92, //* UI rendering
     VIEW_UI_DEBUG    = 93, //* UI debug rendering
 };
