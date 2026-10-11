@@ -229,6 +229,10 @@ class MeshComponent : public Syngine::IComponent {
     /// @since v0.0.1
     const inline bool GetLoadTextures() const { return m_loadTextures; }
 
+    /// @brief Bake glTF/scene node transforms into the vertices on load.
+    /// Must be set before LoadMesh.
+    bool bakeNodeTransforms = false;
+
     /// @brief Set whether textures should be loaded for this mesh
     /// @param loadTextures True to load textures, false otherwise
     /// @threadsafety not-safe

@@ -140,6 +140,12 @@ class ModelLoader {
 /// @since v0.0.1
 class AssimpLoader : public ModelLoader {
   public:
+    // Bake node transforms into the vertices
+    // (aiProcess_PreTransformVertices). Without it, node transforms are
+    // ignored and only raw mesh data is used.
+    // Used by the editor for transform gizmos
+    bool bakeNodeTransforms = false;
+
     /// @brief Loads a model from the specified path, returns true if
     /// successful
     /// @param out ModelData to fill with the loaded model

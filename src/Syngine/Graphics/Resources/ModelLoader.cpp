@@ -275,7 +275,9 @@ bool AssimpLoader::_LoadModel(ModelData&         out,
 
     const int flags = aiProcess_JoinIdenticalVertices |
                       aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
-                      aiProcess_DropNormals;
+                      aiProcess_DropNormals |
+                      (bakeNodeTransforms ? aiProcess_PreTransformVertices
+                                          : 0);
 
     const std::string formatHint = _GetAssimpFormatHint(assetPath);
 

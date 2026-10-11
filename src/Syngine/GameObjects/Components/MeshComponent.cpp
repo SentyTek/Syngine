@@ -131,9 +131,11 @@ bool MeshComponent::LoadMesh(const std::string& bundlePath,
     this->m_meshLoadJob =
         Jobs().DispatchWithResult([meshStream = std::move(meshStream),
                                    modelPath,
-                                   loadTextures]() mutable {
+                                   loadTextures,
+                                   bake = this->bakeNodeTransforms]() mutable {
             ModelData    out;
             AssimpLoader loader;
+            loader.bakeNodeTransforms = bake;
             loader._LoadModel(out, *meshStream, modelPath, loadTextures);
             return out;
         });

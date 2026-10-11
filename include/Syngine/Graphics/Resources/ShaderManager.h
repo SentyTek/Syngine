@@ -198,7 +198,8 @@ class ShaderManager {
 
     ShaderManager() = delete; // Prevent instantiation of this class
 
-    static std::vector<Shader> m_loadedShaders; // List of loaded shaders
+    static std::vector<std::unique_ptr<Shader>>
+        m_loadedShaders; // List of loaded shaders
     static std::vector<Syngine::JobResult<TempShaderData>>
         m_tempShaderData; // List of temporary shader data
     static std::mutex

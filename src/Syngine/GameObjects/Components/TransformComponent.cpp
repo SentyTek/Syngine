@@ -224,7 +224,7 @@ void TransformComponent::SetWorldRotationQuat(Quaternion rotation) {
     } else {
         m_rotation = rotation;
     }
-    _MarkWorldDirty();
+    _MarkLocalDirty();
 }
 
 Mat4 TransformComponent::GetModelMatrix() const {
