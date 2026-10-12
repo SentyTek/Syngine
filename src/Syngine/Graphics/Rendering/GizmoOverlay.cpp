@@ -1,6 +1,6 @@
-// ╒══════════════════ GizmoOverlay.cpp ═╕
+// ╒═══════════════════ GizmoOverlay.cpp ═╕
 // │ Syngine                              │
-// │ Created 2026-05-14                   │
+// │ Created 2026-10-10                   │
 // ├──────────────────────────────────────┤
 // │ Copyright (c) SentyTek 2025-2026     │
 // │ Licensed under the MIT License       │
