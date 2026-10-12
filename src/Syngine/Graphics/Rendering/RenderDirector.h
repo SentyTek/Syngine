@@ -127,7 +127,7 @@ class RenderDirector {
                                std::span<RenderPacket> packets);
     static void _DrawSSAO(const Shader* program);
     static void _DrawPostProcess(const Shader* program);
-    static void _DrawDbgBillboard(Shader* program);
+    static void _DrawDbgBillboard(const Shader* program);
 
 #ifdef SYN_IS_EDITOR
     static void _DrawGizmos(const Shader* program);
@@ -199,13 +199,13 @@ class RenderDirector {
     };
     static RenderCoreBuffers m_buffers;
 
-    static Shader*             m_ssaoProgram;
-    static bgfx::UniformHandle m_ssao_depthTex;
-    static bgfx::UniformHandle m_ssao_normalTex;
-    static bgfx::UniformHandle m_ssaob_ssaoTex;
-    static bgfx::UniformHandle m_tonemap_sceneTex;
-    static bgfx::UniformHandle m_tonemap_ssaoTex;
-    static bgfx::UniformHandle m_defaultShadowMap;
+    static Shader* m_ssaoProgram; // Non-owning; owned by ShaderManager
+    static bgfx::UniformHandle      m_ssao_depthTex;
+    static bgfx::UniformHandle      m_ssao_normalTex;
+    static bgfx::UniformHandle      m_ssaob_ssaoTex;
+    static bgfx::UniformHandle      m_tonemap_sceneTex;
+    static bgfx::UniformHandle      m_tonemap_ssaoTex;
+    static bgfx::UniformHandle      m_defaultShadowMap;
 
     static std::array<Math::Matrix4x4, NUM_CASCADES> m_csmLightViewProj;
     static Math::Vec4                                m_csmCascadeSplits;

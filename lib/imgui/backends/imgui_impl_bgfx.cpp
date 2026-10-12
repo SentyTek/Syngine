@@ -23,6 +23,7 @@
 #include <bx/math.h>
 
 namespace Syngine::UI::Debug {
+Syngine::Shader* ImGui_ImplBgfx::m_shader = nullptr;
 
 void ImGui_ImplBgfx::Init() {
     IMGUI_CHECKVERSION();
@@ -42,14 +43,15 @@ void ImGui_ImplBgfx::Init() {
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
     // bgfx stuff
-    ShaderManager::LoadShader("shaders/assets_root.spk", "ui", ViewID::VIEW_UI);
+    ShaderManager::LoadShader(
+        SYNINT_DEFAULT_SHADERBUNDLE_NAME, "debug_ui", ViewID::VIEW_UI);
     m_layout.begin()
         .add(bgfx::Attrib::Position, 2, bgfx::AttribType::Float)
         .add(bgfx::Attrib::TexCoord0, 2, bgfx::AttribType::Float)
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
 
-    m_shader = ShaderManager::Get("ui");
+    m_shader = ShaderManager::Get("debug_ui").get();
 
     m_font = bgfx::createTexture2D(static_cast<uint16_t>(width),
                                    static_cast<uint16_t>(height),
@@ -66,7 +68,7 @@ void ImGui_ImplBgfx::Shutdown() {
         bgfx::destroy(m_font);
         m_font = BGFX_INVALID_HANDLE;
     }
-    ShaderManager::UnloadShader(m_shader->id);
+    if (m_shader) ShaderManager::UnloadShader(m_shader->id);
     m_shader = nullptr;
     if (m_imguiContext) {
         ImGui_ImplSDL3_Shutdown();

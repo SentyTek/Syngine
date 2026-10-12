@@ -689,7 +689,7 @@ bool RenderDirector::_SetVsync() {
 }
 
 void RenderDirector::_GetRenderResources() {
-    m_ssaoProgram      = ShaderManager::Get("ssao");
+    m_ssaoProgram      = ShaderManager::Get("ssao").get();
     m_defaultShadowMap = UniformRegistry::_GetUniformHandle("s_shadowMap");
     m_ssao_depthTex    = UniformRegistry::_GetUniformHandle("s_depth");
     m_ssao_normalTex   = UniformRegistry::_GetUniformHandle("s_normal");
@@ -1436,7 +1436,7 @@ void RenderDirector::_DrawGizmos(const Shader* program) {
 }
 #endif
 
-void RenderDirector::_DrawDbgBillboard(Shader* program) {
+void RenderDirector::_DrawDbgBillboard(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_BILL_DBG, "Gizmos");
     bgfx::setViewFrameBuffer(VIEW_BILL_DBG, m_buffers.sceneFB);

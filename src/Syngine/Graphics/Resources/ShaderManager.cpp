@@ -21,7 +21,7 @@
 
 namespace Syngine {
 
-std::vector<std::unique_ptr<Shader>>
+std::deque<std::unique_ptr<Shader>>
     ShaderManager::m_loadedShaders; // List of loaded shaders
 std::vector<Syngine::JobResult<ShaderManager::TempShaderData>>
            ShaderManager::m_tempShaderData; // List of temporary shader data
@@ -566,7 +566,7 @@ Shader* ShaderManager::_BuildShader(const std::string&    bundlePath,
             return nullptr;
         }
 
-        Shader* shader = Get(tempData.id);
+        const auto& shader = Get(tempData.id);
         if (!shader) {
             Syngine::Logger::LogF(
                 Syngine::LogLevel::ERR,
@@ -577,7 +577,7 @@ Shader* ShaderManager::_BuildShader(const std::string&    bundlePath,
             return nullptr;
         }
 
-        return shader;
+        return shader.get();
     }
 
     // If asynchronous, return nullptr for now. The shader will be
@@ -650,7 +650,9 @@ bool ShaderManager::_CreateBGFXResources(TempShaderData& tempData) {
         return false;
     }
 
-    *it = std::make_unique<Shader>(std::move(shader));
+    // Assign in place so existing pointers/references to this Shader observe
+    // the update
+    **it = std::move(shader);
 
     return true;
 }
@@ -671,8 +673,7 @@ void ShaderManager::LoadShader(const std::string&    bundlePath,
 
 bool ShaderManager::_CheckPendingShaders() {
     std::lock_guard<std::mutex> lock(tempDataMutex);
-    bool                        anyCompleted    = false;
-    bool                        anyStillPending = false;
+    bool                        anyCompleted = false;
 
     for (auto it = m_tempShaderData.begin(); it != m_tempShaderData.end();) {
         if (it->IsComplete()) {
@@ -714,11 +715,10 @@ bool ShaderManager::_CheckPendingShaders() {
 
     for (auto it = m_loadedShaders.begin(); it != m_loadedShaders.end();) {
         if (it->get()->isWaitingOnWorker) {
-            anyStillPending = true;
+            return true;
         }
         ++it;
     }
-    if (anyStillPending) return true;
 
     return anyCompleted;
 }
@@ -754,7 +754,7 @@ bool ShaderManager::ReloadShader(size_t shaderId) {
     // Build replacement shader first just in case it fails, so we don't lose
     // the old one. Rebuild into the same shader ID slot.
     const int canonicalId = shaderIt->get()->id;
-    Shader*   replacement =
+    auto      replacement =
         _BuildShader(bundlePath, shaderName, viewId, true, canonicalId);
     if (!replacement) {
         Syngine::Logger::LogF(
@@ -800,38 +800,37 @@ bool ShaderManager::UnloadShader(size_t shaderId) {
     return true;
 }
 
-Shader* ShaderManager::Get(size_t shaderId) {
+std::unique_ptr<Shader>& ShaderManager::Get(size_t shaderId) {
     auto it = std::find_if(m_loadedShaders.begin(),
                            m_loadedShaders.end(),
                            [shaderId](const std::unique_ptr<Shader>& s) {
                                return s->id == shaderId;
                            });
     if (it != m_loadedShaders.end()) {
-        return it->get();
+        return *it;
     } else {
         Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                               true,
                               "GetShader: shader ID %zu not found",
                               shaderId);
-        return nullptr;
+        return EmptyShader();
     }
 }
 
-Shader* ShaderManager::Get(const std::string& shaderName) {
+std::unique_ptr<Shader>& ShaderManager::Get(const std::string& shaderName) {
     for (auto& shader : m_loadedShaders) {
         if (shader->shaderName == shaderName) {
             while (shader->isWaitingOnWorker) {
                 _CheckPendingShaders();
             }
-            return shader.get();
+            return shader;
         }
     }
     Syngine::Logger::LogF(Syngine::LogLevel::ERR,
                           true,
                           "GetShader: shader '%s' not found",
                           shaderName.c_str());
-    static std::unique_ptr<Shader> emptyShader = std::make_unique<Shader>();
-    return emptyShader.get();
+    return EmptyShader();
 }
 
 bool ShaderManager::UnloadAllShaders() {

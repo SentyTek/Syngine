@@ -69,11 +69,8 @@ class Material {
     friend class MaterialManager;
     friend class MaterialInstance;
 
-    /// @brief Private constructor to create a Material with a given name. Use
-    /// MaterialManager::CreateMaterial to create a new material.
-    /// @note Highly recommended to NOT use this constructor directly.
-    /// @internal
-    Material(const std::string& name) : name(name), shader(nullptr) {}
+    Material(const std::string& name)
+        : name(name), shader(ShaderManager::EmptyShader()) {}
 
     /// @brief Set the default value for a material parameter
     /// @param paramName Name of the material parameter
@@ -151,8 +148,9 @@ class Material {
     };
 
   public:
-    const std::string       name;   //* Name of the material
-    Shader* shader; //* Pointer to the associated shader
+    const std::string name; //* Name of the material
+    const std::unique_ptr<Shader>&
+        shader; //* Non-owning pointer to the associated shader
 
     Material(const Material& other) = delete;
 
@@ -182,7 +180,7 @@ class Material {
     /// @threadsafety not-safe
     /// @internal
     /// @since v0.0.2
-    Material(const std::string& name, Shader* shader)
+    Material(const std::string& name, const std::unique_ptr<Shader>& shader)
         : name(name), shader(shader) {
         if (shader->isValid) {
             _InitMaterialParameters();
@@ -306,7 +304,7 @@ class MaterialInstance {
     /// @threadsafety read-only
     /// @since v0.0.2
     Shader* GetShader() const {
-        return m_material ? m_material->shader : nullptr;
+        return m_material ? m_material->shader.get() : nullptr;
     }
 
     /// @brief Set the value of a material parameter by name
@@ -609,8 +607,7 @@ class MaterialManager {
                 "Material not found: " + name +
                 ". Note that only materials loaded through the MaterialManager "
                 "can be retrieved.");
-            static Material dummy("dummy");
-            return dummy;
+            return GetDefaultMaterialPBR();
         }
     };
 
@@ -620,7 +617,8 @@ class MaterialManager {
     /// @return Material& Reference to the newly created material
     /// @threadsafety not-safe
     /// @since v0.0.2
-    static Material& CreateMaterial(const std::string& name, Shader* shader) {
+    static Material& CreateMaterial(const std::string&             name,
+                                    const std::unique_ptr<Shader>& shader) {
         if (MaterialExists(name)) {
             return GetMaterialByName(name);
         }

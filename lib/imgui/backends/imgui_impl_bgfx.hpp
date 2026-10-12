@@ -27,10 +27,10 @@
 namespace Syngine::UI::Debug {
 
 class ImGui_ImplBgfx {
-    Syngine::Shader*    m_shader = nullptr;
-    bgfx::VertexLayout  m_layout;
-    bgfx::TextureHandle m_font         = BGFX_INVALID_HANDLE;
-    ImGuiContext*       m_imguiContext = nullptr;
+    static Syngine::Shader* m_shader; // Non-owning; owned by ShaderManager
+    bgfx::VertexLayout      m_layout;
+    bgfx::TextureHandle     m_font         = BGFX_INVALID_HANDLE;
+    ImGuiContext*           m_imguiContext = nullptr;
 
   public:
     void Init();
@@ -44,14 +44,12 @@ class ImGui_ImplBgfx {
     bool WantCaptureMouse();
     bool WantCaptureKeyboard();
 
-    [[nodiscard("Converts a bgfx::TextureHandle to an "
-                "ImTextureID")]] static inline ImTextureID
+    [[nodiscard]] static inline ImTextureID
     ToImGui(bgfx::TextureHandle texture) {
         return static_cast<ImTextureID>(texture.idx);
     };
 
-    [[nodiscard("Converts an ImTextureID to a "
-                "bgfx::TextureHandle")]] static inline bgfx::TextureHandle
+    [[nodiscard]] static inline bgfx::TextureHandle
     ToBGFX(ImTextureID texture) {
         return bgfx::TextureHandle{ static_cast<uint16_t>(texture) };
     };

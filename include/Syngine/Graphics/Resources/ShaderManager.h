@@ -17,6 +17,8 @@
 
 #include <array>
 #include <cstdint>
+#include <deque>
+#include <memory>
 #include <sys/stat.h>
 #include <vector>
 #include <string>
@@ -180,6 +182,8 @@ class ShaderManager {
     static bgfx::ShaderHandle _LoadShaderFromMemory(const void* data,
                                                     size_t      size);
 
+    // Non-owning pointer to the built shader (synchronous only),
+    /// otherwise nullptr. m_loadedShaders owns all shaders.
     static Shader* _BuildShader(const std::string& bundlePath,
                                 const std::string& shaderName,
                                 const ViewID       viewId,
@@ -190,15 +194,17 @@ class ShaderManager {
 
     /// @brief Check if any pending shaders have completed loading and create
     /// their bgfx resources
-    /// @return true if any shaders were completed, false if all shaders are
-    /// ready
+    /// @return true if any shaders were completed or still waiting, false if
+    /// all shaders are ready
     /// @internal
     /// @since v0.0.2
     static bool _CheckPendingShaders();
 
     ShaderManager() = delete; // Prevent instantiation of this class
 
-    static std::vector<std::unique_ptr<Shader>>
+    // A deque never relocates existing elements on push_back, so references to
+    // the contained unique_ptrs stay valid for the lifetime of the manager
+    static std::deque<std::unique_ptr<Shader>>
         m_loadedShaders; // List of loaded shaders
     static std::vector<Syngine::JobResult<TempShaderData>>
         m_tempShaderData; // List of temporary shader data
@@ -248,30 +254,35 @@ class ShaderManager {
 
     /// @brief Get all loaded shaders for a specific view ID
     /// @param viewId View ID to filter shaders by
-    /// @return std::vector<Shader*> Vector of pointers to shaders associated
-    /// with the specified view ID
+    /// @return std::vector<Shader*> Vector of pointers to
+    /// shaders associated with the specified view ID
     /// @threadsafety read-only
     /// @since v0.0.2
     static std::vector<Shader*> GetProgramsByViewID(ViewID viewId);
 
     /// @brief Get a shader by its ID
     /// @param shaderId ID of the shader to retrieve
-    /// @return Shader* Pointer to the shader with the specified ID, or nullptr
-    /// if not found
+    /// @return Reference to the manager's owning pointer for the shader, or
+    /// EmptyShader() if not found. The reference stays valid across reloads.
     /// @threadsafety read-only
     /// @since v0.0.2
-    static Shader* Get(size_t shaderId);
+    static std::unique_ptr<Shader>& Get(size_t shaderId);
 
     /// @brief Get a shader by its name
     /// @param shaderName Name of the shader to retrieve
-    /// @return Shader* Pointer to the shader with the specified name, or
-    /// nullptr if not found
+    /// @return Reference to the manager's owning pointer for the shader, or
+    /// EmptyShader() if not found. The reference stays valid across reloads.
     /// @note It is generally recommened to use ID for shader retrieval, as
     /// names are not guaranteed to be unique and considerably slower to search
     /// for
     /// @threadsafety read-only
     /// @since v0.0.2
-    static Shader* Get(const std::string& shaderName);
+    static std::unique_ptr<Shader>& Get(const std::string& shaderName);
+
+    inline static std::unique_ptr<Shader>& EmptyShader() {
+        static std::unique_ptr<Shader> emptyShader = std::make_unique<Shader>();
+        return emptyShader;
+    }
 };
 
 } // namespace Syngine
