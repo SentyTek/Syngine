@@ -83,6 +83,9 @@ struct DebugModes {
     bool Gizmos = false; //* Gizmos such as cameras, lights, and audio sources
     bool CSMBounds         = false; //* Cascading Shadow Map zone bounds.
     bool DrawBoundingBoxes = false; //* Whether to draw mesh bounding boxes
+    bool DrawDebugForAllObjects =
+        false; //* Draw enabled overlays for all objects, ignoring
+               // WireframeObjects
 };
 
 /// @brief Core class to manage the application

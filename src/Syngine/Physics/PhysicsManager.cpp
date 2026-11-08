@@ -180,22 +180,26 @@ void Phys::_DrawDebug(int                 width,
                       DebugModes          debug) {
     if (mDebugRenderer && debug.Enabled) {
         if (debug.PhysWireframes) {
-            std::vector<JPH::BodyID> bodyIDs;
-            bodyIDs.reserve(debug.WireframeObjects.size());
-            for (GameObject* object : debug.WireframeObjects) {
-                if (!object) continue;
-                RigidbodyComponent* rigidbody =
-                    object->GetComponent<RigidbodyComponent>();
-                if (!rigidbody) continue;
-                const JPH::BodyID bodyID = rigidbody->_GetBodyID();
-                if (!bodyID.IsInvalid()) bodyIDs.push_back(bodyID);
-            }
-
-            SelectedBodyDrawFilter         drawFilter(std::move(bodyIDs));
             JPH::BodyManager::DrawSettings drawSettings;
             drawSettings.mDrawShapeWireframe = true;
-            mPhysicsSystem.DrawBodies(
-                drawSettings, mDebugRenderer, &drawFilter);
+            if (debug.DrawDebugForAllObjects) {
+                mPhysicsSystem.DrawBodies(drawSettings, mDebugRenderer);
+            } else {
+                std::vector<JPH::BodyID> bodyIDs;
+                bodyIDs.reserve(debug.WireframeObjects.size());
+                for (GameObject* object : debug.WireframeObjects) {
+                    if (!object) continue;
+                    RigidbodyComponent* rigidbody =
+                        object->GetComponent<RigidbodyComponent>();
+                    if (!rigidbody) continue;
+                    const JPH::BodyID bodyID = rigidbody->_GetBodyID();
+                    if (!bodyID.IsInvalid()) bodyIDs.push_back(bodyID);
+                }
+
+                SelectedBodyDrawFilter drawFilter(std::move(bodyIDs));
+                mPhysicsSystem.DrawBodies(
+                    drawSettings, mDebugRenderer, &drawFilter);
+            }
         }
 
         mDebugRenderer->RenderLines(

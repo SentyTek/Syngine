@@ -1237,7 +1237,6 @@ void RenderDirector::_DrawDebug(const Shader*    program,
     SYN_PROFILE_FUNCTION();
 
     bgfx::setViewName(program->m_viewId, "Debug");
-    bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
 
     // Draw various debug overlays
     if (debug.Gizmos && m_drender) {
@@ -1287,8 +1286,6 @@ void RenderDirector::_DrawDebug(const Shader*    program,
         for (auto go : billboards) {
             BillboardComponent* comp = go->GetComponent<BillboardComponent>();
             if (!comp) continue;
-            Vector3 goPos =
-                go->GetComponent<TransformComponent>()->GetWorldPosition();
             Vector3 min = comp->GetMinBounds();
             Vector3 max = comp->GetMaxBounds();
             m_drender->DrawBox(min, max, JPH::Color::sBlue);
@@ -1439,7 +1436,6 @@ void RenderDirector::_DrawGizmos(const Shader* program) {
 void RenderDirector::_DrawDbgBillboard(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_BILL_DBG, "Gizmos");
-    bgfx::setViewFrameBuffer(VIEW_BILL_DBG, m_buffers.sceneFB);
     // Debug billboards (gizmos) are always drawn on top. Regular billboards
     // (forward pass ig) are depth-tested normally.
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_BLEND_ALPHA |
@@ -1547,6 +1543,16 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera,
             m_csmCascadeSplits = cascadeSplits;
         }
     }
+
+    // Debug views execute after post-processing and must target the presented
+    // image, rather than the scene texture already sampled by that pass.
+#ifdef SYN_IS_EDITOR
+    const bgfx::FrameBufferHandle debugFrameBuffer = m_buffers.sceneFB;
+#else
+    const bgfx::FrameBufferHandle debugFrameBuffer = BGFX_INVALID_HANDLE;
+#endif
+    bgfx::setViewFrameBuffer(VIEW_DEBUG, debugFrameBuffer);
+    bgfx::setViewFrameBuffer(VIEW_BILL_DBG, debugFrameBuffer);
 
     // Update main camera matrices
     for (Syngine::ViewID view : _allViews) {
