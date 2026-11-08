@@ -60,6 +60,7 @@ add_library(Syngine STATIC
     src/Syngine/Utils/Profiler.cpp
     src/Syngine/Utils/Serializer.cpp
     src/Syngine/Utils/Prefab.cpp
+    src/Syngine/Utils/UUID.cpp
 
     # Physics
     src/Syngine/Physics/PhysicsManager.cpp

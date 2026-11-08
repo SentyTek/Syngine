@@ -54,6 +54,7 @@ struct HardwareSpecs {
     int         maxTextureSize;  //* Maximum texture size supported by the GPU
     bool        supportsCompute; //* Whether the GPU supports compute shaders
     bool        supports3DTextures; //* Whether the GPU supports 3D textures
+    bool        supportsTexArrays;  //* Whether the GPU supports texture arrays
 };
 
 /// @brief Struct to hold engine config
@@ -398,6 +399,9 @@ class Core {
     /// @param event SDL_Event to handle
     /// @deprecated
     void _HandleKeyEvent(const SDL_Event& event);
+
+    static HardwareSpecs m_hardwareSpecs;
+    static bool          m_gottenHardwareSpecs;
 
     friend class Renderer;
     friend class RenderDirector;

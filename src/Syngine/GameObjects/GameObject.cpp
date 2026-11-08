@@ -13,20 +13,38 @@
 #include <Syngine/Utils/Serializer.h>
 #include <Syngine/GameObjects/GameObject.h>
 #include <Syngine/GameObjects/ComponentRegistry.h>
+#include <Syngine/Utils/UUID.h>
 
 using namespace Syngine;
 
 GameObject::GameObject(std::string              name,
                        std::string              type,
                        std::vector<std::string> initialTags)
-    : name(std::move(name)), type(std::move(type)),
-      tags(std::move(initialTags)), id(-1), gizmo("none") {}
+    : GameObject(std::move(name),
+                 std::move(type),
+                 std::move(initialTags),
+                 GenerateUUID()) {}
 
-GameObject::GameObject(const Serializer::DataNode& data) {
+GameObject::GameObject(std::string              name,
+                       std::string              type,
+                       std::vector<std::string> initialTags,
+                       Syngine::UUID            uuid)
+    : name(std::move(name)), type(std::move(type)), gizmo("none"),
+      tags(std::move(initialTags)), m_uuid(std::move(uuid)),
+      m_persistentID(GenerateUUID()) {}
+
+GameObject::GameObject(const Serializer::DataNode& data)
+    : GameObject(data, GenerateUUID()) {}
+
+GameObject::GameObject(const Serializer::DataNode& data, Syngine::UUID uuid)
+    : m_uuid(std::move(uuid)), m_persistentID(GenerateUUID()) {
     this->name     = data["name"].As<std::string>();
     this->type     = data["type"].As<std::string>();
     this->gizmo    = data["gizmo"].As<std::string>();
     this->isActive = data["isActive"].As<bool>();
+    if (data.Has("pID")) {
+        this->m_persistentID = data["pID"].As<Syngine::UUID>();
+    }
     if (data.Has("tags")) {
         this->tags = data["tags"].As<std::vector<std::string>>();
     }
@@ -41,6 +59,12 @@ GameObject::GameObject(const Serializer::DataNode& data) {
                 ComponentRegistry::Instantiate(typeId, this, data);
             if (comp) {
                 this->components[typeId] = std::move(comp);
+                if (data.Has("enabled") &&
+                    this->components[typeId]->IsEnabled() !=
+                        data["enabled"].As<bool>(true)) {
+                    this->components[typeId]->SetEnabled(
+                        data["enabled"].As<bool>(true));
+                }
                 GameObjectRegistry::_NotifyComponentAdded(this, typeId);
             }
         }
@@ -128,6 +152,7 @@ Serializer::DataNode GameObject::Serialize() const {
     node["type"]     = this->type;
     node["gizmo"]    = this->gizmo;
     node["isActive"] = this->isActive;
+    node["pID"]      = this->m_persistentID;
 
     // Serialize tags
     std::vector<std::string> tagList = this->tags;
@@ -136,7 +161,13 @@ Serializer::DataNode GameObject::Serialize() const {
     // Serialize components
     Serializer::DataNode componentsNode;
     for (const auto& [type, comp] : this->components) {
-        componentsNode[std::to_string(type)] = comp->Serialize();
+        Serializer::DataNode componentNode = comp->Serialize();
+        if (!componentNode.IsObject()) {
+            throw std::runtime_error(
+                "Component serialization must produce an object");
+        }
+        componentNode["enabled"]             = comp->IsEnabled();
+        componentsNode[std::to_string(type)] = componentNode;
     }
     node["components"] = componentsNode;
 
@@ -227,22 +258,18 @@ void GameObject::AddChild(GameObject* child) {
     }
 }
 
-const std::vector<GameObject*>& GameObject::GetChildren() const {
-    TransformComponent* tComp = this->GetComponent<TransformComponent>();
-    static std::vector<GameObject*> children;
-    // can't just return the transform's children because that would just return
-    // a bunch of transforms, so we have to construct the vector ourselves from
-    // the transforms owners
+std::vector<GameObject*> GameObject::GetChildren() const {
+    TransformComponent*      tComp = this->GetComponent<TransformComponent>();
+    std::vector<GameObject*> children;
     if (tComp) {
         auto childTComps = tComp->GetChildren();
-        children.clear();
         for (TransformComponent* childTComp : childTComps) {
             if (childTComp && childTComp->m_owner) {
                 children.push_back(childTComp->m_owner);
             }
         }
     }
-    return children; // Return empty vector if no TransformComponent
+    return children;
 }
 
 bool GameObject::CanBeParentedTo(const GameObject* potentialParent) const {

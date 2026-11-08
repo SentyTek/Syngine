@@ -14,21 +14,21 @@
 #include <Syngine/GameObjects/Components/ZoneComponent.h>
 #include <Syngine/GameObjects/Components/TransformComponent.h>
 #include <Syngine/Scene/ZoneSystem.h>
+#include <Syngine/Utils/UUID.h>
 #include <utility>
 
 namespace Syngine {
 
 // Static member initialization
-std::unordered_map<int, GameObject> GameObjectRegistry::m_AllObjects;
-std::vector<GameObject*>            GameObjectRegistry::m_PhysicsObjects;
-std::vector<GameObject*>            GameObjectRegistry::m_RenderableObjects;
-std::vector<GameObject*>            GameObjectRegistry::m_ScriptedObjects;
-std::vector<GameObject*>            GameObjectRegistry::m_Gizmos;
-std::vector<GameObject*>            GameObjectRegistry::m_queueToRemove;
+std::unordered_map<Syngine::UUID, GameObject> GameObjectRegistry::m_AllObjects;
+std::vector<GameObject*> GameObjectRegistry::m_PhysicsObjects;
+std::vector<GameObject*> GameObjectRegistry::m_RenderableObjects;
+std::vector<GameObject*> GameObjectRegistry::m_ScriptedObjects;
+std::vector<GameObject*> GameObjectRegistry::m_Gizmos;
+std::vector<GameObject*> GameObjectRegistry::m_queueToRemove;
 std::vector<std::pair<GameObject*, Syngine::ComponentTypeID>>
     GameObjectRegistry::m_queueToRemoveComponents;
 
-int GameObjectRegistry::nextID = 0; // Next ID to assign to a new GameObject
 std::vector<DirectionalLightComponent*>
     GameObjectRegistry::m_DirectionalLights; // Directional lights for the
                                              // renderer
@@ -38,30 +38,31 @@ GameObject&
 GameObjectRegistry::CreateGameObject(std::string              name,
                                      std::string              type,
                                      std::vector<std::string> tags) noexcept {
-    int id = GameObjectRegistry::nextID++;
+    Syngine::UUID uuid;
+    do {
+        uuid = GenerateUUID();
+    } while (m_AllObjects.contains(uuid));
 
     auto [it, inserted] = m_AllObjects.emplace(
         std::piecewise_construct,
-        std::forward_as_tuple(id),
+        std::forward_as_tuple(uuid),
         std::forward_as_tuple(
-            std::move(name), std::move(type), std::move(tags)));
+            std::move(name), std::move(type), std::move(tags), uuid));
 
-    GameObject& gameObject = (it->second);
-    gameObject._SetID(id);
-
-    return gameObject;
+    return it->second;
 }
 
 GameObject&
 GameObjectRegistry::Instantiate(const Serializer::Prefab& prefab) noexcept {
-    int id = GameObjectRegistry::nextID++;
-    auto [it, inserted] =
-        m_AllObjects.emplace(std::piecewise_construct,
-                             std::forward_as_tuple(id),
-                             std::forward_as_tuple(prefab.rootGameObjectData));
-    GameObject& gameObject = (it->second);
-    gameObject._SetID(id);
-    return gameObject;
+    Syngine::UUID uuid;
+    do {
+        uuid = GenerateUUID();
+    } while (m_AllObjects.contains(uuid));
+    auto [it, inserted] = m_AllObjects.emplace(
+        std::piecewise_construct,
+        std::forward_as_tuple(uuid),
+        std::forward_as_tuple(prefab.rootGameObjectData, uuid));
+    return it->second;
 }
 
 GameObject&
@@ -86,7 +87,7 @@ void GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
     }
 
     auto it = m_AllObjects.find(gameObject->GetID());
-    if (it == m_AllObjects.end()) {
+    if (it == m_AllObjects.end() || &it->second != gameObject) {
         return; // GameObject not found
     }
 
@@ -101,8 +102,9 @@ void GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
         gameObject); // Queue for removal at the end of the frame
 }
 
-void GameObjectRegistry::RemoveGameObjectById(int id) noexcept {
-    auto it = m_AllObjects.find(id);
+void GameObjectRegistry::RemoveGameObjectByID(
+    const Syngine::UUID& uuid) noexcept {
+    auto it = m_AllObjects.find(uuid);
     if (it == m_AllObjects.end()) {
         return; // GameObject not found
     }
@@ -125,7 +127,6 @@ void GameObjectRegistry::Clear() noexcept {
     m_Gizmos.clear();
     m_DirectionalLights.clear();
     m_AllObjects.clear();
-    nextID = 0;
 }
 
 void GameObjectRegistry::_RemoveQueuedObjects() noexcept {
@@ -169,6 +170,10 @@ void GameObjectRegistry::_RemoveQueuedObjectComponents() noexcept {
         auto removeFrom = [&](std::vector<GameObject*>& vec) {
             vec.erase(std::remove(vec.begin(), vec.end(), object), vec.end());
         };
+        auto* directionalLight =
+            type == Syngine::SYN_COMPONENT_LIGHT_DIRECTIONAL
+                ? object->GetComponent<DirectionalLightComponent>()
+                : nullptr;
         object->components.erase(type);
 
         switch (type) {
@@ -185,7 +190,35 @@ void GameObjectRegistry::_RemoveQueuedObjectComponents() noexcept {
         case Syngine::SYN_COMPONENT_SCRIPT:
             removeFrom(m_ScriptedObjects);
             break;
-        case Syngine::SYN_COMPONENT_CAMERA: removeFrom(m_Gizmos); break;
+        case Syngine::SYN_COMPONENT_CAMERA:
+            if (object->HasComponent(Syngine::SYN_COMPONENT_LIGHT_DIRECTIONAL)) {
+                if (object->gizmo == "g_camera_render") {
+                    object->gizmo = "g_light_sun";
+                }
+            } else {
+                removeFrom(m_Gizmos);
+                if (object->gizmo == "g_camera_render") {
+                    object->gizmo = "none";
+                }
+            }
+            break;
+        case Syngine::SYN_COMPONENT_LIGHT_DIRECTIONAL:
+            m_DirectionalLights.erase(
+                std::remove(m_DirectionalLights.begin(),
+                            m_DirectionalLights.end(),
+                            directionalLight),
+                m_DirectionalLights.end());
+            if (object->HasComponent(Syngine::SYN_COMPONENT_CAMERA)) {
+                if (object->gizmo == "g_light_sun") {
+                    object->gizmo = "g_camera_render";
+                }
+            } else {
+                removeFrom(m_Gizmos);
+                if (object->gizmo == "g_light_sun") {
+                    object->gizmo = "none";
+                }
+            }
+            break;
         case Syngine::SYN_COMPONENT_ZONE:
             Core::_GetContext()->ZoneSystem->_UnregisterZone(
                 object->GetComponent<ZoneComponent>());
@@ -219,7 +252,8 @@ GameObjectRegistry::GetGameObjectsByType(std::string_view type) noexcept {
     return result; // Return all GameObjects of the specified type
 }
 
-const GameObject* GameObjectRegistry::GetGameObjectById(int id) noexcept {
+const GameObject*
+GameObjectRegistry::GetGameObjectByID(const Syngine::UUID& id) noexcept {
     auto it = m_AllObjects.find(id);
     if (it != m_AllObjects.end()) {
         return &it->second; // Return the GameObject with the given ID

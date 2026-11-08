@@ -9,7 +9,7 @@
 #pragma once
 #include "Syngine/GameObjects/Component.h"
 #include "Syngine/GameObjects/Components/DirectionalLightComponent.h"
-#include <optional>
+#include "Syngine/Utils/UUID.h"
 #include <unordered_map>
 #include <vector>
 
@@ -59,12 +59,11 @@ class GameObjectRegistry {
     /// @since v0.0.1
     static void RemoveGameObject(GameObject* GameObject) noexcept;
 
-    /// @brief Remove a GameObject by ID. Defers until the end of the frame.
-    /// @param id The ID of the GameObject to remove.
-    /// @return true if the GameObject was removed, false if it was not found.
+    /// @brief Remove a GameObject by runtime UUID at the end of the frame.
+    /// @param uuid The runtime UUID of the GameObject to remove.
     /// @threadsafety safe
     /// @since v0.0.1
-    static void RemoveGameObjectById(int id) noexcept;
+    static void RemoveGameObjectByID(const Syngine::UUID& uuid) noexcept;
 
     /// @brief Clear all objects
     /// @post All GameObjects are removed from the registry.
@@ -90,12 +89,13 @@ class GameObjectRegistry {
     static std::vector<GameObject*>
     GetGameObjectsByType(std::string_view type) noexcept;
 
-    /// @brief Get a GameObject by ID.
-    /// @param id The ID of the GameObject to find.
-    /// @return The GameObject with the given ID.
+    /// @brief Get a GameObject by runtime UUID.
+    /// @param uuid The runtime UUID of the GameObject to find.
+    /// @return The GameObject with the given UUID, or nullptr if not found.
     /// @threadsafety read-only
     /// @since v0.0.1
-    static const GameObject* GetGameObjectById(int id) noexcept;
+    static const GameObject*
+    GetGameObjectByID(const Syngine::UUID& uuid) noexcept;
 
     /// @brief Gets all ``GameObjects`` with a specific component.
     /// @param type The component type to search for.
@@ -107,10 +107,12 @@ class GameObjectRegistry {
 
     /// @brief Get all GameObjects in the registry.
     /// @return A reference to the unordered map of all GameObjects. The map is
-    /// indexed by GameObject ID.
+    /// indexed by runtime GameObject UUID.
+    /// @note I really don't recommend using this function, there's better ways
+    /// to do whatever you're doing.
     /// @threadsafety read-only
     /// @since v0.0.1
-    static inline const std::unordered_map<int, GameObject>&
+    static inline const std::unordered_map<Syngine::UUID, GameObject>&
     GetAllGameObjects() noexcept {
         return m_AllObjects;
     }
@@ -195,7 +197,8 @@ class GameObjectRegistry {
   private:
     // Could be worth using unordered_set for faster removals on the sublists.
 
-    static std::unordered_map<int, GameObject> m_AllObjects; // All GameObjects
+    static std::unordered_map<Syngine::UUID, GameObject>
+        m_AllObjects; // All GameObjects
     static std::vector<GameObject*>
         m_PhysicsObjects; // GameObjects with physics enabled
     static std::vector<GameObject*>
@@ -213,8 +216,6 @@ class GameObjectRegistry {
     static std::vector<std::pair<GameObject*, Syngine::ComponentTypeID>>
         m_queueToRemoveComponents; // Queue of GameObject components to remove
                                    // at the end of the frame
-
-    static int nextID; // Next ID to assign to a new GameObject
 
     static void
     _RemoveQueuedObjects() noexcept; // Process the queue of GameObjects to

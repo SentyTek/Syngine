@@ -23,6 +23,8 @@ You can copy-and-paste that comment into any new header and source files you cre
 
 Any internal or private function should be prefixed with an underscore (`void _InternalClassHelper()` for example). Class member variables should be prefixed with `m_` (`m_carSpeed` for example). Class names are PascalCase, variable names are camelCase, constants and enum members are UPPER_SNAKE_CASE.
 
+Comments explaining the why of code and a healthy amount of empty lines between logical blocks are appriciated for readability.
+
 ## Code documentation format
 SynDoc Format v1.1 (Inspired by Doxygen)
 

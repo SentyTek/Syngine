@@ -9,6 +9,7 @@
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Core/Logger.h>
 #include <Syngine/Utils/Serializer.h>
+#include <Syngine/Core/Core.h>
 
 #include "bgfx/bgfx.h"
 #include <SDL3/SDL.h>
@@ -196,6 +197,120 @@ Syngine::LoadTextureFromBundle(const std::string& bundlePath,
     ms.read(data.data(), ms.size());
     return Syngine::LoadTextureFromMemory(
         data.data(), data.size(), textureName.c_str());
+}
+
+bgfx::TextureHandle Syngine::LoadTextureArrayFromBundle(
+    const std::string&              bundlePath,
+    const std::vector<std::string>& textureNames) {
+    // This reuses a lot of the same machinery as LoadTextureFromBundle and
+    // LoadTextureFromMemory
+    if (textureNames.empty()) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
+                              "No texture names provided for bundle %s",
+                              bundlePath.c_str());
+        return BGFX_INVALID_HANDLE;
+    }
+    if (bundlePath.empty()) {
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR, false, "No bundle path provided");
+        return BGFX_INVALID_HANDLE;
+    }
+    if (!Core::Get()->GetSystemSpecifications().supportsTexArrays) {
+        Syngine::Logger::Fatal("Texture arrays are not supported on this GPU");
+        return BGFX_INVALID_HANDLE;
+    }
+
+    std::vector<scl::stream> streams;
+    streams.reserve(textureNames.size());
+    scl::pack::Packager packager;
+    for (const auto& name : textureNames) {
+        scl::stream ms = Syngine::Serializer::_ReadFromBundle(
+            bundlePath, name, packager, false);
+        if (ms.size() == 0) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  false,
+                                  "Failed to load texture %s from bundle %s",
+                                  name.c_str(),
+                                  bundlePath.c_str());
+            continue;
+        }
+        streams.push_back(std::move(ms));
+    }
+    packager.close();
+
+    if (streams.empty()) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
+                              "No textures could be loaded from bundle %s",
+                              bundlePath.c_str());
+        return BGFX_INVALID_HANDLE;
+    }
+
+    std::vector<DecodedTextureData> dataArrays;
+    dataArrays.reserve(streams.size());
+    for (auto& ms : streams) {
+        std::vector<uint8_t> data(ms.size());
+        ms.read(data.data(), ms.size());
+        DecodedTextureData decoded;
+        if (!DecodeTextureFromMemory(data.data(), data.size(), decoded)) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  false,
+                                  "Failed to decode texture from memory");
+            continue;
+        }
+        dataArrays.push_back(std::move(decoded));
+    }
+
+    if (dataArrays.empty()) {
+        Syngine::Logger::LogF(
+            Syngine::LogLevel::ERR,
+            false,
+            "No valid textures could be decoded from bundle %s",
+            bundlePath.c_str());
+        return BGFX_INVALID_HANDLE;
+    }
+
+    // All textures should be same size
+    uint16_t width  = dataArrays[0].width;
+    uint16_t height = dataArrays[0].height;
+    for (const auto& data : dataArrays) {
+        if (data.width != width || data.height != height) {
+            Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                                  false,
+                                  "Inconsistent texture sizes in bundle %s",
+                                  bundlePath.c_str());
+            return BGFX_INVALID_HANDLE;
+        }
+    }
+
+    // Create big data array for all the textures
+    std::vector<std::byte> bigData;
+    bigData.reserve(width * height * 4 * dataArrays.size());
+    for (const auto& data : dataArrays) {
+        bigData.insert(bigData.end(), data.payload.begin(), data.payload.end());
+    }
+
+    const bgfx::Memory* mem =
+        bgfx::copy(bigData.data(), static_cast<uint32_t>(bigData.size()));
+    bgfx::TextureHandle tex =
+        bgfx::createTexture2D(width,
+                              height,
+                              false,
+                              static_cast<uint16_t>(dataArrays.size()),
+                              bgfx::TextureFormat::RGBA8,
+                              BGFX_TEXTURE_NONE,
+                              mem);
+
+    if (!bgfx::isValid(tex)) {
+        Syngine::Logger::LogF(Syngine::LogLevel::ERR,
+                              false,
+                              "Failed to create texture from bundle %s",
+                              bundlePath.c_str());
+        return BGFX_INVALID_HANDLE;
+    }
+
+    return tex;
 }
 
 bgfx::TextureHandle Syngine::CreateFlatTexture() {

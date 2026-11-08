@@ -32,3 +32,4 @@
 
 #include <Syngine/Utils/Helpers.h>
 #include <Syngine/Utils/Profiler.h>
+#include <Syngine/Utils/UUID.h>

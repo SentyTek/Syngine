@@ -25,9 +25,6 @@
 
 #include <cstdint>
 #include <cstring>
-#include <exception>
-#include <filesystem>
-#include <fstream>
 #include <string>
 
 namespace Syngine {
@@ -68,7 +65,7 @@ static std::string _WideToUtf8(const wchar_t* value) {
 
 static std::string _GetWindowsGpuName(uint16_t vendorId, uint16_t deviceId) {
     IDXGIFactory1* factory = nullptr;
-    HRESULT        result  = CreateDXGIFactory1(__uuidof(IDXGIFactory1),
+    HRESULT result = CreateDXGIFactory1(__uuidof(IDXGIFactory1),
                                         reinterpret_cast<void**>(&factory));
     if (FAILED(result) || !factory) {
         return "Unknown";
@@ -98,9 +95,32 @@ static std::string _GetWindowsGpuName(uint16_t vendorId, uint16_t deviceId) {
     factory->Release();
     return gpuName;
 }
+#elif __linux__
+#include <cstdio>
+static std::string _GetLinuxGpuName(uint16_t vendorId, uint16_t deviceId) {
+    // We try to run lspci to get the GPU name on Linux
+    // This is a very basic approach and may not work in all cases
+    std::string command = "lspci -nn | grep -i VGA";
+    FILE*       pipe    = popen(command.c_str(), "r");
+    if (!pipe) {
+        return "Unknown";
+    }
+    char        buffer[128];
+    std::string result = "";
+    while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+        result += buffer;
+    }
+    pclose(pipe);
+
+    if (result.empty()) {
+        return "Unknown";
+    }
+
+    return result;
+}
 #endif
 
-static std::string _GetGpuName(const bgfx::Caps* caps) {
+static std::string _TryGetGpuName(const bgfx::Caps* caps) {
     if (!caps) {
         return "Unknown";
     }
@@ -108,6 +128,12 @@ static std::string _GetGpuName(const bgfx::Caps* caps) {
 #ifdef _WIN32
     const std::string gpuName =
         _GetWindowsGpuName(caps->vendorId, caps->deviceId);
+    if (gpuName != "Unknown") {
+        return gpuName;
+    }
+#elif __linux__
+    const std::string gpuName =
+        _GetLinuxGpuName(caps->vendorId, caps->deviceId);
     if (gpuName != "Unknown") {
         return gpuName;
     }

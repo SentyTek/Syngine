@@ -17,6 +17,7 @@
 #include "Syngine/Scene/GameObjectRegistry.h"
 #include "Syngine/GameObjects/Component.h"
 #include "Syngine/Utils/Serializer.h"
+#include "Syngine/Utils/UUID.h"
 
 namespace Syngine {
 
@@ -62,24 +63,52 @@ class GameObject {
                std::string              type,
                std::vector<std::string> initialTags);
 
+    /// @brief Construct a registry-owned GameObject with a runtime UUID.
+    /// @param name Name of the GameObject.
+    /// @param type Type of the GameObject.
+    /// @param initialTags Initial tags assigned to the GameObject.
+    /// @param uuid Unique runtime UUID assigned by the registry.
+    /// @internal
+    /// @since v0.0.3
+    GameObject(std::string              name,
+               std::string              type,
+               std::vector<std::string> initialTags,
+               Syngine::UUID            uuid);
+
     /// @brief Construct from a DataNode, used for deserialization
     /// @param data DataNode representing the serialized GameObject
     /// @internal
     /// @since v0.0.1
     GameObject(const Serializer::DataNode& data);
 
+    /// @brief Construct serialized data with a registry-assigned runtime UUID.
+    /// @param data Serialized GameObject data.
+    /// @param uuid Unique runtime UUID assigned by the registry
+    /// (Syngine::UUID).
+    /// @internal
+    /// @since v0.0.3
+    GameObject(const Serializer::DataNode& data, Syngine::UUID uuid);
+
     ~GameObject();
 
     // Operator overload yippee
     bool operator==(const GameObject& other) const {
-        return this->id == other.id;
+        return m_uuid == other.m_uuid;
     }
 
-    /// @brief Get the ID of the GameObject
-    /// @return ID of the GameObject
+    /// @brief Get the GameObject's runtime UUID.
+    /// @return The runtime UUID, regenerated when an object is instantiated.
     /// @threadsafety safe
-    /// @since v0.0.1
-    inline long GetID() noexcept { return this->id; };
+    /// @since v0.0.3
+    const Syngine::UUID& GetID() const noexcept { return m_uuid; }
+
+    /// @brief Get the GameObject's persistent authored identity.
+    /// @return The persistent ID preserved by scene serialization.
+    /// @threadsafety safe
+    /// @since v0.0.3
+    const Syngine::UUID& GetPersistentID() const noexcept {
+        return m_persistentID;
+    }
 
     /// @brief Check if the GameObject is active
     /// @return true if the GameObject is active, false otherwise
@@ -220,7 +249,7 @@ class GameObject {
     /// @return Vector of pointers to the child GameObjects
     /// @threadsafety safe
     /// @since v0.0.2
-    const std::vector<GameObject*>& GetChildren() const;
+    std::vector<GameObject*> GetChildren() const;
 
     /// @brief Checks if this object can become parented to the provided object
     /// @param potentialParent Pointer to the potential parent GameObject
@@ -231,19 +260,13 @@ class GameObject {
     bool CanBeParentedTo(const GameObject* potentialParent) const;
 
   private:
-    long id; // Unique ID for the GameObject
+    Syngine::UUID m_uuid;
+    Syngine::UUID m_persistentID;
 
     std::map<Syngine::ComponentTypeID, std::unique_ptr<Syngine::IComponent>>
         components; // Map of components attached to the GameObject
 
     bool isActive = true; // Whether the GameObject is active or not
-
-    /// @brief Set the ID of the GameObject
-    /// @param id ID of the GameObject
-    /// @threadsafety safe
-    /// @since v0.0.1
-    /// @internal
-    inline void _SetID(long id) noexcept { this->id = id; }
 
     friend class GameObjectRegistry; // Allow GameObjectRegistry to access
                                      // private members

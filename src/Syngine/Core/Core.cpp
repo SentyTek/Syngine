@@ -65,6 +65,9 @@ Core::FrameCounts                       Syngine::Core::m_frameCounts;
 std::vector<std::function<void(int)>>   Syngine::Core::m_frameCallbacks;
 std::vector<std::function<void(float)>> Syngine::Core::m_fixedUpdateCallbacks;
 
+HardwareSpecs Syngine::Core::m_hardwareSpecs;
+bool          Syngine::Core::m_gottenHardwareSpecs = false;
+
 #ifdef SYN_IS_EDITOR
 bool Syngine::Core::viewportHovered      = false;
 bool Syngine::Core::viewportActive       = false;
@@ -241,8 +244,10 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     "Debug",
                                     KeyBinding(Keycode::F1),
                                     { .onPressed = []() {
-                                        Syngine::DebugModes modes = Core::GetDebugMode();
-                                        modes.PhysWireframes = !modes.PhysWireframes;
+                                        Syngine::DebugModes modes =
+                                            Core::GetDebugMode();
+                                        modes.PhysWireframes =
+                                            !modes.PhysWireframes;
                                         Core::SetDebugMode(modes);
                                     } });
 
@@ -589,6 +594,12 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
                               "is ready. This is not allowed.");
         return Syngine::HardwareSpecs();
     }
+
+    // Getting the hardware is expensive, so only do it once
+    if (m_gottenHardwareSpecs) {
+        return m_hardwareSpecs;
+    }
+
     Syngine::HardwareSpecs specs;
 #ifdef _WIN32
     // On Windows, gather system information using Windows API
@@ -688,18 +699,24 @@ Syngine::HardwareSpecs Core::GetSystemSpecifications() {
     const bgfx::Caps* caps = bgfx::getCaps();
     if (caps) {
         specs.gpuVendorID     = _FormatGpuVendorIdHex(caps->vendorId);
-        specs.gpuName         = _GetGpuName(caps);
+        specs.gpuName         = _TryGetGpuName(caps);
         specs.maxTextureSize  = caps->limits.maxTextureSize;
         specs.supportsCompute = (caps->supported & BGFX_CAPS_COMPUTE) != 0;
         specs.supports3DTextures =
             (caps->supported & BGFX_CAPS_TEXTURE_3D) != 0;
+        specs.supportsTexArrays =
+            (caps->supported & BGFX_CAPS_TEXTURE_2D_ARRAY) != 0;
     } else {
         specs.gpuVendorID        = "Unknown";
         specs.gpuName            = "Unknown";
         specs.maxTextureSize     = 0;
         specs.supportsCompute    = false;
         specs.supports3DTextures = false;
+        specs.supportsTexArrays  = false;
     }
+
+    m_hardwareSpecs       = specs;
+    m_gottenHardwareSpecs = true;
     return specs;
 }
 

@@ -629,6 +629,8 @@ void Logger::LogHardwareInfo() {
                 std::string(specs.supportsCompute ? "Yes" : "No") + "\n";
     specsStr += "\tSupports 3D Textures: " +
                 std::string(specs.supports3DTextures ? "Yes" : "No") + "\n";
+    specsStr += "\tSupports Texture Arrays: " +
+                std::string(specs.supportsTexArrays ? "Yes" : "No") + "\n";
 
     Logger::Log(specsStr, LogLevel::INFO, false);
 }
