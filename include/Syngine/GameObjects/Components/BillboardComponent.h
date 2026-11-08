@@ -155,6 +155,18 @@ class BillboardComponent : public Syngine::IComponent {
     /// @return BillboardMode The billboard rendering mode
     BillboardMode GetMode() const { return this->m_mode; }
 
+    /// @brief Set the billboard mode
+    /// @param mode The billboard rendering mode
+    void SetMode(BillboardMode mode) { this->m_mode = mode; }
+
+    /// @brief Get the bundle path of the billboard
+    /// @return std::string The path to the bundle file
+    std::string GetBundlePath() const { return this->m_bundlePath; }
+
+    /// @brief Get the texture path of the billboard
+    /// @return std::string The path to the texture file
+    std::string GetTexturePath() const { return this->m_texturePath; }
+
     /// @brief Get this billboard's mutable material instance.
     MaterialInstance&       GetMaterialInstance() { return m_material; }
     const MaterialInstance& GetMaterialInstance() const { return m_material; }

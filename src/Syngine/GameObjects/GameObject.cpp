@@ -58,6 +58,11 @@ GameObject::GameObject(const Serializer::DataNode& data) {
 }
 
 GameObject::~GameObject() {
+    // Notify parent that this game object is being removed
+    if (this->GetParent()) {
+        this->GetParent()->RemoveChild(this);
+    }
+
     // Delete components
     this->components.clear();
 }
@@ -83,6 +88,10 @@ bool GameObject::HasTag(const std::string& tag) const {
 
 void GameObject::ClearTags() { tags.clear(); }
 
+void GameObject::SetTags(const std::vector<std::string>& newTags) {
+    tags = newTags;
+}
+
 size_t GameObject::GetComponentCount() const noexcept {
     return this->components.size();
 }
@@ -93,7 +102,6 @@ bool GameObject::RemoveComponent(Syngine::ComponentTypeID type) {
         return false; // Component not found
     }
 
-    this->components.erase(it);
     GameObjectRegistry::_NotifyComponentRemoved(this, type);
     return true;
 }
@@ -181,7 +189,7 @@ GameObject* GameObject::GetParent() const {
     TransformComponent* tComp = this->GetComponent<TransformComponent>();
     if (tComp) {
         TransformComponent* parentT = tComp->GetParent();
-        if (parentT) {
+        if (parentT && parentT->m_owner) {
             return parentT->m_owner;
         }
     }
@@ -235,4 +243,15 @@ const std::vector<GameObject*>& GameObject::GetChildren() const {
         }
     }
     return children; // Return empty vector if no TransformComponent
+}
+
+bool GameObject::CanBeParentedTo(const GameObject* potentialParent) const {
+    if (potentialParent == nullptr) return true;
+    if (potentialParent == this) return false;
+    const GameObject* current = potentialParent;
+    while (current) {
+        if (current == this) return false;
+        current = current->GetParent();
+    }
+    return true;
 }

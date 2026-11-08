@@ -21,6 +21,7 @@
 #include <Syngine/GameObjects/GameObject.h>
 
 #include <Syngine/Graphics/Rendering/Renderer.h>
+#include <Syngine/Graphics/Rendering/GizmoOverlay.h>
 #include <Syngine/Graphics/Resources/ModelLoader.h>
 #include <Syngine/Graphics/Resources/MaterialManager.h>
 #include <Syngine/Graphics/Resources/ShaderManager.h>

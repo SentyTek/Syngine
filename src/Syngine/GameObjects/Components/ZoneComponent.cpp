@@ -167,6 +167,9 @@ bool ZoneComponent::HasTag(const std::string& tag) const {
 }
 
 std::vector<std::string> ZoneComponent::GetTags() const {
+    if (m_tags.empty()) {
+        return {};
+    }
     return std::vector<std::string>(m_tags.begin(), m_tags.end());
 }
 

@@ -275,7 +275,9 @@ bool AssimpLoader::_LoadModel(ModelData&         out,
 
     const int flags = aiProcess_JoinIdenticalVertices |
                       aiProcess_CalcTangentSpace | aiProcess_GenSmoothNormals |
-                      aiProcess_DropNormals;
+                      aiProcess_DropNormals |
+                      (bakeNodeTransforms ? aiProcess_PreTransformVertices
+                                          : 0);
 
     const std::string formatHint = _GetAssimpFormatHint(assetPath);
 
@@ -366,16 +368,16 @@ bool AssimpLoader::processScene(ModelData&     out,
 
             // Compute AABB for this submesh
             if (aiMeshPtr->mNumVertices > 0) {
-                aiVector3D min = aiMeshPtr->mVertices[0];
-                aiVector3D max = aiMeshPtr->mVertices[0];
+                aiVector3D min = _MirrorX(aiMeshPtr->mVertices[0]);
+                aiVector3D max = min;
                 for (uint32_t v = 1; v < aiMeshPtr->mNumVertices; ++v) {
-                    const aiVector3D& vert = aiMeshPtr->mVertices[v];
-                    min.x                  = std::min(min.x, vert.x);
-                    min.y                  = std::min(min.y, vert.y);
-                    min.z                  = std::min(min.z, vert.z);
-                    max.x                  = std::max(max.x, vert.x);
-                    max.y                  = std::max(max.y, vert.y);
-                    max.z                  = std::max(max.z, vert.z);
+                    const aiVector3D vert = _MirrorX(aiMeshPtr->mVertices[v]);
+                    min.x                 = std::min(min.x, vert.x);
+                    min.y                 = std::min(min.y, vert.y);
+                    min.z                 = std::min(min.z, vert.z);
+                    max.x                 = std::max(max.x, vert.x);
+                    max.y                 = std::max(max.y, vert.y);
+                    max.z                 = std::max(max.z, vert.z);
                 }
                 subMesh.boundMin.setX(min.x);
                 subMesh.boundMin.setY(min.y);

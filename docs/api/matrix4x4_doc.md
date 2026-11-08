@@ -564,7 +564,7 @@ Signature:
 
 Signature:
 ```cpp
- [[nodiscard("Use the transpose() method to transpose in-place")]] inline Matrix4x4 transposed() const;
+ [[nodiscard( "Use the transpose() method to transpose in-place")]] inline Matrix4x4 transposed() const;
 ```
 **Returns:** New transposed matrix
 

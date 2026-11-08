@@ -19,7 +19,8 @@
 
 #include <cstdint>
 #include <array>
-#include <vector>
+
+#define SYNINT_DEFAULT_SHADERBUNDLE_NAME "shaders/default_shaders.spk"
 
 namespace Syngine {
 
@@ -86,13 +87,13 @@ class RenderDirector {
                               std::array<Math::Matrix4x4, 4>& outLightProj,
                               Math::Vector4&                  outCascadeSplits);
 
-    static constexpr std::array<Syngine::ViewID, 11> _allViews = {
-        Syngine::VIEW_SHADOW,      Syngine::VIEW_LIGHT_SHADOWS,
-        Syngine::VIEW_SKY,         Syngine::VIEW_FORWARD,
-        Syngine::VIEW_BILLBOARD,   Syngine::VIEW_DEBUG,
-        Syngine::VIEW_BILL_DBG,    Syngine::VIEW_AO,
-        Syngine::VIEW_POSTPROCESS, Syngine::VIEW_UI,
-        Syngine::VIEW_UI_DEBUG
+    static constexpr std::array<Syngine::ViewID, 12> _allViews = {
+        Syngine::VIEW_SHADOW,    Syngine::VIEW_LIGHT_SHADOWS,
+        Syngine::VIEW_SKY,       Syngine::VIEW_FORWARD,
+        Syngine::VIEW_BILLBOARD, Syngine::VIEW_DEBUG,
+        Syngine::VIEW_GIZMO,     Syngine::VIEW_BILL_DBG,
+        Syngine::VIEW_AO,        Syngine::VIEW_POSTPROCESS,
+        Syngine::VIEW_UI,        Syngine::VIEW_UI_DEBUG
     };
 
     static bool _CreateSceneBuffers();
@@ -106,7 +107,8 @@ class RenderDirector {
     _CollectRenderPackets(CameraComponent* camera); //* Collect render packets
                                                     // for the current frame
 
-    static bool _PrepareRenderViews(CameraComponent* camera);
+    static bool _PrepareRenderViews(CameraComponent* camera,
+                                    bool&            outHasAvailGlobalLight);
     static CameraComponent::Frustum
     _GetCascadeFrustum(uint8_t                    cascade,
                        CameraComponent*           camera,
@@ -125,8 +127,14 @@ class RenderDirector {
                                std::span<RenderPacket> packets);
     static void _DrawSSAO(const Shader* program);
     static void _DrawPostProcess(const Shader* program);
-    static void _DrawDbgBillboard(Shader* program);
+    static void _DrawDbgBillboard(const Shader* program);
+
+#ifdef SYN_IS_EDITOR
+    static void _DrawGizmos(const Shader* program);
+#endif
+
     static void _DrawUIDebug(CameraComponent* camera);
+    static void _DrawUI(const Shader* program);
 
     static float
         m_maxSmallObjDistance; //* Small objects get culled beyond this distance
@@ -191,13 +199,13 @@ class RenderDirector {
     };
     static RenderCoreBuffers m_buffers;
 
-    static Shader*             m_ssaoProgram;
-    static bgfx::UniformHandle m_ssao_depthTex;
-    static bgfx::UniformHandle m_ssao_normalTex;
-    static bgfx::UniformHandle m_ssaob_ssaoTex;
-    static bgfx::UniformHandle m_tonemap_sceneTex;
-    static bgfx::UniformHandle m_tonemap_ssaoTex;
-    static bgfx::UniformHandle m_defaultShadowMap;
+    static Shader* m_ssaoProgram; // Non-owning; owned by ShaderManager
+    static bgfx::UniformHandle      m_ssao_depthTex;
+    static bgfx::UniformHandle      m_ssao_normalTex;
+    static bgfx::UniformHandle      m_ssaob_ssaoTex;
+    static bgfx::UniformHandle      m_tonemap_sceneTex;
+    static bgfx::UniformHandle      m_tonemap_ssaoTex;
+    static bgfx::UniformHandle      m_defaultShadowMap;
 
     static std::array<Math::Matrix4x4, NUM_CASCADES> m_csmLightViewProj;
     static Math::Vec4                                m_csmCascadeSplits;
@@ -248,6 +256,10 @@ class RenderDirector {
     static void _GetRenderResources();
     static bool
         m_collectedresources; //* Whether render resources have been collected
+
+#ifdef SYN_IS_EDITOR
+    static UI::Debug::ImGui_ImplBgfx m_uiDebug;
+#endif
 };
 
 } // namespace Syngine

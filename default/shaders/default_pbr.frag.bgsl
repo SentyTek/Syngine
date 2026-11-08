@@ -13,7 +13,7 @@ SAMPLER2D(s_normalMap, 1);
 
 //lighting + material params
 // @EngineUniform freq="draw" src="Renderer.SunDirection"
-uniform vec4 u_lightDir; //worldspace sun dir
+uniform vec4 u_lightDir; //worldspace sun dir w = receive shadows (1.0 yes / 0.0 no)
 // @EngineUniform freq="draw" src="Renderer.SkyColorZenith"
 uniform vec4 u_skyColor; //hemisphere ambient sky color
 // @EngineUniform freq="draw" src="Renderer.SunColor"
@@ -58,8 +58,11 @@ void main() {
     vec3 ambient = mix(albedoRgb, skyColor, hemiMix) * u_materialParams1.y;
 
     float microShadow = clamp(dot(Nmicro, lightDirToSun) * 2.0 + 0.3, 0.0, 1.0);
-    float shadow = getShadowFactor(v_worldPos, vN, u_lightDir, v_viewDepth);
-    shadow = mix(1.0, shadow, smoothstep(0.1, 0.3, sunElevation));
+    float shadow = 1.0;
+    if (u_lightDir.w > 0.5) {
+        shadow = getShadowFactor(v_worldPos, vN, u_lightDir, v_viewDepth);
+        shadow = mix(1.0, shadow, smoothstep(0.1, 0.3, sunElevation));
+    }
 
     float sunIntensity = smoothstep(-0.1, 0.1, sunElevation);
     vec3 directLight = u_sunColor.xyz * u_sunColor.w * sunIntensity * NdotL * shadow * microShadow;

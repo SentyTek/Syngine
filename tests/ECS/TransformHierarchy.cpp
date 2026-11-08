@@ -10,6 +10,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "../defines.h"
+#include "Syngine/Scene/GameObjectRegistry.h"
 #include <Syngine/Syngine.h>
 
 using namespace Syngine;
@@ -35,11 +36,14 @@ TEST_CASE("Parent Movement Propagation in children", "[ECS]") {
     REQUIRE(parentTransform != nullptr);
     REQUIRE(childTransform != nullptr);
 
+    const uint64_t childVersion = childTransform->GetVersion();
     parentTransform->SetPosition(SVec3(10.0f, 0.0f, 0.0f));
+    REQUIRE(childTransform->GetVersion() > childVersion);
     REQUIRE_THAT(childTransform->GetWorldPosition().x(),
                  WithinAbs(10.0f, FLOAT_MARGIN));
 
     GameObjectRegistry::Clear();
+    REQUIRE(GameObjectRegistry::GetAllGameObjects().empty());
 }
 
 // Tests that local and world getters work for child GameObjects
@@ -70,6 +74,30 @@ TEST_CASE("Local and World Getters in children", "[ECS]") {
                  WithinAbs(0.0f, FLOAT_MARGIN));
     REQUIRE_THAT(childTransform->GetPosition().y(),
                  WithinAbs(5.0f, FLOAT_MARGIN));
+
+    GameObjectRegistry::Clear();
+}
+
+TEST_CASE("Parent rotation orbits children around the parent", "[ECS]") {
+    GameObjectRegistry::Clear();
+
+    auto& parent = GameObjectRegistry::CreateGameObject(
+        "Parent", "default", std::vector<std::string>{});
+    auto& child = GameObjectRegistry::CreateGameObject(
+        "Child", "default", std::vector<std::string>{});
+
+    auto* parentTransform = parent.AddComponent<TransformComponent>();
+    auto* childTransform  = child.AddComponent<TransformComponent>();
+    childTransform->SetPosition(SVec3(1.0f, 0.0f, 0.0f));
+    child.SetParent(&parent);
+
+    parentTransform->SetRotationQuat(
+        Quaternion(SVec3(0.0f, 0.0f, 1.0f), DEG2RAD(90.0f)));
+
+    const SVec3 childWorldPosition = childTransform->GetWorldPosition();
+    REQUIRE_THAT(childWorldPosition.x(), WithinAbs(0.0f, FLOAT_MARGIN));
+    REQUIRE_THAT(childWorldPosition.y(), WithinAbs(1.0f, FLOAT_MARGIN));
+    REQUIRE_THAT(childWorldPosition.z(), WithinAbs(0.0f, FLOAT_MARGIN));
 
     GameObjectRegistry::Clear();
 }

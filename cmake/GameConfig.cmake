@@ -65,6 +65,8 @@ function(compile_collect_default_gizmos GIZMO_BUNDLE_OUTPUT_VAR)
         return()
     endif()
 
+    # Cheap existence check only; actual file discovery is delegated to syntools
+    # via the "." entry below (see AssetPackager's directory auto-expansion).
     file(GLOB DEFAULT_GIZMO_ENTRIES RELATIVE "${DEFAULT_GIZMO_SOURCE_DIR}" "${DEFAULT_GIZMO_SOURCE_DIR}/*")
     if(NOT DEFAULT_GIZMO_ENTRIES)
         set(${GIZMO_BUNDLE_OUTPUT_VAR} "" PARENT_SCOPE)
@@ -75,7 +77,7 @@ function(compile_collect_default_gizmos GIZMO_BUNDLE_OUTPUT_VAR)
         BUNDLE_NAME "default_gizmos"
         OUTPUT_DIRECTORY "${SYNGINE_STAGED_ROM_DIR}/gizmos"
         SOURCE_DIRECTORY "${DEFAULT_GIZMO_SOURCE_DIR}"
-        INPUT_FILES ${DEFAULT_GIZMO_ENTRIES}
+        INPUT_FILES "."
         BUNDLE_FILE_OUTPUT_VAR GENERATED_GIZMO_BUNDLE
     )
 
@@ -88,51 +90,88 @@ function(compile_collect_asset_bundle ASSET_SRC_DIR BUNDLE_NAME ASSET_BUNDLE_OUT
         return()
     endif()
 
-    file(GLOB ASSET_ENTRIES RELATIVE "${ASSET_SRC_DIR}" "${ASSET_SRC_DIR}/*")
-    if(NOT ASSET_ENTRIES)
+    # Name-only glob: just enough to declare static bundle outputs for Ninja.
+    # Actual per-bundle file discovery is delegated to `syntools pack-tree` at build time,
+    # which creates one bundle per top-level subdirectory of ASSET_SRC_DIR, plus one for
+    # any loose files directly under it (mirrors compile_all_meshes's behavior).
+    file(GLOB ASSET_TOP_ENTRIES RELATIVE "${ASSET_SRC_DIR}" "${ASSET_SRC_DIR}/*")
+    if(NOT ASSET_TOP_ENTRIES)
         set(${ASSET_BUNDLE_OUTPUT_VAR} "" PARENT_SCOPE)
         return()
     endif()
 
-    create_file_bundle(
-        BUNDLE_NAME "${BUNDLE_NAME}"
-        OUTPUT_DIRECTORY "${SYNGINE_STAGED_ROM_DIR}/${BUNDLE_NAME}"
-        SOURCE_DIRECTORY "${ASSET_SRC_DIR}"
-        INPUT_FILES ${ASSET_ENTRIES}
-        BUNDLE_FILE_OUTPUT_VAR GENERATED_ASSET_BUNDLE
+    if(NOT TARGET syntools)
+        message(FATAL_ERROR "compile_collect_asset_bundle: 'syntools' target not found. Ensure it is built before this function is called.")
+    endif()
+
+    set(bundle_output_dir "${SYNGINE_STAGED_ROM_DIR}/${BUNDLE_NAME}")
+
+    set(generated_bundle_files "")
+    set(has_loose_asset_files FALSE)
+    foreach(asset_entry ${ASSET_TOP_ENTRIES})
+        if(IS_DIRECTORY "${ASSET_SRC_DIR}/${asset_entry}")
+            list(APPEND generated_bundle_files "${bundle_output_dir}/${asset_entry}.spk")
+        else()
+            set(has_loose_asset_files TRUE)
+        endif()
+    endforeach()
+    if(has_loose_asset_files)
+        list(APPEND generated_bundle_files "${bundle_output_dir}/${BUNDLE_NAME}.spk")
+    endif()
+
+    add_custom_command(
+        OUTPUT ${generated_bundle_files}
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${bundle_output_dir}"
+        COMMAND $<TARGET_FILE:syntools> pack-tree "${ASSET_SRC_DIR}" "${bundle_output_dir}" "--root-bundle-name=${BUNDLE_NAME}"
+        DEPENDS syntools
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+        COMMENT "Bundling asset tree '${BUNDLE_NAME}' from ${ASSET_SRC_DIR}"
+        VERBATIM
     )
 
-    set(${ASSET_BUNDLE_OUTPUT_VAR} "${GENERATED_ASSET_BUNDLE}" PARENT_SCOPE)
+    set(${ASSET_BUNDLE_OUTPUT_VAR} "${generated_bundle_files}" PARENT_SCOPE)
 endfunction()
 
 # Asset handling helpers
-function(_add_assets_win_linux target)
-    get_target_property(COPY_ROM ${target} SYNGINE_COPY_ROM)
-    if(COPY_ROM)
-        add_custom_command(TARGET ${target} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${target}>/rom"
-            COMMENT "ROM assets are staged directly into executable directory"
-        )
-    endif()
-endfunction()
-
-function(_add_assets_mac target)
-    set(ROM_DIR "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/rom")
-
-    get_target_property(COPY_ROM ${target} SYNGINE_COPY_ROM)
-    if(COPY_ROM)
-        add_custom_command(TARGET ${target} POST_BUILD
+function(_create_rom_copy_target target)
+    if(WIN32 OR (UNIX AND NOT APPLE))
+        set(ROM_DIR "$<TARGET_FILE_DIR:${target}>/rom")
+        add_custom_target(${target}RomCopy ALL
             COMMAND ${CMAKE_COMMAND} -E make_directory "${ROM_DIR}"
             COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${SYNGINE_STAGED_ROM_DIR}"
                 "${ROM_DIR}"
-            COMMENT "Copying staged rom assets into app Resources"
+            COMMENT "Copying staged ROM assets to executable directory for ${target}"
+        )
+    elseif(APPLE)
+        set(ROM_DIR "$<TARGET_BUNDLE_CONTENT_DIR:${target}>/Resources/rom")
+        add_custom_target(${target}RomCopy ALL
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${ROM_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${SYNGINE_STAGED_ROM_DIR}"
+                "${ROM_DIR}"
+            COMMENT "Copying staged ROM assets into macOS app bundle for ${target}"
         )
     endif()
+    
+    set_target_properties(${target}RomCopy PROPERTIES FOLDER "Game")
+    add_dependencies(${target}RomCopy BuildAssets)
+    add_dependencies(${target} ${target}RomCopy)
+endfunction()
+
+function(_add_assets_win_linux target)
+    # Asset copying is now handled by the ROM copy target created in _create_rom_copy_target
+endfunction()
+
+function(_add_assets_mac target)
+    # Asset copying is now handled by the ROM copy target created in _create_rom_copy_target
 endfunction()
 
 # Function to add assets to the target
 function(add_assets target)
+    # Note: ROM copying is now handled via a dedicated target created in SyngineGame()
+    # This function now only handles app icon and platform-specific asset processing
+    
     if(WIN32 OR (UNIX AND NOT APPLE))
         _add_assets_win_linux(${target})
     elseif(APPLE)
@@ -169,6 +208,9 @@ function(add_assets target)
         # configure the Info.plist file and place it into the build cache
         configure_file("${CMAKE_SOURCE_DIR}/system/Info.plist.in"
                        "${GENERATED_PLIST_PATH}"
+        )
+        configure_file("${CMAKE_SOURCE_DIR}/system/Info.plist.in"
+                   "${FINAL_PLIST_PATH}"
         )
 
         # make a command to run the asset compiler
@@ -224,14 +266,9 @@ function(add_assets target)
         set_target_properties(InfoPlistMerge PROPERTIES FOLDER "Game")
 
         # add the Info.plist to the target and have it depend on the icon
-        set_property(
-            SOURCE "${FINAL_PLIST_PATH}"
-            PROPERTY MACOSX_PACKAGE_LOCATION "Contents/"
-        )
-
-        # tell Xcode this is the bundle Info.plist
-        set_target_properties(${target} PROPERTIES
-            XCODE_ATTRIBUTE_INFOPLIST_FILE ${FINAL_PLIST_PATH}
+        set_target_properties(${target} PROPERTIES 
+            MACOSX_BUNDLE TRUE 
+            MACOSX_BUNDLE_INFO_PLIST "${FINAL_PLIST_PATH}"
         )
 
         message(STATUS "Compiling icon for macOS ${MINIMUM_MACOS_VERSION}: ${ICON_PATH} -> Resources/${target}.icns")
@@ -294,97 +331,60 @@ if(MSVC)
     set(BX_COMPILE_DEBUG 1)
 endif()
 
+if(APPLE)
+    set(SYNGINESTUDIO_ROM_PATH "$<TARGET_FILE_DIR:${name}>/../Resources/rom")
+else()
+    set(SYNGINESTUDIO_ROM_PATH "$<TARGET_FILE_DIR:${name}>/rom")
+endif()
 target_compile_definitions(${name} PRIVATE
     "$<$<CONFIG:Debug>:BX_CONFIG_DEBUG=1>"       # Defines BX_CONFIG_DEBUG as 1 for Debug
     "$<$<NOT:$<CONFIG:Debug>>:BX_CONFIG_DEBUG=0>" # Defines BX_CONFIG_DEBUG as 0 for others
+    "SYNGINE_SYNTOOLS_PATH=\"$<TARGET_FILE:syntools>\""
+    "SYNGINE_ASSET_OUTPUT_PATH=\"${SYNGINESTUDIO_ROM_PATH}\""
+    "SYNGINE_SHADER_OUTPUT_PATH=\"${CMAKE_BINARY_DIR}/shaders\""
 )
 message(STATUS "SyngineGame: Set BX_CONFIG_DEBUG preprocessor definition for ${name}.")
 
-# Add default shaders
-set(ALL_COMPILED_SHADER_BINARIES "")
-compile_collect_shaders("${SYNGINE_SOURCE_DIR}/default/shaders" ALL_COMPILED_SHADER_BINARIES)
-
-# Discover and process game asset folders automatically.
-set(ALL_BUNDLED_MESH_FILES "")
-set(ALL_BUNDLED_OTHER_ASSET_FILES "")
-if(EXISTS "${GAME_ASSET_DIR}")
-    file(GLOB GAME_ASSET_SUBDIRS RELATIVE "${GAME_ASSET_DIR}" "${GAME_ASSET_DIR}/*")
-    foreach(ASSET_SUBDIR ${GAME_ASSET_SUBDIRS})
-        if(NOT IS_DIRECTORY "${GAME_ASSET_DIR}/${ASSET_SUBDIR}")
-            continue()
-        endif()
-
-        if(ASSET_SUBDIR STREQUAL "shaders")
-            compile_collect_shaders("${GAME_ASSET_DIR}/${ASSET_SUBDIR}" ALL_COMPILED_SHADER_BINARIES)
-        elseif(ASSET_SUBDIR STREQUAL "meshes")
-            compile_all_meshes(
-                SOURCE_DIRECTORY "${GAME_ASSET_DIR}/${ASSET_SUBDIR}"
-                OUTPUT_DIRECTORY "${SYNGINE_STAGED_ROM_DIR}/meshes"
-                BUNDLE_FILES_OUTPUT_VAR ALL_BUNDLED_MESH_FILES
-            )
-        else()
-            compile_collect_asset_bundle(
-                "${GAME_ASSET_DIR}/${ASSET_SUBDIR}"
-                "${ASSET_SUBDIR}"
-                GENERATED_ASSET_BUNDLE
-            )
-            if(GENERATED_ASSET_BUNDLE)
-                list(APPEND ALL_BUNDLED_OTHER_ASSET_FILES ${GENERATED_ASSET_BUNDLE})
-            endif()
-        endif()
-    endforeach()
+# SynTools owns asset discovery, shader compilation, metadata generation, and
+# packaging. CMake supplies only the source/tool paths and build dependencies.
+if(NOT TARGET syntools OR NOT TARGET shaderc)
+    message(FATAL_ERROR "SyngineGame: syntools and shaderc targets are required for BuildAssets.")
 endif()
 
-message(STATUS "SyngineGame: Compiled mesh bundles for ${name}: ${ALL_BUNDLED_MESH_FILES}")
-message(STATUS "SyngineGame: Compiled asset bundles for ${name}: ${ALL_BUNDLED_OTHER_ASSET_FILES}")
+file(GLOB_RECURSE ASSET_BUILD_INPUTS CONFIGURE_DEPENDS
+    "${CMAKE_SOURCE_DIR}/assets/*"
+    "${SYNGINE_SOURCE_DIR}/default/shaders/*"
+    "${SYNGINE_SOURCE_DIR}/default/gizmos/*"
+)
 
-set(ALL_BUNDLED_GIZMO_FILES "")
-compile_collect_default_gizmos(ALL_BUNDLED_GIZMO_FILES)
-message(STATUS "SyngineGame: Compiled default gizmo bundles for ${name}: ${ALL_BUNDLED_GIZMO_FILES}")
+set(BGFX_SHADER_INCLUDE_DIR "${SYNGINE_SOURCE_DIR}/third_party/bgfx.cmake/bgfx/src")
+set(ASSET_BUILD_STAMP "${CMAKE_BINARY_DIR}/$<CONFIG>/asset-build.stamp")
+add_custom_command(
+    OUTPUT "${ASSET_BUILD_STAMP}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/shaders"
+    COMMAND $<TARGET_FILE:syntools> build-assets
+        "${CMAKE_SOURCE_DIR}"
+        "${SYNGINE_STAGED_ROM_DIR}"
+        "${CMAKE_BINARY_DIR}/shaders"
+    COMMAND ${CMAKE_COMMAND} -E touch "${ASSET_BUILD_STAMP}"
+    DEPENDS syntools shaderc ${ASSET_BUILD_INPUTS}
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    COMMENT "Building assets with syntools"
+    VERBATIM
+)
+add_custom_target(BuildAssets ALL DEPENDS "${ASSET_BUILD_STAMP}")
+set_target_properties(BuildAssets PROPERTIES FOLDER "Game")
 
-# Add dependency on the compiled shaders
-if(ALL_COMPILED_SHADER_BINARIES)
-    add_custom_target(GameShaders ALL DEPENDS ${ALL_COMPILED_SHADER_BINARIES})
-    add_dependencies(${name} GameShaders)
-    set_target_properties(GameShaders PROPERTIES FOLDER "Game")
-    message(STATUS "SyngineGame: Added GameShaders target for ${name}.")
-endif()
-
-# Add dependency on the compiled mesh bundles
-if(ALL_BUNDLED_MESH_FILES)
-    add_custom_target(GameMeshes ALL DEPENDS ${ALL_BUNDLED_MESH_FILES})
-    add_dependencies(${name} GameMeshes)
-    set_target_properties(GameMeshes PROPERTIES FOLDER "Game")
-    message(STATUS "SyngineGame: Added GameMeshes target for ${name}.")
-endif()
-
-# Add dependency on the compiled generic asset bundles
-if(ALL_BUNDLED_OTHER_ASSET_FILES)
-    add_custom_target(GameAssets ALL DEPENDS ${ALL_BUNDLED_OTHER_ASSET_FILES})
-    add_dependencies(${name} GameAssets)
-    set_target_properties(GameAssets PROPERTIES FOLDER "Game")
-    message(STATUS "SyngineGame: Added GameAssets target for ${name}.")
-endif()
-
-# Add dependency on the compiled gizmo bundles
-if(ALL_BUNDLED_GIZMO_FILES)
-    add_custom_target(GameGizmos ALL DEPENDS ${ALL_BUNDLED_GIZMO_FILES})
-    add_dependencies(${name} GameGizmos)
-    set_target_properties(GameGizmos PROPERTIES FOLDER "Game")
-    message(STATUS "SyngineGame: Added GameGizmos target for ${name}.")
-endif()
-
-if(ALL_COMPILED_SHADER_BINARIES OR ALL_BUNDLED_MESH_FILES OR ALL_BUNDLED_OTHER_ASSET_FILES OR ALL_BUNDLED_GIZMO_FILES)
-    set_property(TARGET ${name} PROPERTY SYNGINE_COPY_ROM TRUE)
-endif()
+set_property(TARGET ${name} PROPERTY SYNGINE_COPY_ROM TRUE)
+_create_rom_copy_target(${name})
 
 # --- Target Properties (macOS Bundle Info) ---
 if(APPLE)
     set_target_properties(${name} PROPERTIES
         MACOSX_BUNDLE TRUE
         XCODE_GENERATE_SCHEME TRUE
-        XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
-        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.bakerman"
+        XCODE_ATTRIBUTE_BUNDLE_IDENTIFIER "com.sentytek.${name}"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.sentytek.${name}"
         XCODE_ATTRIBUTE_SDKROOT "macosx"
         # tells Xcode to recognize the app icon. this might not be needed idk
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "${name}"

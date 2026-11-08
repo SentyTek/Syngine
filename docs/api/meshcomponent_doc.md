@@ -20,7 +20,7 @@ Component for rendering 3D mesh models. Supports loading 3D asset files and uplo
 ### Constructors: 
 
 - [MeshComponent(GameObject* owner, const std::string& path, bool loadTextures = true)](#meshcomponent-meshcomponentgameobject-owner-const-std-string-path-bool-loadtextures-true)
-- [MeshComponent(GameObject* owner, const std::string& bundlePath, const std::string& texturePath, bool loadTextures = true)](#meshcomponent-meshcomponentgameobject-owner-const-std-string-bundlepath-const-std-string-texturepath-bool-loadtextures-true)
+- [MeshComponent(GameObject* owner, const std::string& bundlePath, const std::string& modelPath, bool loadTextures = true)](#meshcomponent-meshcomponentgameobject-owner-const-std-string-bundlepath-const-std-string-modelpath-bool-loadtextures-true)
 
 ### Enums and Structs: 
 
@@ -45,6 +45,11 @@ Component for rendering 3D mesh models. Supports loading 3D asset files and uplo
 - [GetMaterialInstance()](#meshcomponent-getmaterialinstance)
 - [GetObjectUVScaleOverride()](#meshcomponent-getobjectuvscaleoverride)
 - [SetObjectUVScaleOverride()](#meshcomponent-setobjectuvscaleoverride)
+- [GetBundlePath()](#meshcomponent-getbundlepath)
+- [GetModelPath()](#meshcomponent-getmodelpath)
+- [GetLoadTextures()](#meshcomponent-getloadtextures)
+- [bakeNodeTransforms](#meshcomponent-bakenodetransforms)
+- [SetLoadTextures()](#meshcomponent-setloadtextures)
 
 ---
 <a id="syngine-meshaabb"></a>
@@ -89,11 +94,11 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
-<a id="meshcomponent-meshcomponentgameobject-owner-const-std-string-bundlepath-const-std-string-texturepath-bool-loadtextures-true"></a>
+<a id="meshcomponent-meshcomponentgameobject-owner-const-std-string-bundlepath-const-std-string-modelpath-bool-loadtextures-true"></a>
 
 ## Class Constructor
 
-#### **`MeshComponent(GameObject* owner, const std::string& bundlePath, const std::string& texturePath, bool loadTextures = true)`**
+#### **`MeshComponent(GameObject* owner, const std::string& bundlePath, const std::string& modelPath, bool loadTextures = true)`**
 
  Constructor for the MeshComponent class
 
@@ -101,12 +106,12 @@ Signature:
 
 Signature:
 ```cpp
- MeshComponent(GameObject* owner, const std::string& bundlePath, const std::string& texturePath, bool loadTextures = true);
+ MeshComponent(GameObject* owner, const std::string& bundlePath, const std::string& modelPath, bool loadTextures = true);
 ```
 **Parameters:**
 - `owner`: Pointer to the GameObject that owns this component
 - `bundlePath`: Path to the shader bundle containing the mesh
-- `texturePath`: Path to the mesh within the bundle
+- `modelPath`: Path to the mesh within the bundle
 - `loadTextures`: Whether to load textures for the model
 
 **This function has been available since:** v0.0.1
@@ -165,11 +170,11 @@ Signature:
 
 Signature:
 ```cpp
- void Init(const std::string& bundlePath, const std::string& texturePath, bool loadTextures = true);
+ void Init(const std::string& bundlePath, const std::string& modelPath, bool loadTextures = true);
 ```
 **Parameters:**
 - `bundlePath`: Path to the shader bundle containing the mesh
-- `texturePath`: Path to the mesh within the bundle
+- `modelPath`: Path to the mesh within the bundle
 - `loadTextures`: Whether to load textures for the model
 
 **Thread Safety:** not-safe
@@ -201,11 +206,11 @@ Signature:
 
 Signature:
 ```cpp
- bool LoadMesh(const std::string& bundlePath, const std::string& texturePath, bool loadTextures = true);
+ bool LoadMesh(const std::string& bundlePath, const std::string& modelPath, bool loadTextures = true);
 ```
 **Parameters:**
 - `bundlePath`: Path to the shader bundle containing the mesh
-- `texturePath`: Path to the mesh within the bundle
+- `modelPath`: Path to the mesh within the bundle
 - `loadTextures`: Whether to load textures for the model
 
 **Returns:** true on success, false on failure
@@ -417,6 +422,86 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="meshcomponent-getbundlepath"></a>
+
+#### **`MeshComponent::GetBundlePath()`**
+
+ Get the path to the mesh bundle
+
+Signature:
+```cpp
+ const inline std::string& GetBundlePath() const;
+```
+**Returns:** Path to the mesh bundle
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="meshcomponent-getmodelpath"></a>
+
+#### **`MeshComponent::GetModelPath()`**
+
+ Get the path to the mesh within the bundle
+
+Signature:
+```cpp
+ const inline std::string& GetModelPath() const;
+```
+**Returns:** Path to the mesh within the bundle
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="meshcomponent-getloadtextures"></a>
+
+#### **`MeshComponent::GetLoadTextures()`**
+
+ Get whether textures should be loaded for this mesh
+
+Signature:
+```cpp
+ const inline bool GetLoadTextures() const;
+```
+**Returns:** True if textures should be loaded, false otherwise
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="meshcomponent-bakenodetransforms"></a>
+
+#### **`MeshComponent::bakeNodeTransforms()`**
+
+ Bake glTF/scene node transforms into the vertices on load. Must be set before LoadMesh.
+
+Signature:
+```cpp
+ bool bakeNodeTransforms = false;
+```
+---
+<a id="meshcomponent-setloadtextures"></a>
+
+#### **`MeshComponent::SetLoadTextures()`**
+
+ Set whether textures should be loaded for this mesh
+
+Signature:
+```cpp
+ void inline SetLoadTextures(bool loadTextures);
+```
+**Parameters:**
+- `loadTextures`: True to load textures, false otherwise
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
 ## Member Variables
 
 | Type | Name | Description |
@@ -427,6 +512,6 @@ Signature:
 | `ModelData` | `modelData` | Mesh data for the GameObject |
 | `mutable` | `MeshAABB` | Axis-aligned bounding box of the mesh |
 | `std::string` | `m_bundlePath` | Path to the shader bundle containing the mesh |
-| `std::string` | `m_texturePath` | Path to the mesh within the bundle |
+| `std::string` | `m_modelPath` | Path to the mesh within the bundle |
 | `JobResult<ModelData>` | `m_meshLoadJob` | Job result for the mesh load job |
 ---

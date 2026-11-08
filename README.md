@@ -21,7 +21,7 @@
 
 ## Roadmap (Subject to change)
 - Phase one: Core systems with Rendering, Physics, and Input subsystems - Completed Q4 2025
-- Phase two: Engine infrastructure and editing tools (Multithreading, job system, level editor, ~~packages~~). - In progress. Complete during 2026.
+- Phase two: Engine infrastructure and editing tools (~~Multithreading~~, ~~job system~~, level editor, ~~packages~~). - In progress. Complete during 2026.
 - Phase three: Simulation & Advanced rendering (Steamworks integration, Compute support, Forward+ rendering, audio subsystem, cooler rendering techniques)
 - Phase four: Modding, UI systems
 - Phase five: More advanced asset management, animations, advanced tech
@@ -43,15 +43,17 @@ tools/          -> Official tools used to make Syngine Games (asset packaging ma
 ```
 
 ## Technologies used
-- [SDL3](https://github.com/libsdl-org/SDL/tree/8e0b39f465c31492f9386d42e15b9df8a3bd7e21)
-- [bgfx](https://github.com/bkaradzic/bgfx.cmake/tree/36a0d1d8d040113a954f99b1456121072dc77348)
-- [Assimp](https://github.com/assimp/assimp/tree/ac5988422a7f1898b25c13fb5fb068c646a4c544)
+This project uses the following third-party technologies:
+- [SDL3](https://github.com/libsdl-org/SDL)
+- [bgfx](https://github.com/bkaradzic/bgfx.cmake)
+- [Assimp](https://github.com/assimp/assimp)
 - [Jolt Physics](https://github.com/jrouwe/JoltPhysics)
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)
-- [miniscl.hpp](https://github.com/MerianBerry/SCL)
+- [SCL](https://github.com/MerianBerry/SCL)
 - [sol2](https://github.com/SentyTek/sol2) (Our patched fork of [sol2](https://github.com/ThePhD/sol2))
-- [Lua 5.5](https://lua.org/)
+- [Lua](https://lua.org/)
 - [DirectXMath](https://github.com/microsoft/directxmath)
+- [ImGui](https://github.com/ocornut/imgui)
 
 ## License
 Syngine is licensed under the MIT license

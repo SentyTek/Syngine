@@ -16,6 +16,7 @@ include(CMakeParseArguments)
 #   OUTPUT_DIRECTORY         Directory where the bundle file is written.
 #   SOURCE_DIRECTORY         Base directory used with --src-dir for relative asset paths.
 #   INPUT_FILES              Files/directories to pack (relative to SOURCE_DIRECTORY preferred).
+#                            A directory entry (e.g. ".") is auto-discovered one level deep by syntools.
 #   BUNDLE_FILE_OUTPUT_VAR   Parent-scope variable receiving the output bundle path.
 #
 # Optional args:

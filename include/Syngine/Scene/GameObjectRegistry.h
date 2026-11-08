@@ -166,8 +166,8 @@ class GameObjectRegistry {
     static void _NotifyComponentAdded(GameObject*              gameobject,
                                       Syngine::ComponentTypeID type) noexcept;
 
-    /// @brief Internal call to notify the registry that a component has been
-    /// removed from a GameObject. This is used to update the indexed sublists.
+    /// @brief Internal call to notify the registry that a component should have
+    /// a component removed. This is used to update the indexed sublists.
     /// @param gameobject The GameObject from which the component was removed.
     /// @param type The type of component that was removed.
     /// @threadsafety safe
@@ -210,12 +210,20 @@ class GameObjectRegistry {
     static std::vector<GameObject*>
         m_queueToRemove; // Queue of GameObjects to remove at the end of the
                          // frame
+    static std::vector<std::pair<GameObject*, Syngine::ComponentTypeID>>
+        m_queueToRemoveComponents; // Queue of GameObject components to remove
+                                   // at the end of the frame
 
     static int nextID; // Next ID to assign to a new GameObject
 
     static void
     _RemoveQueuedObjects() noexcept; // Process the queue of GameObjects to
                                      // remove at the end of the frame
+
+    static void
+    _RemoveQueuedObjectComponents() noexcept; // Process the queue of GameObject
+                                              // components to remove at the end
+                                              // of the frame
 
     friend class GameObject;
     friend class Core;

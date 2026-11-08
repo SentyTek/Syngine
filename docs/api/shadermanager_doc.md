@@ -25,6 +25,7 @@ Class to manage shaders and their associated metadata @section ShaderManager @in
 
 ### Functions: 
 
+- [_BuildShader()](#shadermanager-_buildshader)
 - [_CheckPendingShaders()](#shadermanager-_checkpendingshaders)
 - [LoadShader()](#shadermanager-loadshader)
 - [UnloadShader()](#shadermanager-unloadshader)
@@ -119,6 +120,17 @@ Signature:
 **This function has been available since:** v0.0.2
 
 ---
+<a id="shadermanager-_buildshader"></a>
+
+#### **`ShaderManager::_BuildShader()`**
+
+
+
+Signature:
+```cpp
+ static Shader* _BuildShader(const std::string& bundlePath, const std::string& shaderName, const ViewID viewId, bool synchronous = false, int id = 0);
+```
+---
 <a id="shadermanager-_checkpendingshaders"></a>
 
 #### **`ShaderManager::_CheckPendingShaders()`**
@@ -131,7 +143,7 @@ Signature:
 ```cpp
  static bool _CheckPendingShaders();
 ```
-**Returns:** true if any shaders were completed, false if all shaders are ready
+**Returns:** true if any shaders were completed or still waiting, false if all shaders are ready
 
 **This function has been available since:** v0.0.2
 
@@ -258,12 +270,12 @@ Signature:
 
 Signature:
 ```cpp
- static Shader* Get(size_t shaderId);
+ static std::unique_ptr<Shader>& Get(size_t shaderId);
 ```
 **Parameters:**
 - `shaderId`: ID of the shader to retrieve
 
-**Returns:** Shader* Pointer to the shader with the specified ID, or nullptr if not found
+**Returns:** Reference to the manager's owning pointer for the shader, or EmptyShader() if not found. The reference stays valid across reloads.
 
 **Thread Safety:** read-only
 
@@ -280,12 +292,12 @@ Signature:
 
 Signature:
 ```cpp
- static Shader* Get(const std::string& shaderName);
+ static std::unique_ptr<Shader>& Get(const std::string& shaderName);
 ```
 **Parameters:**
 - `shaderName`: Name of the shader to retrieve
 
-**Returns:** Shader* Pointer to the shader with the specified name, or nullptr if not found
+**Returns:** Reference to the manager's owning pointer for the shader, or EmptyShader() if not found. The reference stays valid across reloads.
 
 **Thread Safety:** read-only
 

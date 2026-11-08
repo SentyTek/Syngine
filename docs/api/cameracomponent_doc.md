@@ -13,6 +13,7 @@ CameraComponent class for managing camera functionality in a game object @sectio
 ---
 ## Goto: 
 
+- [Member Variables](#member-variables)
 
 ## Additional Functions: 
 
@@ -38,7 +39,9 @@ CameraComponent class for managing camera functionality in a game object @sectio
 - [SetFOV()](#cameracomponent-setfov)
 - [GetFOV()](#cameracomponent-getfov)
 - [SetFarPlane()](#cameracomponent-setfarplane)
+- [SetNearPlane()](#cameracomponent-setnearplane)
 - [GetFarPlane()](#cameracomponent-getfarplane)
+- [GetNearPlane()](#cameracomponent-getnearplane)
 - [SetAngles()](#cameracomponent-setangles)
 - [SetAngles()](#cameracomponent-setangles-2)
 - [GetAngles()](#cameracomponent-getangles)
@@ -165,10 +168,9 @@ Signature:
 
 Signature:
 ```cpp
- void Update(int viewId, int width, int height);
+ void Update(int width, int height);
 ```
 **Parameters:**
-- `viewId`: ID of the view to update
 - `width`: Width of the viewport
 - `height`: Height of the viewport
 
@@ -265,6 +267,24 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="cameracomponent-setnearplane"></a>
+
+#### **`CameraComponent::SetNearPlane()`**
+
+ Set the camera near clipping plane
+
+Signature:
+```cpp
+ void SetNearPlane(float nearPlane);
+```
+**Parameters:**
+- `nearPlane`: Near clipping plane distance
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
 <a id="cameracomponent-getfarplane"></a>
 
 #### **`CameraComponent::GetFarPlane()`**
@@ -276,6 +296,23 @@ Signature:
  float GetFarPlane() const;
 ```
 **Returns:** Far clipping plane distance
+
+**Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="cameracomponent-getnearplane"></a>
+
+#### **`CameraComponent::GetNearPlane()`**
+
+ Get the camera near clipping plane
+
+Signature:
+```cpp
+ float GetNearPlane() const;
+```
+**Returns:** Near clipping plane distance
 
 **Thread Safety:** read-only
 
@@ -399,4 +436,10 @@ Signature:
 | `Plane` | `f` | Far plane |
 **This function has been available since:** v0.0.1
 
+---
+## Member Variables
+
+| Type | Name | Description |
+| --- | --- | --- | 
+| `bool` | `isMainCamera` | Whether the camera is the main camera |
 ---

@@ -98,8 +98,7 @@ class RigidbodyComponent : public Syngine::IComponent {
     /// @param params Rigidbody parameters to initialize the component
     /// @note This should only be called by GameObject::AddComponent<T>()
     /// @since v0.0.1
-    RigidbodyComponent(GameObject*                  owner,
-                       Syngine::RigidbodyParameters params = {});
+    RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params);
 
     RigidbodyComponent(const RigidbodyComponent& other);
     RigidbodyComponent& operator=(const RigidbodyComponent& other);
@@ -206,6 +205,20 @@ class RigidbodyComponent : public Syngine::IComponent {
     /// @since v0.0.1
     void UpdateShapeParameters(const Math::Vector3 newShapeParameters);
 
+    /// @brief Get the current parameters of the rigidbody
+    /// @return The current RigidbodyParameters
+    /// @threadsafety safe
+    /// @since v0.0.1
+    inline RigidbodyParameters GetCurrentParameters() const {
+        return m_currentParams;
+    };
+
+    /// @brief Set the current parameters of the rigidbody
+    /// @param newParameters The new RigidbodyParameters to set
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    void SetCurrentParameters(const RigidbodyParameters& newParams);
+
     /// @brief Set the friction of the physics body
     /// @param newFriction The new friction value to set
     /// @threadsafety not-safe
@@ -251,19 +264,25 @@ class RigidbodyComponent : public Syngine::IComponent {
                    ForceMode           mode = ForceMode::FORCE);
 
   private:
-    TransformComponent* transform =
+    TransformComponent* m_transform =
         nullptr; // Reference to the transform component
-    Syngine::Phys* physicsManager = nullptr; // Reference to the physics manager
-    JPH::BodyID    bodyID;                   // ID of the physics body
-    PhysicsShapes  shape;                    // Shape of the physics body
-    float          mass     = 0.0f;          // Mass of the physics body
-    float          friction = 0.5f;          // Friction of the physics body
-    float restitution = 0.5f; // Restitution of the physics body, default to 0.5
-    Math::Vector3 shapeParameters; // Parameters for the shape, e.g., radius
-                                   // for sphere, half extents for box
+    Syngine::Phys* m_physicsManager =
+        nullptr;                     // Reference to the physics manager
+    JPH::BodyID   m_bodyID;          // ID of the physics body
+    PhysicsShapes m_shape;           // Shape of the physics body
+    float         m_mass     = 0.0f; // Mass of the physics body
+    float         m_friction = 0.5f; // Friction of the physics body
+    float         m_restitution =
+        0.5f; // Restitution of the physics body, default to 0.5
+    Math::Vector3 m_shapeParameters; // Parameters for the shape, e.g., radius
+                                     // for sphere, half extents for box
     RigidbodyParameters
-         pendingParams{};      // Parameters for deferred initialization
-    bool initPending  = false; // Flag to indicate if initialization is pending
-    bool initComplete = false; // Flag to indicate if initialization is complete
+         m_pendingParams{};     // Parameters for deferred initialization
+    bool m_initPending = false; // Flag to indicate if initialization is pending
+    bool m_initComplete =
+        false; // Flag to indicate if initialization is complete
+
+    RigidbodyParameters
+        m_currentParams{}; // Current parameters of the rigidbody
 };
 } // namespace Syngine

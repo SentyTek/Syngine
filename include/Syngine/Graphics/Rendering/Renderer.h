@@ -38,12 +38,14 @@ enum ViewID : bgfx::ViewId {
     VIEW_SKY         = 76, //* Skybox rendering
     VIEW_FORWARD     = 77, //* Forward rendering pass for translucent objects
     VIEW_BILLBOARD   = 78, //* Billboard rendering
-    VIEW_DEBUG       = 79, //* Debug rendering pass for debug rendering
-    VIEW_BILL_DBG    = 80, //* Billboard debug rendering
-    VIEW_AO          = 81, //* Ambient occlusion passes (3 passes)
-    VIEW_POSTPROCESS = 84, //* Post-processing effects passes (Max 8 passes)
-    VIEW_UI          = 92, //* UI rendering
-    VIEW_UI_DEBUG    = 93, //* UI debug rendering
+    VIEW_AO          = 79, //* Ambient occlusion passes (3 passes)
+    VIEW_POSTPROCESS = 82, //* Post-processing effects passes (Max 7 passes)
+    VIEW_DEBUG       = 89, //* Debug rendering pass for debug rendering
+    // wireframes, below billboard gizmos
+    VIEW_BILL_DBG = 90, //* Billboard debug rendering
+    VIEW_GIZMO = 91, //* Editor transform gizmos. Drawn over scene geometry and
+    VIEW_UI    = 92, //* UI rendering
+    VIEW_UI_DEBUG = 93, //* UI debug rendering
 };
 
 /// @brief To manage renderer configuration
@@ -138,6 +140,10 @@ class Renderer {
     /// @threadsafety read-only
     /// @since v0.0.2
     static CameraComponent* GetActiveCamera() { return m_camera; }
+
+#ifdef SYN_IS_EDITOR
+    static bgfx::TextureHandle GetSceneTexture();
+#endif
 
   private:
     struct UniformCacheEntry {

@@ -8,6 +8,9 @@
 
 #pragma once
 
+#include "Syngine/GameObjects/Component.h"
+#include "Syngine/GameObjects/Components/MeshComponent.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/Scene/GameObjectRegistry.h"
 #include "bgfx/bgfx.h"
 #include <Syngine/Graphics/Resources/UniformRegistry.h>
@@ -92,11 +95,23 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             UniformFrequency::FRAME,
             1,
             [](const void* ctx) -> const void* {
-                if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
-                    return nullptr;
+                const auto packet =
+                    UniformRegistry::GetContext<const Renderer::RenderPacket>(
+                        ctx);
+                bool receiveShadows = true;
+                if (auto* meshc = packet.go->GetComponent<MeshComponent>()) {
+                    receiveShadows = meshc->receiveShadows;
                 }
-                return GameObjectRegistry::GetFirstActiveDirectionalLight()
-                    ->GetDirectionVector()
+                if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
+                    static const Math::Vec4 zeroDir{
+                        0.0f, 0.0f, 0.0f, receiveShadows ? 1.0f : 0.0f
+                    };
+                    return zeroDir.data();
+                }
+                return Math::Vec4(
+                           GameObjectRegistry::GetFirstActiveDirectionalLight()
+                               ->GetDirectionVector(),
+                           receiveShadows ? 1.0f : 0.0f)
                     .data();
             } });
 
@@ -132,7 +147,8 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
             1,
             [](const void* ctx) -> const void* {
                 if (!GameObjectRegistry::GetFirstActiveDirectionalLight()) {
-                    return nullptr;
+                    static const Math::Vec4 zeroColor{ 0.0f, 0.0f, 0.0f, 1.0f };
+                    return zeroColor.data();
                 }
                 return GameObjectRegistry::GetFirstActiveDirectionalLight()
                     ->GetColor()
@@ -315,9 +331,14 @@ inline void Renderer::_RegisterBuiltinUniformProviders() {
                     auto* transform =
                         packet.go->GetComponent<TransformComponent>();
                     data = { transform->GetWorldPosition(), billboard->size };
+                } else if (auto* camera =
+                               packet.go->GetComponent<CameraComponent>()) {
+                    data = { camera->GetPosition(), 1.0f };
+                } else if (auto* transform =
+                               packet.go->GetComponent<TransformComponent>()) {
+                    data = { transform->GetPosition(), 1.0f };
                 } else {
-                    auto* camera = packet.go->GetComponent<CameraComponent>();
-                    data         = { camera->GetPosition(), 1.0f };
+                    data = { 0.0f, 0.0f, 0.0f, 1.0f };
                 }
 
                 return data.data();

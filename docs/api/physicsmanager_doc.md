@@ -110,13 +110,12 @@ Signature:
 
 Signature:
 ```cpp
- void _DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera camera, Syngine::Camera finalCam, DebugModes debug);
+ void _DrawDebug(int width, int height, bgfx::ProgramHandle program, Syngine::Camera finalCam, DebugModes debug);
 ```
 **Parameters:**
 - `width`: Width of the viewport
 - `height`: Height of the viewport
 - `program`: Shader program to use for rendering
-- `camera`: Camera to get debug information from
 - `finalCam`: Camera to draw debug information to
 - `debug`: Debug modes to determine what to draw
 

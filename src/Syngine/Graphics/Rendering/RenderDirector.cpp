@@ -13,6 +13,7 @@
 #include "Syngine/Core/JobSystem.h"
 #include "Syngine/Core/Memory/ArenaAlloc.h"
 #include "Syngine/GameObjects/Components/BillboardComponent.h"
+#include "Syngine/GameObjects/Components/DirectionalLightComponent.h"
 #include "Syngine/Graphics/Rendering/RenderPacket.h"
 #include "Syngine/Graphics/Resources/ModelLoader.h"
 #include "Syngine/Graphics/Resources/ShaderManager.h"
@@ -20,6 +21,7 @@
 #include "Syngine/Scene/GameObjectRegistry.h"
 #include <Syngine/Graphics/Resources/TextureHelpers.h>
 #include <Syngine/Graphics/Rendering/DebugRenderer.h>
+#include <Syngine/Graphics/Rendering/GizmoOverlay.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>
 #include <Syngine/Graphics/Windowing.h>
 #include <Syngine/GameObjects/Component.h>
@@ -30,6 +32,7 @@
 #include <Syngine/Utils/Serializer.h>
 #include <Syngine/Utils/Version.h>
 #include <Syngine/Utils/Profiler.h>
+#include <lib/imgui/backends/imgui_impl_bgfx.hpp>
 
 #include <bgfx/bgfx.h>
 #include <bgfx/defines.h>
@@ -43,8 +46,6 @@
 #if BX_PLATFORM_OSX
 #include "Syngine/Graphics/Rendering/MetalBridge.h"
 #endif
-
-#define SYNINT_DEFAULT_SHADERBUNDLE_NAME "shaders/default_shaders.spk"
 
 #define SYN_INT_RENDEREXIT(program)                                            \
     Syngine::Logger::Error("Failed to create " #program " program");           \
@@ -138,6 +139,10 @@ Memory::ArenaAlloc RenderDirector::m_billboardRenderPackets;
 std::array<Math::Matrix4x4, RenderDirector::NUM_CASCADES>
            RenderDirector::m_csmLightViewProj;
 Math::Vec4 RenderDirector::m_csmCascadeSplits;
+
+#ifdef SYN_IS_EDITOR
+UI::Debug::ImGui_ImplBgfx RenderDirector::m_uiDebug;
+#endif
 
 bool RenderDirector::_Initialize(const RendererConfig& config) {
     m_config = config;
@@ -251,7 +256,7 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
     bgInit.resolution.width  = Renderer::width;
     bgInit.resolution.height = Renderer::height;
     bgInit.resolution.reset |= BGFX_RESET_VSYNC; // Enable vsync
-    bgInit.debug = true;
+    bgInit.debug = true;                         // TODO: change this
 
     if (!bgfx::init(bgInit)) {
         Syngine::Logger::Error("Failed to initialize bgfx");
@@ -265,9 +270,12 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
     bgfx::setViewRect(
         0, 0, 0, uint16_t(Renderer::width), uint16_t(Renderer::height));
 
-    bgfx::touch(0);      // touch the view to clear it
-    bgfx::frame();       // submit the frame
-    SDL_ShowWindow(win); // show the window
+    bgfx::touch(0); // touch the view to clear it
+    bgfx::frame();  // submit the frame
+
+    if (Core::_GetConfig()->showWindowAuto) {
+        SDL_ShowWindow(win); // show the window
+    }
 
     // Create default shaders
     Renderer::m_isReady =
@@ -376,6 +384,9 @@ bool RenderDirector::_Initialize(const RendererConfig& config) {
         return false;
     }
 
+#ifdef SYN_IS_EDITOR
+    m_uiDebug.Init();
+#endif
     Window::_SetContextCreated(true);
 
     return true;
@@ -407,6 +418,10 @@ void RenderDirector::_Shutdown() {
 
     // Submit the detaches above before queueing destroys.
     bgfx::frame();
+
+#ifdef SYN_IS_EDITOR
+    Syngine::Debug::GizmoOverlay::_Shutdown();
+#endif
 
     // Destroy billboard buffers
     if (bgfx::isValid(m_billboardVbh)) {
@@ -466,6 +481,10 @@ void RenderDirector::_Shutdown() {
     // Most render targets are framebuffer-owned. Invalidate cached handles
     // instead of destroying textures a second time.
     m_buffers.ForEachTexture([](auto& tex) { tex = BGFX_INVALID_HANDLE; });
+
+#ifdef SYN_IS_EDITOR
+    m_uiDebug.Shutdown();
+#endif
 
     // bgfx destroy calls are processed asynchronously. Advance a couple frames
     // so queued destroy commands retire before backend shutdown.
@@ -670,7 +689,7 @@ bool RenderDirector::_SetVsync() {
 }
 
 void RenderDirector::_GetRenderResources() {
-    m_ssaoProgram      = ShaderManager::Get("ssao");
+    m_ssaoProgram      = ShaderManager::Get("ssao").get();
     m_defaultShadowMap = UniformRegistry::_GetUniformHandle("s_shadowMap");
     m_ssao_depthTex    = UniformRegistry::_GetUniformHandle("s_depth");
     m_ssao_normalTex   = UniformRegistry::_GetUniformHandle("s_normal");
@@ -936,7 +955,7 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         }
 
         auto* transform = go->GetComponent<TransformComponent>();
-        if (!transform) continue;
+        if (!transform || !transform->IsEnabled()) continue;
 
         Mat4  modelMtx  = transform->GetModelMatrix();
         float det       = modelMtx.determinant();
@@ -1026,7 +1045,7 @@ RenderDirector::_CollectRenderPackets(CameraComponent* camera) {
         // too far away to be visible
         const Vector3 camPos    = camera->GetPosition();
         auto*         transform = go->GetComponent<TransformComponent>();
-        if (!transform) continue;
+        if (!transform || !transform->IsEnabled()) continue;
 
         const Vector3 goPos    = transform->GetWorldPosition();
         const float   distance = (goPos - camPos).length();
@@ -1145,8 +1164,11 @@ void RenderDirector::_DrawShadows(const Shader*    program,
             bgfx::setState(renderState);
 
             // Get the transform for this object
-            Mat4 modelMtx = gameObject->GetComponent<TransformComponent>()
-                                ->GetModelMatrix();
+            auto* transformComp =
+                gameObject->GetComponent<TransformComponent>();
+            if (!transformComp || !transformComp->IsEnabled()) continue;
+            Mat4 modelMtx = transformComp->GetModelMatrix();
+
             bgfx::setTransform(modelMtx.data());
 
             bgfx::setVertexBuffer(0, modelData.vbh);
@@ -1215,7 +1237,6 @@ void RenderDirector::_DrawDebug(const Shader*    program,
     SYN_PROFILE_FUNCTION();
 
     bgfx::setViewName(program->m_viewId, "Debug");
-    bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
 
     // Draw various debug overlays
     if (debug.Gizmos && m_drender) {
@@ -1265,44 +1286,57 @@ void RenderDirector::_DrawDebug(const Shader*    program,
         for (auto go : billboards) {
             BillboardComponent* comp = go->GetComponent<BillboardComponent>();
             if (!comp) continue;
-            Vector3 goPos =
-                go->GetComponent<TransformComponent>()->GetWorldPosition();
             Vector3 min = comp->GetMinBounds();
             Vector3 max = comp->GetMaxBounds();
             m_drender->DrawBox(min, max, JPH::Color::sBlue);
         }
     }
 
+    // Draw gizmos for specific objects like the sun light direction
+    const DirectionalLightComponent* sun =
+        GameObjectRegistry::GetFirstActiveDirectionalLight();
+    if (debug.Gizmos && sun) {
+        Vector3 sunDir = sun->GetDirectionVector();
+        // Draw a line representing the sun direction
+        m_drender->DrawLine(Vector3(0.0f).toJoltRVec3(),
+                            (-sunDir * 10.0f).toJoltRVec3(),
+                            JPH::Color::sYellow);
+    }
+
     // Flush all queued debug lines (physics wireframes, frustums, CSM
     // lines, zone bounds, and AABBs) in a single pass.
     // TODO: Rework this to draw camera frustums as gizmos instead of
     // hardcoded
-    const GameObject* p = GameObjectRegistry::GetGameObjectByName("player");
-    if (p && Core::IsPhysicsEnabled()) {
-        CameraComponent* playerCamera = p->GetComponent<CameraComponent>();
-        if (!playerCamera) {
-            return;
-        }
-
-        // Keep player camera matrices valid even when simulation is paused.
+    if (debug.Gizmos && Core::IsPhysicsEnabled()) {
+        auto cameras = GameObjectRegistry::GetGameObjectsWithComponent(
+            SYN_COMPONENT_CAMERA);
         const int safeWidth  = std::max(Renderer::width, 1);
         const int safeHeight = std::max(Renderer::height, 1);
-        playerCamera->Update(VIEW_DEBUG, safeWidth, safeHeight);
-
-        Core::_GetContext()->physicsManager->_DrawDebug(
-            Renderer::width,
-            Renderer::height,
-            program->m_program,
-            playerCamera->GetCamera(),
-            camera->GetCamera(),
-            debug);
+        for (auto camObj : cameras) {
+            CameraComponent* camera = camObj->GetComponent<CameraComponent>();
+            if (camera) {
+                // Keep player camera matrices valid even when simulation is
+                // paused.
+                camera->Update(safeWidth, safeHeight);
+                m_drender->DrawFrustum(camera->GetCamera());
+            }
+        }
     }
+
+    Core::_GetContext()->physicsManager->_DrawDebug(Renderer::width,
+                                                    Renderer::height,
+                                                    program->m_program,
+                                                    camera->GetCamera(),
+                                                    debug);
 }
 
 void RenderDirector::_DrawBillboard(const Shader*           program,
                                     CameraComponent*        camera,
                                     std::span<RenderPacket> packets) {
     SYN_PROFILE_FUNCTION();
+
+    if (packets.empty()) return;
+
     bgfx::setViewName(program->m_viewId, "Billboards");
     bgfx::setViewFrameBuffer(program->m_viewId, m_buffers.sceneFB);
     const uint64_t renderState = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A |
@@ -1372,31 +1406,57 @@ void RenderDirector::_DrawSSAO(const Shader* program) {
 void RenderDirector::_DrawPostProcess(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(program->m_viewId, "PostProcess");
+#ifdef SYN_IS_EDITOR
+    bgfx::setViewFrameBuffer(VIEW_POSTPROCESS,
+                             m_buffers.sceneFB); // Scene buffer
+#else
     bgfx::setViewFrameBuffer(VIEW_POSTPROCESS,
                              BGFX_INVALID_HANDLE); // Backbuffer
+#endif
     bgfx::setTexture(0, m_tonemap_sceneTex, m_buffers.sceneColor);
     bgfx::setTexture(1, m_tonemap_ssaoTex, m_buffers.ssaoBlurFinal);
     _ScreenSpaceQuad(VIEW_POSTPROCESS, program);
 }
 
-void RenderDirector::_DrawDbgBillboard(Shader* program) {
+#ifdef SYN_IS_EDITOR
+void RenderDirector::_DrawGizmos(const Shader* program) {
+    SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(VIEW_GIZMO, "Transform Gizmos");
+    bgfx::setViewFrameBuffer(VIEW_GIZMO, m_buffers.sceneFB);
+
+    // Depth is cleared for this view, so gizmos draw over everything in the
+    // scene but still occlude themselves correctly.
+    uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_DEPTH_TEST_LESS |
+                     BGFX_STATE_BLEND_ALPHA;
+    Syngine::Debug::GizmoOverlay::_Draw(
+        VIEW_GIZMO, state, program->m_program.idx);
+}
+#endif
+
+void RenderDirector::_DrawDbgBillboard(const Shader* program) {
     SYN_PROFILE_FUNCTION();
     bgfx::setViewName(VIEW_BILL_DBG, "Gizmos");
-    bgfx::setViewFrameBuffer(VIEW_BILL_DBG, m_buffers.sceneFB);
     // Debug billboards (gizmos) are always drawn on top. Regular billboards
     // (forward pass ig) are depth-tested normally.
     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_BLEND_ALPHA |
                      BGFX_STATE_DEPTH_TEST_ALWAYS;
 
-    _SetFrameUniforms(program);
-    _SetViewUniforms(program);
-
     // Draw all gizmos
     std::vector<GameObject*> gizmos = GameObjectRegistry::GetGizmos();
+
+    if (gizmos.empty()) return;
+
+    //_SetFrameUniforms(program);
+    //_SetViewUniforms(program);
 
     // Build render packets for gizmos and draw them
     std::vector<Renderer::RenderPacket> packets;
     for (auto go : gizmos) {
+        Mat4 modelMtx = Mat4(); // Default to identity matrix
+        if (go->HasComponent(SYN_COMPONENT_TRANSFORM)) {
+            modelMtx = go->GetComponent<TransformComponent>()->GetModelMatrix();
+        }
+
         auto it = Renderer::m_gizmoRegistry.find(go->gizmo);
         if (it == Renderer::m_gizmoRegistry.end()) continue;
         Renderer::RenderPacket packet;
@@ -1405,15 +1465,14 @@ void RenderDirector::_DrawDbgBillboard(Shader* program) {
         packet.ibh                   = m_billboardIbh;
         packet.material              = &gizmo->_GetMaterial();
         packet.shader                = packet.material->GetShader();
-        packet.modelMtx =
-            go->GetComponent<TransformComponent>()->GetModelMatrix();
-        packet.go = go;
+        packet.modelMtx              = modelMtx;
+        packet.go                    = go;
         packets.push_back(packet);
     }
 
     for (auto& packet : packets) {
         _SetObjectUniforms(program, packet);
-        _SetMaterialUniforms(program, packet);
+        _SetMaterialUniforms(program, packet, BGFX_SAMPLER_MAG_POINT);
         bgfx::setState(state);
 
         bgfx::setTransform(packet.modelMtx.data());
@@ -1435,13 +1494,25 @@ void RenderDirector::_DrawUIDebug(CameraComponent* camera) {
     int maxCols = width / 8;   // Assuming each character is 8 pixels wide
     int maxRows = height / 16; // Assuming each character is 16 pixels tall
 
+#ifndef SYN_IS_EDITOR
     bgfx::dbgTextPrintf(
         1, maxRows - 2, 0x0C, "Syngine v%s", SYN_VERSION_STRING);
     bgfx::dbgTextPrintf(
         1, maxRows - 1, 0x0C, "FOR INTERNAL USE ONLY - NOT FOR PUBLIC RELEASE");
+#endif
 }
 
-bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
+void RenderDirector::_DrawUI(const Shader* program) {
+#ifdef SYN_IS_EDITOR
+    SYN_PROFILE_FUNCTION();
+    bgfx::setViewName(VIEW_UI, "UI");
+
+    m_uiDebug.Render(VIEW_UI);
+#endif
+}
+
+bool RenderDirector::_PrepareRenderViews(CameraComponent* camera,
+                                         bool& outHasAvailGlobalLight) {
     SYN_PROFILE_FUNCTION();
     // Prepare camera and light information
     if (!camera) {
@@ -1451,7 +1522,7 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
 
     const int safeWidth  = std::max(Renderer::width, 1);
     const int safeHeight = std::max(Renderer::height, 1);
-    camera->Update(VIEW_FORWARD, safeWidth, safeHeight);
+    camera->Update(safeWidth, safeHeight);
     Camera cam = camera->GetCamera();
 
     std::array<Math::Matrix4x4, NUM_CASCADES> lightView;
@@ -1464,18 +1535,31 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
         if (!lightSrc) {
             Syngine::Logger::Warn(
                 "No active directional light found for shadow mapping");
-            return false;
+            outHasAvailGlobalLight = false;
+        } else {
+            outHasAvailGlobalLight = true;
+            _CalculateCascadeMatrices(
+                camera, lightSrc, lightView, lightProj, cascadeSplits);
+            m_csmCascadeSplits = cascadeSplits;
         }
-        _CalculateCascadeMatrices(
-            camera, lightSrc, lightView, lightProj, cascadeSplits);
-        m_csmCascadeSplits = cascadeSplits;
     }
+
+    // Debug views execute after post-processing and must target the presented
+    // image, rather than the scene texture already sampled by that pass.
+#ifdef SYN_IS_EDITOR
+    const bgfx::FrameBufferHandle debugFrameBuffer = m_buffers.sceneFB;
+#else
+    const bgfx::FrameBufferHandle debugFrameBuffer = BGFX_INVALID_HANDLE;
+#endif
+    bgfx::setViewFrameBuffer(VIEW_DEBUG, debugFrameBuffer);
+    bgfx::setViewFrameBuffer(VIEW_BILL_DBG, debugFrameBuffer);
 
     // Update main camera matrices
     for (Syngine::ViewID view : _allViews) {
         switch (view) {
         case ViewID::VIEW_SHADOW: {
-            if (!m_config.useShadows) break; // Skip if shadows are disabled
+            if (!m_config.useShadows || !outHasAvailGlobalLight)
+                break; // Skip if shadows are disabled
 
             for (uint8_t i = 0; i < NUM_CASCADES; ++i) {
                 bgfx::ViewId cascadeViewId = view + i;
@@ -1503,7 +1587,7 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
             bgfx::setViewClear(
                 view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
 
-            camera->Update(view, Renderer::width, Renderer::height);
+            camera->Update(Renderer::width, Renderer::height);
             Camera cam = camera->GetCamera();
             bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
             break;
@@ -1538,15 +1622,37 @@ bool RenderDirector::_PrepareRenderViews(CameraComponent* camera) {
             }
             break;
         }
-        default: {
+#ifdef SYN_IS_EDITOR
+        case VIEW_GIZMO: {
             bgfx::setViewRect(view,
                               0,
                               0,
                               uint16_t(Renderer::width),
                               uint16_t(Renderer::height));
-            // bgfx::setViewClear(
-            //     view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH,
-            //     0x000000ff, 1.0f, 0);
+            bgfx::setViewClear(view, BGFX_CLEAR_DEPTH, 0x00000000, 1.0f, 0);
+            bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
+            break;
+        }
+#endif
+        case VIEW_UI: {
+            bgfx::setViewRect(view,
+                              0,
+                              0,
+                              uint16_t(Renderer::width),
+                              uint16_t(Renderer::height));
+            bgfx::setViewClear(
+                view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x000000ff, 1.0f, 0);
+            break;
+        }
+        default: {
+            if ((view == VIEW_SHADOW || view == VIEW_BILLBOARD) &&
+                !outHasAvailGlobalLight)
+                break; // Skip if no light is available for shadows
+            bgfx::setViewRect(view,
+                              0,
+                              0,
+                              uint16_t(Renderer::width),
+                              uint16_t(Renderer::height));
             bgfx::setViewTransform(view, cam.view.data(), cam.proj.data());
             break;
         }
@@ -1680,6 +1786,9 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
 
     bool isPendingShaders = ShaderManager::_CheckPendingShaders();
     if (isPendingShaders) {
+#ifdef SYN_IS_EDITOR
+        Syngine::Debug::GizmoOverlay::_EndFrame();
+#endif
         return false;
     } else if (!m_collectedresources) {
         RenderDirector::_GetRenderResources();
@@ -1687,7 +1796,8 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     }
     MaterialManager::_CheckPendingMaterials();
 
-    if (!_PrepareRenderViews(camera)) {
+    bool hasAvailGlobalLight = false;
+    if (!_PrepareRenderViews(camera, hasAvailGlobalLight)) {
         Renderer::_UpdateDrawID();
         return false;
     }
@@ -1707,17 +1817,25 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
             // Draw logic based on view type
             switch (view) {
             case VIEW_SHADOW:
-                if (m_config.useShadows) {
+                if (m_config.useShadows && hasAvailGlobalLight) {
                     _DrawShadows(program, camera);
                 }
                 break;
             case VIEW_SKY: _DrawSky(program, camera); break;
             case VIEW_FORWARD:
+                if (!hasAvailGlobalLight)
+                    break; // Skip if no light is available for forward
+                           // rendering
                 _DrawForward(program, camera, std::get<0>(packets));
                 break;
             case VIEW_DEBUG:
                 if (debug.Enabled) _DrawDebug(program, camera, debug);
                 break;
+#ifdef SYN_IS_EDITOR
+            case VIEW_GIZMO:
+                if (debug.Enabled) _DrawGizmos(program);
+                break;
+#endif
             case VIEW_BILL_DBG:
                 // Debug billboard draws are submitted from VIEW_BILLBOARD
                 // using this view ID.
@@ -1728,6 +1846,7 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
                 break;
             case VIEW_POSTPROCESS: _DrawPostProcess(program); break;
             case VIEW_AO: _DrawSSAO(program); break;
+            case VIEW_UI: _DrawUI(program); break;
             default: break;
             }
         }
@@ -1741,6 +1860,9 @@ bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
 
     m_renderPackets.Reset();
     m_billboardRenderPackets.Reset();
+#ifdef SYN_IS_EDITOR
+    Syngine::Debug::GizmoOverlay::_EndFrame();
+#endif
 
     Renderer::_UpdateDrawID();
     return true;

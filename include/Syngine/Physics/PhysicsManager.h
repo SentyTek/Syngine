@@ -64,6 +64,15 @@ static constexpr BroadPhaseLayer MOVING(1);
 static constexpr uint32_t        NUM_BP_LAYERS = 2;
 }; // namespace BroadPhaseLayers
 
+struct RaycastHit {
+    bool          hit;    // Whether the ray hit an object
+    Math::Vector3 point;  // The point of intersection
+    Math::Vector3 normal; // The normal at the intersection point
+    float
+        distance; // The distance from the ray origin to the intersection point
+    GameObject* object; // The game object that was hit
+};
+
 // BroadPhaseLayerInterface implementation
 // Defined a mapping between ObjectLayer and BroadPhaseLayer
 class BPLayerInterfaceImpl : public BroadPhaseLayerInterface {
@@ -191,6 +200,10 @@ class SynBodyActivationListener : public BodyActivationListener {
 /// @section Physics
 /// @since v0.0.1
 class Phys {
+    std::unordered_map<BodyID, GameObject*> mBodyToGameObjectMap;
+
+    friend class RigidbodyComponent;
+
   public:
     Phys();
     ~Phys();
@@ -222,13 +235,11 @@ class Phys {
     /// @param width Width of the viewport
     /// @param height Height of the viewport
     /// @param program Shader program to use for rendering
-    /// @param camera Camera to get debug information from
     /// @param finalCam Camera to draw debug information to
     /// @param debug Debug modes to determine what to draw
     void _DrawDebug(int                 width,
                     int                 height,
                     bgfx::ProgramHandle program,
-                    Syngine::Camera     camera,
                     Syngine::Camera     finalCam,
                     DebugModes          debug);
 
@@ -370,6 +381,8 @@ class Phys {
     void _DrawLine(const Math::Vector3 from,
                    const Math::Vector3 to,
                    JPH::ColorArg       color);
+
+    RaycastHit Raycast(const Math::Ray& ray);
 
   private:
     // Jolt specific variables

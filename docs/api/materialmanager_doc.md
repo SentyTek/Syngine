@@ -19,8 +19,7 @@ Class to manage materials and their instances @section MaterialManager
 
 ### Constructors: 
 
-- [Material(const std::string& name)](#material-materialconst-std-string-name)
-- [Material(const std::string& name, Shader* shader)](#material-materialconst-std-string-name-shader-shader)
+- [Material(const std::string& name, const std::unique_ptr<Shader>& shader)](#material-materialconst-std-string-name-const-std-unique_ptrshader-shader)
 - [MaterialInstance(const Material& material)](#materialinstance-materialinstanceconst-material-material)
 
 ### Enums and Structs: 
@@ -96,23 +95,6 @@ struct TextureParameter
 **This function has been available since:** v0.0.2
 
 ---
-<a id="material-materialconst-std-string-name"></a>
-
-## Class Constructor
-
-#### **`Material(const std::string& name)`**
-
- Private constructor to create a Material with a given name. Use MaterialManager::CreateMaterial to create a new material.
-
-#### This function is internal use only and not intended for public use!
-
-**Note:** Highly recommended to NOT use this constructor directly.
-
-Signature:
-```cpp
- Material(const std::string& name) : name(name), shader(nullptr);
-```
----
 <a id="material-_setdefault"></a>
 
 #### **`Material::_SetDefault()`**
@@ -174,11 +156,11 @@ Signature:
 **Thread Safety:** not-safe
 
 ---
-<a id="material-materialconst-std-string-name-shader-shader"></a>
+<a id="material-materialconst-std-string-name-const-std-unique_ptrshader-shader"></a>
 
 ## Class Constructor
 
-#### **`Material(const std::string& name, Shader* shader)`**
+#### **`Material(const std::string& name, const std::unique_ptr<Shader>& shader)`**
 
  Construct a Material with a given name and shader
 
@@ -188,7 +170,7 @@ Signature:
 
 Signature:
 ```cpp
- Material(const std::string& name, Shader* shader) : name(name), shader(shader);
+ Material(const std::string& name, const std::unique_ptr<Shader>& shader) : name(name), shader(shader);
 ```
 **Parameters:**
 - `name`: Name of the material
@@ -625,7 +607,7 @@ Signature:
 
 Signature:
 ```cpp
- static Material& CreateMaterial(const std::string& name, Shader* shader);
+ static Material& CreateMaterial(const std::string& name, const std::unique_ptr<Shader>& shader);
 ```
 **Parameters:**
 - `name`: Name of the material to create
@@ -658,5 +640,4 @@ Signature:
 | Type | Name | Description |
 | --- | --- | --- | 
 | `const` | `std` | Name of the material |
-| `Shader*` | `shader` | Pointer to the associated shader |
 ---

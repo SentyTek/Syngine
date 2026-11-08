@@ -26,6 +26,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Syngine {
 // Forward declare
@@ -62,7 +63,9 @@ struct EngineConfig {
     std::string gameName     = "SyngineGame"; //* Title of the game window
     int         windowWidth  = 800; //* Width of the game window in pixels
     int         windowHeight = 600; //* Height of the game window in pixels
-    bool        usePhysics = true;  //* Whether to initialize the physics system
+    bool        showWindowAuto =
+        true; //* Whether to automatically show the window on initialization
+    bool    usePhysics = true; //* Whether to initialize the physics system
     bool    useLua = true; //* Whether to initialize the Lua scripting system
     LuaLibs luaLibs =
         LuaLibs::DEFAULT;  //* Which Lua libraries to load if useLua is true
@@ -75,10 +78,14 @@ struct EngineConfig {
 /// @since v0.0.1
 struct DebugModes {
     bool Enabled        = true;  //* Global debug toggle
-    bool PhysWireframes = false; //* Whether to draw physics wireframes
-    bool Gizmos    = true; //* Gizmos such as cameras, lights, and audio sources
-    bool CSMBounds = false;         //* Cascading Shadow Map zone bounds.
+    bool PhysWireframes = false; //* Whether to draw object wireframes
+    std::vector<GameObject*> WireframeObjects; //* Objects to draw as wireframes
+    bool Gizmos = false; //* Gizmos such as cameras, lights, and audio sources
+    bool CSMBounds         = false; //* Cascading Shadow Map zone bounds.
     bool DrawBoundingBoxes = false; //* Whether to draw mesh bounding boxes
+    bool DrawDebugForAllObjects =
+        false; //* Draw enabled overlays for all objects, ignoring
+               // WireframeObjects
 };
 
 /// @brief Core class to manage the application
@@ -246,6 +253,21 @@ class Core {
         }
     }
 
+#ifdef SYN_IS_EDITOR
+    static bool viewportHovered;
+    static bool viewportActive;
+    // Set while the editor camera is being dragged (e.g. RMB look) so input
+    // keeps routing to the game even if the cursor leaves the Scene viewport.
+    static bool mouseCaptureOverride;
+
+    static void Quit() { m_shouldClose = true; }
+#endif
+
+    // Debug keybind actions
+    static void _ReloadChangedAssets();
+    static void _ReloadShaders();
+    static void _ReloadLua();
+
   private:
     struct _internal {
         // Mouse sensitivity
@@ -361,11 +383,6 @@ class Core {
             }
         }
     };
-
-    // Debug keybind actions
-    static void _ReloadChangedAssets();
-    static void _ReloadShaders();
-    static void _ReloadLua();
 
     static Core*         m_instance; //* Pointer to the global Core instance
     static Context*      m_context;  //* Pointer to the global Context instance

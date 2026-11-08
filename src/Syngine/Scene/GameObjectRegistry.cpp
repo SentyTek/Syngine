@@ -25,6 +25,8 @@ std::vector<GameObject*>            GameObjectRegistry::m_RenderableObjects;
 std::vector<GameObject*>            GameObjectRegistry::m_ScriptedObjects;
 std::vector<GameObject*>            GameObjectRegistry::m_Gizmos;
 std::vector<GameObject*>            GameObjectRegistry::m_queueToRemove;
+std::vector<std::pair<GameObject*, Syngine::ComponentTypeID>>
+    GameObjectRegistry::m_queueToRemoveComponents;
 
 int GameObjectRegistry::nextID = 0; // Next ID to assign to a new GameObject
 std::vector<DirectionalLightComponent*>
@@ -88,6 +90,13 @@ void GameObjectRegistry::RemoveGameObject(GameObject* gameObject) noexcept {
         return; // GameObject not found
     }
 
+    // Tell children to delete themselves
+    for (GameObject* child : gameObject->GetChildren()) {
+        if (child) {
+            RemoveGameObject(child);
+        }
+    }
+
     m_queueToRemove.push_back(
         gameObject); // Queue for removal at the end of the frame
 }
@@ -96,6 +105,13 @@ void GameObjectRegistry::RemoveGameObjectById(int id) noexcept {
     auto it = m_AllObjects.find(id);
     if (it == m_AllObjects.end()) {
         return; // GameObject not found
+    }
+
+    // Tell children to delete themselves
+    for (GameObject* child : it->second.GetChildren()) {
+        if (child) {
+            RemoveGameObject(child);
+        }
     }
 
     m_queueToRemove.push_back(
@@ -116,6 +132,7 @@ void GameObjectRegistry::_RemoveQueuedObjects() noexcept {
     if (m_queueToRemove.empty()) return; // Nothing to remove
     for (GameObject* obj : m_queueToRemove) {
         // Lambda to remove from indexed sublists. No, I do not like this either
+        // reply: what's wrong with it?
         auto removeFrom = [&](std::vector<GameObject*>& vec) {
             vec.erase(std::remove(vec.begin(), vec.end(), obj), vec.end());
         };
@@ -143,6 +160,40 @@ void GameObjectRegistry::_RemoveQueuedObjects() noexcept {
         m_AllObjects.erase(obj->GetID());
     }
     m_queueToRemove.clear(); // Clear the queue after processing
+}
+
+void GameObjectRegistry::_RemoveQueuedObjectComponents() noexcept {
+    for (auto [object, type] : m_queueToRemoveComponents) {
+        if (!object) return;
+
+        auto removeFrom = [&](std::vector<GameObject*>& vec) {
+            vec.erase(std::remove(vec.begin(), vec.end(), object), vec.end());
+        };
+        object->components.erase(type);
+
+        switch (type) {
+        case Syngine::SYN_COMPONENT_MESH:
+        case Syngine::SYN_COMPONENT_TRANSFORM: // Trigger if either are removed
+            if (!object->HasComponent(Syngine::SYN_COMPONENT_MESH) ||
+                !object->HasComponent(Syngine::SYN_COMPONENT_TRANSFORM)) {
+                removeFrom(m_RenderableObjects);
+            }
+            break;
+        case Syngine::SYN_COMPONENT_RIGIDBODY:
+            removeFrom(m_PhysicsObjects);
+            break;
+        case Syngine::SYN_COMPONENT_SCRIPT:
+            removeFrom(m_ScriptedObjects);
+            break;
+        case Syngine::SYN_COMPONENT_CAMERA: removeFrom(m_Gizmos); break;
+        case Syngine::SYN_COMPONENT_ZONE:
+            Core::_GetContext()->ZoneSystem->_UnregisterZone(
+                object->GetComponent<ZoneComponent>());
+            break;
+        default: break; // No action for other component types
+        }
+    }
+    m_queueToRemoveComponents.clear(); // Clear the queue after processing
 }
 
 // Getters
@@ -235,7 +286,7 @@ void GameObjectRegistry::_NotifyComponentAdded(
             m_Gizmos.end()) {
             m_Gizmos.push_back(gameobject);
             Syngine::Core::_GetContext()->renderer->_RegisterGizmo(
-                "camera_render");
+                "g_camera_render");
         }
         break;
     case Syngine::SYN_COMPONENT_ZONE:
@@ -250,6 +301,12 @@ void GameObjectRegistry::_NotifyComponentAdded(
             m_DirectionalLights.push_back(
                 gameobject->GetComponent<DirectionalLightComponent>());
         }
+        if (std::find(m_Gizmos.begin(), m_Gizmos.end(), gameobject) ==
+            m_Gizmos.end()) {
+            m_Gizmos.push_back(gameobject);
+            Syngine::Core::_GetContext()->renderer->_RegisterGizmo(
+                "g_light_sun");
+        }
         break;
     default: break; // No action for other component types
     }
@@ -257,30 +314,9 @@ void GameObjectRegistry::_NotifyComponentAdded(
 
 void GameObjectRegistry::_NotifyComponentRemoved(
     GameObject* gameobject, Syngine::ComponentTypeID type) noexcept {
-    if (!gameobject) return;
+    if (!gameobject || !gameobject->HasComponent(type)) return;
 
-    auto removeFrom = [&](std::vector<GameObject*>& vec) {
-        vec.erase(std::remove(vec.begin(), vec.end(), gameobject), vec.end());
-    };
-
-    switch (type) {
-    case Syngine::SYN_COMPONENT_MESH:
-    case Syngine::SYN_COMPONENT_TRANSFORM: // Trigger if either are removed,
-                                           // fully remove when both are gone
-        if (!gameobject->HasComponent(Syngine::SYN_COMPONENT_MESH) &&
-            !gameobject->HasComponent(Syngine::SYN_COMPONENT_TRANSFORM)) {
-            removeFrom(m_RenderableObjects);
-        }
-        break;
-    case Syngine::SYN_COMPONENT_RIGIDBODY: removeFrom(m_PhysicsObjects); break;
-    case Syngine::SYN_COMPONENT_SCRIPT: removeFrom(m_ScriptedObjects); break;
-    case Syngine::SYN_COMPONENT_CAMERA: removeFrom(m_Gizmos); break;
-    case Syngine::SYN_COMPONENT_ZONE:
-        Core::_GetContext()->ZoneSystem->_UnregisterZone(
-            gameobject->GetComponent<ZoneComponent>());
-        break;
-    default: break; // No action for other component types
-    }
+    m_queueToRemoveComponents.push_back({ gameobject, type });
 }
 
 } // namespace Syngine

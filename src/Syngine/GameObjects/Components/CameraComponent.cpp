@@ -8,10 +8,10 @@
 
 #include "Syngine/GameObjects/Components/CameraComponent.h"
 #include "Syngine/GameObjects/ComponentRegistry.h"
+#include "Syngine/GameObjects/Components/TransformComponent.h"
 #include "Syngine/GameObjects/GameObject.h"
 
 #include "Syngine/Math/Math.hpp"
-#include "Syngine/Utils/Profiler.h"
 #include "Syngine/Utils/Serializer.h"
 #include "bx/math.h"
 #include "bgfx/bgfx.h"
@@ -39,7 +39,7 @@ CameraComponent::CameraComponent(GameObject* owner)
 
     if (this->m_owner) {
         this->m_owner->gizmo =
-            "camera_render"; // Set gizmo type for this component
+            "g_camera_render"; // Set gizmo type for this component
     }
 }
 
@@ -49,7 +49,7 @@ CameraComponent::CameraComponent(const CameraComponent& other)
 
     if (this->m_owner) {
         this->m_owner->gizmo =
-            "camera_render"; // Set gizmo type for this component
+            "g_camera_render"; // Set gizmo type for this component
     }
 }
 
@@ -60,7 +60,7 @@ CameraComponent& CameraComponent::operator=(const CameraComponent& other) {
 
         if (this->m_owner) {
             this->m_owner->gizmo =
-                "camera_render"; // Set gizmo type for this component
+                "g_camera_render"; // Set gizmo type for this component
         }
     }
     return *this;
@@ -81,8 +81,18 @@ Serializer::DataNode CameraComponent::Serialize() const {
     return node;
 }
 
-void CameraComponent::Update(int viewId, int width, int height) {
+void CameraComponent::Update(int width, int height) {
     // update view and projection matrices
+    if (this->syncToTransform && this->m_owner) {
+        TransformComponent* transform =
+            this->m_owner->GetComponent<TransformComponent>();
+        if (transform) {
+            this->camera.eye     = transform->GetWorldPosition();
+            Math::Vector3 angles = transform->GetWorldRotationEuler();
+            this->camera.yaw     = angles.x();
+            this->camera.pitch   = angles.y();
+        }
+    }
     Syngine::Camera& cam        = this->camera;
     Math::Vec3       eyeVec     = this->camera.eye.toBxVec3();
     const int        safeWidth  = std::max(width, 1);
@@ -134,12 +144,22 @@ void CameraComponent::SetFOV(float fov) {
 float CameraComponent::GetFOV() const { return this->camera.fov; }
 
 void CameraComponent::SetFarPlane(float farPlane) {
-    if (farPlane < 0.0f && farPlane > this->camera.nearPlane &&
+    if (farPlane < 0.0f || farPlane < this->camera.nearPlane ||
         farPlane > 50000.0f) {
         return;
     }
     this->camera.farPlane = farPlane;
 }
+
+void CameraComponent::SetNearPlane(float nearPlane) {
+    if (nearPlane < 0.0f || nearPlane > this->camera.farPlane ||
+        nearPlane > 50000.0f) {
+        return;
+    }
+    this->camera.nearPlane = nearPlane;
+}
+
+float CameraComponent::GetNearPlane() const { return this->camera.nearPlane; }
 
 float CameraComponent::GetFarPlane() const { return this->camera.farPlane; }
 
@@ -173,8 +193,8 @@ CameraComponent::Frustum CameraComponent::_extractFrustum() {
     const auto extractPlane = [&vp](int axis, float sign) {
         Plane plane;
         plane.normal   = Math::Vec3(vp.m(0, 3) + sign * vp.m(0, axis),
-                                  vp.m(1, 3) + sign * vp.m(1, axis),
-                                  vp.m(2, 3) + sign * vp.m(2, axis));
+                                    vp.m(1, 3) + sign * vp.m(1, axis),
+                                    vp.m(2, 3) + sign * vp.m(2, axis));
         plane.distance = vp.m(3, 3) + sign * vp.m(3, axis);
         return plane;
     };
@@ -220,6 +240,25 @@ bool CameraComponent::_aabbInsideFrustum(const Frustum&       frustum,
            _aabbInsidePlane(frustum.f, min, max);
 }
 
+Math::Ray
+CameraComponent::ScreenPointToRay(const Math::Vector2& screenPoint) const {
+    // Implementation for converting a screen point to a ray in world space
+    // This typically involves unprojecting the screen point using the camera's
+    // view and projection matrices
+
+    Math::Vector3 rayOrigin = GetPosition();
+    Math::Vector3 farPoint  = Math::Unproject(screenPoint,
+                                              GetCamera().proj,
+                                              GetCamera().view,
+                                              Renderer::width,
+                                              Renderer::height,
+                                              1.f);
+
+    Math::Vector3 rayDirection = farPoint - rayOrigin;
+
+    return Math::Ray(rayOrigin, rayDirection);
+}
+
 static Syngine::ComponentRegistrar s_cameraRegistrar(
     Syngine::SYN_COMPONENT_CAMERA,
 
@@ -242,6 +281,10 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
                 node / "yaw" = std::stof(value);
             } else if (key == "pitch") {
                 node / "pitch" = std::stof(value);
+            } else if (key == "isMainCamera") {
+                node / "isMainCamera" = (value == "true");
+            } else if (key == "syncToTransform") {
+                node / "syncToTransform" = (value == "true");
             }
         }
         return node;
@@ -264,6 +307,12 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
         }
         if (data.Has("yaw") && data.Has("pitch")) {
             comp->SetAngles(data["yaw"].As<float>(), data["pitch"].As<float>());
+        }
+        if (data.Has("isMainCamera")) {
+            comp->isMainCamera = data["isMainCamera"].As<bool>();
+        }
+        if (data.Has("syncToTransform")) {
+            comp->syncToTransform = data["syncToTransform"].As<bool>();
         }
         return comp;
     });

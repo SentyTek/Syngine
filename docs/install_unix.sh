@@ -44,7 +44,8 @@ if(APPLE)
     # set the minimum deployment version for the asset compiler
     set(MINIMUM_MACOS_VERSION 26.0)
     # set the bundle identifier for xcode
-    set(BUNDLE_IDENTIFIER \"com.example.$PROJECT_NAME\")
+    string(TOLOWER "${PROJECT_NAME}" BUNDLE_NAME)
+    set(BUNDLE_IDENTIFIER "com.COMPANYNAME.${BUNDLE_NAME}")
 endif()
 
 # Enable making a Windows executable if on Windows
@@ -101,12 +102,14 @@ echo '<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSHighResolutionCapable</key>
-	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
+    <key>CFBundleIconFile</key>
+    <string>${EXECUTABLE_NAME}</string>
+    <key>CFBundleIconName</key>
+    <string>${EXECUTABLE_NAME}</string>
 	<key>CFBundleIdentifier</key>
 	<string>${BUNDLE_IDENTIFIER}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -119,11 +122,15 @@ echo '<?xml version="1.0" encoding="UTF-8"?>
 	<string>1</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+    <key>NSAccentColorName</key>
+    <string>AccentColor</string>
+    <key>NSHighResolutionCapable</key>
+    <true />
 	<key>NSHumanReadableCopyright</key>
-	<string>Placeholder Copyright ${CURRENT_YEAR}. Please update this to your own project copyright</string>
+    <string>Copyright 2025-2026 SentyTek. All rights reserved.</string>
 </dict>
 </plist>
-' > info.plist.in
+' > Info.plist.in
 mkdir -p assets
 cd ../
 touch .gitignore

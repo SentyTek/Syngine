@@ -42,6 +42,7 @@
 #include <Syngine/Utils/Version.h>
 #include <Syngine/Utils/Profiler.h>
 #include <Syngine/Utils/SpecsHelpers.h>
+#include <lib/imgui/backends/imgui_impl_bgfx.hpp>
 
 #include <SDL3/SDL.h>
 
@@ -63,6 +64,12 @@ bool                                    Syngine::Core::m_shouldClose = false;
 Core::FrameCounts                       Syngine::Core::m_frameCounts;
 std::vector<std::function<void(int)>>   Syngine::Core::m_frameCallbacks;
 std::vector<std::function<void(float)>> Syngine::Core::m_fixedUpdateCallbacks;
+
+#ifdef SYN_IS_EDITOR
+bool Syngine::Core::viewportHovered      = false;
+bool Syngine::Core::viewportActive       = false;
+bool Syngine::Core::mouseCaptureOverride = false;
+#endif
 
 Core::Core(const EngineConfig config) {
     if (m_instance) {
@@ -234,10 +241,9 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
                                     "Debug",
                                     KeyBinding(Keycode::F1),
                                     { .onPressed = []() {
-                                        Syngine::DebugModes m =
-                                            Core::GetDebugMode();
-                                        m.PhysWireframes = !m.PhysWireframes;
-                                        Core::SetDebugMode(m);
+                                        Syngine::DebugModes modes = Core::GetDebugMode();
+                                        modes.PhysWireframes = !modes.PhysWireframes;
+                                        Core::SetDebugMode(modes);
                                     } });
 
         InputAction::RegisterAction("syngine.debugGizmos",
@@ -367,7 +373,40 @@ bool Core::HandleEvents() {
         }
         }
 
-        // Handle input events
+// Handle input events
+// Editor will have ImGui take over keyboard/mouse sometimes where we should
+// return early
+#ifdef SYN_IS_EDITOR
+        RenderDirector::m_uiDebug.HandleEvent(&event);
+
+        // Gate keyboard and mouse events independently so a keyboard-only
+        // capture (e.g. ImGui nav) can't also swallow mouse motion, and vice
+        // versa. mouseCaptureOverride bypasses both gates entirely while the
+        // editor camera is being dragged, so input keeps flowing even if the
+        // cursor leaves the Scene viewport mid-drag. Release events (key/mouse
+        // up) always pass through regardless of capture state, otherwise a
+        // dropped release leaves an action stuck "held" forever.
+        bool isMouseDown  = event.type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+        bool isMouseUp    = event.type == SDL_EVENT_MOUSE_BUTTON_UP;
+        bool isMouseEvent = isMouseDown || isMouseUp ||
+                            event.type == SDL_EVENT_MOUSE_MOTION ||
+                            event.type == SDL_EVENT_MOUSE_WHEEL;
+        bool isKeyDown    = event.type == SDL_EVENT_KEY_DOWN;
+        bool isKeyUp      = event.type == SDL_EVENT_KEY_UP;
+        bool isKeyEvent   = isKeyDown || isKeyUp;
+
+        if (!mouseCaptureOverride && !isKeyUp && !isMouseUp) {
+            if (isMouseEvent && RenderDirector::m_uiDebug.WantCaptureMouse() &&
+                !viewportHovered) {
+                continue;
+            }
+            if (isKeyEvent && RenderDirector::m_uiDebug.WantCaptureKeyboard() &&
+                !viewportActive) {
+                continue;
+            }
+        }
+#endif
+
         InputAction::_HandleEvent(event);
 
         if (m_internal.simulate) {
@@ -402,7 +441,7 @@ bool Core::Update() {
     m_internal.last = m_internal.now;
     m_internal.now  = SDL_GetPerformanceCounter();
     deltaTime       = (m_internal.now - m_internal.last) /
-                (float)SDL_GetPerformanceFrequency();
+                      (float)SDL_GetPerformanceFrequency();
 #endif
 
     // Cap dt after stalls (breakpoints, app suspend) to avoid runaway
@@ -487,6 +526,7 @@ bool Core::Update() {
 
     if (!Renderer::m_isRendering) {
         GameObjectRegistry::_RemoveQueuedObjects();
+        GameObjectRegistry::_RemoveQueuedObjectComponents();
     }
 
     return true;
@@ -496,6 +536,9 @@ bool Core::Render() {
     SYN_PROFILE_FUNCTION();
     // Render the application
     if (Renderer::IsReady()) {
+#ifdef SYN_IS_EDITOR
+        RenderDirector::m_uiDebug.NewFrame();
+#endif
         m_frameCounter.frameCount++;
         m_frameCounter.frameDisplay++;
 
@@ -520,6 +563,10 @@ bool Core::Render() {
             RenderDirector::m_drawnCounts.culledFrustum;
         m_frameCounts.drawnObjects.culledSize =
             RenderDirector::m_drawnCounts.culledSize;
+
+#ifdef SYN_IS_EDITOR
+        RenderDirector::m_uiDebug.EndFrame();
+#endif
     }
     return true;
 }

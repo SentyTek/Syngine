@@ -66,6 +66,10 @@ Window::Window(const EngineConfig& config) {
     SetWindowMode(videoSettings->windowMode);
     m_contextCreated = false;
 
+    if (!config.showWindowAuto) {
+        SDL_HideWindow(m_window);
+    }
+
 #if BX_PLATFORM_OSX
     // macOS requires some kind of renderer to be created before Metal can be
     // initialized
@@ -128,6 +132,23 @@ void Window::SetTitle(const std::string_view& title) {
     }
 }
 
+void Window::SetWindowVisible(bool visible) {
+    if (m_window) {
+        SDL_ShowWindow(m_window);
+        if (!visible) {
+            SDL_HideWindow(m_window);
+        }
+    }
+}
+
+bool Window::IsWindowVisible() {
+    if (m_window) {
+        SDL_WindowFlags flags = SDL_GetWindowFlags(m_window);
+        return (flags & SDL_WINDOW_HIDDEN) == 0;
+    }
+    return false;
+}
+
 void Window::SetWindowMode(int mode) {
     if (m_window && m_contextCreated && mode >= 0 && mode <= 2) {
         switch (mode) {
@@ -143,7 +164,7 @@ void Window::SetWindowMode(int mode) {
 #if BX_PLATFORM_WINDOWS
             int width, height;
             SDL_GetWindowSize(m_window, &width, &height);
-            SDL_SetWindowSize(m_window, width, height - 10);
+            SDL_SetWindowSize(m_window, width, height);
             SDL_SetWindowPosition(
                 m_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
 #endif
