@@ -60,6 +60,7 @@ We have several pages of documentation available. Note the API reference is auto
 
 #### Graphics/Rendering
 
+- [Gizmooverlay](api/gizmooverlay_doc.md)
 - [Renderer](api/renderer_doc.md)
 - [Renderpacket](api/renderpacket_doc.md)
 - [Internal] [DebugRenderer](api/debugrenderer_doc.md)

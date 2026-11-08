@@ -38,6 +38,7 @@ ZoneComponent is used to define an area within the game world that can be used t
 - [Init()](#zonecomponent-init)
 - [Update()](#zonecomponent-update)
 - [GetShape()](#zonecomponent-getshape)
+- [SetShape()](#zonecomponent-setshape)
 - [GetPosition()](#zonecomponent-getposition)
 - [SetPosition()](#zonecomponent-setposition)
 - [GetSize()](#zonecomponent-getsize)
@@ -295,6 +296,24 @@ Signature:
 **Returns:** The shape of the zone (ZoneShape).
 
 **Thread Safety:** read-only
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="zonecomponent-setshape"></a>
+
+#### **`ZoneComponent::SetShape()`**
+
+ Set the shape of the zone.
+
+Signature:
+```cpp
+ void SetShape(ZoneShape shape);
+```
+**Parameters:**
+- `shape`: The new shape of the zone (box or sphere).
+
+**Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1
 

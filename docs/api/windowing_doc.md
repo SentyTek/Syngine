@@ -27,6 +27,8 @@ Manages all of the windowing operations @section Window @internal
 - [SetTitle()](#window-settitle)
 - [SetWindowMode()](#window-setwindowmode)
 - [GetWindowMode()](#window-getwindowmode)
+- [SetWindowVisible()](#window-setwindowvisible)
+- [IsWindowVisible()](#window-iswindowvisible)
 - [SetMouseCursorVisible()](#window-setmousecursorvisible)
 - [GetMousePosition()](#window-getmouseposition)
 - [SetMousePosition()](#window-setmouseposition)
@@ -178,11 +180,46 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="window-setwindowvisible"></a>
+
+#### **`Window::SetWindowVisible()`**
+
+ Show or hide the window.
+
+Signature:
+```cpp
+ static void SetWindowVisible(bool visible);
+```
+**Parameters:**
+- `visible`: True to show the window, false to hide it.
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="window-iswindowvisible"></a>
+
+#### **`Window::IsWindowVisible()`**
+
+ Checks if the window is currently visible.
+
+Signature:
+```cpp
+ static bool IsWindowVisible();
+```
+**Returns:** True if the window is visible, false otherwise.
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
 <a id="window-setmousecursorvisible"></a>
 
 #### **`Window::SetMouseCursorVisible()`**
 
- Sets the visibility of the mouse cursor.
+ Sets the visibility of the mouse cursor. Also restricts the mouse to the window, but still does movement events even when on the edge of the window.
 
 Signature:
 ```cpp

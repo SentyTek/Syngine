@@ -363,7 +363,7 @@ Signature:
 
 #### **`GameObjectRegistry::_NotifyComponentRemoved()`**
 
- Internal call to notify the registry that a component has been removed from a GameObject. This is used to update the indexed sublists.
+ Internal call to notify the registry that a component should have a component removed. This is used to update the indexed sublists.
 
 #### This function is internal use only and not intended for public use!
 

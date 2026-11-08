@@ -209,8 +209,6 @@ Signature:
 | `std::vector<SubMesh>` | `subMeshes` | List of submeshes in the mesh |
 | `uint8_t` | `numSubMeshes` | Number of submeshes in the mesh |
 | `uint8_t` | `numMaterials` | Number of materials used by the mesh |
-| `bgfx::VertexBufferHandle` | `vbh` | Handle to the vertex buffer on the GPU |
-| `bgfx::IndexBufferHandle` | `ibh` | Handle to the index buffer on the GPU |
 | `int` | `id` | Unique ID for the mesh (for hot reloading and editor purposes) |
 | `bool` | `valid` | Whether the mesh data is valid and can be rendered |
 ---

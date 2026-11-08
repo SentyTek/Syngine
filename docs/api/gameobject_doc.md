@@ -32,6 +32,7 @@ GameObject class representing an entity in the game world, such as a player, ene
 - [RemoveTag()](#gameobject-removetag)
 - [HasTag()](#gameobject-hastag)
 - [ClearTags()](#gameobject-cleartags)
+- [SetTags()](#gameobject-settags)
 - [GetComponentCount()](#gameobject-getcomponentcount)
 - [RemoveComponent()](#gameobject-removecomponent)
 - [HasComponent()](#gameobject-hascomponent)
@@ -45,6 +46,7 @@ GameObject class representing an entity in the game world, such as a player, ene
 - [AddChild()](#gameobject-addchild)
 - [RemoveChild()](#gameobject-removechild)
 - [GetChildren()](#gameobject-getchildren)
+- [CanBeParentedTo()](#gameobject-canbeparentedto)
 - [_SetID()](#gameobject-_setid)
 
 ---
@@ -229,6 +231,24 @@ Signature:
 **This function has been available since:** v0.0.1
 
 ---
+<a id="gameobject-settags"></a>
+
+#### **`GameObject::SetTags()`**
+
+ Set the tags of the GameObject
+
+Signature:
+```cpp
+ void SetTags(const std::vector<std::string>& tags);
+```
+**Parameters:**
+- `tags`: Vector of tags to set
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
 <a id="gameobject-getcomponentcount"></a>
 
 #### **`GameObject::GetComponentCount()`**
@@ -250,7 +270,7 @@ Signature:
 
 #### **`GameObject::RemoveComponent()`**
 
- Remove a component from the GameObject
+ Remove a component from the GameObject. Defers the actual removal to the end of the frame.
 
 Signature:
 ```cpp
@@ -314,7 +334,7 @@ Signature:
 
 Signature:
 ```cpp
- template <typename T> T* GetComponent() const;
+ template <Component T> T* GetComponent() const;
 ```
 **Template Parameters:**
 - `T`: Type of the component to get
@@ -334,7 +354,7 @@ Signature:
 
 Signature:
 ```cpp
- template <typename T, typename... Args> T* AddComponent(Args&&... args);
+ template <typename T, typename... Args> requires ComponentConstructible<T, Args...> T* AddComponent(Args&&... args);
 ```
 **Template Parameters:**
 - `T`: Type of the component to add
@@ -465,6 +485,26 @@ Signature:
  const std::vector<GameObject*>& GetChildren() const;
 ```
 **Returns:** Vector of pointers to the child GameObjects
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.2
+
+---
+<a id="gameobject-canbeparentedto"></a>
+
+#### **`GameObject::CanBeParentedTo()`**
+
+ Checks if this object can become parented to the provided object
+
+Signature:
+```cpp
+ bool CanBeParentedTo(const GameObject* potentialParent) const;
+```
+**Parameters:**
+- `potentialParent`: Pointer to the potential parent GameObject
+
+**Returns:** True if this object can be parented to the provided object, false otherwise
 
 **Thread Safety:** safe
 

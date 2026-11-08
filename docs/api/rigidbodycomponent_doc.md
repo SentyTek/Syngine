@@ -19,7 +19,7 @@ Syngine Rigidbody Component The RigidbodyComponent is used to represent a physic
 
 ### Constructors: 
 
-- [RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params = {})](#rigidbodycomponent-rigidbodycomponentgameobject-owner-syngine-rigidbodyparameters-params)
+- [RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params)](#rigidbodycomponent-rigidbodycomponentgameobject-owner-syngine-rigidbodyparameters-params)
 
 ### Enums and Structs: 
 
@@ -44,6 +44,8 @@ Syngine Rigidbody Component The RigidbodyComponent is used to represent a physic
 - [GetRestitution()](#rigidbodycomponent-getrestitution)
 - [GetShapeParameters()](#rigidbodycomponent-getshapeparameters)
 - [UpdateShapeParameters()](#rigidbodycomponent-updateshapeparameters)
+- [GetCurrentParameters()](#rigidbodycomponent-getcurrentparameters)
+- [SetCurrentParameters()](#rigidbodycomponent-setcurrentparameters)
 - [SetFriction()](#rigidbodycomponent-setfriction)
 - [SetRestitution()](#rigidbodycomponent-setrestitution)
 - [AddForce()](#rigidbodycomponent-addforce)
@@ -124,7 +126,7 @@ struct RigidbodyParameters
 
 ## Class Constructor
 
-#### **`RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params = {})`**
+#### **`RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params)`**
 
  Constructor for the RigidbodyComponent class
 
@@ -132,7 +134,7 @@ struct RigidbodyParameters
 
 Signature:
 ```cpp
- RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params = {});
+ RigidbodyComponent(GameObject* owner, Syngine::RigidbodyParameters params);
 ```
 **Parameters:**
 - `owner`: Pointer to the GameObject that owns this component
@@ -393,6 +395,41 @@ Signature:
 ```
 **Parameters:**
 - `newShapeParameters`: The new shape parameters to set
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="rigidbodycomponent-getcurrentparameters"></a>
+
+#### **`RigidbodyComponent::GetCurrentParameters()`**
+
+ Get the current parameters of the rigidbody
+
+Signature:
+```cpp
+ inline RigidbodyParameters GetCurrentParameters() const;
+```
+**Returns:** The current RigidbodyParameters
+
+**Thread Safety:** safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="rigidbodycomponent-setcurrentparameters"></a>
+
+#### **`RigidbodyComponent::SetCurrentParameters()`**
+
+ Set the current parameters of the rigidbody
+
+Signature:
+```cpp
+ void SetCurrentParameters(const RigidbodyParameters& newParams);
+```
+**Parameters:**
+- `newParameters`: The new RigidbodyParameters to set
 
 **Thread Safety:** not-safe
 

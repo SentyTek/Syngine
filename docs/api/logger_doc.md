@@ -43,6 +43,7 @@ Logger class for logging messages @section Logger
 - [PrintStackTrace()](#logger-printstacktrace)
 - [SetVerbose()](#logger-setverbose)
 - [IsVerbose()](#logger-isverbose)
+- [RegisterCallback()](#logger-registercallback)
 
 ---
 <a id="syngine-loglevel"></a>
@@ -447,5 +448,24 @@ Signature:
 **Thread Safety:** safe
 
 **This function has been available since:** v0.0.1
+
+---
+<a id="logger-registercallback"></a>
+
+#### **`Logger::RegisterCallback()`**
+
+ Register a callback function to be called on every log message
+
+Signature:
+```cpp
+ static void RegisterCallback(LogMessageFunctionCallback callback, bool callInDebugOnly = false);
+```
+**Parameters:**
+- `callback`: Callback function to register
+- `callInDebugOnly`: If true, the callback will only be called in debug mode
+
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.3
 
 ---

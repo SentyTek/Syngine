@@ -38,6 +38,8 @@ PlayerComponent is responsible for handling player input, movement, and state. I
 - [GetRotation()](#playercomponent-getrotation)
 - [SetRotation()](#playercomponent-setrotation)
 - [SetRotation()](#playercomponent-setrotation-2)
+- [Reset()](#playercomponent-reset)
+- [RebuildCharacter()](#playercomponent-rebuildcharacter)
 
 ---
 <a id="syngine-playerstate"></a>
@@ -269,6 +271,36 @@ Signature:
 **Parameters:**
 - `rotation`: Vector2, where x is the yaw and y is the pitch, in radians
 
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="playercomponent-reset"></a>
+
+#### **`PlayerComponent::Reset()`**
+
+ Reset the player component to its default state.
+
+Signature:
+```cpp
+ void Reset();
+```
+**Thread Safety:** not-safe
+
+**This function has been available since:** v0.0.1
+
+---
+<a id="playercomponent-rebuildcharacter"></a>
+
+#### **`PlayerComponent::RebuildCharacter()`**
+
+ Rebuilds the player character based on the current component settings.
+
+Signature:
+```cpp
+ void RebuildCharacter();
+```
 **Thread Safety:** not-safe
 
 **This function has been available since:** v0.0.1

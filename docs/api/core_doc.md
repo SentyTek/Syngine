@@ -104,6 +104,7 @@ struct EngineConfig
 | `std::string` | `gameName` | Title of the game window |
 | `int` | `windowWidth` | Width of the game window in pixels |
 | `int` | `windowHeight` | Height of the game window in pixels |
+| `true` | `Whether` | to automatically show the window on initialization |
 | `bool` | `usePhysics` | Whether to initialize the physics system |
 | `bool` | `useLua` | Whether to initialize the Lua scripting system |
 | `bool` | `headless` | Whether to run in headless mode (no window, for |
@@ -124,10 +125,12 @@ struct DebugModes
 | Type | Name | Description |
 | --- | --- | --- | 
 | `bool` | `Enabled` | Global debug toggle |
-| `bool` | `PhysWireframes` | Whether to draw physics wireframes |
+| `bool` | `PhysWireframes` | Whether to draw object wireframes |
+| `std::vector<GameObject*>` | `WireframeObjects` | Objects to draw as wireframes |
 | `bool` | `Gizmos` | Gizmos such as cameras, lights, and audio sources |
 | `bool` | `CSMBounds` | Cascading Shadow Map zone bounds. |
 | `bool` | `DrawBoundingBoxes` | Whether to draw mesh bounding boxes |
+| `false` | `Draw` | enabled overlays for all objects, ignoring |
 **This function has been available since:** v0.0.1
 
 ---
@@ -406,7 +409,7 @@ Signature:
 
 Signature:
 ```cpp
- static float GetFPS();
+ static int GetFPS();
 ```
 **Returns:** Estimated FPS
 

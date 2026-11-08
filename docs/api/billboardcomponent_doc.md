@@ -38,6 +38,9 @@ Syngine Billboard Component. The BillboardComponent is used to represent a 2D mo
 - [SetRot()](#billboardcomponent-setrot)
 - [GetRot()](#billboardcomponent-getrot)
 - [GetMode()](#billboardcomponent-getmode)
+- [SetMode()](#billboardcomponent-setmode)
+- [GetBundlePath()](#billboardcomponent-getbundlepath)
+- [GetTexturePath()](#billboardcomponent-gettexturepath)
 - [GetMaterialInstance()](#billboardcomponent-getmaterialinstance)
 - [GetMinBounds()](#billboardcomponent-getminbounds)
 - [GetMaxBounds()](#billboardcomponent-getmaxbounds)
@@ -253,6 +256,46 @@ Signature:
  BillboardMode GetMode() const;
 ```
 **Returns:** BillboardMode The billboard rendering mode
+
+---
+<a id="billboardcomponent-setmode"></a>
+
+#### **`myBillboard.SetMode()`**
+
+ Set the billboard mode
+
+Signature:
+```cpp
+ void SetMode(BillboardMode mode);
+```
+**Parameters:**
+- `mode`: The billboard rendering mode
+
+---
+<a id="billboardcomponent-getbundlepath"></a>
+
+#### **`myBillboard.GetBundlePath()`**
+
+ Get the bundle path of the billboard
+
+Signature:
+```cpp
+ std::string GetBundlePath() const;
+```
+**Returns:** std::string The path to the bundle file
+
+---
+<a id="billboardcomponent-gettexturepath"></a>
+
+#### **`myBillboard.GetTexturePath()`**
+
+ Get the texture path of the billboard
+
+Signature:
+```cpp
+ std::string GetTexturePath() const;
+```
+**Returns:** std::string The path to the texture file
 
 ---
 <a id="billboardcomponent-getmaterialinstance"></a>

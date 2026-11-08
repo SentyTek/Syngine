@@ -554,7 +554,7 @@ Signature:
 
 Signature:
 ```cpp
- inline float operator[] (int index) const;
+ inline float operator[](int index) const;
 ```
 **Parameters:**
 - `index`: Component index in range [0, 2]

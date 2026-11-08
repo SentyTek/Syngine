@@ -58,10 +58,11 @@ enum ViewID : bgfx::ViewId
 | `VIEW_SKY` | Skybox rendering |
 | `VIEW_FORWARD` | Forward rendering pass for translucent objects |
 | `VIEW_BILLBOARD` | Billboard rendering |
+| `VIEW_AO` | Ambient occlusion passes (3 passes) |
+| `VIEW_POSTPROCESS` | Post-processing effects passes (Max 7 passes) |
 | `VIEW_DEBUG` | Debug rendering pass for debug rendering |
 | `VIEW_BILL_DBG` | Billboard debug rendering |
-| `VIEW_AO` | Ambient occlusion passes (3 passes) |
-| `VIEW_POSTPROCESS` | Post-processing effects passes (Max 8 passes) |
+| `VIEW_GIZMO` | Editor transform gizmos. Drawn over scene geometry and |
 | `VIEW_UI` | UI rendering |
 | `VIEW_UI_DEBUG` | UI debug rendering |
 **This function has been available since:** v0.0.1
