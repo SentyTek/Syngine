@@ -7,9 +7,12 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
-#include "Syngine/GameObjects/Component.h"
-#include "Syngine/GameObjects/Components/DirectionalLightComponent.h"
-#include "Syngine/Utils/UUID.h"
+
+#include <Syngine/Utils/Serializer.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/GameObjects/Components/DirectionalLightComponent.h>
+#include <Syngine/Utils/UUID.h>
+
 #include <unordered_map>
 #include <vector>
 
@@ -35,6 +38,15 @@ class GameObjectRegistry {
                      std::string              type = "default",
                      std::vector<std::string> tags = {}) noexcept;
 
+    /// @brief Create a new GameObject from a serialized Prefab and add it to
+    /// the registry. The GameObject is owned by the registry and will be
+    /// deleted when the registry is cleared or the GameObject is removed.
+    /// @param prefab The Prefab containing the serialized GameObject data.
+    /// @return A reference to the newly created GameObject.
+    /// @threadsafety safe
+    /// @since v0.0.2
+    static GameObject& Instantiate(const Serializer::Prefab& prefab) noexcept;
+
     /// @brief Create a new GameObject from a serialized DataNode and add it to
     /// the registry. The GameObject is owned by the registry and will be
     /// deleted when the registry is cleared or the GameObject is removed.
@@ -42,7 +54,8 @@ class GameObjectRegistry {
     /// @return A reference to the newly created GameObject.
     /// @threadsafety safe
     /// @since v0.0.2
-    static GameObject& Instantiate(const Serializer::Prefab& prefab) noexcept;
+    static GameObject&
+    Instantiate(const Syngine::Serializer::DataNode& dataNode) noexcept;
 
     /// @brief Clone an existing GameObject and add the clone to the registry.
     /// @param original The GameObject to clone.

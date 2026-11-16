@@ -41,6 +41,7 @@ add_library(Syngine STATIC
     src/Syngine/Core/Memory/ArenaAlloc.cpp
 
     #Scene
+    src/Syngine/Scene/Scene.cpp
     src/Syngine/Scene/ZoneSystem.cpp
     src/Syngine/Scene/GameObjectRegistry.cpp
 
@@ -59,6 +60,7 @@ add_library(Syngine STATIC
     src/Syngine/Utils/FsUtils.cpp
     src/Syngine/Utils/Profiler.cpp
     src/Syngine/Utils/Serializer.cpp
+    src/Syngine/Utils/SerializeScene.cpp
     src/Syngine/Utils/Prefab.cpp
     src/Syngine/Utils/UUID.cpp
 

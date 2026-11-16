@@ -6,12 +6,15 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Utils/Serializer.h"
-#include "Syngine/Utils/FsUtils.h"
-#include "Syngine/GameObjects/GameObject.h"
+#include <Syngine/Utils/Serializer.h>
+#include <Syngine/Utils/FsUtils.h>
+#include <Syngine/GameObjects/GameObject.h>
 
 #include "../../lib/miniscl.hpp"
 #include <filesystem>
+#include <iomanip>
+#include <locale>
+#include <sstream>
 #include <string>
 #include <variant>
 #include <stdexcept>
@@ -19,6 +22,20 @@
 namespace Syngine {
 namespace Internal {
 std::string ResolvePath(const char* path) { return _ResolveOSPath(path); }
+
+std::string FormatSerializedFloat(float value) {
+    std::ostringstream stream;
+    stream.imbue(std::locale::classic());
+    stream << std::fixed << std::setprecision(SYN_SERIALIZER_FLOAT_DECIMALS)
+           << value;
+    std::string result = stream.str();
+    const auto  dot    = result.find('.');
+    if (dot != std::string::npos) {
+        const auto last = result.find_last_not_of('0');
+        result.erase(last == dot ? dot : last + 1);
+    }
+    return result;
+}
 } // namespace Internal
 
 Serializer::CoreSettings Serializer::m_coreSettings =
@@ -230,8 +247,9 @@ bool Serializer::CoreSettings::SaveToFile(const std::string&  path,
         doc.new_attr("height", std::to_string(settings.video.height)));
     videoElem->add_attr(
         doc.new_attr("windowMode", std::to_string(settings.video.windowMode)));
-    videoElem->add_attr(
-        doc.new_attr("brightness", std::to_string(settings.video.brightness)));
+    videoElem->add_attr(doc.new_attr(
+        "brightness",
+        Internal::FormatSerializedFloat(settings.video.brightness)));
     videoElem->add_attr(
         doc.new_attr("vSync", settings.video.vSync ? "true" : "false"));
     videoElem->add_attr(doc.new_attr(
@@ -249,11 +267,13 @@ bool Serializer::CoreSettings::SaveToFile(const std::string&  path,
         Logger::Error("Failed to open file for writing: " + path);
         return false;
     }
+
     auto res = doc.print(file);
     if (res.code != scl::xml::OK) {
         Logger::Error("Failed to write XML document to file: " + path);
         return false;
     }
+
     file.flush();
     file.close();
 

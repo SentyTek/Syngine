@@ -65,6 +65,19 @@ GameObjectRegistry::Instantiate(const Serializer::Prefab& prefab) noexcept {
     return it->second;
 }
 
+GameObject& GameObjectRegistry::Instantiate(
+    const Syngine::Serializer::DataNode& dataNode) noexcept {
+    Syngine::UUID uuid;
+    do {
+        uuid = GenerateUUID();
+    } while (m_AllObjects.contains(uuid));
+    auto [it, inserted] =
+        m_AllObjects.emplace(std::piecewise_construct,
+                             std::forward_as_tuple(uuid),
+                             std::forward_as_tuple(dataNode, uuid));
+    return it->second;
+}
+
 GameObject&
 GameObjectRegistry::CloneGameObject(const GameObject& original) noexcept {
     GameObject& clone = CreateGameObject(
@@ -191,7 +204,8 @@ void GameObjectRegistry::_RemoveQueuedObjectComponents() noexcept {
             removeFrom(m_ScriptedObjects);
             break;
         case Syngine::SYN_COMPONENT_CAMERA:
-            if (object->HasComponent(Syngine::SYN_COMPONENT_LIGHT_DIRECTIONAL)) {
+            if (object->HasComponent(
+                    Syngine::SYN_COMPONENT_LIGHT_DIRECTIONAL)) {
                 if (object->gizmo == "g_camera_render") {
                     object->gizmo = "g_light_sun";
                 }

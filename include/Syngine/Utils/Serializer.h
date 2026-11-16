@@ -8,7 +8,9 @@
 
 #pragma once
 
-#include "Syngine/Core/Logger.h"
+#include <Syngine/Core/Logger.h>
+#include <Syngine/Math/Math.hpp>
+#include <Syngine/Utils/UUID.h>
 
 #include <string>
 #include <unordered_map>
@@ -18,21 +20,31 @@
 #include <cstddef>
 
 #include "../../lib/miniscl.hpp"
-#include "Syngine/Math/Math.hpp"
-#include "Syngine/Math/Quaternion.hpp"
 
 #define SYNINT_PREFAB_VERSION "1.0"
 #define SYNINT_SCENE_VERSION "1.0"
 #define SYNINT_CORESETTINGS_VERSION "1.0"
 
+// Maximum decimal places in serialized floats. Lower values round saved data.
+#ifndef SYN_SERIALIZER_FLOAT_DECIMALS
+#define SYN_SERIALIZER_FLOAT_DECIMALS 5
+#endif
+
+#if SYN_SERIALIZER_FLOAT_DECIMALS < 0
+#error SYN_SERIALIZER_FLOAT_DECIMALS must be non-negative
+#endif
+
 namespace Syngine {
-class GameObject; // Forward declaration to avoid circular dependency with
-                  // GameObject.h
+class GameObject;    // Forward declaration to avoid circular dependency with
+                     // GameObject.h
+class SceneInstance; // Forward declaration to avoid circular dependency with
+                     // Scene.h
 namespace Internal {
 std::string
 ResolvePath(const char* path); // Had issues with FsUtils so added this as a
                                // workaround for now. Will refactor later.
-}
+std::string FormatSerializedFloat(float value);
+} // namespace Internal
 
 /// @brief Utility class for serializing and deserializing engine and game data
 /// to disk.
@@ -255,7 +267,7 @@ class Serializer {
 
         DataNode Serialize() const; //* Helper to serialize core settings
         void     Deserialize(
-                const DataNode& node); //* Helper to deserialize core settings
+            const DataNode& node); //* Helper to deserialize core settings
 
         static bool
         SaveToFile(const std::string&  path,
@@ -287,34 +299,71 @@ class Serializer {
         bool   SaveToFile(const std::string& path);   //* Save prefab to file
         Prefab LoadFromFile(const std::string& path); //* Load prefab from file
 
-      private:
-        Prefab();
-        void WriteGameObject(
+        static void WriteGameObject(
             const DataNode&        node,
             scl::xml::XmlDocument& doc,
-            scl::xml::XmlElem*     parent) const; //* Helper to serialize prefab
-        DataNode&
+            scl::xml::XmlElem*     parent); //* Helper to serialize prefab
+
+        static DataNode&
         Deserialize(const scl::xml::XmlElem* elem,
                     DataNode& outNode); //* Helper to deserialize prefab
+
+      private:
+        Prefab();
     };
 
     /// @brief Represents a complete game scene with all GameObjects and scene
     /// settings
-    /// @since v0.0.1
+    /// @since v0.0.3
     struct Scene {
-        std::string name;          //* Human-readable name of the scene
-        std::string guid;          //* Unique identifier for the scene
-        DataNode    gameObjects;   //* Array of root GameObjects in the scene
-        DataNode    sceneSettings; //* Scene-specific settings (lighting, fog,
-                                   // skybox, etc.)
+        std::string   name;               //* Human-readable name of the scene
+        Syngine::UUID uuid;               //* Unique identifier for the scene
+        bool          persistent = false; //* Survives single-scene loads
+        bool isValid = false;   //* Set after successful data deserialization;
+                                // does not validate component factories
+        DataNode gameObjects;   //* Array of root GameObjects in the scene
+        DataNode sceneSettings; //* Scene-specific settings (lighting, fog,
+                                // skybox, etc.)
 
-        DataNode Serialize() const;             //* Helper to serialize scene
-        void Deserialize(const DataNode& node); //* Helper to deserialize scene
+        /// @brief Encodes the scene data in a DataNode.
+        /// @return A DataNode containing the scene metadata and content.
+        /// @throws std::runtime_error if gameObjects is not an array.
+        /// @threadsafety read-only
+        /// @since v0.0.3
+        DataNode Serialize() const;
 
-        static bool SaveToFile(const std::string& path,
-                               const Scene&       scene); //* Save scene to file
-        static Scene
-        LoadFromFile(const std::string& path); //* Load scene from file
+        /// @brief Validates and replaces the scene data.
+        /// @param node The scene data to decode.
+        /// @throws std::runtime_error if required fields have invalid types.
+        /// @note Validation does not check GameObject or component contents.
+        /// @threadsafety not-safe
+        /// @since v0.0.3
+        void Deserialize(const DataNode& node);
+
+        /// @brief Writes scene data to a versioned, typed XML file.
+        /// @param path The destination filesystem path.
+        /// @param sceneInstance The scene data to save.
+        /// @return True on success, false if validation or writing fails.
+        /// @note An existing file is replaced only after the new data is
+        /// written.
+        /// @threadsafety not-safe
+        /// @since v0.0.3
+        static bool SaveToFile(const std::string&   path,
+                               const SceneInstance& sceneInstance);
+
+        /// @brief Reads scene data from a versioned, typed XML file.
+        /// @param bundle The path to the bundle file.
+        /// @param sceneName The name of the scene within the bundle.
+        /// @return The decoded scene, or an invalid scene if reading fails.
+        /// @note A valid result does not imply that component factories exist.
+        /// @threadsafety not-safe
+        /// @since v0.0.3
+        static Scene LoadFromFile(const std::string& bundle,
+                                  const std::string& sceneName);
+
+      private:
+        static const Scene
+        _FromSceneInstance(const SceneInstance& sceneInstance);
     };
 
     /// @brief Represents a complete game save file
@@ -350,7 +399,8 @@ class Serializer {
     static inline scl::stream
     _ReadFromBundle(const std::string&   bundlePath,
                     const std::string&   assetPath,
-                    scl::pack::Packager& pack = *(new scl::pack::Packager())) {
+                    scl::pack::Packager& pack = *(new scl::pack::Packager()),
+                    bool                 closePackager = true) {
         try {
             // Check if the packager is already open; if not, open the bundle
             // file
@@ -395,7 +445,9 @@ class Serializer {
                     false,
                     "Failed to open asset in bundle: %s. Does the asset exist?",
                     assetPath.c_str());
-                pack.close();
+                if (closePackager) {
+                    pack.close();
+                }
                 return scl::stream();
             }
 
@@ -405,7 +457,9 @@ class Serializer {
             ms.write(wts->stream()->data(), dataSize);
             ms.seek(scl::StreamPos::start, 0);
 
-            pack.close();
+            if (closePackager) {
+                pack.close();
+            }
             return ms;
         } catch (const std::exception& e) {
             Logger::LogF(
@@ -414,16 +468,20 @@ class Serializer {
         }
     }
 
-    /// @brief Internal helper to parse float arrays
-    /// @param value The string value to parse (expected format: "x,y,z")
+    /// @brief Helper to parse float arrays from a delimited string
+    /// @param value The string value to parse (expected format: "x,y,z") (or
+    /// whatever delimiter is specified)
+    /// @param delimiter The character used to separate values in the string
     /// @return A vector of floats with the parsed values, or an empty vector if
     /// parsing fails
     /// @since v0.0.1
     /// @internal
-    static inline std::vector<float> _ParseFloatArray(scl::string& value) {
-        // See _ParseStringArray for explanation of CSV parsing logic
+    static inline std::vector<float> SplitFloat(scl::string& value,
+                                                const char   delimiter = ',') {
+        // See SplitString for explanation of CSV parsing logic
+        std::string        delimiterStr(1, delimiter);
         std::vector<float> floats;
-        size_t             end = value.ffi(",");
+        size_t             end = value.ffi(delimiterStr);
 // Suppress conversion warning from __int64 to uint and from size_t to uint
 #pragma warning(push)
 #pragma warning(disable : 4244)
@@ -431,48 +489,54 @@ class Serializer {
         while (end != std::string::npos) {
             floats.push_back(std::stof(value.substr(0, end).cstr()));
             value = value.substr(end + 1);
-            end   = value.ffi(",");
+            end   = value.ffi(delimiterStr);
         }
         floats.push_back(std::stof(value.cstr()));
 #pragma warning(pop)
         return floats;
     }
 
-    /// @brief Internal helper to parse int arrays
-    /// @param value The string value to parse (expected format: "x,y,z")
+    /// @brief Helper to parse int arrays from a delimited string
+    /// @param value The string value to parse (expected format: "x,y,z") (or
+    /// whatever delimiter is specified)
+    /// @param delimiter The character used to separate values in the string
     /// @return A vector of ints with the parsed values, or an empty vector if
     /// parsing fails
     /// @since v0.0.1
     /// @internal
-    static inline std::vector<int> _ParseIntArray(scl::string& value) {
-        // See _ParseStringArray for explanation of CSV parsing logic
+    static inline std::vector<int> SplitInt(scl::string& value,
+                                            const char   delimiter = ',') {
+        std::string delimiterStr(1, delimiter);
+        // See SplitString for explanation of CSV parsing logic
         std::vector<int> ints;
-        size_t           end = value.ffi(",");
+        size_t           end = value.ffi(delimiterStr);
         // Suppress conversion warning from size_t to uint
 #pragma warning(push)
 #pragma warning(disable : 4267)
         while (end != std::string::npos) {
             ints.push_back(std::stoi(value.substr(0, end).cstr()));
             value = value.substr(end + 1);
-            end   = value.ffi(",");
+            end   = value.ffi(delimiterStr);
         }
         ints.push_back(std::stoi(value.cstr()));
 #pragma warning(pop)
         return ints;
     }
 
-    /// @brief Internal helper to parse string arrays
+    /// @brief Helper to parse string arrays from a delimited string
     /// @param value The string value to parse (expected format:
-    /// "str1,str2,str3")
+    /// "str1,str2,str3") (or whatever delimiter is specified)
+    /// @param delimiter The character used to separate values in the string
     /// @return A vector of strings with the parsed values, or an empty vector
     /// if parsing fails
     /// @since v0.0.1
     /// @internal
     static inline std::vector<std::string>
-    _ParseStringArray(scl::string value) {
+    SplitString(scl::string value, const char delimiter = ',') {
+        std::string delimiterStr(1, delimiter);
         // tags are CSV in XML, convert back to array
         std::vector<std::string> tags;
-        long long                end = value.ffi(","); // Find first comma
+        long long end = value.ffi(delimiterStr); // Find first comma
         // Suppress conversion warning from __int64 to uint
 #pragma warning(push)
 #pragma warning(disable : 4244)
@@ -481,7 +545,8 @@ class Serializer {
                 value.substr(0, end)
                     .cstr()); // Extract substring up to comma as a tag
             value = value.substr(end + 1); // Remove parsed part from string
-            end   = value.ffi(","); // Find next comma in remaining string
+            end =
+                value.ffi(delimiterStr); // Find next comma in remaining string
         }
         tags.push_back(value.cstr()); // Last tag after final comma
 #pragma warning(pop)
@@ -578,12 +643,11 @@ Serializer::DataNode::As<Syngine::Math::Quaternion>(
     }
 
     const auto& arr = std::get<NodeArray>(m_data);
-    auto vec4       = arr[0].As<std::vector<float>>({ 0.0f, 0.0f, 0.0f, 1.0f });
-    if (vec4.size() != 4) {
-        return Syngine::Math::Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
-    }
-
-    return Syngine::Math::Quaternion(vec4[0], vec4[1], vec4[2], vec4[3]);
+    if (arr.size() != 4) return defaultValue;
+    return Syngine::Math::Quaternion(arr[0].As<float>(),
+                                     arr[1].As<float>(),
+                                     arr[2].As<float>(),
+                                     arr[3].As<float>());
 }
 
 template <>
@@ -618,6 +682,21 @@ inline Syngine::Math::Vector4 Serializer::DataNode::As<Syngine::Math::Vector4>(
                                   arr[1].As<float>(0.0f),
                                   arr[2].As<float>(0.0f),
                                   arr[3].As<float>(1.0f));
+}
+
+template <>
+inline Syngine::UUID Serializer::DataNode::As<Syngine::UUID>(
+    const Syngine::UUID& defaultValue) const {
+    if (!std::holds_alternative<NodeArray>(m_data)) {
+        return defaultValue;
+    }
+
+    const auto& arr = std::get<NodeArray>(m_data);
+    if (arr.empty()) {
+        return defaultValue;
+    }
+
+    return Syngine::UUIDFromString(arr[0].As<std::string>(""));
 }
 
 // Generic template for other types that don't have a specific specialization
@@ -734,6 +813,15 @@ inline Serializer::DataNode& Serializer::DataNode::operator=
     arr.emplace_back().Set(value.y());
     arr.emplace_back().Set(value.z());
     arr.emplace_back().Set(value.w());
+    return *this;
+}
+
+template <>
+inline Serializer::DataNode& Serializer::DataNode::operator=
+    <Syngine::UUID>(const Syngine::UUID& value) {
+    m_data    = NodeArray{};
+    auto& arr = std::get<NodeArray>(m_data);
+    arr.emplace_back().Set(value.ToString());
     return *this;
 }
 

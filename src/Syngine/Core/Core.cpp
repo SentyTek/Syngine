@@ -123,6 +123,10 @@ Core::~Core() {
             m_context->physicsManager->_Shutdown();
             m_context->physicsManager.reset();
         }
+        if (m_context->sceneManager) {
+            m_context->sceneManager->_Shutdown();
+            m_context->sceneManager.reset();
+        }
         m_instance = nullptr; // Reset the singleton instance
     }
     Logger::_Shutdown();
@@ -220,6 +224,12 @@ bool Core::Initialize(const RendererConfig rendererConfig) {
             }
         } else {
             m_context->luaState = nullptr;
+        }
+
+        m_context->sceneManager = std::make_unique<SceneManager>();
+        if (!m_context->sceneManager) {
+            Logger::Error("Failed to create SceneManager. Check the log for "
+                          "more details.");
         }
     } catch (const std::exception& e) {
         Syngine::Logger::LogF(

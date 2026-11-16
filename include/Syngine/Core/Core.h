@@ -22,6 +22,7 @@
 #include <Syngine/Utils/Profiler.h>
 #include <Syngine/Core/JobSystem.h>
 #include <Syngine/Core/ThreadManager.h>
+#include <Syngine/Scene/Scene.h>
 
 #include <cstdint>
 #include <memory>
@@ -304,8 +305,10 @@ class Core {
         std::unique_ptr<Phys> physicsManager; //* Pointer to the physics manager
         std::unique_ptr<ZoneSystem> ZoneSystem; //* Pointer to the zone manager
         std::unique_ptr<LuaManager> luaState;   //* Pointer to the Lua state
-        DebugModes                  debug;      //* Debug modes flags
-        JobSystem                   jobSystem;  //* Reference to the job system
+        std::unique_ptr<SceneManager>
+                      sceneManager;  //* Pointer to the scene manager
+        DebugModes    debug;         //* Debug modes flags
+        JobSystem     jobSystem;     //* Reference to the job system
         ThreadManager threadManager; //* Reference to the thread manager
     };
 

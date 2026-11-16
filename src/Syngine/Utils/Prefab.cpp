@@ -6,14 +6,74 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/GameObjects/GameObject.h"
-#include "Syngine/Utils/Serializer.h"
-#include "Syngine/Utils/FsUtils.h"
-#include "Syngine/Core/Core.h"
-#include "Syngine/GameObjects/ComponentRegistry.h"
+#include <Syngine/GameObjects/GameObject.h>
+#include <Syngine/Scene/GameObjectRegistry.h>
+#include <Syngine/Utils/Serializer.h>
+#include <Syngine/Utils/FsUtils.h>
+#include <Syngine/Core/Core.h>
+#include <Syngine/GameObjects/ComponentRegistry.h>
+
+#include <locale>
+#include <sstream>
 #include <string>
 
 namespace Syngine {
+namespace {
+bool PrefabDataSupported(const Serializer::DataNode& object) {
+    if (object.Has("components")) {
+        for (const auto& [type, component] : object["components"]) {
+            for (const auto& [key, value] : component) {
+                if (value.IsObject()) return false;
+                if (value.IsArray()) {
+                    for (size_t i = 0; i < value.Size(); ++i) {
+                        if (value.At(i).IsArray() || value.At(i).IsObject())
+                            return false;
+                    }
+                }
+            }
+        }
+    }
+    if (object.Has("children") && object["children"].IsArray()) {
+        for (size_t i = 0; i < object["children"].Size(); ++i) {
+            if (!PrefabDataSupported(object["children"].At(i))) return false;
+        }
+    }
+    return true;
+}
+
+std::string SerializeCompoundParts(const Serializer::DataNode& parts) {
+    using Node = Serializer::DataNode;
+    if (!parts.IsArray() || parts.Size() == 0)
+        throw std::runtime_error("Invalid compound shape parts");
+
+    std::ostringstream result;
+    result.imbue(std::locale::classic());
+    for (size_t i = 0; i < parts.Size(); ++i) {
+        const auto& part = parts.At(i);
+        if (part["shape"].GetType() != Node::Type::Integer)
+            throw std::runtime_error("Invalid compound shape part type");
+        if (i != 0) result << '|';
+        result << part["shape"].As<int>();
+        for (const auto& field :
+             { "shapeParameters", "position", "rotation" }) {
+            const auto&  values = part[field];
+            const size_t count  = std::string(field) == "rotation" ? 4 : 3;
+            if (!values.IsArray() || values.Size() != count)
+                throw std::runtime_error("Invalid compound shape part vector");
+            result << ':';
+            for (size_t j = 0; j < count; ++j) {
+                if (values.At(j).GetType() != Node::Type::Float)
+                    throw std::runtime_error(
+                        "Invalid compound shape part value");
+                if (j != 0) result << ',';
+                result << Internal::FormatSerializedFloat(
+                    values.At(j).As<float>());
+            }
+        }
+    }
+    return result.str();
+}
+} // namespace
 
 Serializer::Prefab::Prefab(GameObject* root)
     : rootGameObjectData(root->Serialize()), isValid(true),
@@ -32,7 +92,7 @@ Serializer::Prefab::Prefab(const std::string& path)
 
 void Serializer::Prefab::WriteGameObject(const DataNode&        node,
                                          scl::xml::XmlDocument& doc,
-                                         scl::xml::XmlElem*     parent) const {
+                                         scl::xml::XmlElem*     parent) {
     // Convert DataNode data to XML attributes
     // Defines a lambda function named `ConvertData` that takes a `DataNode`
     // object as input and returns a `std::string`. Within this lambda function,
@@ -50,18 +110,18 @@ void Serializer::Prefab::WriteGameObject(const DataNode&        node,
             case DataNode::Type::Integer: return std::to_string(n.As<int>());
             case DataNode::Type::UnsignedInteger:
                 return std::to_string(n.As<uint64_t>());
-            case DataNode::Type::Float: {
-                std::string s   = std::to_string(n.As<float>());
-                auto        dot = s.find('.');
-                if (dot != std::string::npos) {
-                    auto last = s.find_last_not_of('0');
-                    s         = (last == dot) ? s.substr(0, dot)
-                                              : s.substr(0, last + 1);
-                }
-                return s;
-            }
+            case DataNode::Type::Float:
+                return Internal::FormatSerializedFloat(n.As<float>());
             case DataNode::Type::String: return n.As<std::string>();
-            case DataNode::Type::Object: return std::string("<object>");
+            case DataNode::Type::Object: {
+                for (const auto& [k, v] :
+                     std::get<DataNode::NodeMap>(n.m_data)) {
+                    if (!v.IsNull()) {
+                        return convert(v);
+                    }
+                }
+                return std::string("null");
+            }
             case DataNode::Type::Array: {
                 std::string valueStr; // Default value required so XML doesn't
                                       // have null attribs
@@ -113,8 +173,13 @@ void Serializer::Prefab::WriteGameObject(const DataNode&        node,
             scl::xml::XmlElem* compElem = doc.new_elem("Component");
             for (const auto& [key, value] :
                  std::get<DataNode::NodeMap>(comp.second.m_data)) {
-                std::string        valueStr = ConvertData(value);
-                scl::xml::XmlAttr* attr     = doc.new_attr(key, valueStr);
+                std::string valueStr =
+                    key == "compoundParts" &&
+                            comp.first ==
+                                std::to_string(SYN_COMPONENT_RIGIDBODY)
+                        ? SerializeCompoundParts(value)
+                        : ConvertData(value);
+                scl::xml::XmlAttr* attr = doc.new_attr(key, valueStr);
                 if (!attr) {
                     Logger::Error(
                         "Failed to create XML attribute for component key: " +
@@ -150,6 +215,10 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
     }
     if (!rootGameObject) {
         Logger::Error("Prefab has no root GameObject to serialize");
+        return false;
+    }
+    if (!PrefabDataSupported(rootGameObjectData)) {
+        Logger::Error("Prefab format does not support nested component data");
         return false;
     }
 
@@ -219,7 +288,7 @@ Serializer::Prefab Serializer::Prefab::LoadFromFile(const std::string& path) {
         return prefab;
     }
     scl::string version = versionAttr->data();
-    if (version != SYNINT_PREFAB_VERSION) {
+    if (doc.tag() != "Prefab" || version != SYNINT_PREFAB_VERSION) {
         Logger::Error(&"Prefab version mismatch (expected "[scl::string(
                           SYNINT_PREFAB_VERSION)] +
                       scl::string(", got ") + version + scl::string("): ") +
@@ -238,7 +307,8 @@ Serializer::Prefab Serializer::Prefab::LoadFromFile(const std::string& path) {
 
     // Now that the prefab is deserialized into a DataNode, we can instantiate
     // it into actual GameObjects and Components
-    prefab.rootGameObject = new GameObject(prefab.rootGameObjectData);
+    prefab.rootGameObject =
+        &GameObjectRegistry::Instantiate(prefab.rootGameObjectData);
     prefab.name =
         prefab.rootGameObject
             ->name; // Set prefab name to root GameObject's name for convenience
@@ -262,9 +332,8 @@ Serializer::Prefab::Deserialize(const scl::xml::XmlElem* elem,
             outNode["isActive"] = (value == "true");
         } else if (key == "tags") {
             // tags are CSV in XML, convert back to array
-            std::vector<std::string> tags =
-                Serializer::_ParseStringArray(value);
-            outNode["tags"] = tags;
+            std::vector<std::string> tags = Serializer::SplitString(value, ',');
+            outNode["tags"]               = tags;
         }
     }
 
@@ -280,6 +349,9 @@ Serializer::Prefab::Deserialize(const scl::xml::XmlElem* elem,
                 typeAttr->data()
                     .cstr()); // Pray it doesn't get negative somehow
             DataNode compNode = ComponentRegistry::ParseXml(typeId, compElem);
+            if (auto* enabled = compElem->find_attr("enabled")) {
+                compNode["enabled"] = (enabled->data() == "true");
+            }
             componentsNode[std::to_string(typeId)] =
                 compNode; // Use component type as key
         }
@@ -287,6 +359,10 @@ Serializer::Prefab::Deserialize(const scl::xml::XmlElem* elem,
     }
 
     // Handle child GameObjects
+    if (elem->find_children("Children").empty()) {
+        return outNode;
+    }
+
     auto childrenElem = elem->find_children("Children").front();
     if (childrenElem) {
         DataNode childrenNode;

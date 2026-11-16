@@ -122,7 +122,7 @@ Material& MaterialManager::_DeserializeMaterial(scl::stream& xmlStream) {
                 if (paramType == "vec4") {
                     scl::string        valueStr = value->data();
                     std::vector<float> components =
-                        Serializer::_ParseFloatArray(valueStr);
+                        Serializer::SplitFloat(valueStr);
 
                     if (components.size() == 4) {
                         mat._SetDefault(uniformName,
