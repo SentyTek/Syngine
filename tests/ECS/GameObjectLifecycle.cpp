@@ -75,8 +75,8 @@ TEST_CASE("ECS registry queries reflect component membership", "[ECS]") {
 
         REQUIRE(GameObjectRegistry::GetGameObjectByName("TransformObject") ==
                 &transformObject);
-        REQUIRE(GameObjectRegistry::GetGameObjectByUUID(
-                    transformObject.GetUUID()) == &transformObject);
+        REQUIRE(GameObjectRegistry::GetGameObjectByID(
+                    transformObject.GetID()) == &transformObject);
 
         const auto byType = GameObjectRegistry::GetGameObjectsByType("npc");
         REQUIRE(std::find(byType.begin(), byType.end(), &transformObject) !=
@@ -117,11 +117,11 @@ TEST_CASE("ECS copy construction clones components", "[ECS]") {
     REQUIRE(originalTransform != nullptr);
     originalTransform->SetPosition(Syngine::Math::Vec3(4.0f, 5.0f, 6.0f));
 
-    const auto originalUUID = original.GetUUID();
+    const auto originalUUID = original.GetID();
 
     GameObject& copy = GameObjectRegistry::CloneGameObject(original);
 
-    REQUIRE(copy.GetUUID() != originalUUID);
+    REQUIRE(copy.GetID() != originalUUID);
     REQUIRE(copy.name == original.name + "_clone");
     REQUIRE(copy.type == original.type);
     REQUIRE(copy.GetTags() == original.GetTags());

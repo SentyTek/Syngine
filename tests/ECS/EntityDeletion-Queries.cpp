@@ -50,19 +50,19 @@ TEST_CASE("GameObject UUID lookup and deferred removal", "[ECS][UUID]") {
     SYN_STARTENGINE
 
     auto& object = GameObjectRegistry::CreateGameObject("UUID object");
-    const std::string uuid = object.GetUUID();
-    REQUIRE(GameObjectRegistry::GetGameObjectByUUID(uuid) == &object);
+    const std::string uuid = object.GetID();
+    REQUIRE(GameObjectRegistry::GetGameObjectByID(uuid) == &object);
     REQUIRE(GameObjectRegistry::GetAllGameObjects().contains(uuid));
 
     GameObject unregistered("unregistered", "default", {}, uuid);
     GameObjectRegistry::RemoveGameObject(&unregistered);
     engine.Update();
-    REQUIRE(GameObjectRegistry::GetGameObjectByUUID(uuid) == &object);
+    REQUIRE(GameObjectRegistry::GetGameObjectByID(uuid) == &object);
 
-    GameObjectRegistry::RemoveGameObjectByUUID(uuid);
-    REQUIRE(GameObjectRegistry::GetGameObjectByUUID(uuid) == &object);
+    GameObjectRegistry::RemoveGameObjectByID(uuid);
+    REQUIRE(GameObjectRegistry::GetGameObjectByID(uuid) == &object);
     engine.Update();
-    REQUIRE(GameObjectRegistry::GetGameObjectByUUID(uuid) == nullptr);
+    REQUIRE(GameObjectRegistry::GetGameObjectByID(uuid) == nullptr);
     REQUIRE_FALSE(GameObjectRegistry::GetAllGameObjects().contains(uuid));
 }
 

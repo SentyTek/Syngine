@@ -6,10 +6,12 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "Syngine/Utils/UUID.h"
+#include <Syngine/Utils/UUID.h>
 
 #include <array>
 #include <random>
+#include <cstdio>
+#include <stdexcept>
 
 namespace Syngine {
 

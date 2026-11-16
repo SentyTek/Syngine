@@ -60,7 +60,7 @@ TEST_CASE("Object serialization retains authored identity and enabled state",
     const auto node = original.Serialize();
     GameObject restored(node);
     REQUIRE(restored.GetPersistentID() == original.GetPersistentID());
-    REQUIRE(restored.GetUUID() != original.GetUUID());
+    REQUIRE(restored.GetID() != original.GetID());
     REQUIRE_FALSE(restored.GetComponent<TransformComponent>()->IsEnabled());
 }
 
