@@ -11,9 +11,64 @@
 #include "../defines.h"
 
 #include <Syngine/Syngine.h>
+#include <Syngine/GameObjects/ComponentRegistry.h>
+#include <Syngine/Scene/Scene.h>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
 using namespace Syngine;
 using namespace Syngine::Math;
 using namespace Catch::Matchers;
+
+TEST_CASE("Scene XML loads root GameObjects", "[Serializer][Scene]") {
+    const auto base = std::filesystem::temp_directory_path() /
+                      ("syngine-scene-" + GenerateUUID().ToString());
+    const auto xmlPath = base.string() + ".xml";
+    const auto bundlePath = base.string() + ".spk";
+    {
+        std::ofstream file(xmlPath);
+        REQUIRE(file);
+        file << R"(<Scene Version="1.0"><name>Test</name>)"
+                R"(<uuid>0d7fea47-e7f1-4c04-8eac-384b00c19ffa</uuid>)"
+                R"(<persistent>false</persistent><gameObjects>)"
+                R"(<gameObject name="First" type="default" gizmo="none" isActive="true"/>)"
+                R"(<gameObject name="Second" type="default" gizmo="none" isActive="false"/>)"
+                R"(</gameObjects></Scene>)";
+    }
+
+    scl::pack::Packager pack;
+    REQUIRE(pack.open(scl::path(bundlePath.c_str())));
+    auto* entry = pack.openFile(scl::path(xmlPath.c_str()));
+    REQUIRE(entry != nullptr);
+    const std::string assetPath = entry->filepath().cstr();
+    entry->submit();
+    REQUIRE(pack.write());
+    pack.close();
+
+    const auto scene = Serializer::Scene::LoadFromFile(bundlePath, assetPath);
+    std::filesystem::remove(bundlePath);
+    std::filesystem::remove(xmlPath);
+    REQUIRE(scene.isValid);
+    REQUIRE(scene.gameObjects.IsArray());
+    REQUIRE(scene.gameObjects.Size() == 2);
+    REQUIRE(scene.gameObjects.At(0).IsObject());
+    REQUIRE(scene.gameObjects.At(0)["name"].As<std::string>() == "First");
+    REQUIRE(scene.gameObjects.At(1).IsObject());
+    REQUIRE(scene.gameObjects.At(1)["name"].As<std::string>() == "Second");
+
+    SceneInstance instance(scene, bundlePath, assetPath);
+    REQUIRE(instance.GetGameObjects().size() == 2);
+    const auto* first = instance.GetGameObject(instance.GetGameObjects()[0]);
+    const auto* second = instance.GetGameObject(instance.GetGameObjects()[1]);
+    REQUIRE(first != nullptr);
+    REQUIRE(second != nullptr);
+    REQUIRE(first->name == "First");
+    REQUIRE(second->name == "Second");
+    REQUIRE(first->IsActive());
+    REQUIRE_FALSE(second->IsActive());
+    GameObjectRegistry::Clear();
+}
 
 // Test that a GameObject can be serialized and deserialized correctly
 TEST_CASE("GameObject serialization round-trip", "[Serializer]") {
@@ -170,4 +225,131 @@ TEST_CASE("Saving and loading a GameObject tree from disk", "[Serializer]") {
     // Clean up
     delete loadedGo;
     delete loadedChild;
+}
+
+TEST_CASE("Compound rigidbody prefab XML round trip", "[Serializer][Physics]") {
+    RigidbodyParameters params;
+    params.shape = PhysicsShapes::COMPOUND;
+    params.friction = 0.12345678f;
+    params.compoundParts.push_back(
+        { .shape           = PhysicsShapes::BOX,
+          .shapeParameters = SVec3(1.00000012f, 2.0f, 3.0f),
+          .position        = SVec3(-4.0f, 5.0f, 6.0f),
+          .rotation        = SQuat(0.1f, 0.2f, 0.3f, 0.9f) });
+    SECTION("one part") {}
+    SECTION("multiple parts") {
+        params.compoundParts.push_back(
+            { .shape           = PhysicsShapes::SPHERE,
+              .shapeParameters = SVec3(0.5f, 0.0f, 0.0f),
+              .position        = SVec3(7.0f, -8.0f, 9.0f),
+              .rotation        = SQuat(-0.2f, 0.4f, -0.5f, 0.7f) });
+    }
+
+    GameObject original("Compound", "default", {});
+    original.AddComponent<TransformComponent>()->SetPosition(
+        SVec3(0.12345678f, 0.0f, 0.0f));
+    original.AddComponent<RigidbodyComponent>(params);
+    Serializer::Prefab prefab(&original);
+    const auto path = std::filesystem::temp_directory_path() /
+                      ("syngine-compound-" + GenerateUUID().ToString() + ".xml");
+    REQUIRE(prefab.SaveToFile(path.string()));
+    std::ifstream file(path);
+    const std::string xml((std::istreambuf_iterator<char>(file)),
+                          std::istreambuf_iterator<char>());
+    file.close();
+    REQUIRE(xml.find("compoundParts=\"1:") != std::string::npos);
+    REQUIRE((xml.find('|') != std::string::npos) ==
+            (params.compoundParts.size() == 2));
+#if SYN_SERIALIZER_FLOAT_DECIMALS == 6
+    REQUIRE(xml.find("friction=\"0.123457\"") != std::string::npos);
+    REQUIRE(xml.find("position=\"0.123457,0,0\"") != std::string::npos);
+    REQUIRE(xml.find("compoundParts=\"1:1,2,3:") != std::string::npos);
+#elif SYN_SERIALIZER_FLOAT_DECIMALS == 2
+    REQUIRE(xml.find("friction=\"0.12\"") != std::string::npos);
+    REQUIRE(xml.find("position=\"0.12,0,0\"") != std::string::npos);
+    REQUIRE(xml.find("compoundParts=\"1:1,2,3:") != std::string::npos);
+#elif SYN_SERIALIZER_FLOAT_DECIMALS == 0
+    REQUIRE(xml.find("friction=\"0\"") != std::string::npos);
+    REQUIRE(xml.find("position=\"0,0,0\"") != std::string::npos);
+    REQUIRE(xml.find("compoundParts=\"1:1,2,3:") != std::string::npos);
+#endif
+
+    Serializer::Prefab loaded(path.string());
+    std::filesystem::remove(path);
+    REQUIRE(loaded.isValid);
+    REQUIRE(loaded.rootGameObject != nullptr);
+    auto* body = loaded.rootGameObject->GetComponent<RigidbodyComponent>();
+    REQUIRE(body != nullptr);
+    const auto result = body->GetCurrentParameters();
+    REQUIRE(result.shape == PhysicsShapes::COMPOUND);
+    REQUIRE(result.compoundParts.size() == params.compoundParts.size());
+    const double margin =
+        std::pow(10.0, -SYN_SERIALIZER_FLOAT_DECIMALS) / 2.0 + 1e-7;
+    for (size_t i = 0; i < params.compoundParts.size(); ++i) {
+        const auto& expected = params.compoundParts[i];
+        const auto& actual   = result.compoundParts[i];
+        REQUIRE(actual.shape == expected.shape);
+        REQUIRE_THAT(actual.shapeParameters.x(),
+                     WithinAbs(expected.shapeParameters.x(), margin));
+        REQUIRE_THAT(actual.shapeParameters.y(),
+                     WithinAbs(expected.shapeParameters.y(), margin));
+        REQUIRE_THAT(actual.shapeParameters.z(),
+                     WithinAbs(expected.shapeParameters.z(), margin));
+        REQUIRE_THAT(actual.position.x(),
+                     WithinAbs(expected.position.x(), margin));
+        REQUIRE_THAT(actual.position.y(),
+                     WithinAbs(expected.position.y(), margin));
+        REQUIRE_THAT(actual.position.z(),
+                     WithinAbs(expected.position.z(), margin));
+        REQUIRE_THAT(actual.rotation.x(),
+                     WithinAbs(expected.rotation.x(), margin));
+        REQUIRE_THAT(actual.rotation.y(),
+                     WithinAbs(expected.rotation.y(), margin));
+        REQUIRE_THAT(actual.rotation.z(),
+                     WithinAbs(expected.rotation.z(), margin));
+        REQUIRE_THAT(actual.rotation.w(),
+                     WithinAbs(expected.rotation.w(), margin));
+    }
+    delete loaded.rootGameObject;
+}
+
+TEST_CASE("Settings float serialization uses configured decimal places",
+          "[Serializer]") {
+    Serializer::CoreSettings settings;
+    settings.video.brightness = 0.12345678f;
+    const auto path = std::filesystem::temp_directory_path() /
+                      ("syngine-settings-" + GenerateUUID().ToString() + ".xml");
+    REQUIRE(Serializer::CoreSettings::SaveToFile(path.string(), settings));
+    std::ifstream file(path);
+    const std::string xml((std::istreambuf_iterator<char>(file)),
+                          std::istreambuf_iterator<char>());
+    file.close();
+    std::filesystem::remove(path);
+#if SYN_SERIALIZER_FLOAT_DECIMALS == 6
+    REQUIRE(xml.find("brightness=\"0.123457\"") != std::string::npos);
+#elif SYN_SERIALIZER_FLOAT_DECIMALS == 2
+    REQUIRE(xml.find("brightness=\"0.12\"") != std::string::npos);
+#elif SYN_SERIALIZER_FLOAT_DECIMALS == 0
+    REQUIRE(xml.find("brightness=\"0\"") != std::string::npos);
+#else
+    REQUIRE(xml.find("brightness=\"") != std::string::npos);
+#endif
+}
+
+TEST_CASE("Non-compound rigidbody retains shape parameters", "[Serializer][Physics]") {
+    GameObject owner("Box", "default", {});
+    RigidbodyParameters params;
+    params.shape = PhysicsShapes::BOX;
+    params.shapeParameters = SVec3(1.0f, 2.0f, 3.0f);
+    RigidbodyComponent original(&owner, params);
+    const auto node = original.Serialize();
+    REQUIRE_FALSE(node.Has("compoundParts"));
+    auto restored = ComponentRegistry::Instantiate(
+        SYN_COMPONENT_RIGIDBODY, &owner, node);
+    REQUIRE(restored != nullptr);
+    const auto result =
+        static_cast<RigidbodyComponent*>(restored.get())->GetCurrentParameters();
+    REQUIRE(result.shapeParameters.x() == 1.0f);
+    REQUIRE(result.shapeParameters.y() == 2.0f);
+    REQUIRE(result.shapeParameters.z() == 3.0f);
 }

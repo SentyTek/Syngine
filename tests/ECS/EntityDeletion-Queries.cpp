@@ -46,6 +46,26 @@ TEST_CASE("Entity deletion removes entity from registry", "[ECS]") {
     REQUIRE(!GameObjectRegistry::GetGameObjectByName("TestEntity"));
 }
 
+TEST_CASE("GameObject UUID lookup and deferred removal", "[ECS][UUID]") {
+    SYN_STARTENGINE
+
+    auto& object = GameObjectRegistry::CreateGameObject("UUID object");
+    const std::string uuid = object.GetUUID();
+    REQUIRE(GameObjectRegistry::GetGameObjectByUUID(uuid) == &object);
+    REQUIRE(GameObjectRegistry::GetAllGameObjects().contains(uuid));
+
+    GameObject unregistered("unregistered", "default", {}, uuid);
+    GameObjectRegistry::RemoveGameObject(&unregistered);
+    engine.Update();
+    REQUIRE(GameObjectRegistry::GetGameObjectByUUID(uuid) == &object);
+
+    GameObjectRegistry::RemoveGameObjectByUUID(uuid);
+    REQUIRE(GameObjectRegistry::GetGameObjectByUUID(uuid) == &object);
+    engine.Update();
+    REQUIRE(GameObjectRegistry::GetGameObjectByUUID(uuid) == nullptr);
+    REQUIRE_FALSE(GameObjectRegistry::GetAllGameObjects().contains(uuid));
+}
+
 TEST_CASE("Vector of GameObjects creation/deletion", "[ECS]") {
     SYN_STARTENGINE
 

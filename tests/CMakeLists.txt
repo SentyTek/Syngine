@@ -37,6 +37,7 @@ add_executable(engine_tests
     ECS/EntityDeletion-Queries.cpp
     ECS/Zones.cpp
     Serialization/ObjectRoundTrip.cpp
+    Serialization/SceneData.cpp
     Physics/RigidbodyCreation.cpp
     Physics/PhysicsSync.cpp
     Lua/ScriptLoading.cpp
