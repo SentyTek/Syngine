@@ -7,18 +7,18 @@
 // ╰──────────────────────────────────────╯
 
 #pragma once
+
+#include <Syngine/Scene/GameObjectRegistry.h>
+#include <Syngine/GameObjects/Component.h>
+#include <Syngine/Utils/Serializer.h>
+#include <Syngine/Utils/UUID.h>
+
 #include <concepts>
 #include <cstddef>
 #include <memory>
 #include <string>
 #include <map>
 #include <vector>
-
-#include "Syngine/Scene/GameObjectRegistry.h"
-#include "Syngine/GameObjects/Component.h"
-#include "Syngine/Utils/Serializer.h"
-#include "Syngine/Utils/UUID.h"
-
 namespace Syngine {
 
 template <typename T>

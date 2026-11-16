@@ -120,6 +120,9 @@ class RigidbodyComponent : public Syngine::IComponent {
     /// @brief Serializes the RigidbodyComponent to a data node
     /// @return A pointer to the serialized data node representing the
     /// RigidbodyComponent's state
+    /// @note XML stores compound parts as
+    /// shape:parameters:position:rotation, separated by |. Vectors and
+    /// quaternions use comma-separated components (x,y,z[,w]).
     Serializer::DataNode Serialize() const override;
 
     /// @brief Initialize the RigidbodyComponent

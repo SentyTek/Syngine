@@ -308,13 +308,13 @@ static Syngine::ComponentRegistrar s_transformRegistrar(
             scl::string value = attr->data();
 
             if (key == "position") {
-                std::vector<float> pos = Serializer::_ParseFloatArray(value);
+                std::vector<float> pos = Serializer::SplitFloat(value);
                 node / "position"      = pos;
             } else if (key == "rotation") {
-                std::vector<float> rot = Serializer::_ParseFloatArray(value);
+                std::vector<float> rot = Serializer::SplitFloat(value);
                 node / "rotation"      = rot;
             } else if (key == "scale") {
-                std::vector<float> scale = Serializer::_ParseFloatArray(value);
+                std::vector<float> scale = Serializer::SplitFloat(value);
                 node / "scale"           = scale;
             }
         }

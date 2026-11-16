@@ -125,6 +125,8 @@ Serializer::DataNode PlayerComponent::Serialize() const {
     node["enableSprinting"] = enableSprinting;
     node["enableCrouching"] = enableCrouching;
     node["enableSliding"]   = enableSliding;
+    node["enableMovement"]  = enableMovement;
+    node["enableJumping"]   = enableJumping;
     node["standHeight"]     = standHeight;
     node["crouchHeight"]    = crouchHeight;
     node["playerRadius"]    = playerRadius;
@@ -575,6 +577,8 @@ static Syngine::ComponentRegistrar s_playerRegistrar(
                 node[key] = value == "true";
             } else if (key == "enableSliding") {
                 node[key] = value == "true";
+            } else if (key == "enableMovement" || key == "enableJumping") {
+                node[key] = value == "true";
             } else if (key == "standHeight") {
                 node[key] = std::stof(value);
             } else if (key == "crouchHeight") {
@@ -612,6 +616,10 @@ static Syngine::ComponentRegistrar s_playerRegistrar(
         playerComp->enableSprinting = data["enableSprinting"].As<bool>(true);
         playerComp->enableCrouching = data["enableCrouching"].As<bool>(true);
         playerComp->enableSliding   = data["enableSliding"].As<bool>(true);
+        if (data.Has("enableMovement"))
+            playerComp->enableMovement = data["enableMovement"].As<bool>();
+        if (data.Has("enableJumping"))
+            playerComp->enableJumping = data["enableJumping"].As<bool>();
         playerComp->standHeight     = data["standHeight"].As<float>(1.8f);
         playerComp->crouchHeight    = data["crouchHeight"].As<float>(1.0f);
         playerComp->playerRadius    = data["playerRadius"].As<float>(0.3f);

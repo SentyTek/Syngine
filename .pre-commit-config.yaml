@@ -1,4 +1,4 @@
-exclude: '\.(md|patch)$'
+exclude: '\.(md|patch)$|^(lib\**)$'
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks

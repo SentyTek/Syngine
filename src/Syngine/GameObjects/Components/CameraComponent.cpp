@@ -75,9 +75,12 @@ Serializer::DataNode CameraComponent::Serialize() const {
     node / "type" = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_CAMERA);
     node / "eye"  = std::vector<float>(camera.eye);
     node / "fov"  = camera.fov;
-    node / "farPlane" = camera.farPlane;
-    node / "yaw"      = camera.yaw;
-    node / "pitch"    = camera.pitch;
+    node / "farPlane"        = camera.farPlane;
+    node / "nearPlane"       = camera.nearPlane;
+    node / "yaw"             = camera.yaw;
+    node / "pitch"           = camera.pitch;
+    node / "isMainCamera"    = isMainCamera;
+    node / "syncToTransform" = syncToTransform;
     return node;
 }
 
@@ -272,11 +275,13 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
             std::string value = attr->data().cstr();
             if (key == "eye") {
                 scl::string eyeValue(value);
-                node / "eye" = Serializer::_ParseFloatArray(eyeValue);
+                node / "eye" = Serializer::SplitFloat(eyeValue);
             } else if (key == "fov") {
                 node / "fov" = std::stof(value);
             } else if (key == "farPlane") {
                 node / "farPlane" = std::stof(value);
+            } else if (key == "nearPlane") {
+                node / "nearPlane" = std::stof(value);
             } else if (key == "yaw") {
                 node / "yaw" = std::stof(value);
             } else if (key == "pitch") {
@@ -304,6 +309,9 @@ static Syngine::ComponentRegistrar s_cameraRegistrar(
         }
         if (data.Has("farPlane")) {
             comp->SetFarPlane(data["farPlane"].As<float>());
+        }
+        if (data.Has("nearPlane")) {
+            comp->SetNearPlane(data["nearPlane"].As<float>());
         }
         if (data.Has("yaw") && data.Has("pitch")) {
             comp->SetAngles(data["yaw"].As<float>(), data["pitch"].As<float>());

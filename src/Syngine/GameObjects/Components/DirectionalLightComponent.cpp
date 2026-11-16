@@ -44,7 +44,7 @@ static Syngine::ComponentRegistrar s_directionalLightRegistrar(
             scl::string key   = attr->tag();
             scl::string value = attr->data();
             if (key == "direction") {
-                std::vector<float> dir = Serializer::_ParseFloatArray(value);
+                std::vector<float> dir = Serializer::SplitFloat(value);
                 if (dir.size() != 3) {
                     Syngine::Logger::Warn(
                         "Incorrect number of elements for direction "
@@ -52,7 +52,7 @@ static Syngine::ComponentRegistrar s_directionalLightRegistrar(
                 }
                 node / "direction" = Math::Vec3(dir[0], dir[1], dir[2]);
             } else if (key == "color") {
-                std::vector<float> col = Serializer::_ParseFloatArray(value);
+                std::vector<float> col = Serializer::SplitFloat(value);
                 if (col.size() != 3) {
                     Syngine::Logger::Warn(
                         "Incorrect number of elements for color initializer in "

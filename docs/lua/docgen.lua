@@ -87,15 +87,17 @@ local function parseStructMember(line)
         return nil, nil
     end
 
-    local name, arrayPart = decl:match("([%w_]+)%s*(%b[])%s*[=;]")
-    if not name then
-        name = decl:match("([%w_]+)%s*[=;]")
-    end
+    local declarator = decl:match("^(.-)%s*=")
+        or decl:match("^(.-)%s*{")
+        or decl:gsub(";%s*$", "")
+    local name, arrayPart = declarator:match("([%w_]+)%s*(%b[])%s*$")
+    local typeDeclarator = declarator:gsub("%s*%b[]%s*$", "")
+    name = name or typeDeclarator:match("([%w_]+)%s*$")
     if not name then
         return nil, nil
     end
 
-    local typeName = decl:match("^%s*(.-)%s+" .. name)
+    local typeName = typeDeclarator:match("^%s*(.-)%s+" .. name .. "%s*$")
     if not typeName then
         return nil, nil
     end
@@ -645,6 +647,8 @@ function DocGen.ReadFile(path, name)
     local className = ""
     local insideStruct = false
     local insideEnum = false
+    local pendingStructMember = nil
+    local lastStructMemberDoc = nil
 
     -- Meta state for class documentation details
     local classMeta = {
@@ -659,14 +663,62 @@ function DocGen.ReadFile(path, name)
 
     if f then
         for line in f:lines() do
+            if insideStruct and line:match("^%s*};") then
+                local doctable = formatDocTable(currentDoc, line, insideClass, className)
+                if doctable then
+                    table.insert(docs, doctable)
+                end
+                currentDoc = {}
+                collecting = false
+                insideStruct = false
+                pendingStructMember = nil
+                lastStructMemberDoc = nil
             -- Check for doc comment start
-            if line:match("^%s*///") then
+            elseif line:match("^%s*///") then
                 collecting = true
                 local sub = line:gsub("^%s*///%s*", "")
                 table.insert(currentDoc, sub)
+            elseif insideStruct then
+                local commentStart = line:find("//*", 1, true)
+                if commentStart then
+                    local declaration = line:sub(1, commentStart - 1)
+                    if pendingStructMember then
+                        declaration = pendingStructMember .. " " .. declaration
+                    end
+
+                    local type, name = parseStructMember(declaration)
+                    local comment = line:sub(commentStart + 3):gsub("^%s*", "")
+                    if type and name then
+                        table.insert(currentDoc,
+                            string.format("@param %s %s %s", type, name, comment))
+                        lastStructMemberDoc = #currentDoc
+                    elseif lastStructMemberDoc then
+                        currentDoc[lastStructMemberDoc] =
+                            currentDoc[lastStructMemberDoc] .. " " .. comment
+                    end
+                    pendingStructMember = nil
+                elseif line:match("^%s*//") then
+                    local comment = line:gsub("^%s*//%s*", "")
+                    if lastStructMemberDoc and comment ~= "" then
+                        currentDoc[lastStructMemberDoc] =
+                            currentDoc[lastStructMemberDoc] .. " " .. comment
+                    end
+                else
+                    lastStructMemberDoc = nil
+                    local code = line:gsub("//.*$", "")
+                    if code:match("%S") then
+                        pendingStructMember = pendingStructMember
+                                and (pendingStructMember .. " " .. code)
+                            or code
+                        if code:find(";", 1, true) then
+                            pendingStructMember = nil
+                        end
+                    end
+                end
             elseif line:find("//*", 1, true) then
                 -- Match member variables
-                local comment = line:match("//*%s*(.*)")
+                local commentStart = line:find("//*", 1, true)
+                local comment = line:sub(commentStart + 3):gsub("^%s*", "")
                 -- Try to match enum/struct member with optional assignment and trailing comma
                 local type, name
                 if insideEnum then
@@ -674,11 +726,9 @@ function DocGen.ReadFile(path, name)
                     if not name then
                         -- Part of previous comment, append to last comment
                         if comment and #comment > 0 and #currentDoc > 0 then
-                            currentDoc[#currentDoc] = currentDoc[#currentDoc] .. " " .. comment:sub(3)
+                            currentDoc[#currentDoc] = currentDoc[#currentDoc] .. " " .. comment
                         end
                     end
-                elseif insideStruct then
-                    type, name = parseStructMember(line)
                 else
                     -- Match optional 'static' or 'const', then type and name
                     type, name = line:match("^%s*static%s+([%w_:<>%*%&]+)%s+([%w_]+)")
@@ -690,14 +740,11 @@ function DocGen.ReadFile(path, name)
                     table.insert(memberVars, {
                         type = type,
                         name = name,
-                        description = comment:sub(3)
+                        description = comment
                     })
                 end
                 if insideEnum and name and comment then
-                    table.insert(currentDoc, string.format("@param %s %s", name, comment:sub(3)))
-                end
-                if insideStruct and name and comment then
-                    table.insert(currentDoc, string.format("@param %s %s %s", type, name, comment:sub(3)))
+                    table.insert(currentDoc, string.format("@param %s %s", name, comment))
                 end
             elseif (line:match("^%s*enum") or line:match("^%s*struct")) and collecting then
                 if line:match("^%s*enum") then

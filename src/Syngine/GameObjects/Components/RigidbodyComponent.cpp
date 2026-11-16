@@ -37,7 +37,10 @@
 namespace Syngine {
 RigidbodyComponent::RigidbodyComponent(GameObject*                  owner,
                                        Syngine::RigidbodyParameters params)
-    : IComponent(owner) {
+    : IComponent(owner), m_shape(params.shape), m_mass(params.mass),
+      m_friction(params.friction), m_restitution(params.restitution),
+      m_shapeParameters(params.shapeParameters), m_pendingParams(params),
+      m_currentParams(params) {
     if (!Core::IsPhysicsEnabled()) return;
     this->Init(params);
 }
@@ -84,11 +87,26 @@ Serializer::DataNode RigidbodyComponent::Serialize() const {
     Serializer::DataNode node;
     node / "type" =
         static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_RIGIDBODY);
-    node / "mass"            = m_mass;
-    node / "friction"        = m_friction;
-    node / "restitution"     = m_restitution;
-    node / "shape"           = static_cast<int>(m_shape);
-    node / "shapeParameters" = m_shapeParameters;
+    node / "mass"        = m_currentParams.mass;
+    node / "friction"    = m_currentParams.friction;
+    node / "restitution" = m_currentParams.restitution;
+    node / "shape"       = static_cast<int>(m_currentParams.shape);
+    if (m_currentParams.shape != Syngine::PhysicsShapes::COMPOUND)
+        node / "shapeParameters" = m_currentParams.shapeParameters;
+    node / "motionType" = static_cast<int>(m_currentParams.motionType);
+    node / "layer"      = static_cast<int>(m_currentParams.layer);
+    if (!m_currentParams.compoundParts.empty()) {
+        Serializer::DataNode parts;
+        for (const auto& part : m_currentParams.compoundParts) {
+            Serializer::DataNode item;
+            item["shape"]           = static_cast<int>(part.shape);
+            item["shapeParameters"] = part.shapeParameters;
+            item["position"]        = part.position;
+            item["rotation"]        = part.rotation;
+            parts.Append(item);
+        }
+        node["compoundParts"] = parts;
+    }
     return node;
 }
 
@@ -112,6 +130,7 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         return;
     }
 
+    m_currentParams        = params;
     this->m_physicsManager = Syngine::Core::_GetContext()->physicsManager.get();
     this->m_transform      = this->m_owner->GetComponent<TransformComponent>();
     this->m_mass           = params.mass;
@@ -130,8 +149,6 @@ void RigidbodyComponent::Init(Syngine::RigidbodyParameters params) {
         m_initPending = true;
         return;
     }
-    m_currentParams = params;
-
     JPH::RVec3 curPos = m_transform->GetPosition().toJoltRVec3();
     JPH::Quat  transformRot =
         m_transform->GetWorldRotationQuaternion().toJoltQuat();
@@ -627,9 +644,37 @@ static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
                 node["restitution"] = std::stof(value);
             else if (key == "shape")
                 node["shape"] = static_cast<int>(std::stoi(value));
+            else if (key == "motionType" || key == "layer")
+                node[key] = std::stoi(value);
             else if (key == "shapeParameters") {
                 scl::string v           = attr->data();
-                node["shapeParameters"] = Serializer::_ParseFloatArray(v);
+                node["shapeParameters"] = Serializer::SplitFloat(v);
+            } else if (key == "compoundParts") {
+                scl::string v = attr->data();
+                // compound parts are stored as:
+                // `<shape>:<shapeParameters>:<position>:<rotation>` with a pipe
+                // separating them in the string
+                auto partsArray = Serializer::SplitString(v, '|');
+                for (const auto& partStr : partsArray) {
+                    auto partElements = Serializer::SplitString(partStr, ':');
+                    if (partElements.size() != 4) {
+                        Logger::Warn("Invalid parts for compound shape while "
+                                     "deserializing: " +
+                                     partStr);
+                        continue;
+                    }
+
+                    Serializer::DataNode partNode;
+                    partNode["shape"]          = std::stoi(partElements[0]);
+                    scl::string shapeParamsStr = partElements[1];
+                    partNode["shapeParameters"] =
+                        Serializer::SplitFloat(shapeParamsStr);
+                    scl::string positionStr = partElements[2];
+                    partNode["position"] = Serializer::SplitFloat(positionStr);
+                    scl::string rotationStr = partElements[3];
+                    partNode["rotation"] = Serializer::SplitFloat(rotationStr);
+                    node["compoundParts"].Append(partNode);
+                }
             }
         }
         return node;
@@ -643,8 +688,31 @@ static Syngine::ComponentRegistrar s_rigidbodyRegistrar(
         params.friction    = data["friction"].As(0.5f);
         params.restitution = data["restitution"].As(0.0f);
         params.shape       = static_cast<PhysicsShapes>(data["shape"].As(0));
-        params.shapeParameters =
-            data["shapeParameters"].As<std::vector<float>>({});
+        if (data.Has("shapeParameters"))
+            params.shapeParameters =
+                data["shapeParameters"].As<std::vector<float>>({});
+        if (data.Has("motionType"))
+            params.motionType =
+                static_cast<JPH::EMotionType>(data["motionType"].As<int>());
+        if (data.Has("layer"))
+            params.layer =
+                static_cast<JPH::ObjectLayer>(data["layer"].As<int>());
+        if (data.Has("compoundParts")) {
+            const auto& parts = data["compoundParts"];
+            if (!parts.IsArray())
+                throw std::runtime_error("Invalid compound shape parts");
+            for (size_t i = 0; i < parts.Size(); ++i) {
+                const auto&       item = parts.At(i);
+                CompoundShapePart part;
+                part.shape =
+                    static_cast<PhysicsShapes>(item["shape"].As<int>());
+                part.shapeParameters =
+                    item["shapeParameters"].As<Math::Vector3>();
+                part.position = item["position"].As<Math::Vector3>();
+                part.rotation = item["rotation"].As<Math::Quaternion>();
+                params.compoundParts.push_back(part);
+            }
+        }
         return std::make_unique<RigidbodyComponent>(owner, params);
     },
 

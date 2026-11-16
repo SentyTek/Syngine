@@ -127,12 +127,22 @@ class Window {
     /// @internal
     static SDL_Window* _GetSDLWindow() noexcept;
 
+    /// @brief Checks if the window is currently minimized.
+    /// @return True if the window is minimized, false otherwise.
+    /// @threadsafety not-safe
+    /// @since v0.0.1
+    static bool IsWindowMinimized();
+
   private:
     static std::string m_title;
     static bool        m_contextCreated;
     static bool        m_shouldClose;
     static int         m_windowMode;
     static SDL_Window* m_window;
+    static bool        m_minimized;
+
+    static void _SetMinimized(bool minimized) noexcept;
+    friend class Core;
 };
 
 } // namespace Syngine

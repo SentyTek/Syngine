@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "ThreadManager.h"
+#include <Syngine/Core/ThreadManager.h>
 #include <Syngine/Scene/GameObjectRegistry.h>
 #include <Syngine/Core/LuaManager.h>
 #include <Syngine/Graphics/Rendering/Renderer.h>

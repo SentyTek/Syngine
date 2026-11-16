@@ -255,20 +255,19 @@ static Syngine::ComponentRegistrar s_zoneRegistrar(
             if (key == "shape") {
                 node["shape"] = std::stoi(value.cstr());
             } else if (key == "position") {
-                node["position"] = Serializer::_ParseFloatArray(value);
+                node["position"] = Serializer::SplitFloat(value);
             } else if (key == "size") {
-                node["size"] = Serializer::_ParseFloatArray(value);
+                node["size"] = Serializer::SplitFloat(value);
             } else if (key == "rotation") {
-                node["rotation"] = Serializer::_ParseFloatArray(value);
+                node["rotation"] = Serializer::SplitFloat(value);
             } else if (key == "active") {
                 node["active"] = (value == "true");
             } else if (key == "oneShot") {
                 node["oneShot"] = (value == "true");
             } else if (key == "tags") {
                 // tags are CSV in XML, convert back to array
-                std::vector<std::string> tags =
-                    Serializer::_ParseStringArray(value);
-                node["tags"] = tags;
+                std::vector<std::string> tags = Serializer::SplitString(value);
+                node["tags"]                  = tags;
             }
         }
         return node;

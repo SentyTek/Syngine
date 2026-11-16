@@ -103,6 +103,9 @@ Serializer::DataNode BillboardComponent::Serialize() const {
     billboardNode / "mode"        = static_cast<int>(m_mode);
     billboardNode / "texturePath" = m_texturePath;
     billboardNode / "bundlePath"  = m_bundlePath;
+    billboardNode / "rotation"    = m_rot;
+    billboardNode / "receiveShadows"  = receiveShadows;
+    billboardNode / "receiveSunLight" = receiveSunLight;
     // Note: We don't serialize the texture handle itself, as it's not
     // meaningful outside of the current runtime context. Instead, we serialize
     // the texture path, which can be used to reload the texture when
@@ -147,6 +150,10 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
                 node / "texturePath" = value;
             } else if (key == "bundlePath") {
                 node / "bundlePath" = value;
+            } else if (key == "rotation") {
+                node / "rotation" = Serializer::SplitFloat(value);
+            } else if (key == "receiveShadows" || key == "receiveSunLight") {
+                node[key.cstr()] = (value == "true");
             }
         }
         return node;
@@ -169,8 +176,15 @@ static Syngine::ComponentRegistrar s_billboardRegistrar(
                                       : "";
         std::string bundlePath =
             data.Has("bundlePath") ? data["bundlePath"].As<std::string>() : "";
-        return std::make_unique<BillboardComponent>(
+        auto component = std::make_unique<BillboardComponent>(
             owner, bundlePath, texturePath, mode, size);
+        if (data.Has("rotation"))
+            component->SetRot(data["rotation"].As<Math::Vector3>());
+        if (data.Has("receiveShadows"))
+            component->receiveShadows = data["receiveShadows"].As<bool>();
+        if (data.Has("receiveSunLight"))
+            component->receiveSunLight = data["receiveSunLight"].As<bool>();
+        return component;
     },
 
     // Lua bindings

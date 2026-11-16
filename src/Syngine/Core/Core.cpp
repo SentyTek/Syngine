@@ -6,7 +6,6 @@
 // │ Licensed under the MIT License       │
 // ╰──────────────────────────────────────╯
 
-#include "SDL3/SDL_video.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -376,6 +375,8 @@ bool Core::HandleEvents() {
             RenderDirector::SetResolutionFlag(w, h);
             break;
         }
+        case SDL_EVENT_WINDOW_MINIMIZED: Window::_SetMinimized(true); break;
+        case SDL_EVENT_WINDOW_RESTORED: Window::_SetMinimized(false); break;
         }
 
 // Handle input events

@@ -92,6 +92,10 @@ Serializer::DataNode MeshComponent::Serialize() const {
     node / "type"   = static_cast<Syngine::ComponentTypeID>(SYN_COMPONENT_MESH);
     node / "bundle" = m_bundlePath;
     node / "path"   = m_modelPath;
+    node / "hasTextures" = m_loadTextures;
+    node / "receiveShadows" = receiveShadows;
+    node / "castShadows" = castShadows;
+    node / "receiveSunLight" = receiveSunLight;
     // TODO: mats will need to be serialized at some point
     return node;
 }
@@ -549,6 +553,9 @@ static Syngine::ComponentRegistrar s_meshRegistrar(
             } else if (key == "bundle") {
                 std::string svalue = std::string(value.cstr());
                 node / "bundle"    = svalue;
+            } else if (key == "receiveShadows" || key == "castShadows" ||
+                       key == "receiveSunLight") {
+                node[key.cstr()] = (value == "true");
             }
         }
         return node;
@@ -566,6 +573,12 @@ static Syngine::ComponentRegistrar s_meshRegistrar(
             data.Has("hasTextures") ? data["hasTextures"].As<bool>() : false;
         auto meshComp = std::make_unique<MeshComponent>(
             owner, bundlePath, path, hasTextures);
+        if (data.Has("receiveShadows"))
+            meshComp->receiveShadows = data["receiveShadows"].As<bool>();
+        if (data.Has("castShadows"))
+            meshComp->castShadows = data["castShadows"].As<bool>();
+        if (data.Has("receiveSunLight"))
+            meshComp->receiveSunLight = data["receiveSunLight"].As<bool>();
         return meshComp;
     },
 

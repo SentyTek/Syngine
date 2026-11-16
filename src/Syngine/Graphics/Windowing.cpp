@@ -20,6 +20,7 @@ bool        Window::m_contextCreated = false;
 bool        Window::m_shouldClose    = false;
 int         Window::m_windowMode     = 0; // Default to bordered window
 SDL_Window* Window::m_window         = nullptr;
+bool        Window::m_minimized      = false;
 
 Window::Window(const EngineConfig& config) {
     m_title = config.gameName;
@@ -241,5 +242,9 @@ void Window::SetMousePosition(const Math::Vector2& position) {
         SDL_WarpMouseInWindow(m_window, position.x(), position.y());
     }
 }
+
+bool Window::IsWindowMinimized() { return m_minimized; }
+
+void Window::_SetMinimized(bool minimized) noexcept { m_minimized = minimized; }
 
 } // namespace Syngine

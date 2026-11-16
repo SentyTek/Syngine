@@ -203,11 +203,10 @@ void GameObjectRegistry::_RemoveQueuedObjectComponents() noexcept {
             }
             break;
         case Syngine::SYN_COMPONENT_LIGHT_DIRECTIONAL:
-            m_DirectionalLights.erase(
-                std::remove(m_DirectionalLights.begin(),
-                            m_DirectionalLights.end(),
-                            directionalLight),
-                m_DirectionalLights.end());
+            m_DirectionalLights.erase(std::remove(m_DirectionalLights.begin(),
+                                                  m_DirectionalLights.end(),
+                                                  directionalLight),
+                                      m_DirectionalLights.end());
             if (object->HasComponent(Syngine::SYN_COMPONENT_CAMERA)) {
                 if (object->gizmo == "g_light_sun") {
                     object->gizmo = "g_camera_render";

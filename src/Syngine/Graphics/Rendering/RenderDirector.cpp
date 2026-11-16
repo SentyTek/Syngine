@@ -1756,6 +1756,8 @@ void RenderDirector::_SetMaterialUniforms(const Shader*                 shader,
 
 bool RenderDirector::_RenderFrame(CameraComponent* camera, DebugModes debug) {
     SYN_PROFILE_FUNCTION();
+    if (Window::IsWindowMinimized()) return false;
+
     if (m_isFirstFrame) {
         m_isFirstFrame = false;
         if (Core::IsPhysicsEnabled())
