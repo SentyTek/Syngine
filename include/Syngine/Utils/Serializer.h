@@ -352,14 +352,16 @@ class Serializer {
                                const SceneInstance& sceneInstance);
 
         /// @brief Reads scene data from a versioned, typed XML file.
-        /// @param bundle The path to the bundle file.
-        /// @param sceneName The name of the scene within the bundle.
+        /// @param sceneName The name of the scene to load.
+        /// @param bundle Optional. The path to the bundle file, relative to the
+        /// game's asset directory.
         /// @return The decoded scene, or an invalid scene if reading fails.
         /// @note A valid result does not imply that component factories exist.
-        /// @threadsafety not-safe
+        /// @note If bundle is not supplied, the scene is instead loaded from
+        /// the appdata directory.
         /// @since v0.0.3
-        static Scene LoadFromFile(const std::string& bundle,
-                                  const std::string& sceneName);
+        static Scene LoadFromFile(const std::string& sceneName,
+                                  const std::string& bundle = "");
 
       private:
         static const Scene
@@ -687,9 +689,11 @@ inline Syngine::Math::Vector4 Serializer::DataNode::As<Syngine::Math::Vector4>(
 template <>
 inline Syngine::UUID Serializer::DataNode::As<Syngine::UUID>(
     const Syngine::UUID& defaultValue) const {
-    if (!std::holds_alternative<NodeArray>(m_data)) {
-        return defaultValue;
+    if (std::holds_alternative<std::string>(m_data)) {
+        return Syngine::UUIDFromString(As<std::string>(""));
     }
+
+    if (!std::holds_alternative<NodeArray>(m_data)) return defaultValue;
 
     const auto& arr = std::get<NodeArray>(m_data);
     if (arr.empty()) {

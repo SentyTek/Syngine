@@ -50,7 +50,7 @@ TEST_CASE("GameObject UUID lookup and deferred removal", "[ECS][UUID]") {
     SYN_STARTENGINE
 
     auto& object = GameObjectRegistry::CreateGameObject("UUID object");
-    const std::string uuid = object.GetID();
+    const Syngine::UUID uuid = object.GetID();
     REQUIRE(GameObjectRegistry::GetGameObjectByID(uuid) == &object);
     REQUIRE(GameObjectRegistry::GetAllGameObjects().contains(uuid));
 

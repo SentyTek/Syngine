@@ -19,27 +19,6 @@
 
 namespace Syngine {
 namespace {
-bool PrefabDataSupported(const Serializer::DataNode& object) {
-    if (object.Has("components")) {
-        for (const auto& [type, component] : object["components"]) {
-            for (const auto& [key, value] : component) {
-                if (value.IsObject()) return false;
-                if (value.IsArray()) {
-                    for (size_t i = 0; i < value.Size(); ++i) {
-                        if (value.At(i).IsArray() || value.At(i).IsObject())
-                            return false;
-                    }
-                }
-            }
-        }
-    }
-    if (object.Has("children") && object["children"].IsArray()) {
-        for (size_t i = 0; i < object["children"].Size(); ++i) {
-            if (!PrefabDataSupported(object["children"].At(i))) return false;
-        }
-    }
-    return true;
-}
 
 std::string SerializeCompoundParts(const Serializer::DataNode& parts) {
     using Node = Serializer::DataNode;
@@ -73,6 +52,34 @@ std::string SerializeCompoundParts(const Serializer::DataNode& parts) {
     }
     return result.str();
 }
+
+bool PrefabDataSupported(const Serializer::DataNode& object) {
+    if (object.Has("components")) {
+        for (const auto& [type, component] : object["components"]) {
+            for (const auto& [key, value] : component) {
+                if (type == std::to_string(SYN_COMPONENT_RIGIDBODY) &&
+                    key == "compoundParts") {
+                    SerializeCompoundParts(value);
+                    continue;
+                }
+                if (value.IsObject()) return false;
+                if (value.IsArray()) {
+                    for (size_t i = 0; i < value.Size(); ++i) {
+                        if (value.At(i).IsArray() || value.At(i).IsObject())
+                            return false;
+                    }
+                }
+            }
+        }
+    }
+    if (object.Has("children") && object["children"].IsArray()) {
+        for (size_t i = 0; i < object["children"].Size(); ++i) {
+            if (!PrefabDataSupported(object["children"].At(i))) return false;
+        }
+    }
+    return true;
+}
+
 } // namespace
 
 Serializer::Prefab::Prefab(GameObject* root)
@@ -217,8 +224,15 @@ bool Serializer::Prefab::SaveToFile(const std::string& path) {
         Logger::Error("Prefab has no root GameObject to serialize");
         return false;
     }
-    if (!PrefabDataSupported(rootGameObjectData)) {
-        Logger::Error("Prefab format does not support nested component data");
+    try {
+        if (!PrefabDataSupported(rootGameObjectData)) {
+            Logger::Error(
+                "Prefab format does not support nested component data");
+            return false;
+        }
+    } catch (const std::runtime_error& e) {
+        Logger::Error("Invalid prefab component data: " +
+                      std::string(e.what()));
         return false;
     }
 

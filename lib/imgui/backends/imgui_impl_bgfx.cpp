@@ -193,15 +193,18 @@ void ImGui_ImplBgfx::Render(ViewID viewID) {
 }
 
 void ImGui_ImplBgfx::HandleEvent(SDL_Event* event) {
+    if (!event || !m_imguiContext) return;
     ImGui_ImplSDL3_ProcessEvent(event);
 }
 
 bool ImGui_ImplBgfx::WantCaptureMouse() {
+    if (!m_imguiContext) return false;
     ImGuiIO& io = ::ImGui::GetIO();
     return io.WantCaptureMouse;
 }
 
 bool ImGui_ImplBgfx::WantCaptureKeyboard() {
+    if (!m_imguiContext) return false;
     ImGuiIO& io = ::ImGui::GetIO();
     return io.WantCaptureKeyboard;
 }

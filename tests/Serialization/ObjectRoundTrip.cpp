@@ -22,19 +22,20 @@ using namespace Syngine::Math;
 using namespace Catch::Matchers;
 
 TEST_CASE("Scene XML loads root GameObjects", "[Serializer][Scene]") {
-    const auto base = std::filesystem::temp_directory_path() /
-                      ("syngine-scene-" + GenerateUUID().ToString());
-    const auto xmlPath = base.string() + ".xml";
+    const auto base       = std::filesystem::temp_directory_path() /
+                            ("syngine-scene-" + GenerateUUID().ToString());
+    const auto xmlPath    = base.string() + ".xml";
     const auto bundlePath = base.string() + ".spk";
     {
         std::ofstream file(xmlPath);
         REQUIRE(file);
-        file << R"(<Scene Version="1.0"><name>Test</name>)"
-                R"(<uuid>0d7fea47-e7f1-4c04-8eac-384b00c19ffa</uuid>)"
-                R"(<persistent>false</persistent><gameObjects>)"
-                R"(<gameObject name="First" type="default" gizmo="none" isActive="true"/>)"
-                R"(<gameObject name="Second" type="default" gizmo="none" isActive="false"/>)"
-                R"(</gameObjects></Scene>)";
+        file
+            << R"(<Scene Version="1.0">)"
+               R"(<uuid>0d7fea47-e7f1-4c04-8eac-384b00c19ffa</uuid>)"
+               R"(<persistent>false</persistent><gameObjects>)"
+               R"(<gameObject name="First" type="default" gizmo="none" isActive="true"/>)"
+               R"(<gameObject name="Second" type="default" gizmo="none" isActive="false"/>)"
+               R"(</gameObjects></Scene>)";
     }
 
     scl::pack::Packager pack;
@@ -46,7 +47,7 @@ TEST_CASE("Scene XML loads root GameObjects", "[Serializer][Scene]") {
     REQUIRE(pack.write());
     pack.close();
 
-    const auto scene = Serializer::Scene::LoadFromFile(bundlePath, assetPath);
+    const auto scene = Serializer::Scene::LoadFromFile(assetPath, bundlePath);
     std::filesystem::remove(bundlePath);
     std::filesystem::remove(xmlPath);
     REQUIRE(scene.isValid);
@@ -59,7 +60,7 @@ TEST_CASE("Scene XML loads root GameObjects", "[Serializer][Scene]") {
 
     SceneInstance instance(scene, bundlePath, assetPath);
     REQUIRE(instance.GetGameObjects().size() == 2);
-    const auto* first = instance.GetGameObject(instance.GetGameObjects()[0]);
+    const auto* first  = instance.GetGameObject(instance.GetGameObjects()[0]);
     const auto* second = instance.GetGameObject(instance.GetGameObjects()[1]);
     REQUIRE(first != nullptr);
     REQUIRE(second != nullptr);
@@ -229,7 +230,7 @@ TEST_CASE("Saving and loading a GameObject tree from disk", "[Serializer]") {
 
 TEST_CASE("Compound rigidbody prefab XML round trip", "[Serializer][Physics]") {
     RigidbodyParameters params;
-    params.shape = PhysicsShapes::COMPOUND;
+    params.shape    = PhysicsShapes::COMPOUND;
     params.friction = 0.12345678f;
     params.compoundParts.push_back(
         { .shape           = PhysicsShapes::BOX,
@@ -250,10 +251,11 @@ TEST_CASE("Compound rigidbody prefab XML round trip", "[Serializer][Physics]") {
         SVec3(0.12345678f, 0.0f, 0.0f));
     original.AddComponent<RigidbodyComponent>(params);
     Serializer::Prefab prefab(&original);
-    const auto path = std::filesystem::temp_directory_path() /
-                      ("syngine-compound-" + GenerateUUID().ToString() + ".xml");
+    const auto         path =
+        std::filesystem::temp_directory_path() /
+        ("syngine-compound-" + GenerateUUID().ToString() + ".xml");
     REQUIRE(prefab.SaveToFile(path.string()));
-    std::ifstream file(path);
+    std::ifstream     file(path);
     const std::string xml((std::istreambuf_iterator<char>(file)),
                           std::istreambuf_iterator<char>());
     file.close();
@@ -310,17 +312,60 @@ TEST_CASE("Compound rigidbody prefab XML round trip", "[Serializer][Physics]") {
         REQUIRE_THAT(actual.rotation.w(),
                      WithinAbs(expected.rotation.w(), margin));
     }
-    delete loaded.rootGameObject;
+    GameObjectRegistry::Clear();
+}
+
+TEST_CASE("Prefab save rejects unsupported nested component data",
+          "[Serializer][Physics]") {
+    RigidbodyParameters params;
+    params.shape = PhysicsShapes::COMPOUND;
+    params.compoundParts.push_back(
+        { .shape           = PhysicsShapes::BOX,
+          .shapeParameters = SVec3(1.0f, 2.0f, 3.0f),
+          .position        = SVec3(0.0f, 0.0f, 0.0f),
+          .rotation        = SQuat(0.0f, 0.0f, 0.0f, 1.0f) });
+    GameObject original("Compound", "default", {});
+    original.AddComponent<RigidbodyComponent>(params);
+    Serializer::Prefab prefab(&original);
+    const auto         path =
+        std::filesystem::temp_directory_path() /
+        ("syngine-compound-invalid-" + GenerateUUID().ToString() + ".xml");
+
+    REQUIRE(prefab.SaveToFile(path.string()));
+    std::ifstream     originalFile(path);
+    const std::string originalXml(
+        (std::istreambuf_iterator<char>(originalFile)),
+        std::istreambuf_iterator<char>());
+    originalFile.close();
+
+    auto& component =
+        prefab.rootGameObjectData["components"]
+                                 [std::to_string(SYN_COMPONENT_RIGIDBODY)];
+    SECTION("malformed compound part") {
+        Serializer::DataNode part = component["compoundParts"].At(0);
+        part["rotation"]          = std::vector<float>{ 1.0f };
+        component["compoundParts"].Set(Serializer::DataNode::NodeArray{});
+        component["compoundParts"].Append(part);
+    }
+    SECTION("other nested field") { component["extra"]["nested"] = 1; }
+    REQUIRE_FALSE(prefab.SaveToFile(path.string()));
+    std::ifstream     savedFile(path);
+    const std::string savedXml((std::istreambuf_iterator<char>(savedFile)),
+                               std::istreambuf_iterator<char>());
+    savedFile.close();
+    REQUIRE(savedXml == originalXml);
+    std::filesystem::remove(path);
 }
 
 TEST_CASE("Settings float serialization uses configured decimal places",
           "[Serializer]") {
     Serializer::CoreSettings settings;
     settings.video.brightness = 0.12345678f;
-    const auto path = std::filesystem::temp_directory_path() /
-                      ("syngine-settings-" + GenerateUUID().ToString() + ".xml");
+    const auto path =
+        std::filesystem::temp_directory_path() /
+        ("syngine-settings-" + GenerateUUID().ToString() + ".xml");
     REQUIRE(Serializer::CoreSettings::SaveToFile(path.string(), settings));
-    std::ifstream file(path);
+    std::ifstream     file(path);
     const std::string xml((std::istreambuf_iterator<char>(file)),
                           std::istreambuf_iterator<char>());
     file.close();
@@ -336,19 +381,20 @@ TEST_CASE("Settings float serialization uses configured decimal places",
 #endif
 }
 
-TEST_CASE("Non-compound rigidbody retains shape parameters", "[Serializer][Physics]") {
-    GameObject owner("Box", "default", {});
+TEST_CASE("Non-compound rigidbody retains shape parameters",
+          "[Serializer][Physics]") {
+    GameObject          owner("Box", "default", {});
     RigidbodyParameters params;
-    params.shape = PhysicsShapes::BOX;
+    params.shape           = PhysicsShapes::BOX;
     params.shapeParameters = SVec3(1.0f, 2.0f, 3.0f);
     RigidbodyComponent original(&owner, params);
-    const auto node = original.Serialize();
+    const auto         node = original.Serialize();
     REQUIRE_FALSE(node.Has("compoundParts"));
-    auto restored = ComponentRegistry::Instantiate(
-        SYN_COMPONENT_RIGIDBODY, &owner, node);
+    auto restored =
+        ComponentRegistry::Instantiate(SYN_COMPONENT_RIGIDBODY, &owner, node);
     REQUIRE(restored != nullptr);
-    const auto result =
-        static_cast<RigidbodyComponent*>(restored.get())->GetCurrentParameters();
+    const auto result = static_cast<RigidbodyComponent*>(restored.get())
+                            ->GetCurrentParameters();
     REQUIRE(result.shapeParameters.x() == 1.0f);
     REQUIRE(result.shapeParameters.y() == 2.0f);
     REQUIRE(result.shapeParameters.z() == 3.0f);

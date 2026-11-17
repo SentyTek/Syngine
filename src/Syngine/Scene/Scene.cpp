@@ -35,9 +35,28 @@ void SceneManager::_Shutdown() {
 bool SceneManager::LoadScene(const std::string& bundle,
                              const std::string& sceneName,
                              SceneLoadMode      mode) {
-    auto scene = Serializer::Scene::LoadFromFile(bundle, sceneName);
+    auto scene = Serializer::Scene::LoadFromFile(sceneName, bundle);
 
     SceneInstance sceneInstance(scene, bundle, sceneName);
+
+    if (mode == SceneLoadMode::Single) {
+        for (auto& scene : m_scenes) {
+            if (!scene.IsPersistent()) {
+                UnloadScene(scene.m_uuid);
+            }
+        }
+    }
+
+    if (GetScene(scene.uuid)) return false;
+
+    m_scenes.emplace_back(std::move(sceneInstance));
+
+    return true;
+}
+
+bool SceneManager::LoadScene(const std::string& path, SceneLoadMode mode) {
+    auto          scene = Serializer::Scene::LoadFromFile(path);
+    SceneInstance sceneInstance(scene, "", path);
 
     if (mode == SceneLoadMode::Single) {
         for (auto& scene : m_scenes) {

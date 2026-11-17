@@ -27,15 +27,11 @@ namespace {
 using Node = Serializer::DataNode;
 
 void _WriteScene(scl::xml::XmlDocument& doc, const Node& node) {
-
-    auto nameElem = doc.new_elem("name");
-    nameElem->set_data(node["name"].As<std::string>());
     auto uuidElem = doc.new_elem("uuid");
     uuidElem->set_data(node["uuid"].As<Syngine::UUID>().ToString());
     auto persistentElem = doc.new_elem("persistent");
     persistentElem->set_data(node["persistent"].As<bool>() ? "true" : "false");
     doc.add_child(uuidElem);
-    doc.add_child(nameElem);
     doc.add_child(persistentElem);
 
     // recursively write child nodes
@@ -67,11 +63,9 @@ std::string _Attribute(const scl::xml::XmlElem& elem, const char* name) {
 }
 
 Node _ReadScene(const scl::xml::XmlDocument& elem) {
-    if (!elem.find_children("name").empty() &&
-        !elem.find_children("uuid").empty() &&
+    if (!elem.find_children("uuid").empty() &&
         !elem.find_children("persistent").empty()) {
         Node node;
-        node["name"] = elem.find_children("name").front()->data().cstr();
         node["uuid"] = elem.find_children("uuid").front()->data().cstr();
         node["persistent"] =
             elem.find_children("persistent").front()->data().cstr();
@@ -98,7 +92,6 @@ Node _ReadScene(const scl::xml::XmlDocument& elem) {
 
 Serializer::DataNode Serializer::Scene::Serialize() const {
     DataNode node;
-    node["name"]        = name;
     node["uuid"]        = uuid;
     node["persistent"]  = persistent;
     node["gameObjects"] = gameObjects;
@@ -109,20 +102,27 @@ Serializer::DataNode Serializer::Scene::Serialize() const {
 
 void Serializer::Scene::Deserialize(const DataNode& node) {
     // what a terrible conditional
-    if (!node.IsObject() || !node.Has("name") || !node.Has("uuid") ||
-        !node.Has("persistent") || !node.Has("gameObjects") ||
-        node["name"].GetType() != DataNode::Type::String ||
-        node["uuid"].GetType() != DataNode::Type::String ||
-        node["persistent"].GetType() != DataNode::Type::String ||
+    if (!node.IsObject() || !node.Has("uuid") || !node.Has("persistent") ||
+        !node.Has("gameObjects") ||
+        (node["uuid"].GetType() != DataNode::Type::String &&
+         !(node["uuid"].IsArray() && node["uuid"].Size() == 1 &&
+           node["uuid"].At(0).GetType() == DataNode::Type::String)) ||
+        (node["uuid"].GetType() != DataNode::Type::String &&
+         !(node["uuid"].IsArray() && node["uuid"].Size() == 1 &&
+           node["uuid"].At(0).GetType() == DataNode::Type::String)) ||
+        (node["persistent"].GetType() != DataNode::Type::String &&
+         node["persistent"].GetType() != DataNode::Type::Boolean) ||
         !node["gameObjects"].IsArray()) {
         Logger::Error("Invalid scene data");
         return;
     }
 
     Scene parsed;
-    parsed.name        = node["name"].As<std::string>();
-    parsed.uuid        = node["uuid"].As<Syngine::UUID>();
-    parsed.persistent  = node["persistent"].As<bool>();
+    parsed.uuid = node["uuid"].As<Syngine::UUID>();
+    if (node["persistent"].GetType() == DataNode::Type::String) //ugh
+        parsed.persistent = node["persistent"].As<std::string>() == "true";
+    else
+        parsed.persistent  = node["persistent"].As<bool>();
     parsed.gameObjects = node["gameObjects"];
     // parsed.sceneSettings = node["sceneSettings"]; // TODO: Implement
     // sceneSettings
@@ -182,10 +182,19 @@ bool Serializer::Scene::SaveToFile(const std::string&   path,
     return true;
 }
 
-Serializer::Scene Serializer::Scene::LoadFromFile(const std::string& bundle,
-                                                  const std::string& path) {
+Serializer::Scene Serializer::Scene::LoadFromFile(const std::string& path,
+                                                  const std::string& bundle) {
     try {
-        scl::stream stream = Serializer::_ReadFromBundle(bundle, path);
+        scl::stream stream;
+        if (bundle.empty()) {
+            scl::path appdataPath(
+                (_GetAppDataPath(Core::Get()->m_context->config.gameName) /
+                 path)
+                    .string());
+            stream.open(appdataPath, scl::OpenMode::READ);
+        } else {
+            stream = Serializer::_ReadFromBundle(bundle, path);
+        }
         scl::string sceneData;
         stream >> sceneData;
 
@@ -204,13 +213,14 @@ Serializer::Scene Serializer::Scene::LoadFromFile(const std::string& bundle,
         }
 
         const auto children = document.children();
-        if (children.size() != 4) {
+        if (children.size() != 3) {
             Logger::Error("Scene XML does not have expected values");
             return {};
         }
 
         Scene result;
         result.Deserialize(_ReadScene(document));
+        result.name = _Attribute(document, "Name");
 
         return result;
     } catch (const std::exception& e) {

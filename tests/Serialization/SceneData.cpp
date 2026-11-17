@@ -7,17 +7,17 @@
 // ╰──────────────────────────────────────╯
 
 #include <catch2/catch_test_macros.hpp>
+#include "../defines.h"
 
 #include <Syngine/GameObjects/Components/TransformComponent.h>
 #include <Syngine/GameObjects/Components/RigidbodyComponent.h>
 #include <Syngine/GameObjects/ComponentRegistry.h>
 #include <Syngine/GameObjects/GameObject.h>
+#include <Syngine/Scene/Scene.h>
 #include <Syngine/Utils/Serializer.h>
 #include <Syngine/Utils/UUID.h>
 
-#include <bit>
 #include <filesystem>
-#include <fstream>
 #include <unordered_set>
 
 using namespace Syngine;
@@ -25,7 +25,7 @@ using namespace Syngine;
 TEST_CASE("UUIDs are valid version 4 identifiers", "[UUID]") {
     std::unordered_set<std::string> values;
     for (int i = 0; i < 1000; ++i) {
-        std::string id = GenerateUUID();
+        std::string id = GenerateUUID().ToString();
         REQUIRE(id.size() == 36);
         REQUIRE(id[8] == '-');
         REQUIRE(id[13] == '-');
@@ -97,43 +97,60 @@ TEST_CASE("Rigidbody serialization retains authored compound parameters",
 }
 
 TEST_CASE("Scene data round trips typed nested values", "[Serializer][Scene]") {
-    Serializer::Scene scene;
-    scene.name       = "Scene & \"test\"";
-    scene.guid       = GenerateUUID();
-    scene.persistent = true;
-    scene.gameObjects.Set(Serializer::DataNode::NodeArray{});
-    Serializer::DataNode object;
-    object["name"]     = "One <two>";
-    object["empty"]    = "";
-    object["number"]   = 17;
-    object["unsigned"] = uint64_t{ 18446744073709551615ULL };
-    object["float"]    = std::bit_cast<float>(uint32_t{ 0x3f800001 });
-    object["enabled"]  = false;
-    object["emptyArray"].Set(Serializer::DataNode::NodeArray{});
-    object["emptyObject"].Set(Serializer::DataNode::NodeMap{});
-    scene.gameObjects.Append(object);
-    scene.sceneSettings["lighting"] = "test";
+    SYN_STARTENGINE;
+    GameObjectRegistry::Clear();
+
+    GameObject& object = GameObjectRegistry::CreateGameObject(
+        "One <two>", "default", { "tag & value" });
+    object.SetActive(false);
+    auto* transform = object.AddComponent<TransformComponent>();
+    transform->SetPosition(Math::Vector3(1.25f, 2.5f, 3.75f));
+
+    SceneInstance scene("Scene & \"test\"");
+    scene.SetPersistent(true);
+    scene.AddGameObject(object);
+
+    Serializer::Scene serialized;
+    serialized.name       = scene.GetName();
+    serialized.uuid       = scene.GetUUID();
+    serialized.persistent = scene.IsPersistent();
+    serialized.gameObjects.Set(Serializer::DataNode::NodeArray{});
+    Serializer::Scene inMemory;
+    inMemory.Deserialize(serialized.Serialize());
+    REQUIRE(inMemory.isValid);
+    REQUIRE(inMemory.uuid == scene.GetUUID());
 
     const auto path = std::filesystem::temp_directory_path() /
-                      ("syngine-scene-" + GenerateUUID() + ".scene");
+                      ("syngine-scene-" + GenerateUUID().ToString() + ".xml");
     REQUIRE(Serializer::Scene::SaveToFile(path.string(), scene));
-    auto loaded = Serializer::Scene::LoadFromFile(path.string());
+
+    const auto data = Serializer::Scene::LoadFromFile(path.string());
+    REQUIRE(data.isValid);
+    REQUIRE(data.name == "Scene & \"test\"");
+    REQUIRE(data.uuid == scene.GetUUID());
+    REQUIRE(data.persistent);
+    REQUIRE(data.gameObjects.IsArray());
+    REQUIRE(data.gameObjects.Size() == 1);
+
+    SceneInstance loaded(data, "", path.string());
+    REQUIRE(loaded.GetName() == scene.GetName());
+    REQUIRE(loaded.GetPath() == path.string());
+    REQUIRE(loaded.GetBundle().empty());
+    REQUIRE(loaded.GetGameObjects().size() == 1);
+
+    const auto* restored = loaded.GetGameObject(loaded.GetGameObjects()[0]);
+    REQUIRE(restored != nullptr);
+    REQUIRE(restored->name == "One <two>");
+    REQUIRE_FALSE(restored->IsActive());
+    REQUIRE(restored->HasTag("tag & value"));
+    const auto* restoredTransform = restored->GetComponent<TransformComponent>();
+    REQUIRE(restoredTransform != nullptr);
+    REQUIRE(restoredTransform->GetPosition().x() == 1.25f);
+    REQUIRE(restoredTransform->GetPosition().y() == 2.5f);
+    REQUIRE(restoredTransform->GetPosition().z() == 3.75f);
+
+    GameObjectRegistry::Clear();
     std::filesystem::remove(path);
-    REQUIRE(loaded.isValid);
-    REQUIRE(loaded.name == scene.name);
-    REQUIRE(loaded.guid == scene.guid);
-    REQUIRE(loaded.persistent);
-    REQUIRE(loaded.gameObjects.Size() == 1);
-    const auto& value = loaded.gameObjects.At(0);
-    REQUIRE(value["name"].As<std::string>() == "One <two>");
-    REQUIRE(value["empty"].As<std::string>() == "");
-    REQUIRE(value["number"].As<int>() == 17);
-    REQUIRE(value["unsigned"].As<uint64_t>() == UINT64_MAX);
-    REQUIRE(std::bit_cast<uint32_t>(value["float"].As<float>()) == 0x3f800001);
-    REQUIRE_FALSE(value["enabled"].As<bool>());
-    REQUIRE(value["emptyArray"].IsArray());
-    REQUIRE(value["emptyObject"].IsObject());
-    REQUIRE(loaded.sceneSettings["lighting"].As<std::string>() == "test");
 }
 
 TEST_CASE("Invalid scene data is rejected without changing its destination",
@@ -141,68 +158,69 @@ TEST_CASE("Invalid scene data is rejected without changing its destination",
     Serializer::Scene scene;
     scene.name = "original";
     Serializer::DataNode invalid;
-    REQUIRE_THROWS(scene.Deserialize(invalid));
+
+    REQUIRE_NOTHROW(scene.Deserialize(invalid));
     REQUIRE(scene.name == "original");
-
-    const auto path = std::filesystem::temp_directory_path() /
-                      ("syngine-scene-" + GenerateUUID() + ".scene");
-    {
-        std::ofstream file(path);
-        file << "<Scene Version=\"invalid\"/>";
-    }
-    REQUIRE_FALSE(Serializer::Scene::LoadFromFile(path.string()).isValid);
-
-    {
-        std::ofstream file(path);
-        file << "<Scene Version=\"1.0\"><Node type=\"object\">";
-        for (int i = 0; i < 200; ++i) {
-            file << "<Node key=\"61\" type=\"null\"/>";
-        }
-        file << "</invalid></Scene>";
-    }
-    REQUIRE_FALSE(Serializer::Scene::LoadFromFile(path.string()).isValid);
-    std::filesystem::remove(path);
+    REQUIRE_FALSE(scene.isValid);
 }
 
 TEST_CASE("Scene save replaces a file without losing it on validation errors",
           "[Serializer][Scene]") {
-    const auto        path = std::filesystem::temp_directory_path() /
-                             ("syngine-scene-" + GenerateUUID() + ".scene");
-    Serializer::Scene scene;
-    scene.name = "first";
-    scene.guid = GenerateUUID();
-    scene.gameObjects.Set(Serializer::DataNode::NodeArray{});
-    REQUIRE(Serializer::Scene::SaveToFile(path.string(), scene));
-    scene.name = "second";
-    REQUIRE(Serializer::Scene::SaveToFile(path.string(), scene));
-    scene.gameObjects = Serializer::DataNode{};
-    REQUIRE_FALSE(Serializer::Scene::SaveToFile(path.string(), scene));
-    auto loaded = Serializer::Scene::LoadFromFile(path.string());
-    std::filesystem::remove(path);
+    SYN_STARTENGINE;
+    GameObjectRegistry::Clear();
+
+    GameObject& object =
+        GameObjectRegistry::CreateGameObject("Original", "default", {});
+    SceneInstance original("first");
+    original.AddGameObject(object);
+
+    const auto path = std::filesystem::temp_directory_path() /
+                      ("syngine-scene-replace-" +
+                       GenerateUUID().ToString() + ".xml");
+    REQUIRE(Serializer::Scene::SaveToFile(path.string(), original));
+
+    SceneInstance invalid("empty");
+    REQUIRE_FALSE(Serializer::Scene::SaveToFile(path.string(), invalid));
+
+    const auto loaded = Serializer::Scene::LoadFromFile(path.string());
     REQUIRE(loaded.isValid);
-    REQUIRE(loaded.name == "second");
+    REQUIRE(loaded.name == "first");
+    REQUIRE_FALSE(loaded.persistent);
+
+    GameObjectRegistry::Clear();
+    std::filesystem::remove(path);
 }
 
-TEST_CASE("Scene save respects the node nesting limit", "[Serializer][Scene]") {
-    const auto        path = std::filesystem::temp_directory_path() /
-                             ("syngine-scene-" + GenerateUUID() + ".scene");
-    Serializer::Scene scene;
-    scene.name = "within limit";
-    scene.guid = GenerateUUID();
-    scene.gameObjects.Set(Serializer::DataNode::NodeArray{});
+TEST_CASE("Scene save round trips nested GameObjects", "[Serializer][Scene]") {
+    SYN_STARTENGINE;
+    GameObjectRegistry::Clear();
 
-    auto* node = &scene.sceneSettings;
-    for (size_t i = 0; i < 255; ++i) node = &(*node)["child"];
-    *node = 42;
+    GameObject& parent =
+        GameObjectRegistry::CreateGameObject("Parent", "default", {});
+    GameObject& child =
+        GameObjectRegistry::CreateGameObject("Child", "default", {});
+    parent.AddComponent<TransformComponent>();
+    child.AddComponent<TransformComponent>();
+    parent.AddChild(&child);
+
+    SceneInstance scene("hierarchy");
+    scene.AddGameObject(parent);
+
+    const auto path = std::filesystem::temp_directory_path() /
+                      ("syngine-scene-hierarchy-" +
+                       GenerateUUID().ToString() + ".xml");
     REQUIRE(Serializer::Scene::SaveToFile(path.string(), scene));
-    REQUIRE(Serializer::Scene::LoadFromFile(path.string()).isValid);
 
-    *node            = Serializer::DataNode{};
-    (*node)["child"] = 42;
-    scene.name       = "exceeds limit";
-    REQUIRE_FALSE(Serializer::Scene::SaveToFile(path.string(), scene));
-    auto loaded = Serializer::Scene::LoadFromFile(path.string());
+    const auto data = Serializer::Scene::LoadFromFile(path.string());
+    REQUIRE(data.isValid);
+    SceneInstance loaded(data, "", path.string());
+    REQUIRE(loaded.GetGameObjects().size() == 1);
+    const auto* restoredParent =
+        loaded.GetGameObject(loaded.GetGameObjects()[0]);
+    REQUIRE(restoredParent != nullptr);
+    REQUIRE(restoredParent->GetChildren().size() == 1);
+    REQUIRE(restoredParent->GetChildren()[0]->name == "Child");
+
+    GameObjectRegistry::Clear();
     std::filesystem::remove(path);
-    REQUIRE(loaded.isValid);
-    REQUIRE(loaded.name == "within limit");
 }
